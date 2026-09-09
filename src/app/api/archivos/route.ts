@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { googleConfigurado, subirArchivoADrive } from '@/lib/servidor/google';
-import { CONFIG } from '@/lib/config';
+import { leerDatosCongreso } from '@/lib/servidor/contenido';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -15,6 +15,7 @@ export async function POST(peticion: NextRequest) {
     );
   }
 
+  const { foto_megabytes_maximo: maximoMb } = await leerDatosCongreso();
   const formulario = await peticion.formData();
   const archivo = formulario.get('archivo');
 
@@ -24,11 +25,8 @@ export async function POST(peticion: NextRequest) {
   if (!TIPOS_PERMITIDOS.includes(archivo.type)) {
     return NextResponse.json({ mensaje: 'Solo se aceptan imágenes JPG o PNG.' }, { status: 415 });
   }
-  if (archivo.size > CONFIG.fotoMegabytesMaximo * 1024 * 1024) {
-    return NextResponse.json(
-      { mensaje: `El archivo supera ${CONFIG.fotoMegabytesMaximo} MB.` },
-      { status: 413 },
-    );
+  if (archivo.size > maximoMb * 1024 * 1024) {
+    return NextResponse.json({ mensaje: `El archivo supera ${maximoMb} MB.` }, { status: 413 });
   }
 
   const extension = archivo.type === 'image/png' ? 'png' : 'jpg';

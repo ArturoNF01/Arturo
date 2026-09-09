@@ -7,6 +7,7 @@ import { TarjetaGrafica } from './tarjeta-grafica';
 import { GraficaBarras } from './graficas';
 import { aplicarFiltros, useRegistros, FILTROS_VACIOS, type Filtros, type RegistroPanel } from './usar-registros';
 import { contarPor } from '@/lib/graficas';
+import { useContenidoPanel } from './contexto-panel';
 import { nombrePerfil, PERFILES } from '@/lib/perfiles';
 import { etiquetaDe } from '@/lib/opciones';
 import type { Permisos } from '@/lib/servidor/sesion';
@@ -17,6 +18,7 @@ import type { Permisos } from '@/lib/servidor/sesion';
  */
 export function AnaliticaAvanzada({ permisos }: { permisos: Permisos }) {
   const { t } = useApp();
+  const { nombreEje } = useContenidoPanel();
   const { registros, cargando } = useRegistros();
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_VACIOS);
 
@@ -37,6 +39,15 @@ export function AnaliticaAvanzada({ permisos }: { permisos: Permisos }) {
       (v) => etiquetaDe('procedencia', v, t),
     ),
     [activos, t],
+  );
+  const porEje = useMemo(
+    () => contarPor(
+      activos.filter((r) => r.eje_tematico),
+      (r) => r.eje_tematico,
+      nombreEje,
+      { maximo: 8 },
+    ),
+    [activos, nombreEje],
   );
   const porRol = useMemo(
     () => contarPor(
@@ -137,6 +148,17 @@ export function AnaliticaAvanzada({ permisos }: { permisos: Permisos }) {
               alto={300}
             >
               <GraficaBarras datos={porProcedencia} unidad={t.panel.graficas.registros} />
+            </TarjetaGrafica>
+          )}
+
+          {porEje.length > 0 && (
+            <TarjetaGrafica
+              titulo={t.panel.graficas.ejes}
+              filas={porEje.map((d) => [d.nombre, d.total])}
+              columnas={[t.formulario.campos.ejeTematico, t.panel.graficas.registros]}
+              alto={300}
+            >
+              <GraficaBarras datos={porEje} unidad={t.panel.graficas.registros} />
             </TarjetaGrafica>
           )}
 

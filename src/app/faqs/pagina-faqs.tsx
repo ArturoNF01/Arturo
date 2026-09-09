@@ -3,14 +3,24 @@
 import { useMemo, useState } from 'react';
 import { Encabezado, PieDePagina } from '@/componentes/controles';
 import { useApp } from '@/componentes/proveedores';
-import { FAQS } from '@/i18n/faqs';
+import { traducir, type Faq } from '@/lib/contenido';
 
-export function PaginaFaqs({ urlAgenda }: { urlAgenda: string }) {
+export function PaginaFaqs({ urlAgenda, faqs }: { urlAgenda: string; faqs: Faq[] }) {
   const { idioma, t } = useApp();
   const [busqueda, setBusqueda] = useState('');
   const [abierta, setAbierta] = useState<string | null>(null);
 
-  const preguntas = FAQS[idioma];
+  const preguntas = useMemo(
+    () =>
+      faqs.map((f) => ({
+        id: f.clave,
+        categoria: traducir(f.categoria, idioma),
+        pregunta: traducir(f.pregunta, idioma),
+        respuesta: traducir(f.respuesta, idioma),
+        provisional: f.provisional,
+      })),
+    [faqs, idioma],
+  );
   const filtradas = useMemo(() => {
     const termino = busqueda.trim().toLowerCase();
     if (!termino) return preguntas;

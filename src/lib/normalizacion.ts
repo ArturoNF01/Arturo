@@ -203,7 +203,8 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
       s(r.folio), '', '', persona, r.nombre_personificador || persona,
       r.cargo || rol, s(r.institucion), s(r.pais_residencia), s(r.foto_url),
       semblanza ? marca : '', semblanza, contarPalabras(semblanza),
-      CONFIG.limiteSemblanzaPalabras, '', 'No iniciado', 'No iniciado', '', '',
+      Number(r.limite_semblanza_palabras ?? CONFIG.limiteSemblanzaPalabras), '',
+      'No iniciado', 'No iniciado', '', '',
       'Semblanza recibida T-4 sem · editada T-2 sem · impresa T-1 sem',
     ]];
   }

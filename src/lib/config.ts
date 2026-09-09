@@ -1,25 +1,14 @@
 /**
- * Configuración del congreso. Los valores marcados como PENDIENTE deben
- * confirmarse con el comité organizador; los que viven en la tabla
- * `configuracion` de Supabase se pueden editar desde el panel.
+ * Constantes que no cambian desde el panel. El nombre, la sede, las fechas,
+ * los ejes temáticos, los límites del formulario, los cupos y los textos de
+ * las páginas públicas viven en Supabase y se editan en
+ * Panel → Cupos y configuración y Panel → Contenido del sitio.
  */
 export const CONFIG = {
-  sede: 'CIESS · Ciudad de México, México', // PENDIENTE confirmar sede exacta
-  fechas: 'Por confirmar',                  // PENDIENTE
-  fechaLimiteRegistro: '2026-05-15',        // editable desde el panel
+  fechaLimiteRegistro: '2026-05-15', // respaldo; el valor vigente vive en la base
 
-  ejesTematicos: [
-    // PENDIENTE: sustituir por los ejes definitivos de la convocatoria.
-    'Eje 1 · Cobertura y suficiencia de la protección social',
-    'Eje 2 · Sostenibilidad financiera de los sistemas de pensiones',
-    'Eje 3 · Salud, cuidados y envejecimiento',
-    'Eje 4 · Trabajo, informalidad y nuevas formas de empleo',
-  ],
-
+  /** Respaldo del límite de semblanza para la réplica en Sheets. */
   limiteSemblanzaPalabras: 60,
-  limiteSemblanzaCaracteres: 420,
-  limiteResumenCaracteres: 2000,
-  fotoMegabytesMaximo: 10,
 
   /** Margen entre la hora programada y la presentación del vehículo, en minutos. */
   margenes: {

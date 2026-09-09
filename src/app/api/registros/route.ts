@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { crearClienteAdmin } from '@/lib/supabase/admin';
-import { esquemaRegistro } from '@/lib/esquema';
+import { crearEsquemaRegistro } from '@/lib/esquema';
 import { perfilPorClave } from '@/lib/perfiles';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
 import { sincronizarRegistro } from '@/lib/servidor/sheets';
 import { enviarCorreoRegistro } from '@/lib/servidor/correo';
 import { CONFIG } from '@/lib/config';
+import { leerDatosCongreso } from '@/lib/servidor/contenido';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,11 @@ export async function POST(peticion: NextRequest) {
     return NextResponse.json({ mensaje: 'Cuerpo de la petición no válido.' }, { status: 400 });
   }
 
-  const analisis = esquemaRegistro.safeParse(cuerpo);
+  const congreso = await leerDatosCongreso();
+  const analisis = crearEsquemaRegistro({
+    semblanzaCaracteres: congreso.limite_semblanza_caracteres,
+    resumenCaracteres: congreso.limite_resumen_caracteres,
+  }).safeParse(cuerpo);
   if (!analisis.success) {
     const errores: Record<string, string> = {};
     for (const problema of analisis.error.issues) {

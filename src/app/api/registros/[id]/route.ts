@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { crearClienteAdmin } from '@/lib/supabase/admin';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
-import { esquemaEdicion } from '@/lib/esquema';
+import { crearEsquemaRegistro } from '@/lib/esquema';
 import { perfilPorClave } from '@/lib/perfiles';
 import { dentroDelPlazo, leerConfiguracion } from '@/lib/servidor/configuracion';
+import { leerDatosCongreso } from '@/lib/servidor/contenido';
 import { resincronizarRegistro } from '@/lib/servidor/sheets';
 import { enviarCorreoRegistro } from '@/lib/servidor/correo';
 
@@ -66,7 +67,11 @@ export async function PUT(peticion: NextRequest, contexto: { params: Promise<{ i
     );
   }
 
-  const analisis = esquemaEdicion.safeParse(cuerpo);
+  const congreso = await leerDatosCongreso();
+  const analisis = crearEsquemaRegistro({
+    semblanzaCaracteres: congreso.limite_semblanza_caracteres,
+    resumenCaracteres: congreso.limite_resumen_caracteres,
+  }).safeParse(cuerpo);
   if (!analisis.success) {
     const errores: Record<string, string> = {};
     for (const problema of analisis.error.issues) {

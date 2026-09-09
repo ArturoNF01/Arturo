@@ -4,10 +4,18 @@ import { Encabezado, PieDePagina } from '@/componentes/controles';
 import { FormularioRegistro } from '@/componentes/formulario-registro';
 import { useApp } from '@/componentes/proveedores';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
-import { CONFIG } from '@/lib/config';
+import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
 
-export function PaginaRegistro({ configuracion }: { configuracion: ConfiguracionPublica }) {
-  const { t } = useApp();
+export function PaginaRegistro({
+  configuracion,
+  congreso,
+  ejes,
+}: {
+  configuracion: ConfiguracionPublica;
+  congreso: DatosCongreso;
+  ejes: EjeTematico[];
+}) {
+  const { t, idioma } = useApp();
 
   return (
     <>
@@ -17,8 +25,12 @@ export function PaginaRegistro({ configuracion }: { configuracion: Configuracion
           <p className="text-xs font-semibold uppercase tracking-wide text-ciess-400">
             {t.congreso.organiza}
           </p>
-          <h1 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">{t.congreso.titulo}</h1>
-          <p className="mt-3 text-sm tenue">{CONFIG.sede} · {CONFIG.fechas}</p>
+          <h1 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">
+            {traducir(congreso.nombre, idioma)}
+          </h1>
+          <p className="mt-3 text-sm tenue">
+            {traducir(congreso.sede, idioma)} · {traducir(congreso.fechas, idioma)}
+          </p>
           <p className="mt-5 text-sm leading-relaxed">{t.formulario.intro}</p>
           <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-2 text-sm">
             <div>
@@ -31,7 +43,7 @@ export function PaginaRegistro({ configuracion }: { configuracion: Configuracion
             </div>
           </dl>
         </section>
-        <FormularioRegistro configuracion={configuracion} />
+        <FormularioRegistro configuracion={configuracion} congreso={congreso} ejes={ejes} />
       </main>
       <PieDePagina />
     </>

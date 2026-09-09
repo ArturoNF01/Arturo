@@ -11,6 +11,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { PERFILES } from '../src/lib/perfiles';
 import { OPCIONES } from '../src/lib/opciones';
+import { EJES_POR_DEFECTO } from '../src/lib/contenido';
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const CLAVE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -48,12 +49,7 @@ const INSTITUCIONES = [
 
 const NOMBRES = ['Ana', 'Carlos', 'María', 'João', 'Lucía', 'Pedro', 'Sofía', 'Miguel', 'Camila', 'Rafael'];
 const APELLIDOS = ['Ruiz', 'Silva', 'Martínez', 'Oliveira', 'González', 'Pereira', 'Torres', 'Ramírez'];
-const EJES = [
-  'Eje 1 · Cobertura y suficiencia de la protección social',
-  'Eje 2 · Sostenibilidad financiera de los sistemas de pensiones',
-  'Eje 3 · Salud, cuidados y envejecimiento',
-  'Eje 4 · Trabajo, informalidad y nuevas formas de empleo',
-];
+const EJES = EJES_POR_DEFECTO.map((e) => e.clave);
 
 const azar = <T,>(lista: readonly T[]): T => lista[Math.floor(Math.random() * lista.length)];
 

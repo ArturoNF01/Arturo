@@ -6,16 +6,21 @@ import { FormularioRegistro } from '@/componentes/formulario-registro';
 import { useApp } from '@/componentes/proveedores';
 import { ResumenRegistro } from '@/componentes/resumen-registro';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
+import type { DatosCongreso, EjeTematico } from '@/lib/contenido';
 import { interpolar } from '@/i18n';
 
 export function PaginaConfirmacion({
   registro,
   configuracion,
+  congreso,
+  ejes,
   token,
   puedeEditar,
 }: {
   registro: Record<string, unknown>;
   configuracion: ConfiguracionPublica;
+  congreso: DatosCongreso;
+  ejes: EjeTematico[];
   token: string;
   /** Se decide en el servidor: la hora del navegador no es de fiar. */
   puedeEditar: boolean;
@@ -30,6 +35,8 @@ export function PaginaConfirmacion({
         <main className="pt-8">
           <FormularioRegistro
             configuracion={configuracion}
+            congreso={congreso}
+            ejes={ejes}
             registroExistente={registro}
             token={token}
           />
@@ -89,7 +96,7 @@ export function PaginaConfirmacion({
 
         <section className="mt-8">
           <h2 className="titulo-seccion mb-4">{t.confirmacion.resumen}</h2>
-          <ResumenRegistro registro={registro} />
+          <ResumenRegistro registro={registro} ejes={ejes} />
         </section>
       </main>
       <PieDePagina />

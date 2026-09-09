@@ -1,6 +1,17 @@
 import { z } from 'zod';
-import { CONFIG } from './config';
+import { CONGRESO_POR_DEFECTO } from './contenido';
 import { CLAVES_PERFIL, perfilPorClave } from './perfiles';
+
+/** Límites que el panel puede cambiar y que la validación debe respetar. */
+export interface LimitesFormulario {
+  semblanzaCaracteres: number;
+  resumenCaracteres: number;
+}
+
+export const LIMITES_POR_DEFECTO: LimitesFormulario = {
+  semblanzaCaracteres: CONGRESO_POR_DEFECTO.limite_semblanza_caracteres,
+  resumenCaracteres: CONGRESO_POR_DEFECTO.limite_resumen_caracteres,
+};
 
 const textoOpcional = z.string().trim().max(500).optional().or(z.literal(''));
 const parrafoOpcional = z.string().trim().max(5000).optional().or(z.literal(''));
@@ -15,7 +26,12 @@ const horaOpcional = z
   .optional()
   .or(z.literal(''));
 
-export const esquemaRegistro = z
+/**
+ * El esquema se construye con los límites vigentes: si el comité los cambia
+ * desde el panel, la validación del servidor cambia con ellos.
+ */
+export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DEFECTO) {
+  return z
   .object({
     perfil: z.enum(CLAVES_PERFIL),
     modalidad: z.enum(['presencial', 'en_linea']),
@@ -50,7 +66,7 @@ export const esquemaRegistro = z
     resumen_ponencia: z
       .string()
       .trim()
-      .max(CONFIG.limiteResumenCaracteres, `El resumen excede ${CONFIG.limiteResumenCaracteres} caracteres`)
+      .max(limites.resumenCaracteres, `El resumen excede ${limites.resumenCaracteres} caracteres`)
       .optional()
       .or(z.literal('')),
     palabras_clave: textoOpcional,
@@ -60,7 +76,7 @@ export const esquemaRegistro = z
     semblanza: z
       .string()
       .trim()
-      .max(CONFIG.limiteSemblanzaCaracteres, `La semblanza excede ${CONFIG.limiteSemblanzaCaracteres} caracteres`)
+      .max(limites.semblanzaCaracteres, `La semblanza excede ${limites.semblanzaCaracteres} caracteres`)
       .optional()
       .or(z.literal('')),
     linea_investigacion: textoOpcional,
@@ -149,11 +165,11 @@ export const esquemaRegistro = z
       }
     }
   });
+}
 
-export type DatosRegistro = z.infer<typeof esquemaRegistro>;
+export const esquemaRegistro = crearEsquemaRegistro();
 
-/** Esquema para la edición: mismos campos, sin exigir de nuevo el consentimiento. */
-export const esquemaEdicion = esquemaRegistro;
+export type DatosRegistro = z.infer<ReturnType<typeof crearEsquemaRegistro>>;
 
 export const esquemaConsultaSql = z.object({
   consulta: z.string().trim().min(5).max(10000),
@@ -167,6 +183,8 @@ export const esquemaPlantilla = z.object({
   cuerpo_html: z.string().trim().min(1).max(50000),
 });
 
+const multilingueTexto = z.record(z.enum(['es', 'en', 'pt']), z.string().max(500));
+
 export const esquemaConfiguracion = z.object({
   cupos_presenciales: z.number().int().min(0).nullable().optional(),
   cupos_en_linea: z.number().int().min(0).nullable().optional(),
@@ -174,4 +192,18 @@ export const esquemaConfiguracion = z.object({
   fecha_limite_registro: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   url_agenda: z.string().url().optional(),
   correo_contacto: z.string().email().optional(),
+
+  // Datos del congreso
+  congreso_nombre: multilingueTexto.optional(),
+  congreso_nombre_corto: multilingueTexto.optional(),
+  congreso_sede: multilingueTexto.optional(),
+  congreso_fechas: multilingueTexto.optional(),
+  congreso_fecha_inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  congreso_fecha_fin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+
+  // Límites del formulario
+  limite_semblanza_palabras: z.number().int().min(10).max(500).optional(),
+  limite_semblanza_caracteres: z.number().int().min(50).max(5000).optional(),
+  limite_resumen_caracteres: z.number().int().min(100).max(20000).optional(),
+  foto_megabytes_maximo: z.number().int().min(1).max(50).optional(),
 });

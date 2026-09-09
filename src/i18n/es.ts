@@ -292,6 +292,7 @@ export const es = {
       cupos: 'Cupos y configuración',
       auditoria: 'Auditoría',
       usuarios: 'Usuarios del panel',
+      contenido: 'Contenido del sitio',
     },
     roles: {
       superadmin: 'Superadministrador',

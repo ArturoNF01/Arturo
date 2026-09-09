@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { esquemaRegistro, esquemaConsultaSql, esquemaConfiguracion } from '@/lib/esquema';
-import { CONFIG } from '@/lib/config';
+import {
+  esquemaRegistro, esquemaConsultaSql, esquemaConfiguracion,
+  crearEsquemaRegistro, LIMITES_POR_DEFECTO,
+} from '@/lib/esquema';
 
 /** Registro válido mínimo, tal como lo envía el formulario. */
 function valido(extra: Record<string, unknown> = {}) {
@@ -62,13 +64,13 @@ describe('esquema de registro', () => {
 
   it('respeta los límites de semblanza y resumen del formulario original', () => {
     expect(
-      esquemaRegistro.safeParse(valido({ semblanza: 'a'.repeat(CONFIG.limiteSemblanzaCaracteres) })).success,
+      esquemaRegistro.safeParse(valido({ semblanza: 'a'.repeat(LIMITES_POR_DEFECTO.semblanzaCaracteres) })).success,
     ).toBe(true);
     expect(
-      esquemaRegistro.safeParse(valido({ semblanza: 'a'.repeat(CONFIG.limiteSemblanzaCaracteres + 1) })).success,
+      esquemaRegistro.safeParse(valido({ semblanza: 'a'.repeat(LIMITES_POR_DEFECTO.semblanzaCaracteres + 1) })).success,
     ).toBe(false);
     expect(
-      esquemaRegistro.safeParse(valido({ resumen_ponencia: 'a'.repeat(CONFIG.limiteResumenCaracteres + 1) })).success,
+      esquemaRegistro.safeParse(valido({ resumen_ponencia: 'a'.repeat(LIMITES_POR_DEFECTO.resumenCaracteres + 1) })).success,
     ).toBe(false);
   });
 
@@ -91,6 +93,23 @@ describe('esquema de registro', () => {
     expect(resultado.success).toBe(true);
     expect(resultado.data).not.toHaveProperty('_alojamiento');
     expect(resultado.data).not.toHaveProperty('token');
+  });
+});
+
+describe('límites configurables desde el panel', () => {
+  it('la validación del servidor sigue el límite que se le pase', () => {
+    const estricto = crearEsquemaRegistro({ semblanzaCaracteres: 100, resumenCaracteres: 200 });
+    expect(estricto.safeParse(valido({ semblanza: 'a'.repeat(100) })).success).toBe(true);
+    expect(estricto.safeParse(valido({ semblanza: 'a'.repeat(101) })).success).toBe(false);
+
+    const amplio = crearEsquemaRegistro({ semblanzaCaracteres: 900, resumenCaracteres: 5000 });
+    expect(amplio.safeParse(valido({ semblanza: 'a'.repeat(900) })).success).toBe(true);
+  });
+
+  it('el mensaje de error nombra el límite vigente', () => {
+    const estricto = crearEsquemaRegistro({ semblanzaCaracteres: 100, resumenCaracteres: 200 });
+    const resultado = estricto.safeParse(valido({ semblanza: 'a'.repeat(101) }));
+    expect(resultado.error?.issues[0].message).toContain('100');
   });
 });
 

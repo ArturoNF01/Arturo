@@ -119,13 +119,39 @@ guiones/                  Sembrado de datos de demostración
 - **Cupos**: al llenarse los lugares presenciales, los registros nuevos pasan
   automáticamente a lista de espera y reciben la plantilla correspondiente.
 
-## Pendiente de confirmar con el comité organizador
+## Todo el contenido se edita desde el panel
 
-Los siguientes valores están marcados como provisionales en el código:
+El sistema arranca con **propuestas** del equipo de desarrollo para que nada
+quede bloqueado esperando información. Todas se sustituyen desde el panel, sin
+tocar el código ni volver a desplegar.
 
-- Sede y fechas exactas del congreso (`src/lib/config.ts`).
-- Ejes temáticos definitivos (`src/lib/config.ts`).
-- Agenda final, que sustituirá al PDF de la convocatoria (editable desde
-  **Panel → Cupos y configuración**).
-- Validación jurídica del aviso de privacidad (`src/i18n/aviso-privacidad.ts`).
-- Respuestas de FAQs marcadas como provisionales (`src/i18n/faqs.ts`).
+| Qué | Dónde se edita | Propuesta inicial |
+|---|---|---|
+| Nombre, sede y fechas del congreso | Panel → Cupos y configuración | CIESS, Ciudad de México · 3, 4 y 5 de junio de 2026 |
+| Límites de semblanza, resumen y fotografía | Panel → Cupos y configuración | 60 palabras · 2 000 caracteres · 10 MB |
+| Cupos, fecha límite, agenda y correo de contacto | Panel → Cupos y configuración | 300 presenciales · en línea sin límite |
+| Ejes temáticos | Panel → Contenido del sitio | 6 ejes propuestos, en los tres idiomas |
+| Preguntas frecuentes | Panel → Contenido del sitio | 20 preguntas, en los tres idiomas |
+| Aviso de privacidad | Panel → Contenido del sitio (superadmin) | 10 apartados conforme a LFPDPPP, LGPD y RGPD |
+| Plantillas de correo | Panel → Plantillas de correo | 3 plantillas × 3 idiomas |
+| Perfiles de participación | Tabla `perfiles` de Supabase | 7 perfiles |
+
+**Cómo funciona el respaldo.** Las propuestas viven en el código
+(`src/lib/contenido.ts`, `src/i18n/faqs.ts`, `src/i18n/aviso-privacidad.ts`) y se
+usan mientras las tablas estén vacías, de modo que el sitio funciona desde el
+primer arranque. En **Panel → Contenido del sitio**, el botón
+**Sembrar propuestas** las copia a la base y a partir de ahí quedan editables.
+La operación es idempotente: no pisa lo que ya se haya editado.
+
+En el editor, una pestaña de idioma en ámbar señala que ese idioma todavía no
+está traducido.
+
+## Sigue pendiente de confirmación
+
+Nada bloquea el desarrollo, pero conviene revisar antes de abrir el registro:
+
+- Sede y fechas definitivas (hoy es una propuesta).
+- Ejes temáticos definitivos contra la convocatoria oficial.
+- Validación jurídica del aviso de privacidad.
+- Respuestas de FAQs marcadas como **provisionales** en el editor.
+- Agenda final, que sustituirá al PDF de la convocatoria.

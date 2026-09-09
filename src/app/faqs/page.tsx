@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
+import { leerFaqs } from '@/lib/servidor/contenido';
 import { PaginaFaqs } from './pagina-faqs';
 
 export const dynamic = 'force-dynamic';
@@ -9,6 +10,6 @@ export const metadata: Metadata = {
 };
 
 export default async function Faqs() {
-  const configuracion = await leerConfiguracion();
-  return <PaginaFaqs urlAgenda={configuracion.url_agenda} />;
+  const [configuracion, { filas: faqs }] = await Promise.all([leerConfiguracion(), leerFaqs()]);
+  return <PaginaFaqs urlAgenda={configuracion.url_agenda} faqs={faqs} />;
 }

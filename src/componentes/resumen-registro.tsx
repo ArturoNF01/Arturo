@@ -3,6 +3,7 @@
 import { useApp } from './proveedores';
 import { etiquetaDe, type GrupoOpciones } from '@/lib/opciones';
 import { nombrePerfil } from '@/lib/perfiles';
+import { traducir, type EjeTematico } from '@/lib/contenido';
 
 type Registro = Record<string, unknown>;
 
@@ -13,8 +14,15 @@ interface Fila {
   lista?: boolean;
 }
 
-export function ResumenRegistro({ registro }: { registro: Registro }) {
-  const { t } = useApp();
+export function ResumenRegistro({
+  registro,
+  ejes = [],
+}: {
+  registro: Registro;
+  /** Permite mostrar el nombre del eje temático en lugar de su clave. */
+  ejes?: EjeTematico[];
+}) {
+  const { t, idioma } = useApp();
   const c = t.formulario.campos;
 
   const secciones: { titulo: string; filas: Fila[] }[] = [
@@ -116,6 +124,10 @@ export function ResumenRegistro({ registro }: { registro: Registro }) {
   function valorDe(fila: Fila): string {
     const bruto = registro[fila.clave];
     if (bruto === null || bruto === undefined || bruto === '') return '';
+    if (fila.clave === 'eje_tematico') {
+      const eje = ejes.find((e) => e.clave === bruto);
+      return eje ? traducir(eje.nombre, idioma) : String(bruto);
+    }
     if (Array.isArray(bruto)) {
       if (bruto.length === 0) return '';
       return fila.grupo

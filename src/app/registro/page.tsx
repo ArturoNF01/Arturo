@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
+import { leerDatosCongreso, leerEjes } from '@/lib/servidor/contenido';
 import { PaginaRegistro } from './pagina-registro';
 
 export const dynamic = 'force-dynamic';
@@ -9,6 +10,11 @@ export const metadata: Metadata = {
 };
 
 export default async function Registro() {
-  const configuracion = await leerConfiguracion();
-  return <PaginaRegistro configuracion={configuracion} />;
+  const [configuracion, congreso, { filas: ejes }] = await Promise.all([
+    leerConfiguracion(),
+    leerDatosCongreso(),
+    leerEjes(),
+  ]);
+
+  return <PaginaRegistro configuracion={configuracion} congreso={congreso} ejes={ejes} />;
 }

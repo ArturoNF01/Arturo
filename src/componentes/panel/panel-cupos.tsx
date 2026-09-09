@@ -7,11 +7,20 @@ import { Ficha } from './tarjeta-grafica';
 import { EstadoSincronizacion } from './sincronizacion';
 import { interpolar } from '@/i18n';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
+import type { DatosCongreso } from '@/lib/contenido';
+import { CampoMultilingue } from './campo-multilingue';
 
-export function PanelCupos({ configuracion }: { configuracion: ConfiguracionPublica }) {
+export function PanelCupos({
+  configuracion,
+  congreso,
+}: {
+  configuracion: ConfiguracionPublica;
+  congreso: DatosCongreso;
+}) {
   const { t } = useApp();
   const router = useRouter();
 
+  const [datos, setDatos] = useState<DatosCongreso>(congreso);
   const [valores, setValores] = useState({
     cupos_presenciales: configuracion.cupos_presenciales?.toString() ?? '',
     cupos_en_linea: configuracion.cupos_en_linea?.toString() ?? '',
@@ -45,10 +54,20 @@ export function PanelCupos({ configuracion }: { configuracion: ConfiguracionPubl
         fecha_limite_registro: valores.fecha_limite_registro,
         url_agenda: valores.url_agenda,
         correo_contacto: valores.correo_contacto,
+        congreso_nombre: datos.nombre,
+        congreso_nombre_corto: datos.nombre_corto,
+        congreso_sede: datos.sede,
+        congreso_fechas: datos.fechas,
+        congreso_fecha_inicio: datos.fecha_inicio,
+        congreso_fecha_fin: datos.fecha_fin,
+        limite_semblanza_palabras: datos.limite_semblanza_palabras,
+        limite_semblanza_caracteres: datos.limite_semblanza_caracteres,
+        limite_resumen_caracteres: datos.limite_resumen_caracteres,
+        foto_megabytes_maximo: datos.foto_megabytes_maximo,
       }),
     });
-    const datos = await respuesta.json();
-    setMensaje(respuesta.ok ? t.estados.guardado : datos.mensaje ?? t.estados.error);
+    const resultado = await respuesta.json();
+    setMensaje(respuesta.ok ? t.estados.guardado : resultado.mensaje ?? t.estados.error);
     if (respuesta.ok) router.refresh();
     setGuardando(false);
   }
@@ -79,7 +98,93 @@ export function PanelCupos({ configuracion }: { configuracion: ConfiguracionPubl
         <Ficha etiqueta={t.panel.kpi.enLinea} valor={configuracion.ocupado_en_linea} />
       </div>
 
+      <section className="tarjeta mb-5 max-w-2xl p-5">
+        <h2 className="titulo-seccion mb-1">Datos del congreso</h2>
+        <p className="ayuda !mt-0 mb-5">
+          Los valores actuales son una propuesta del equipo de desarrollo. Sustitúyalos por los
+          definitivos: se reflejan de inmediato en el formulario, los correos y las páginas públicas.
+        </p>
+
+        <div className="space-y-5">
+          <CampoMultilingue
+            etiqueta="Nombre del congreso"
+            valor={datos.nombre}
+            onChange={(v) => setDatos({ ...datos, nombre: v })}
+            filas={2}
+            maximo={300}
+          />
+          <CampoMultilingue
+            etiqueta="Nombre corto"
+            valor={datos.nombre_corto}
+            onChange={(v) => setDatos({ ...datos, nombre_corto: v })}
+            maximo={160}
+          />
+          <CampoMultilingue
+            etiqueta="Sede"
+            valor={datos.sede}
+            onChange={(v) => setDatos({ ...datos, sede: v })}
+            maximo={200}
+          />
+          <CampoMultilingue
+            etiqueta="Fechas, tal como se muestran"
+            valor={datos.fechas}
+            onChange={(v) => setDatos({ ...datos, fechas: v })}
+            ayuda="Texto libre. Ejemplo: 3, 4 y 5 de junio de 2026."
+            maximo={120}
+          />
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="block">
+              <span className="etiqueta">Primer día</span>
+              <input
+                type="date" className="campo" value={datos.fecha_inicio}
+                onChange={(e) => setDatos({ ...datos, fecha_inicio: e.target.value })}
+              />
+            </label>
+            <label className="block">
+              <span className="etiqueta">Último día</span>
+              <input
+                type="date" className="campo" value={datos.fecha_fin}
+                onChange={(e) => setDatos({ ...datos, fecha_fin: e.target.value })}
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="block">
+              <span className="etiqueta">Semblanza · máximo de palabras</span>
+              <input
+                type="number" min={10} className="campo" value={datos.limite_semblanza_palabras}
+                onChange={(e) => setDatos({ ...datos, limite_semblanza_palabras: Number(e.target.value) })}
+              />
+            </label>
+            <label className="block">
+              <span className="etiqueta">Semblanza · máximo de caracteres</span>
+              <input
+                type="number" min={50} className="campo" value={datos.limite_semblanza_caracteres}
+                onChange={(e) => setDatos({ ...datos, limite_semblanza_caracteres: Number(e.target.value) })}
+              />
+            </label>
+            <label className="block">
+              <span className="etiqueta">Resumen · máximo de caracteres</span>
+              <input
+                type="number" min={100} className="campo" value={datos.limite_resumen_caracteres}
+                onChange={(e) => setDatos({ ...datos, limite_resumen_caracteres: Number(e.target.value) })}
+              />
+            </label>
+            <label className="block">
+              <span className="etiqueta">Fotografía · máximo en MB</span>
+              <input
+                type="number" min={1} max={50} className="campo" value={datos.foto_megabytes_maximo}
+                onChange={(e) => setDatos({ ...datos, foto_megabytes_maximo: Number(e.target.value) })}
+              />
+            </label>
+          </div>
+        </div>
+      </section>
+
       <div className="tarjeta max-w-2xl p-5">
+        <h2 className="titulo-seccion mb-5">Cupos y registro</h2>
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="block">
             <span className="etiqueta">{t.panel.cupos.presenciales}</span>

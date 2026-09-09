@@ -244,7 +244,7 @@ export const en: Diccionario = {
     secciones: {
       dashboard: 'Dashboard', registros: 'Registrations', analitica: 'Advanced analytics',
       sql: 'SQL queries', plantillas: 'E-mail templates', cupos: 'Seats and settings',
-      auditoria: 'Audit log', usuarios: 'Panel users',
+      auditoria: 'Audit log', usuarios: 'Panel users', contenido: 'Site content',
     },
     roles: {
       superadmin: 'Super administrator', organizador: 'Organiser',

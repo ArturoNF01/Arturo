@@ -1,8 +1,25 @@
 import 'server-only';
 import { clienteSheets, googleConfigurado } from './google';
 import { HOJAS, filasDeRegistro } from '@/lib/normalizacion';
+import { leerDatosCongreso, leerEjes } from './contenido';
+import { traducir } from '@/lib/contenido';
 
 type Registro = Record<string, unknown>;
+
+/**
+ * El libro de seguimiento se lleva en español y con nombres legibles: aquí se
+ * resuelve la clave del eje temático y se fija el límite de semblanza vigente.
+ */
+async function prepararParaHoja(registro: Registro): Promise<Registro> {
+  const [{ filas: ejes }, congreso] = await Promise.all([leerEjes(), leerDatosCongreso()]);
+  const eje = ejes.find((e) => e.clave === registro.eje_tematico);
+
+  return {
+    ...registro,
+    eje_tematico: eje ? traducir(eje.nombre, 'es') : registro.eje_tematico,
+    limite_semblanza_palabras: congreso.limite_semblanza_palabras,
+  };
+}
 
 /** Crea las pestañas que falten y escribe sus encabezados. */
 async function asegurarHojas(idLibro: string) {
@@ -43,7 +60,7 @@ export async function sincronizarRegistro(registro: Registro): Promise<void> {
 
   await asegurarHojas(idLibro);
   const sheets = clienteSheets();
-  const filas = filasDeRegistro(registro);
+  const filas = filasDeRegistro(await prepararParaHoja(registro));
 
   for (const [hoja, valores] of Object.entries(filas)) {
     await sheets.spreadsheets.values.append({

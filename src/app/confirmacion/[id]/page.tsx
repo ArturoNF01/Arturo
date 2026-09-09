@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { crearClienteAdmin } from '@/lib/supabase/admin';
 import { dentroDelPlazo, leerConfiguracion } from '@/lib/servidor/configuracion';
+import { leerDatosCongreso, leerEjes } from '@/lib/servidor/contenido';
 import { PaginaConfirmacion } from './pagina-confirmacion';
 
 export const dynamic = 'force-dynamic';
@@ -23,15 +24,20 @@ export default async function Confirmacion({
 
   if (!registro || !token || token !== registro.token_edicion) notFound();
 
-  const configuracion = await leerConfiguracion();
-  const puedeEditar = dentroDelPlazo(configuracion.fecha_limite_registro);
+  const [configuracion, congreso, { filas: ejes }] = await Promise.all([
+    leerConfiguracion(),
+    leerDatosCongreso(),
+    leerEjes(),
+  ]);
 
   return (
     <PaginaConfirmacion
       registro={registro}
       configuracion={configuracion}
+      congreso={congreso}
+      ejes={ejes}
       token={token}
-      puedeEditar={puedeEditar}
+      puedeEditar={dentroDelPlazo(configuracion.fecha_limite_registro)}
     />
   );
 }

@@ -3,15 +3,15 @@
 import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { useApp } from './proveedores';
-import { CONFIG } from '@/lib/config';
 import { interpolar } from '@/i18n';
 
 export function SubidaFotografia({
-  valorUrl, onSubida, onQuitar,
+  valorUrl, onSubida, onQuitar, megabytesMaximo,
 }: {
   valorUrl: string;
   onSubida: (url: string, driveId: string) => void;
   onQuitar: () => void;
+  megabytesMaximo: number;
 }) {
   const { t } = useApp();
   const entrada = useRef<HTMLInputElement>(null);
@@ -27,8 +27,8 @@ export function SubidaFotografia({
       setError(t.formulario.validacion.archivoTipo);
       return;
     }
-    if (archivo.size > CONFIG.fotoMegabytesMaximo * 1024 * 1024) {
-      setError(interpolar(t.formulario.validacion.archivoGrande, { mb: CONFIG.fotoMegabytesMaximo }));
+    if (archivo.size > megabytesMaximo * 1024 * 1024) {
+      setError(interpolar(t.formulario.validacion.archivoGrande, { mb: megabytesMaximo }));
       return;
     }
 
@@ -94,7 +94,7 @@ export function SubidaFotografia({
           </div>
         )}
       </div>
-      <p className="ayuda">{interpolar(t.formulario.campos.fotoAyuda, { mb: CONFIG.fotoMegabytesMaximo })}</p>
+      <p className="ayuda">{interpolar(t.formulario.campos.fotoAyuda, { mb: megabytesMaximo })}</p>
       {error && <p className="error">{error}</p>}
     </div>
   );

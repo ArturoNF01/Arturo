@@ -245,7 +245,7 @@ export const pt: Diccionario = {
     secciones: {
       dashboard: 'Dashboard', registros: 'Inscrições', analitica: 'Analítica avançada',
       sql: 'Consultas SQL', plantillas: 'Modelos de e-mail', cupos: 'Vagas e configuração',
-      auditoria: 'Auditoria', usuarios: 'Usuários do painel',
+      auditoria: 'Auditoria', usuarios: 'Usuários do painel', contenido: 'Conteúdo do site',
     },
     roles: {
       superadmin: 'Superadministrador', organizador: 'Organizador',

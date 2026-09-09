@@ -9,7 +9,9 @@ import { BarraFiltros } from './filtros';
 import { aplicarFiltros, useRegistros, FILTROS_VACIOS, type Filtros, type RegistroPanel } from './usar-registros';
 import { contarPor, regresionLineal } from '@/lib/graficas';
 import { codigoPais } from '@/lib/paises';
+import { traducir } from '@/lib/contenido';
 import { etiquetaDe } from '@/lib/opciones';
+import { useContenidoPanel } from './contexto-panel';
 import { nombrePerfil } from '@/lib/perfiles';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import type { Permisos } from '@/lib/servidor/sesion';
@@ -24,6 +26,7 @@ export function Dashboard({
   permisos: Permisos;
 }) {
   const { t, idioma } = useApp();
+  const { nombreEje, congreso } = useContenidoPanel();
   const { registros, cargando, error } = useRegistros();
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_VACIOS);
 
@@ -62,8 +65,8 @@ export function Dashboard({
     [activos],
   );
   const porEje = useMemo(
-    () => contarPor(activos.filter((r) => r.eje_tematico), (r) => r.eje_tematico, (v) => v, { maximo: 8 }),
-    [activos],
+    () => contarPor(activos.filter((r) => r.eje_tematico), (r) => r.eje_tematico, nombreEje, { maximo: 8 }),
+    [activos, nombreEje],
   );
   const porRegimen = useMemo(
     () => contarPor(
@@ -103,7 +106,9 @@ export function Dashboard({
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">{t.panel.secciones.dashboard}</h1>
-          <p className="ayuda !mt-1">{CONFIG.sede} · {configuracion.fecha_limite_registro}</p>
+          <p className="ayuda !mt-1">
+            {traducir(congreso.sede, idioma)} · {traducir(congreso.fechas, idioma)}
+          </p>
         </div>
         {permisos.exportar && (
           <a href="/api/exportar?formato=csv" className="boton-secundario !py-2 !text-xs">

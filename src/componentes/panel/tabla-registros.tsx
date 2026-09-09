@@ -6,6 +6,7 @@ import { useApp } from '@/componentes/proveedores';
 import { BarraFiltros } from './filtros';
 import { aplicarFiltros, useRegistros, FILTROS_VACIOS, type Filtros, type RegistroPanel } from './usar-registros';
 import { ResumenRegistro } from '@/componentes/resumen-registro';
+import { useContenidoPanel } from './contexto-panel';
 import { nombrePerfil } from '@/lib/perfiles';
 import { interpolar } from '@/i18n';
 import type { Permisos } from '@/lib/servidor/sesion';
@@ -14,6 +15,7 @@ const POR_PAGINA = 50;
 
 export function TablaRegistros({ permisos }: { permisos: Permisos }) {
   const { t, idioma } = useApp();
+  const { ejes } = useContenidoPanel();
   const parametros = useSearchParams();
   const { registros, cargando, error, recargar } = useRegistros();
 
@@ -154,7 +156,7 @@ export function TablaRegistros({ permisos }: { permisos: Permisos }) {
               </div>
             </header>
             {completo ? (
-              <ResumenRegistro registro={completo} />
+              <ResumenRegistro registro={completo} ejes={ejes} />
             ) : (
               <p className="py-8 text-center text-sm tenue">{t.estados.cargando}</p>
             )}

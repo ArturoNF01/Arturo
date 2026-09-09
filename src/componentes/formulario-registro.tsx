@@ -9,13 +9,13 @@ import {
   CampoSeleccion, CampoTexto,
 } from './campos';
 import { SubidaFotografia } from './subida-fotografia';
-import { CONFIG } from '@/lib/config';
 import {
   PERFILES, campoVisible, pasosVisibles, perfilPorClave,
   type ClavePerfil, type Modalidad, type PasoFormulario,
 } from '@/lib/perfiles';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import { opciones } from '@/lib/opciones';
+import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
 import { interpolar } from '@/i18n';
 
 type Valores = Record<string, string | boolean | string[]>;
@@ -44,10 +44,14 @@ const VALORES_INICIALES: Valores = {
 
 export function FormularioRegistro({
   configuracion,
+  congreso,
+  ejes,
   registroExistente,
   token,
 }: {
   configuracion: ConfiguracionPublica;
+  congreso: DatosCongreso;
+  ejes: EjeTematico[];
   registroExistente?: Record<string, unknown>;
   token?: string;
 }) {
@@ -110,14 +114,14 @@ export function FormularioRegistro({
       if (perfil?.requiereSemblanza) obligatorio('nombre_personificador');
     }
 
-    if (paso === 'semblanza' && texto('semblanza').length > CONFIG.limiteSemblanzaCaracteres) {
+    if (paso === 'semblanza' && texto('semblanza').length > congreso.limite_semblanza_caracteres) {
       nuevos.semblanza = interpolar(t.formulario.validacion.semblanzaLarga, {
-        max: CONFIG.limiteSemblanzaCaracteres,
+        max: congreso.limite_semblanza_caracteres,
       });
     }
-    if (paso === 'academico' && texto('resumen_ponencia').length > CONFIG.limiteResumenCaracteres) {
+    if (paso === 'academico' && texto('resumen_ponencia').length > congreso.limite_resumen_caracteres) {
       nuevos.resumen_ponencia = interpolar(t.formulario.validacion.resumenLargo, {
-        max: CONFIG.limiteResumenCaracteres,
+        max: congreso.limite_resumen_caracteres,
       });
     }
     if (paso === 'privacidad' && !valores.consentimiento_datos) {
@@ -236,16 +240,16 @@ export function FormularioRegistro({
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.academico} />
             <CampoOpcionUnica etiqueta={t.formulario.campos.modalidadParticipacion} opciones={opciones('roles', t)} valor={texto('modalidad_participacion')} onChange={(v) => fijar('modalidad_participacion', v)} error={errores.modalidad_participacion} columnas={2} />
-            <CampoSeleccion etiqueta={t.formulario.campos.ejeTematico} opciones={CONFIG.ejesTematicos.map((e) => ({ valor: e, etiqueta: e }))} valor={texto('eje_tematico')} onChange={(v) => fijar('eje_tematico', v)} />
+            <CampoSeleccion etiqueta={t.formulario.campos.ejeTematico} opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valor={texto('eje_tematico')} onChange={(v) => fijar('eje_tematico', v)} />
             <CampoTexto etiqueta={t.formulario.campos.tituloPonencia} ayuda={t.formulario.campos.tituloPonenciaAyuda} valor={texto('titulo_ponencia')} onChange={(v) => fijar('titulo_ponencia', v)} />
             <CampoParrafo
               etiqueta={t.formulario.campos.resumen}
-              ayuda={interpolar(t.formulario.campos.resumenAyuda, { max: CONFIG.limiteResumenCaracteres })}
+              ayuda={interpolar(t.formulario.campos.resumenAyuda, { max: congreso.limite_resumen_caracteres })}
               filas={7}
-              maximo={CONFIG.limiteResumenCaracteres}
+              maximo={congreso.limite_resumen_caracteres}
               contador
               textoContador={interpolar(t.formulario.validacion.caracteres, {
-                n: texto('resumen_ponencia').length, max: CONFIG.limiteResumenCaracteres,
+                n: texto('resumen_ponencia').length, max: congreso.limite_resumen_caracteres,
               })}
               valor={texto('resumen_ponencia')}
               onChange={(v) => fijar('resumen_ponencia', v)}
@@ -262,16 +266,17 @@ export function FormularioRegistro({
             <CampoParrafo
               etiqueta={t.formulario.campos.semblanza}
               ayuda={interpolar(t.formulario.campos.semblanzaAyuda, {
-                palabras: CONFIG.limiteSemblanzaPalabras, caracteres: CONFIG.limiteSemblanzaCaracteres,
+                palabras: congreso.limite_semblanza_palabras,
+                caracteres: congreso.limite_semblanza_caracteres,
               })}
               filas={6}
-              maximo={CONFIG.limiteSemblanzaCaracteres}
+              maximo={congreso.limite_semblanza_caracteres}
               contador
               textoContador={`${interpolar(t.formulario.validacion.semblanzaPalabras, {
                 n: texto('semblanza').trim() ? texto('semblanza').trim().split(/\s+/).length : 0,
-                max: CONFIG.limiteSemblanzaPalabras,
+                max: congreso.limite_semblanza_palabras,
               })} · ${interpolar(t.formulario.validacion.caracteres, {
-                n: texto('semblanza').length, max: CONFIG.limiteSemblanzaCaracteres,
+                n: texto('semblanza').length, max: congreso.limite_semblanza_caracteres,
               })}`}
               valor={texto('semblanza')}
               onChange={(v) => fijar('semblanza', v)}
@@ -279,6 +284,7 @@ export function FormularioRegistro({
             />
             <CampoTexto etiqueta={t.formulario.campos.lineaInvestigacion} valor={texto('linea_investigacion')} onChange={(v) => fijar('linea_investigacion', v)} />
             <SubidaFotografia
+              megabytesMaximo={congreso.foto_megabytes_maximo}
               valorUrl={texto('foto_url')}
               onSubida={(url, id) => { fijar('foto_url', url); fijar('foto_drive_id', id); }}
               onQuitar={() => { fijar('foto_url', ''); fijar('foto_drive_id', ''); }}
