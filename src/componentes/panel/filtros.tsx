@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useApp } from '@/componentes/proveedores';
 import { PERFILES, nombrePerfil } from '@/lib/perfiles';
+import { ESTADOS } from '@/lib/estados';
 import { interpolar } from '@/i18n';
 import type { Filtros, RegistroPanel } from './usar-registros';
 import { FILTROS_VACIOS } from './usar-registros';
@@ -53,6 +54,14 @@ export function BarraFiltros({
             <option value="">{t.panel.filtros.todos}</option>
             <option value="presencial">{t.modalidad.presencial}</option>
             <option value="en_linea">{t.modalidad.en_linea}</option>
+          </select>
+        </Control>
+        <Control etiqueta={t.panel.filtros.estado}>
+          <select className="campo !py-1.5" value={filtros.estado} onChange={(e) => fijar('estado', e.target.value)}>
+            <option value="">{t.panel.filtros.todos}</option>
+            {ESTADOS.map((estado) => (
+              <option key={estado} value={estado}>{t.panel.estadosRegistro[estado]}</option>
+            ))}
           </select>
         </Control>
         <Control etiqueta={t.panel.filtros.institucion} ancho="min-w-[11rem] flex-1">

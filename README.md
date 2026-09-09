@@ -42,6 +42,8 @@ npm run dev
 2. Ejecutar en el editor SQL, en orden:
    - `supabase/migrations/0001_esquema_inicial.sql`
    - `supabase/migrations/0002_plantillas_y_sql_lectura.sql`
+   - `supabase/migrations/0003_contenido_editable.sql`
+   - `supabase/migrations/0004_estados_y_lista_espera.sql`
 3. Copiar a `.env.local` la URL del proyecto, la clave anónima y la clave de
    servicio (`SUPABASE_SERVICE_ROLE_KEY`, sólo del lado del servidor).
 4. Crear las cuentas del panel en **Authentication → Users** y darles de alta en
@@ -140,8 +142,18 @@ guiones/                  Sembrado de datos de demostración
   lote.
 - **Auditoría**: toda alta, modificación o baja de registros, plantillas y
   configuración queda asentada con usuario, rol, fecha y campos modificados.
-- **Cupos**: al llenarse los lugares presenciales, los registros nuevos pasan
-  automáticamente a lista de espera y reciben la plantilla correspondiente.
+- **Cupos y lista de espera**: al llenarse los lugares presenciales, los
+  registros nuevos pasan automáticamente a lista de espera y reciben la
+  plantilla correspondiente. Cuando se libera un lugar —porque alguien canceló
+  o porque se amplió el aforo— la lista aparece en **Panel → Cupos y
+  configuración** en orden de llegada, y desde ahí se confirma a la siguiente
+  persona. El servidor vuelve a comprobar el cupo antes de asignar el lugar, de
+  modo que dos organizadores no puedan confirmar al mismo tiempo por encima del
+  aforo.
+- **Estados**: cada registro es *en proceso*, *confirmado*, *en lista de espera*
+  o *cancelado*. Sólo se ofrecen las transiciones que tienen sentido, y cada
+  cambio puede avisar al participante por correo en su idioma con la plantilla
+  correspondiente. Todo queda asentado en la auditoría.
 
 ## Todo el contenido se edita desde el panel
 

@@ -7,8 +7,15 @@ import { obtenerDiccionario } from '@/i18n';
 import { nombrePerfil } from '@/lib/perfiles';
 import { aplicarPlantilla, envolverHtml } from '@/lib/plantillas';
 
+export type ClavePlantilla =
+  | 'confirmacion_registro'
+  | 'edicion_registro'
+  | 'lista_espera'
+  | 'registro_confirmado'
+  | 'registro_cancelado';
+
 export interface DatosCorreo {
-  clave: 'confirmacion_registro' | 'edicion_registro' | 'lista_espera';
+  clave: ClavePlantilla;
   registro: Record<string, unknown>;
   correoContacto: string;
   fechaLimite: string;

@@ -7,6 +7,8 @@ import { BarraFiltros } from './filtros';
 import { aplicarFiltros, useRegistros, FILTROS_VACIOS, type Filtros, type RegistroPanel } from './usar-registros';
 import { ResumenRegistro } from '@/componentes/resumen-registro';
 import { useContenidoPanel } from './contexto-panel';
+import { ControlEstado, InsigniaEstado } from './control-estado';
+import type { EstadoRegistro } from '@/lib/estados';
 import { nombrePerfil } from '@/lib/perfiles';
 import { interpolar } from '@/i18n';
 import type { Permisos } from '@/lib/servidor/sesion';
@@ -79,11 +81,12 @@ export function TablaRegistros({ permisos }: { permisos: Permisos }) {
         <p className="py-16 text-center text-sm tenue">{t.estados.cargando}</p>
       ) : (
         <div className="tarjeta desplazable overflow-x-auto">
-          <table className="w-full min-w-[880px] text-left text-sm">
+          <table className="w-full min-w-[1000px] text-left text-sm">
             <thead>
               <tr className="border-b" style={{ borderColor: 'var(--borde)' }}>
                 {[columnas.folio, columnas.nombre, columnas.perfil, columnas.modalidad,
-                  columnas.institucion, columnas.pais, columnas.fecha, columnas.acciones].map((c) => (
+                  columnas.estado, columnas.institucion, columnas.pais, columnas.fecha,
+                  columnas.acciones].map((c) => (
                   <th key={c} className="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide tenue">
                     {c}
                   </th>
@@ -106,6 +109,9 @@ export function TablaRegistros({ permisos }: { permisos: Permisos }) {
                     >
                       {r.modalidad === 'presencial' ? t.modalidad.presencial : t.modalidad.en_linea}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5">
+                    <InsigniaEstado estado={r.estado as EstadoRegistro} />
                   </td>
                   <td className="max-w-[14rem] truncate px-3 py-2.5">{r.institucion}</td>
                   <td className="whitespace-nowrap px-3 py-2.5">{r.pais_residencia}</td>
@@ -155,6 +161,19 @@ export function TablaRegistros({ permisos }: { permisos: Permisos }) {
                 </button>
               </div>
             </header>
+            {permisos.editarRegistros && (
+              <div className="mb-5">
+                <ControlEstado
+                  id={detalle.id}
+                  estado={detalle.estado as EstadoRegistro}
+                  onCambio={() => {
+                    void recargar();
+                    setDetalle(null);
+                  }}
+                />
+              </div>
+            )}
+
             {completo ? (
               <ResumenRegistro registro={completo} ejes={ejes} />
             ) : (

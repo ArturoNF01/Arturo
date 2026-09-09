@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/componentes/proveedores';
 import { Ficha } from './tarjeta-grafica';
 import { EstadoSincronizacion } from './sincronizacion';
+import { ListaEspera } from './lista-espera';
 import { interpolar } from '@/i18n';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import type { DatosCongreso } from '@/lib/contenido';
@@ -264,6 +265,7 @@ export function PanelCupos({
         <p className="ayuda mt-3">{t.panel.agenda.provisional}</p>
       </div>
 
+      <ListaEspera configuracion={configuracion} />
       <EstadoSincronizacion />
     </div>
   );
