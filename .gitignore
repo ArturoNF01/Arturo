@@ -13,3 +13,6 @@ next-env.d.ts
 # Reglas de agente generadas por el entorno
 AGENTS.md
 CLAUDE.md
+
+# Vista previa generada
+vista-previa-formulario.html

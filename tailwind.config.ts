@@ -13,7 +13,11 @@ export default {
         },
         accent: { 500: '#c9a227', 600: '#a8871d' },
       },
-      fontFamily: { sans: ['var(--font-sans)', 'system-ui', 'sans-serif'] },
+      fontFamily: {
+        sans: ['var(--font-sans)'],
+        display: ['var(--font-display)'],
+        mono: ['var(--font-mono)'],
+      },
     },
   },
   plugins: [],

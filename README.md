@@ -86,7 +86,16 @@ npm run lint        # análisis estático
 npm test            # pruebas de la lógica crítica
 npm run sembrar 120 # 120 registros de demostración en Supabase
 npm run sembrar -- --borrar   # elimina sólo los registros de demostración
+
+npx tsx guiones/generar-vista-previa.ts   # vista previa del formulario en un HTML
 ```
+
+`generar-vista-previa.ts` produce `vista-previa-formulario.html`, un archivo
+autocontenido que recorre el formulario con sus siete perfiles y sus tres
+idiomas, sin base de datos ni servidor. Las etiquetas, las ayudas, las opciones
+y la lógica de pasos salen de los módulos reales del proyecto, así que la
+redacción no se desvía; sirve para que el comité revise campos y textos antes
+de desplegar. No guarda datos ni envía correos.
 
 Las pruebas cubren la normalización hacia las pestañas de Google Sheets
 (incluido el cálculo de la hora de presentación del vehículo), la validación
