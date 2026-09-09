@@ -78,3 +78,43 @@
   .sin-impresion { display: none !important; }
   body { background: #fff; color: #000; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Paleta de visualización de datos (validada para daltonismo y        */
+/* contraste en ambos temas). Los tonos oscuros no son un volteo       */
+/* automático: son pasos elegidos para la superficie oscura.           */
+/* ------------------------------------------------------------------ */
+.viz {
+  --superficie: #ffffff;
+  --texto-viz: #0e1c2c;
+  --texto-viz-tenue: #5b6b7f;
+  --rejilla: #e3e9f1;
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --serie-3: #1baf7a;
+  --serie-4: #eda100;
+  --serie-5: #e87ba4;
+  --serie-6: #008300;
+  --serie-7: #4a3aa7;
+  --serie-8: #e34948;
+  /* Rampa secuencial de un solo tono, claro → oscuro */
+  --sec-1: #cde2fb; --sec-2: #9ec5f4; --sec-3: #6da7ec;
+  --sec-4: #3987e5; --sec-5: #256abf; --sec-6: #184f95; --sec-7: #0d366b;
+}
+
+.dark .viz {
+  --superficie: #121e2e;
+  --texto-viz: #e8eef6;
+  --texto-viz-tenue: #93a5bb;
+  --rejilla: #24374e;
+  --serie-1: #3987e5;
+  --serie-2: #d95926;
+  --serie-3: #199e70;
+  --serie-4: #c98500;
+  --serie-5: #d55181;
+  --serie-6: #008300;
+  --serie-7: #9085e9;
+  --serie-8: #e66767;
+  --sec-1: #0d366b; --sec-2: #184f95; --sec-3: #256abf;
+  --sec-4: #3987e5; --sec-5: #6da7ec; --sec-6: #9ec5f4; --sec-7: #cde2fb;
+}
