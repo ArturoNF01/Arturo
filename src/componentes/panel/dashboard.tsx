@@ -334,20 +334,22 @@ function construirProyeccion(
     proyectado: i === serie.length - 1 ? d.acumulado : null,
   }));
 
-  const ultimoIndice = serie.length - 1;
   const diasHastaLimite = Math.max(
     0,
     Math.round((Date.parse(`${fechaLimite}T00:00:00Z`) - Date.now()) / 86_400_000),
   );
   const pasos = Math.min(DIAS_PROYECCION, diasHastaLimite || DIAS_PROYECCION);
+  const ultimoAcumulado = serie[serie.length - 1].acumulado;
 
+  // La proyección parte del último acumulado real y avanza con el ritmo diario
+  // ajustado: extrapolar la recta cruda arrancaría por debajo del dato de hoy
+  // y se leería como una caída que no ha ocurrido.
   for (let paso = 1; paso <= pasos; paso += 1) {
-    const x = ultimoIndice + paso;
     const fecha = new Date(Date.now() + paso * 86_400_000).toISOString().slice(5, 10);
     datos.push({
       dia: fecha,
       real: null,
-      proyectado: Math.max(0, Math.round(modelo.pendiente * x + modelo.interseccion)),
+      proyectado: Math.max(0, Math.round(ultimoAcumulado + modelo.pendiente * paso)),
     });
   }
 

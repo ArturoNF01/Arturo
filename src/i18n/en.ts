@@ -265,7 +265,7 @@ export const en: Diccionario = {
       acumulado: 'Cumulative registrations',
       heatmap: 'Registration activity by hour and day',
       prediccion: 'Registration forecast',
-      prediccionAyuda: 'Estimate from a simple linear regression on the daily history. Shaded band: approximate confidence interval.',
+      prediccionAyuda: 'Forecast from a simple linear regression on the daily history: it starts from today\u2019s cumulative total and advances at the fitted daily rate. R\u00b2 shows how well the line fits the history.',
       instituciones: 'Top institutions',
       ejes: 'Distribution by thematic axis',
       alimentacion: 'Dietary regime',

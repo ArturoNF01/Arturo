@@ -17,7 +17,12 @@ export const SECUENCIAL = [
 
 export const MAX_SERIES = 8;
 
-export function colorSerie(indice: number): string {
+/** Tono neutro del cubo «Otros»: no compite con las series con identidad. */
+export const COLOR_OTROS = 'var(--rejilla-fuerte)';
+export const CLAVE_OTROS = '__otros__';
+
+export function colorSerie(indice: number, clave?: string): string {
+  if (clave === CLAVE_OTROS) return COLOR_OTROS;
   return SERIES[Math.min(indice, SERIES.length - 1)];
 }
 
@@ -56,7 +61,7 @@ export function contarPor<T>(
   }));
 
   const resto = ordenados.slice(maximo).reduce((suma, [, total]) => suma + total, 0);
-  if (resto > 0) principales.push({ clave: '__otros__', nombre: etiquetaOtros, total: resto });
+  if (resto > 0) principales.push({ clave: CLAVE_OTROS, nombre: etiquetaOtros, total: resto });
 
   return principales;
 }

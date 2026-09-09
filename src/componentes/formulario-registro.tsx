@@ -79,7 +79,9 @@ export function FormularioRegistro({
   const modalidad = valores.modalidad as Modalidad;
   const pasos = useMemo(() => pasosVisibles(perfil, modalidad), [perfil, modalidad]);
   const pasoActual = pasos[Math.min(indicePaso, pasos.length - 1)];
-  const esUltimo = indicePaso >= pasos.length - 1;
+  // Sin perfil elegido sólo existe el primer paso: el botón principal debe
+  // invitar a continuar, no a enviar un registro que aún no tiene datos.
+  const esUltimo = pasos.length > 1 && indicePaso >= pasos.length - 1;
 
   const restantes =
     configuracion.cupos_presenciales === null

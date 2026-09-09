@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { contarPor, pasoSecuencial, colorSerie, regresionLineal, MAX_SERIES } from '@/lib/graficas';
+import {
+  contarPor, pasoSecuencial, colorSerie, regresionLineal, MAX_SERIES,
+  CLAVE_OTROS, COLOR_OTROS,
+} from '@/lib/graficas';
 
 describe('contarPor', () => {
   const filas = [
@@ -78,5 +81,22 @@ describe('regresionLineal', () => {
 
   it('no proyecta cuando todos los puntos comparten la misma abscisa', () => {
     expect(regresionLineal([{ x: 2, y: 1 }, { x: 2, y: 5 }, { x: 2, y: 9 }])).toBeNull();
+  });
+});
+
+describe('cubo «Otros»', () => {
+  it('lleva un tono neutro y no repite el de la octava serie', () => {
+    expect(colorSerie(8, CLAVE_OTROS)).toBe(COLOR_OTROS);
+    expect(colorSerie(8, CLAVE_OTROS)).not.toBe(colorSerie(7));
+  });
+
+  it('el tono neutro sólo se aplica a la clave del resto', () => {
+    expect(colorSerie(3, 'brasil')).toBe('var(--serie-4)');
+  });
+
+  it('contarPor marca el resto con la clave reservada', () => {
+    const muchos = Array.from({ length: 12 }, (_, i) => ({ pais: `País ${i}` }));
+    const conteo = contarPor(muchos, (f) => f.pais, (v) => v);
+    expect(conteo.at(-1)?.clave).toBe(CLAVE_OTROS);
   });
 });

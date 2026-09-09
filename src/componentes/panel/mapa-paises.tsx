@@ -67,7 +67,14 @@ export function MapaPaises({
   }, [geografia, conteos, maximo]);
 
   if (fallo) {
-    return <p className="grid h-full place-items-center text-sm tenue">{t.estados.error}</p>;
+    return (
+      <div className="grid h-full place-items-center px-6 text-center">
+        <p className="text-sm tenue">
+          No fue posible cargar el mapa base del atlas mundial. Los datos por país están
+          disponibles en la vista de tabla de esta misma tarjeta.
+        </p>
+      </div>
+    );
   }
   if (!geografia) {
     return <p className="grid h-full place-items-center text-sm tenue">{t.estados.cargando}</p>;

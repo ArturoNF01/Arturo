@@ -9,3 +9,7 @@ build/
 next-env.d.ts
 .DS_Store
 .vercel
+
+# Reglas de agente generadas por el entorno
+AGENTS.md
+CLAUDE.md

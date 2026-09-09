@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 import {
-  IDIOMAS, IDIOMA_POR_DEFECTO, diccionarios, esIdiomaValido, interpolar,
+  IDIOMA_POR_DEFECTO, diccionarios, esIdiomaValido, interpolar,
   type Diccionario, type Idioma,
 } from '@/i18n';
 import { useAlmacenLocal } from './usar-almacen-local';
@@ -23,12 +23,6 @@ const Contexto = createContext<ContextoApp | null>(null);
 const CLAVE_IDIOMA = 'congreso.idioma';
 const CLAVE_TEMA = 'congreso.tema';
 
-function idiomaDelNavegador(): Idioma {
-  if (typeof navigator === 'undefined') return IDIOMA_POR_DEFECTO;
-  const preferido = navigator.languages?.map((l) => l.slice(0, 2)) ?? [];
-  return (preferido.find((l): l is Idioma => IDIOMAS.includes(l as Idioma)) ?? IDIOMA_POR_DEFECTO);
-}
-
 export function Proveedores({
   children,
   idiomaInicial,
@@ -36,12 +30,10 @@ export function Proveedores({
   children: React.ReactNode;
   idiomaInicial?: Idioma;
 }) {
+  // El español es el idioma por defecto; sólo lo cambia una elección
+  // explícita, que se recuerda en la cookie y en el almacenamiento local.
   const respaldoIdioma = idiomaInicial ?? IDIOMA_POR_DEFECTO;
-  const [idiomaGuardado, guardarIdioma] = useAlmacenLocal(
-    CLAVE_IDIOMA,
-    respaldoIdioma,
-    idiomaDelNavegador,
-  );
+  const [idiomaGuardado, guardarIdioma] = useAlmacenLocal(CLAVE_IDIOMA, respaldoIdioma);
   // Modo oscuro activo por defecto.
   const [temaGuardado, guardarTema] = useAlmacenLocal(CLAVE_TEMA, 'oscuro');
 

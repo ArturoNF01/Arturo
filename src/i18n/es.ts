@@ -320,7 +320,7 @@ export const es = {
       acumulado: 'Registros acumulados',
       heatmap: 'Actividad de registro por hora y día',
       prediccion: 'Proyección de inscripciones',
-      prediccionAyuda: 'Estimación por regresión lineal simple sobre el histórico diario. Zona sombreada: intervalo de confianza aproximado.',
+      prediccionAyuda: 'Proyección por regresión lineal simple sobre el histórico diario: parte del acumulado de hoy y avanza con el ritmo diario ajustado. R² indica qué tan bien se ajusta la recta al histórico.',
       instituciones: 'Principales instituciones',
       ejes: 'Distribución por eje temático',
       alimentacion: 'Régimen alimentario',

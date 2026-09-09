@@ -266,7 +266,7 @@ export const pt: Diccionario = {
       acumulado: 'Inscrições acumuladas',
       heatmap: 'Atividade de inscrição por hora e dia',
       prediccion: 'Projeção de inscrições',
-      prediccionAyuda: 'Estimativa por regressão linear simples sobre o histórico diário. Faixa sombreada: intervalo de confiança aproximado.',
+      prediccionAyuda: 'Projeção por regressão linear simples sobre o histórico diário: parte do acumulado de hoje e avança no ritmo diário ajustado. R² indica o quanto a reta se ajusta ao histórico.',
       instituciones: 'Principais instituições',
       ejes: 'Distribuição por eixo temático',
       alimentacion: 'Regime alimentar',

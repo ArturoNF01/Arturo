@@ -67,7 +67,15 @@ export function GraficaBarras({
         {horizontal ? (
           <>
             <XAxis type="number" tick={EJE} axisLine={false} tickLine={false} domain={[0, maximo]} />
-            <YAxis type="category" dataKey="nombre" tick={EJE} axisLine={false} tickLine={false} width={140} />
+            <YAxis
+              type="category"
+              dataKey="nombre"
+              tick={EJE}
+              axisLine={false}
+              tickLine={false}
+              width={150}
+              tickFormatter={(valor: string) => (valor.length > 30 ? `${valor.slice(0, 29)}…` : valor)}
+            />
           </>
         ) : (
           <>
@@ -89,7 +97,7 @@ export function GraficaBarras({
           }}
         >
           {datos.map((d, i) => (
-            <Cell key={d.clave} fill={colorSerie(i)} stroke="var(--superficie)" strokeWidth={2} />
+            <Cell key={d.clave} fill={colorSerie(i, d.clave)} stroke="var(--superficie)" strokeWidth={2} />
           ))}
         </Bar>
       </BarChart>
@@ -117,7 +125,7 @@ export function GraficaPastel({ datos, unidad }: { datos: Conteo[]; unidad: stri
               isAnimationActive={false}
             >
               {datos.map((d, i) => (
-                <Cell key={d.clave} fill={colorSerie(i)} stroke="var(--superficie)" strokeWidth={2} />
+                <Cell key={d.clave} fill={colorSerie(i, d.clave)} stroke="var(--superficie)" strokeWidth={2} />
               ))}
             </Pie>
           </PieChart>
@@ -131,7 +139,9 @@ export function GraficaPastel({ datos, unidad }: { datos: Conteo[]; unidad: stri
           </div>
         </div>
       </div>
-      <Leyenda elementos={datos.map((d, i) => ({ nombre: `${d.nombre} · ${d.total}`, color: colorSerie(i) }))} />
+      <Leyenda
+        elementos={datos.map((d, i) => ({ nombre: `${d.nombre} · ${d.total}`, color: colorSerie(i, d.clave) }))}
+      />
     </div>
   );
 }
