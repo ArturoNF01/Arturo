@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --fondo: #f7f9fc;
+  --fondo-tarjeta: #ffffff;
+  --borde: #dde5ef;
+  --texto: #0e1c2c;
+  --texto-tenue: #5b6b7f;
+  --marca: #2e5c8a;
+  --acento: #a8871d;
+}
+
+.dark {
+  --fondo: #0b1420;
+  --fondo-tarjeta: #121e2e;
+  --borde: #23364d;
+  --texto: #e8eef6;
+  --texto-tenue: #93a5bb;
+  --marca: #7fa9db;
+  --acento: #c9a227;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    background-color: var(--fondo);
+    color: var(--texto);
+    -webkit-font-smoothing: antialiased;
+  }
+  * { border-color: var(--borde); }
+  :focus-visible {
+    outline: 2px solid var(--marca);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .tarjeta {
+    background-color: var(--fondo-tarjeta);
+    border: 1px solid var(--borde);
+    @apply rounded-xl shadow-sm;
+  }
+  .campo {
+    @apply w-full rounded-lg border px-3 py-2 text-sm transition
+           focus:border-ciess-400 focus:ring-2 focus:ring-ciess-400/30 focus:outline-none
+           disabled:opacity-60;
+    background-color: var(--fondo);
+    border-color: var(--borde);
+    color: var(--texto);
+  }
+  .etiqueta { @apply block text-sm font-medium mb-1.5; }
+  .ayuda { @apply mt-1 text-xs; color: var(--texto-tenue); }
+  .error { @apply mt-1 text-xs text-red-500; }
+  .boton {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5
+           text-sm font-semibold transition focus:outline-none focus-visible:ring-2
+           focus-visible:ring-ciess-400 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .boton-primario { @apply boton bg-ciess-500 text-white hover:bg-ciess-600 active:bg-ciess-700; }
+  .boton-secundario {
+    @apply boton border hover:bg-black/5 dark:hover:bg-white/5;
+    border-color: var(--borde);
+    color: var(--texto);
+  }
+  .boton-peligro { @apply boton bg-red-600 text-white hover:bg-red-700; }
+  .insignia { @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium; }
+  .titulo-seccion { @apply text-lg font-semibold tracking-tight; }
+  .tenue { color: var(--texto-tenue); }
+}
+
+/* Barra de desplazamiento discreta en tablas y consolas */
+.desplazable::-webkit-scrollbar { height: 10px; width: 10px; }
+.desplazable::-webkit-scrollbar-thumb { background: var(--borde); border-radius: 999px; }
+
+@media print {
+  .sin-impresion { display: none !important; }
+  body { background: #fff; color: #000; }
+}
