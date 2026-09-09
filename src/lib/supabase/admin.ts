@@ -1,6 +1,13 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 
+/** ¿Hay credenciales de Supabase? Sin ellas el sitio público funciona igual. */
+export function supabaseConfigurado(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+}
+
 /**
  * Cliente con clave de servicio: ignora RLS. Se usa únicamente en rutas de
  * API del servidor (alta pública de registros, sincronizaciones, correos).

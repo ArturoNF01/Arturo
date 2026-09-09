@@ -1,7 +1,7 @@
 import 'server-only';
 import { redirect } from 'next/navigation';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { crearClienteAdmin, supabaseConfigurado } from '@/lib/supabase/admin';
 
 export type RolPanel = 'superadmin' | 'organizador' | 'cientifico_datos' | 'lector';
 
@@ -44,6 +44,8 @@ export type Permisos = ReturnType<typeof permisos>;
 
 /** Usuario del panel de la sesión actual, o null si no tiene acceso. */
 export async function usuarioActual(): Promise<UsuarioPanel | null> {
+  if (!supabaseConfigurado()) return null;
+
   const supabase = await crearClienteServidor();
   const { data } = await supabase.auth.getUser();
   if (!data.user) return null;

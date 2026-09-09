@@ -8,7 +8,14 @@ import { useApp } from '@/componentes/proveedores';
 import { crearClienteNavegador } from '@/lib/supabase/cliente';
 import { VideoFondo } from '@/componentes/video-fondo';
 
-export function PaginaLogin({ urlVideo }: { urlVideo: string }) {
+export function PaginaLogin({
+  urlVideo,
+  configurado,
+}: {
+  urlVideo: string;
+  /** Sin credenciales de Supabase el acceso al panel no puede funcionar. */
+  configurado: boolean;
+}) {
   const { t } = useApp();
   const router = useRouter();
   const parametros = useSearchParams();
@@ -82,6 +89,16 @@ export function PaginaLogin({ urlVideo }: { urlVideo: string }) {
             <p className="mt-2 text-sm text-white/70">{t.login.subtitulo}</p>
           </div>
 
+          {!configurado && (
+            <div className="mb-4 rounded-xl border border-amber-400/40 bg-amber-500/15 p-4 text-sm text-amber-100">
+              <p className="font-semibold">El panel todavía no está conectado.</p>
+              <p className="mt-1 text-amber-100/85">
+                Falta configurar Supabase en las variables de entorno del despliegue. El formulario
+                de registro funciona con normalidad mientras tanto.
+              </p>
+            </div>
+          )}
+
           <form
             onSubmit={entrar}
             className="rounded-xl border border-white/15 bg-black/45 p-6 shadow-2xl backdrop-blur-md"
@@ -127,14 +144,14 @@ export function PaginaLogin({ urlVideo }: { urlVideo: string }) {
               <p className="mt-4 rounded-lg bg-emerald-500/20 p-2.5 text-sm text-emerald-200">{aviso}</p>
             )}
 
-            <button type="submit" className="boton-primario mt-5 w-full" disabled={cargando}>
+            <button type="submit" className="boton-primario mt-5 w-full" disabled={cargando || !configurado}>
               {cargando ? t.estados.cargando : t.login.entrar}
             </button>
 
             <button
               type="button"
               onClick={enlaceMagico}
-              disabled={cargando}
+              disabled={cargando || !configurado}
               className="mt-3 w-full rounded-lg border border-white/20 px-4 py-2.5 text-sm font-medium
                          text-white/85 transition hover:bg-white/10 disabled:opacity-50"
             >

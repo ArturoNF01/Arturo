@@ -73,8 +73,23 @@ Las pestañas normalizadas se crean solas en el primer registro.
 
 ### 4. Despliegue en Vercel
 
-Importar el repositorio, cargar las mismas variables de entorno y fijar
-`NEXT_PUBLIC_URL_SITIO` al dominio definitivo.
+**El sitio público no necesita ninguna credencial para desplegarse.** El
+formulario, las FAQs y el aviso de privacidad funcionan con las propuestas que
+trae el código, y el video institucional de fondo se ve en cuanto hay un
+dominio público. Sin Supabase, el panel avisa que todavía no está conectado en
+lugar de fallar.
+
+1. Entrar a [vercel.com/new](https://vercel.com/new) e importar `ArturoNF01/Arturo`.
+2. Vercel detecta Next.js solo: no hay que tocar la configuración de compilación.
+3. **Deploy.** En un par de minutos hay una URL pública.
+
+Para activar el panel, añadir después en *Settings → Environment Variables* las
+mismas claves de `.env.example` y volver a desplegar. Conviene fijar
+`NEXT_PUBLIC_URL_SITIO` al dominio definitivo para que los enlaces de edición
+de los correos apunten bien.
+
+Si la rama de trabajo todavía no está fusionada, en *Settings → Git →
+Production Branch* se puede apuntar a `claude/congreso-registration-system-d6r396`.
 
 ## Comandos
 
