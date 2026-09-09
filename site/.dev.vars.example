@@ -1,0 +1,5 @@
+# Copie este archivo como .dev.vars para el desarrollo local (no se versiona).
+# En producción los mismos nombres se cargan como secretos del proyecto de Pages.
+PANEL_USUARIO="Admin"
+PANEL_PASSWORD="CongresoC13SS2026!"
+SESSION_SECRET="cadena-larga-y-aleatoria-solo-para-firmar-cookies"

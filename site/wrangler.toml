@@ -1,0 +1,11 @@
+name = "ciess-riuss-congreso"
+compatibility_date = "2026-09-01"
+pages_build_output_dir = "public"
+
+# La base de datos se crea una sola vez con:
+#   npx wrangler d1 create ciess-riuss-congreso
+# y el identificador que devuelve se copia en database_id.
+[[d1_databases]]
+binding = "DB"
+database_name = "ciess-riuss-congreso"
+database_id = "PENDIENTE-COPIAR-DE-WRANGLER-D1-CREATE"

@@ -1,0 +1,17 @@
+{
+  "name": "ciess-riuss-congreso",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cuestionario final y panel del instructor sobre Cloudflare Pages Functions y D1",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "deploy": "wrangler pages deploy",
+    "db:crear": "wrangler d1 create ciess-riuss-congreso",
+    "db:local": "wrangler d1 execute ciess-riuss-congreso --local --file=schema.sql",
+    "db:remoto": "wrangler d1 execute ciess-riuss-congreso --remote --file=schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.130.0"
+  }
+}
