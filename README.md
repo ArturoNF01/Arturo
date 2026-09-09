@@ -139,6 +139,7 @@ tocar el código ni volver a desplegar.
 | Nombre, sede y fechas del congreso | Panel → Cupos y configuración | CIESS, Ciudad de México · 3, 4 y 5 de junio de 2026 |
 | Límites de semblanza, resumen y fotografía | Panel → Cupos y configuración | 60 palabras · 2 000 caracteres · 10 MB |
 | Cupos, fecha límite, agenda y correo de contacto | Panel → Cupos y configuración | 300 presenciales · en línea sin límite |
+| Video de fondo del login y del formulario | Panel → Cupos y configuración | Video institucional del congreso, al 15 % |
 | Ejes temáticos | Panel → Contenido del sitio | 6 ejes propuestos, en los tres idiomas |
 | Preguntas frecuentes | Panel → Contenido del sitio | 20 preguntas, en los tres idiomas |
 | Aviso de privacidad | Panel → Contenido del sitio (superadmin) | 10 apartados conforme a LFPDPPP, LGPD y RGPD |

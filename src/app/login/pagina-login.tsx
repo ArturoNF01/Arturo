@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { BotonTema, SelectorIdioma } from '@/componentes/controles';
 import { useApp } from '@/componentes/proveedores';
 import { crearClienteNavegador } from '@/lib/supabase/cliente';
+import { VideoFondo } from '@/componentes/video-fondo';
 
 export function PaginaLogin({ urlVideo }: { urlVideo: string }) {
   const { t } = useApp();
@@ -64,23 +65,7 @@ export function PaginaLogin({ urlVideo }: { urlVideo: string }) {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-ciess-950">
-      {/* Video institucional del congreso al 15 % de opacidad */}
-      <video
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-15"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        aria-hidden
-      >
-        <source src={urlVideo} type="video/mp4" />
-      </video>
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(ellipse at center, rgba(8,15,24,0.35), rgba(8,15,24,0.9))' }}
-        aria-hidden
-      />
+      <VideoFondo url={urlVideo} variante="oscuro" />
 
       <header className="relative z-10 flex items-center justify-end gap-2 p-4">
         <SelectorIdioma compacto />

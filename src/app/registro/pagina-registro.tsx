@@ -5,6 +5,7 @@ import { FormularioRegistro } from '@/componentes/formulario-registro';
 import { useApp } from '@/componentes/proveedores';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
+import { VideoFondo } from '@/componentes/video-fondo';
 
 export function PaginaRegistro({
   configuracion,
@@ -19,6 +20,7 @@ export function PaginaRegistro({
 
   return (
     <>
+      <VideoFondo url={configuracion.url_video_login} />
       <Encabezado />
       <main>
         <section className="mx-auto max-w-3xl px-4 pb-8 pt-10 sm:px-6">

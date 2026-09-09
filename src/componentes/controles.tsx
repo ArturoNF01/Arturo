@@ -95,7 +95,7 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
             <Link
               key={e.href}
               href={e.href}
-              className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
+              className="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
             >
               {e.texto}
             </Link>
@@ -106,7 +106,7 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
           <SelectorIdioma compacto />
           <BotonTema />
           {variante === 'publico' && (
-            <Link href="/login" className="boton-secundario hidden sm:inline-flex">
+            <Link href="/login" className="boton-secundario hidden whitespace-nowrap sm:inline-flex">
               {t.nav.login}
             </Link>
           )}

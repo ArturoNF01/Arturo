@@ -27,6 +27,7 @@ export function PanelCupos({
     registro_abierto: configuracion.registro_abierto,
     fecha_limite_registro: configuracion.fecha_limite_registro,
     url_agenda: configuracion.url_agenda,
+    url_video_login: configuracion.url_video_login,
     correo_contacto: configuracion.correo_contacto,
   });
   const [mensaje, setMensaje] = useState('');
@@ -53,6 +54,7 @@ export function PanelCupos({
         registro_abierto: valores.registro_abierto,
         fecha_limite_registro: valores.fecha_limite_registro,
         url_agenda: valores.url_agenda,
+        url_video_login: valores.url_video_login,
         correo_contacto: valores.correo_contacto,
         congreso_nombre: datos.nombre,
         congreso_nombre_corto: datos.nombre_corto,
@@ -225,6 +227,18 @@ export function PanelCupos({
               value={valores.url_agenda}
               onChange={(e) => setValores({ ...valores, url_agenda: e.target.value })}
             />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="etiqueta">Video de fondo (login y formulario)</span>
+            <input
+              type="url" className="campo"
+              value={valores.url_video_login}
+              onChange={(e) => setValores({ ...valores, url_video_login: e.target.value })}
+            />
+            <span className="ayuda">
+              Se muestra al 15 % de opacidad. Quien haya pedido menos movimiento en su sistema
+              ve sólo el fondo, sin descargar el video. Dejar vacío para quitarlo.
+            </span>
           </label>
         </div>
 
