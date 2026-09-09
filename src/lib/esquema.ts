@@ -207,4 +207,16 @@ export const esquemaConfiguracion = z.object({
   limite_semblanza_caracteres: z.number().int().min(50).max(5000).optional(),
   limite_resumen_caracteres: z.number().int().min(100).max(20000).optional(),
   foto_megabytes_maximo: z.number().int().min(1).max(50).optional(),
+
+  // Recordatorios antes del congreso
+  recordatorios: z
+    .array(
+      z.object({
+        clave: z.string().trim().min(1).max(40),
+        dias_antes: z.number().int().min(0).max(365),
+        activo: z.boolean(),
+      }),
+    )
+    .max(12)
+    .optional(),
 });

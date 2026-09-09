@@ -24,6 +24,9 @@ convocado por el **CIESS** y la **CISS**.
   cada registro, filtros dinámicos, exportación en CSV, Excel y JSON, consola SQL
   de sólo lectura, heatmap de actividad, proyección por regresión lineal simple,
   mapa geográfico, gestión de cupos y plantillas, y registro de auditoría.
+- **Dictamen de ponencias** por el comité científico, con comentarios que viajan
+  en el correo a la persona autora y en su idioma.
+- **Recordatorios automáticos** 30, 7 y 1 día antes del congreso.
 - **Roles**: superadministrador, organizador, científico de datos y lector.
 - **Cumplimiento normativo**: aviso de privacidad y consentimiento conforme a la
   LFPDPPP (México), la LGPD (Brasil) y el RGPD (Unión Europea).
@@ -44,6 +47,8 @@ npm run dev
    - `supabase/migrations/0002_plantillas_y_sql_lectura.sql`
    - `supabase/migrations/0003_contenido_editable.sql`
    - `supabase/migrations/0004_estados_y_lista_espera.sql`
+   - `supabase/migrations/0005_dictamen_ponencias.sql`
+   - `supabase/migrations/0006_recordatorios.sql`
 3. Copiar a `.env.local` la URL del proyecto, la clave anónima y la clave de
    servicio (`SUPABASE_SERVICE_ROLE_KEY`, sólo del lado del servidor).
 4. Crear las cuentas del panel en **Authentication → Users** y darles de alta en
@@ -84,6 +89,18 @@ lugar de fallar.
 1. Entrar a [vercel.com/new](https://vercel.com/new) e importar `ArturoNF01/Arturo`.
 2. Vercel detecta Next.js solo: no hay que tocar la configuración de compilación.
 3. **Deploy.** En un par de minutos hay una URL pública.
+
+### 5. Recordatorios automáticos
+
+`vercel.json` deja programado el envío diario a las 14:00 UTC (8:00 en Ciudad de
+México). Para que funcione hay que definir `CRON_SECRET` en las variables de
+entorno de Vercel con una cadena larga al azar: el cron se autentica con ella y,
+sin ella, el endpoint responde 503 en lugar de escribir a nadie. El panel avisa
+en *Cupos y configuración* cuando falta.
+
+Desde esa misma pantalla se ajusta la antelación de cada recordatorio, se
+desactivan y se puede disparar uno a mano. Cada envío queda asentado, así que
+repetirlo no vuelve a escribir a quien ya lo recibió.
 
 Para activar el panel, añadir después en *Settings → Environment Variables* las
 mismas claves de `.env.example` y volver a desplegar. Conviene fijar
@@ -154,6 +171,19 @@ guiones/                  Sembrado de datos de demostración
   o *cancelado*. Sólo se ofrecen las transiciones que tienen sentido, y cada
   cambio puede avisar al participante por correo en su idioma con la plantilla
   correspondiente. Todo queda asentado en la auditoría.
+
+- **Dictamen de ponencias**: en **Panel → Dictamen de ponencias** aparecen sólo
+  los registros que traen propuesta, en orden de llegada y con el resumen a la
+  vista. Cada propuesta puede quedar *sin dictamen*, *en revisión*, *aceptada*,
+  *aceptada con cambios* o *no aceptada*; las dos últimas exigen comentarios,
+  que son lo que la persona autora recibe por correo. El dictamen es
+  independiente del registro: no aceptar una ponencia no cancela la
+  inscripción.
+- **Recordatorios**: un cron diario envía el recordatorio que corresponde al día
+  —30, 7 o 1 día antes, ajustable desde el panel— a quien tenga el registro
+  vigente. La ventana admite un día de retraso para que una ejecución fallida no
+  se pierda, y cada envío queda asentado, de modo que nadie recibe dos veces el
+  mismo aviso.
 
 ## Todo el contenido se edita desde el panel
 

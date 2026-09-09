@@ -10,13 +10,17 @@ import { interpolar } from '@/i18n';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import type { DatosCongreso } from '@/lib/contenido';
 import { CampoMultilingue } from './campo-multilingue';
+import { SeccionRecordatorios } from './recordatorios';
+import type { EstadoRecordatorios } from '@/lib/servidor/recordatorios';
 
 export function PanelCupos({
   configuracion,
   congreso,
+  recordatorios,
 }: {
   configuracion: ConfiguracionPublica;
   congreso: DatosCongreso;
+  recordatorios: EstadoRecordatorios;
 }) {
   const { t } = useApp();
   const router = useRouter();
@@ -266,6 +270,7 @@ export function PanelCupos({
       </div>
 
       <ListaEspera configuracion={configuracion} />
+      <SeccionRecordatorios estado={recordatorios} />
       <EstadoSincronizacion />
     </div>
   );
