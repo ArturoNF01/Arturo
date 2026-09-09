@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from './proveedores';
@@ -74,6 +74,14 @@ export function FormularioRegistro({
   const [indicePaso, setIndicePaso] = useState(0);
   const [enviando, setEnviando] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState('');
+  // Señuelo: un campo que ninguna persona ve. Si llega lleno, quien envió el
+  // formulario fue un programa.
+  const [senuelo, setSenuelo] = useState('');
+  const abiertoEn = useRef<number | null>(null);
+  // El reloj se toma al montar, no durante el render, que debe ser puro.
+  useEffect(() => {
+    abiertoEn.current ??= Date.now();
+  }, []);
 
   const perfil = perfilPorClave(valores.perfil as string);
   const modalidad = valores.modalidad as Modalidad;
@@ -150,7 +158,14 @@ export function FormularioRegistro({
     setEnviando(true);
     setErrorGeneral('');
     try {
-      const cuerpo = { ...valores, idioma };
+      const cuerpo = {
+        ...valores,
+        idioma,
+        // Señuelo y momento de apertura: el servidor los usa para distinguir a
+        // una persona de un programa. Se descartan antes de guardar.
+        sitio_web: senuelo,
+        abierto_en: abiertoEn.current,
+      };
       const respuesta = await fetch(
         registroExistente ? `/api/registros/${registroExistente.id}` : '/api/registros',
         {
@@ -184,6 +199,21 @@ export function FormularioRegistro({
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-16 sm:px-6">
+      {/* Señuelo. Fuera de la pantalla y fuera del recorrido del teclado y de
+          los lectores de pantalla: nadie que se registre lo encuentra. */}
+      <div aria-hidden className="pointer-events-none absolute left-[-9999px] h-px w-px overflow-hidden">
+        <label htmlFor="sitio_web">Sitio web</label>
+        <input
+          id="sitio_web"
+          name="sitio_web"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={senuelo}
+          onChange={(e) => setSenuelo(e.target.value)}
+        />
+      </div>
+
       <ProgresoPasos pasos={pasos} indice={indicePaso} onIr={setIndicePaso} />
 
       <div className="tarjeta mt-6 p-5 sm:p-8">

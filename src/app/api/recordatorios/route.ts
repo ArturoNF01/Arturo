@@ -8,6 +8,7 @@ import {
   debeRecibirRecordatorio, normalizarRecordatorios, recordatorioDeHoy, diasHasta,
 } from '@/lib/recordatorios';
 import { traducir } from '@/lib/contenido';
+import { purgarIntentos } from '@/lib/servidor/antiabuso';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -23,6 +24,10 @@ const LOTE = 200;
  * no vuelve a escribir a nadie.
  */
 async function ejecutar(forzarClave?: string) {
+  // El cron diario aprovecha para borrar los intentos de registro que ya no
+  // cuentan para el límite por dirección de origen.
+  await purgarIntentos();
+
   const [configuracion, congreso] = await Promise.all([leerConfiguracion(), leerDatosCongreso()]);
 
   const admin = crearClienteAdmin();

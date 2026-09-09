@@ -382,6 +382,12 @@ export const pt: Diccionario = {
       dictaminadaPor: 'Avaliado por',
       guardado: 'Avaliação registrada',
     },
+    antiabuso: {
+      titulo: 'Proteção do formulário',
+      ayuda: 'Um e-mail só pode ter um cadastro vigente; cancelar o libera. Também há um limite de cadastros aceitos em 24 h a partir da mesma rede.',
+      limite: 'Cadastros por rede em 24 h',
+      limiteAyuda: 'Folgado de propósito: uma instituição inteira pode se inscrever da mesma rede. Quem atingir o limite vê um aviso com o e-mail de contato.',
+    },
     recordatorios: {
       titulo: 'Lembretes',
       ayuda: 'Enviados automaticamente, uma vez por dia, a quem tem inscrição vigente. Ninguém recebe o mesmo lembrete duas vezes.',

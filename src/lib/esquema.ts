@@ -208,6 +208,9 @@ export const esquemaConfiguracion = z.object({
   limite_resumen_caracteres: z.number().int().min(100).max(20000).optional(),
   foto_megabytes_maximo: z.number().int().min(1).max(50).optional(),
 
+  // Protección del formulario público
+  limite_registros_por_huella: z.number().int().min(1).max(1000).optional(),
+
   // Recordatorios antes del congreso
   recordatorios: z
     .array(

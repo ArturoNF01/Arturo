@@ -7,6 +7,10 @@ import { sincronizarRegistro } from '@/lib/servidor/sheets';
 import { enviarCorreoRegistro } from '@/lib/servidor/correo';
 import { CONFIG } from '@/lib/config';
 import { leerDatosCongreso } from '@/lib/servidor/contenido';
+import { dentroDelLimite, normalizarCorreo, revisarEnvio } from '@/lib/antiabuso';
+import {
+  asentarIntento, contarIntentos, huellaDePeticion, limitePorHuella, registroVigenteCon,
+} from '@/lib/servidor/antiabuso';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +20,18 @@ export async function POST(peticion: NextRequest) {
     cuerpo = await peticion.json();
   } catch {
     return NextResponse.json({ mensaje: 'Cuerpo de la petición no válido.' }, { status: 400 });
+  }
+
+  // Señuelo y tiempo de llenado: se leen del cuerpo crudo, porque el esquema
+  // descarta lo que no son campos del registro.
+  const sobre = (cuerpo ?? {}) as Record<string, unknown>;
+  const envio = revisarEnvio({ senuelo: sobre.sitio_web, abiertoEn: sobre.abierto_en });
+  if (!envio.aceptado) {
+    // A quien lo dispara un programa no se le explica qué lo delató.
+    return NextResponse.json(
+      { mensaje: 'No fue posible procesar el envío. Vuelva a intentarlo.' },
+      { status: envio.codigo ?? 422 },
+    );
   }
 
   const congreso = await leerDatosCongreso();
@@ -44,6 +60,32 @@ export async function POST(peticion: NextRequest) {
     return NextResponse.json({ mensaje: 'Perfil de participación no válido.' }, { status: 422 });
   }
 
+  // Un correo, un registro vigente. Cancelar libera el correo.
+  const correoNormalizado = normalizarCorreo(datos.correo);
+  const folioExistente = await registroVigenteCon(correoNormalizado);
+  if (folioExistente) {
+    return NextResponse.json(
+      {
+        mensaje: 'Ya existe un registro con este correo.',
+        errores: { correo: 'Ya existe un registro con este correo.' },
+        folio: folioExistente,
+      },
+      { status: 409 },
+    );
+  }
+
+  // Límite por dirección de origen, holgado y editable desde el panel.
+  const huella = huellaDePeticion(peticion);
+  const [intentos, limite] = await Promise.all([contarIntentos(huella), limitePorHuella()]);
+  if (!dentroDelLimite(intentos, limite)) {
+    return NextResponse.json(
+      {
+        mensaje: `Se alcanzó el número de registros permitidos desde esta red en 24 horas. Escriba a ${configuracion.correo_contacto} para inscribir a más personas.`,
+      },
+      { status: 429 },
+    );
+  }
+
   // Cupos: si la modalidad presencial está llena, el registro pasa a lista de espera.
   let estado: 'en_proceso' | 'lista_espera' = 'en_proceso';
   if (
@@ -68,9 +110,21 @@ export async function POST(peticion: NextRequest) {
     .single();
 
   if (error || !registro) {
+    // El índice único del correo puede saltar si dos envíos entran a la vez.
+    if (error?.code === '23505') {
+      return NextResponse.json(
+        {
+          mensaje: 'Ya existe un registro con este correo.',
+          errores: { correo: 'Ya existe un registro con este correo.' },
+        },
+        { status: 409 },
+      );
+    }
     console.error('Alta de registro fallida:', error);
     return NextResponse.json({ mensaje: 'No fue posible guardar el registro.' }, { status: 500 });
   }
+
+  await asentarIntento(huella);
 
   // Sincronización con Sheets y acuse por correo: no bloquean la respuesta al
   // participante, pero sí se asientan en la fila para poder reintentarlos.

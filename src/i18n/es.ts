@@ -450,6 +450,12 @@ export const es = {
       dictaminadaPor: 'Dictaminada por',
       guardado: 'Dictamen registrado',
     },
+    antiabuso: {
+      titulo: 'Protección del formulario',
+      ayuda: 'Un correo sólo puede tener un registro vigente; cancelar lo libera. Además se limita cuántos registros se aceptan en 24 h desde una misma red.',
+      limite: 'Registros por red en 24 h',
+      limiteAyuda: 'Holgado a propósito: una institución entera puede inscribirse desde la misma red. Quien lo alcance ve un aviso con el correo de contacto.',
+    },
     recordatorios: {
       titulo: 'Recordatorios',
       ayuda: 'Se envían solos, una vez al día, a quien tenga el registro vigente. Nadie recibe dos veces el mismo recordatorio.',

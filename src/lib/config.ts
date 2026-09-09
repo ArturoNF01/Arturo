@@ -26,7 +26,7 @@ export const CONFIG = {
     'https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf',
 
   zonaHoraria: 'America/Mexico_City',
-  versionAvisoPrivacidad: '1.0',
+  versionAvisoPrivacidad: '1.1',
 } as const;
 
 export const CORREO_CONTACTO = process.env.CORREO_CONTACTO ?? 'congreso@ciess.org';

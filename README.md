@@ -26,6 +26,9 @@ convocado por el **CIESS** y la **CISS**.
   mapa geográfico, gestión de cupos y plantillas, y registro de auditoría.
 - **Dictamen de ponencias** por el comité científico, con comentarios que viajan
   en el correo a la persona autora y en su idioma.
+- **Formulario protegido**: un correo, un registro vigente; señuelo y tiempo
+  mínimo de llenado contra envíos automatizados; y un tope de registros por red
+  en 24 horas, editable desde el panel.
 - **Recordatorios automáticos** 30, 7 y 1 día antes del congreso.
 - **Roles**: superadministrador, organizador, científico de datos y lector.
 - **Cumplimiento normativo**: aviso de privacidad y consentimiento conforme a la
@@ -49,6 +52,7 @@ npm run dev
    - `supabase/migrations/0004_estados_y_lista_espera.sql`
    - `supabase/migrations/0005_dictamen_ponencias.sql`
    - `supabase/migrations/0006_recordatorios.sql`
+   - `supabase/migrations/0007_antiabuso.sql`
 3. Copiar a `.env.local` la URL del proyecto, la clave anónima y la clave de
    servicio (`SUPABASE_SERVICE_ROLE_KEY`, sólo del lado del servidor).
 4. Crear las cuentas del panel en **Authentication → Users** y darles de alta en
@@ -179,6 +183,14 @@ guiones/                  Sembrado de datos de demostración
   que son lo que la persona autora recibe por correo. El dictamen es
   independiente del registro: no aceptar una ponencia no cancela la
   inscripción.
+- **Protección del formulario público**: un correo sólo puede tener un registro
+  vigente —cancelar lo libera—, un campo señuelo invisible y un tiempo mínimo de
+  llenado descartan los envíos automatizados, y un tope por red (20 en 24 h por
+  omisión, editable en **Cupos y configuración**) frena los flujos masivos sin
+  estorbar a una institución que inscribe a todo su equipo desde la misma red.
+  De la dirección de origen se guarda sólo una huella irreversible, durante 24
+  horas, y así se declara en el aviso de privacidad. Conviene fijar
+  `ANTIABUSO_SAL` en el despliegue.
 - **Recordatorios**: un cron diario envía el recordatorio que corresponde al día
   —30, 7 o 1 día antes, ajustable desde el panel— a quien tenga el registro
   vigente. La ventana admite un día de retraso para que una ejecución fallida no

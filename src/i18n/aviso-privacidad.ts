@@ -10,7 +10,7 @@ export interface BloqueAviso { titulo: string; parrafos: string[] }
 export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloques: BloqueAviso[] }> = {
   es: {
     titulo: 'Aviso de privacidad y consentimiento de tratamiento de datos personales',
-    actualizado: 'Última actualización: versión 1.0',
+    actualizado: 'Última actualización: versión 1.1',
     bloques: [
       {
         titulo: '1. Responsable del tratamiento',
@@ -68,6 +68,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
         titulo: '8. Seguridad y medidas técnicas',
         parrafos: [
           'La información se transmite mediante conexiones cifradas (TLS) y se almacena con controles de acceso por rol. El acceso al panel de control está restringido a personas autorizadas del comité organizador y del equipo de análisis, y toda modificación o eliminación de registros queda asentada en un registro de auditoría que documenta quién y cuándo la realizó.',
+          'Para evitar envíos automatizados, el formulario guarda una huella criptográfica irreversible derivada de la dirección de origen —nunca la dirección misma— durante un máximo de 24 horas, y la elimina después. Esa huella no se asocia a su registro ni se usa para ninguna otra finalidad.',
         ],
       },
       {
@@ -86,7 +87,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
   },
   en: {
     titulo: 'Privacy notice and consent to the processing of personal data',
-    actualizado: 'Last updated: version 1.0',
+    actualizado: 'Last updated: version 1.1',
     bloques: [
       {
         titulo: '1. Data controller',
@@ -144,6 +145,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
         titulo: '8. Security and technical measures',
         parrafos: [
           'Information is transmitted over encrypted connections (TLS) and stored with role-based access controls. Access to the control panel is restricted to authorised members of the organising committee and the analytics team, and every modification or deletion of records is written to an audit log documenting who performed it and when.',
+          'To prevent automated submissions, the form stores an irreversible cryptographic fingerprint derived from the originating address — never the address itself — for at most 24 hours, and deletes it afterwards. This fingerprint is not linked to your registration and is not used for any other purpose.',
         ],
       },
       {
@@ -162,7 +164,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
   },
   pt: {
     titulo: 'Aviso de privacidade e consentimento para o tratamento de dados pessoais',
-    actualizado: 'Última atualização: versão 1.0',
+    actualizado: 'Última atualização: versão 1.1',
     bloques: [
       {
         titulo: '1. Controlador dos dados',
@@ -220,6 +222,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
         titulo: '8. Segurança e medidas técnicas',
         parrafos: [
           'As informações são transmitidas por conexões criptografadas (TLS) e armazenadas com controle de acesso por perfil. O acesso ao painel de controle é restrito a pessoas autorizadas do comitê organizador e da equipe de análise, e toda alteração ou exclusão de registros fica assentada em um log de auditoria que documenta quem a realizou e quando.',
+          'Para evitar envios automatizados, o formulário guarda uma impressão criptográfica irreversível derivada do endereço de origem — nunca o endereço em si — por no máximo 24 horas, e a exclui em seguida. Essa impressão não é associada ao seu cadastro nem usada para qualquer outra finalidade.',
         ],
       },
       {

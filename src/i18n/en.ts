@@ -381,6 +381,12 @@ export const en: Diccionario = {
       dictaminadaPor: 'Reviewed by',
       guardado: 'Review recorded',
     },
+    antiabuso: {
+      titulo: 'Form protection',
+      ayuda: 'An e-mail address can hold only one active registration; cancelling frees it. There is also a cap on how many registrations are accepted in 24 h from the same network.',
+      limite: 'Registrations per network in 24 h',
+      limiteAyuda: 'Deliberately generous: a whole institution may register from the same network. Anyone who hits it sees a notice with the contact address.',
+    },
     recordatorios: {
       titulo: 'Reminders',
       ayuda: 'Sent automatically, once a day, to everyone with an active registration. Nobody receives the same reminder twice.',

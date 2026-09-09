@@ -17,10 +17,12 @@ export function PanelCupos({
   configuracion,
   congreso,
   recordatorios,
+  limiteHuella,
 }: {
   configuracion: ConfiguracionPublica;
   congreso: DatosCongreso;
   recordatorios: EstadoRecordatorios;
+  limiteHuella: number;
 }) {
   const { t } = useApp();
   const router = useRouter();
@@ -34,6 +36,7 @@ export function PanelCupos({
     url_agenda: configuracion.url_agenda,
     url_video_login: configuracion.url_video_login,
     correo_contacto: configuracion.correo_contacto,
+    limite_registros_por_huella: limiteHuella.toString(),
   });
   const [mensaje, setMensaje] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -61,6 +64,7 @@ export function PanelCupos({
         url_agenda: valores.url_agenda,
         url_video_login: valores.url_video_login,
         correo_contacto: valores.correo_contacto,
+        limite_registros_por_huella: Number(valores.limite_registros_por_huella),
         congreso_nombre: datos.nombre,
         congreso_nombre_corto: datos.nombre_corto,
         congreso_sede: datos.sede,
@@ -268,6 +272,27 @@ export function PanelCupos({
         </div>
         <p className="ayuda mt-3">{t.panel.agenda.provisional}</p>
       </div>
+
+      <section className="tarjeta mt-5 max-w-3xl p-5">
+        <h2 className="text-sm font-semibold">{t.panel.antiabuso.titulo}</h2>
+        <p className="ayuda !mt-1 mb-4">{t.panel.antiabuso.ayuda}</p>
+        <label className="block">
+          <span className="etiqueta">{t.panel.antiabuso.limite}</span>
+          <input
+            type="number" min={1} max={1000} className="campo max-w-[10rem]"
+            value={valores.limite_registros_por_huella}
+            onChange={(e) =>
+              setValores({ ...valores, limite_registros_por_huella: e.target.value })
+            }
+          />
+          <span className="ayuda">{t.panel.antiabuso.limiteAyuda}</span>
+        </label>
+        <div className="mt-5">
+          <button type="button" className="boton-primario !py-2 !text-sm" onClick={guardar} disabled={guardando}>
+            {t.acciones.guardar}
+          </button>
+        </div>
+      </section>
 
       <ListaEspera configuracion={configuracion} />
       <SeccionRecordatorios estado={recordatorios} />
