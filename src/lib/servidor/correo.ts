@@ -5,20 +5,14 @@ import { CONFIG, urlSitio } from '@/lib/config';
 import { etiquetaDe } from '@/lib/opciones';
 import { obtenerDiccionario } from '@/i18n';
 import { nombrePerfil } from '@/lib/perfiles';
+import { aplicarPlantilla, envolverHtml } from '@/lib/plantillas';
 
 export interface DatosCorreo {
   clave: 'confirmacion_registro' | 'edicion_registro' | 'lista_espera';
-  registro: Record<string, any>;
+  registro: Record<string, unknown>;
   correoContacto: string;
   fechaLimite: string;
   urlAgenda: string;
-}
-
-/** Sustituye las variables {{clave}} de una plantilla. */
-export function aplicarPlantilla(plantilla: string, variables: Record<string, string>): string {
-  return plantilla.replace(/\{\{\s*(\w+)\s*\}\}/g, (coincidencia, clave: string) =>
-    clave in variables ? variables[clave] : coincidencia,
-  );
 }
 
 export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> {
@@ -34,7 +28,7 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
     modalidad,
     correo: String(r.correo ?? ''),
     institucion: String(r.institucion ?? ''),
-    rol: etiquetaDe('roles', r.modalidad_participacion, t),
+    rol: etiquetaDe('roles', r.modalidad_participacion as string | null, t),
     fecha: new Date().toLocaleDateString(t.meta.codigo, { timeZone: CONFIG.zonaHoraria }),
     fecha_limite: datos.fechaLimite,
     url_edicion: `${urlSitio()}/confirmacion/${r.id}?token=${r.token_edicion}`,
@@ -83,27 +77,4 @@ export async function enviarCorreoRegistro(datos: DatosCorreo): Promise<{ enviad
   }
 }
 
-/** Envoltura HTML sobria y compatible con clientes de correo. */
-export function envolverHtml(contenido: string, titulo: string): string {
-  return `<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${titulo}</title></head>
-<body style="margin:0;padding:0;background:#f2f5f9;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f5f9;padding:24px 12px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-             style="max-width:620px;background:#ffffff;border-radius:12px;overflow:hidden;
-                    font-family:Arial,Helvetica,sans-serif;color:#16283d;">
-        <tr><td style="background:#2e5c8a;padding:20px 28px;color:#ffffff;font-size:14px;font-weight:bold;">
-          ${titulo}
-        </td></tr>
-        <tr><td style="padding:28px;font-size:15px;line-height:1.6;">${contenido}</td></tr>
-        <tr><td style="padding:18px 28px;background:#f2f5f9;font-size:12px;color:#5b6b7f;">
-          CIESS · Centro Interamericano de Estudios de Seguridad Social<br>
-          CISS · Conferencia Interamericana de Seguridad Social
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-}
+export { aplicarPlantilla, envolverHtml };

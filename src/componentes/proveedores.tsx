@@ -1,10 +1,11 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 import {
   IDIOMAS, IDIOMA_POR_DEFECTO, diccionarios, esIdiomaValido, interpolar,
   type Diccionario, type Idioma,
 } from '@/i18n';
+import { useAlmacenLocal } from './usar-almacen-local';
 
 type Tema = 'oscuro' | 'claro';
 
@@ -35,32 +36,34 @@ export function Proveedores({
   children: React.ReactNode;
   idiomaInicial?: Idioma;
 }) {
-  const [idioma, setIdioma] = useState<Idioma>(idiomaInicial ?? IDIOMA_POR_DEFECTO);
-  const [tema, setTema] = useState<Tema>('oscuro'); // modo oscuro activo por defecto
+  const respaldoIdioma = idiomaInicial ?? IDIOMA_POR_DEFECTO;
+  const [idiomaGuardado, guardarIdioma] = useAlmacenLocal(
+    CLAVE_IDIOMA,
+    respaldoIdioma,
+    idiomaDelNavegador,
+  );
+  // Modo oscuro activo por defecto.
+  const [temaGuardado, guardarTema] = useAlmacenLocal(CLAVE_TEMA, 'oscuro');
 
-  useEffect(() => {
-    const guardado = localStorage.getItem(CLAVE_IDIOMA);
-    setIdioma(esIdiomaValido(guardado) ? guardado : idiomaInicial ?? idiomaDelNavegador());
-    const temaGuardado = localStorage.getItem(CLAVE_TEMA);
-    if (temaGuardado === 'claro' || temaGuardado === 'oscuro') setTema(temaGuardado);
-  }, [idiomaInicial]);
+  const idioma: Idioma = esIdiomaValido(idiomaGuardado) ? idiomaGuardado : respaldoIdioma;
+  const tema: Tema = temaGuardado === 'claro' ? 'claro' : 'oscuro';
 
+  // Estos efectos sólo escriben en sistemas externos (documento y cookie),
+  // que es justo para lo que sirven.
   useEffect(() => {
     document.documentElement.lang = diccionarios[idioma].meta.codigo;
     document.cookie = `${CLAVE_IDIOMA}=${idioma}; path=/; max-age=31536000; samesite=lax`;
-    localStorage.setItem(CLAVE_IDIOMA, idioma);
   }, [idioma]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', tema === 'oscuro');
     document.documentElement.style.colorScheme = tema === 'oscuro' ? 'dark' : 'light';
-    localStorage.setItem(CLAVE_TEMA, tema);
   }, [tema]);
 
-  const cambiarIdioma = useCallback((nuevo: Idioma) => setIdioma(nuevo), []);
+  const cambiarIdioma = useCallback((nuevo: Idioma) => guardarIdioma(nuevo), [guardarIdioma]);
   const alternarTema = useCallback(
-    () => setTema((actual) => (actual === 'oscuro' ? 'claro' : 'oscuro')),
-    [],
+    () => guardarTema(tema === 'oscuro' ? 'claro' : 'oscuro'),
+    [guardarTema, tema],
   );
 
   const valor = useMemo<ContextoApp>(

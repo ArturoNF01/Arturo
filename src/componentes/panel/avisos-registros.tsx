@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/componentes/proveedores';
 import { crearClienteNavegador } from '@/lib/supabase/cliente';
 import { nombrePerfil } from '@/lib/perfiles';
+import { useAlmacenLocal } from '@/componentes/usar-almacen-local';
 
 interface Aviso {
   id: string;
@@ -25,14 +26,16 @@ export function AvisosRegistros() {
   const { t, tt } = useApp();
   const router = useRouter();
   const [avisos, setAvisos] = useState<Aviso[]>([]);
-  const [silenciado, setSilenciado] = useState(false);
-  const silenciadoRef = useRef(false);
+  const [preferencia, guardarPreferencia] = useAlmacenLocal(CLAVE_SILENCIO, 'activo');
+  const silenciado = preferencia === 'silenciado';
+
+  // La suscripción en tiempo real se crea una sola vez; la referencia deja que
+  // su callback consulte el estado vigente sin volver a suscribirse.
+  const silenciadoRef = useRef(silenciado);
 
   useEffect(() => {
-    const guardado = localStorage.getItem(CLAVE_SILENCIO) === 'silenciado';
-    setSilenciado(guardado);
-    silenciadoRef.current = guardado;
-  }, []);
+    silenciadoRef.current = silenciado;
+  }, [silenciado]);
 
   useEffect(() => {
     const supabase = crearClienteNavegador();
@@ -81,9 +84,7 @@ export function AvisosRegistros() {
 
   function alternarSilencio() {
     const nuevo = !silenciado;
-    setSilenciado(nuevo);
-    silenciadoRef.current = nuevo;
-    localStorage.setItem(CLAVE_SILENCIO, nuevo ? 'silenciado' : 'activo');
+    guardarPreferencia(nuevo ? 'silenciado' : 'activo');
     if (!nuevo && typeof Notification !== 'undefined' && Notification.permission === 'default') {
       void Notification.requestPermission();
     }

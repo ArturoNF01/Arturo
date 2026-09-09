@@ -3,7 +3,7 @@ import { crearClienteAdmin } from '@/lib/supabase/admin';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
 import { esquemaEdicion } from '@/lib/esquema';
 import { perfilPorClave } from '@/lib/perfiles';
-import { leerConfiguracion } from '@/lib/servidor/configuracion';
+import { dentroDelPlazo, leerConfiguracion } from '@/lib/servidor/configuracion';
 import { resincronizarRegistro } from '@/lib/servidor/sheets';
 import { enviarCorreoRegistro } from '@/lib/servidor/correo';
 
@@ -58,9 +58,8 @@ export async function PUT(peticion: NextRequest, contexto: { params: Promise<{ i
   if (!autorizado) return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
 
   const configuracion = await leerConfiguracion();
-  const limite = new Date(`${configuracion.fecha_limite_registro}T23:59:59`);
   const esPanel = !token || token !== previo.token_edicion;
-  if (!esPanel && Date.now() > limite.getTime()) {
+  if (!esPanel && !dentroDelPlazo(configuracion.fecha_limite_registro)) {
     return NextResponse.json(
       { mensaje: 'El periodo de edición está cerrado.' },
       { status: 409 },

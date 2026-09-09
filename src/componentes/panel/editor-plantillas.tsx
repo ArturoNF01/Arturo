@@ -23,7 +23,10 @@ export function EditorPlantillas() {
   const [plantillas, setPlantillas] = useState<Plantilla[]>([]);
   const [clave, setClave] = useState('confirmacion_registro');
   const [idiomaPlantilla, setIdiomaPlantilla] = useState<Idioma>('es');
-  const [borrador, setBorrador] = useState<{ asunto: string; cuerpo_html: string } | null>(null);
+  // Los cambios sin guardar viven en un mapa por plantilla e idioma, de modo
+  // que cambiar de pestaña no los descarte ni haya que sincronizar estado
+  // derivado con un efecto.
+  const [edicion, setEdicion] = useState<Record<string, { asunto: string; cuerpo_html: string }>>({});
   const [mensaje, setMensaje] = useState('');
   const [guardando, setGuardando] = useState(false);
 
@@ -33,11 +36,16 @@ export function EditorPlantillas() {
       .then((datos: Plantilla[]) => setPlantillas(datos));
   }, []);
 
+  const llave = `${clave}|${idiomaPlantilla}`;
   const actual = plantillas.find((p) => p.clave === clave && p.idioma === idiomaPlantilla);
+  const borrador =
+    edicion[llave] ?? (actual ? { asunto: actual.asunto, cuerpo_html: actual.cuerpo_html } : null);
+  const sinGuardar =
+    Boolean(actual && edicion[llave]) &&
+    (edicion[llave].asunto !== actual!.asunto || edicion[llave].cuerpo_html !== actual!.cuerpo_html);
 
-  useEffect(() => {
-    if (actual) setBorrador({ asunto: actual.asunto, cuerpo_html: actual.cuerpo_html });
-  }, [actual]);
+  const setBorrador = (valores: { asunto: string; cuerpo_html: string }) =>
+    setEdicion((previa) => ({ ...previa, [llave]: valores }));
 
   async function guardar() {
     if (!borrador) return;
@@ -56,6 +64,11 @@ export function EditorPlantillas() {
           p.clave === clave && p.idioma === idiomaPlantilla ? { ...p, ...borrador } : p,
         ),
       );
+      setEdicion((previa) => {
+        const resto = { ...previa };
+        delete resto[llave];
+        return resto;
+      });
     }
     setGuardando(false);
   }
@@ -151,6 +164,7 @@ export function EditorPlantillas() {
               <button type="button" className="boton-secundario !py-2 !text-xs" onClick={enviarPrueba} disabled={guardando}>
                 {t.panel.plantillas.enviarPrueba}
               </button>
+              {sinGuardar && <span className="text-xs text-amber-500">Cambios sin guardar</span>}
               {mensaje && <span className="text-xs tenue">{mensaje}</span>}
             </div>
           </div>

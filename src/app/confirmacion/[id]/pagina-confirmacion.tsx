@@ -12,16 +12,16 @@ export function PaginaConfirmacion({
   registro,
   configuracion,
   token,
+  puedeEditar,
 }: {
   registro: Record<string, unknown>;
   configuracion: ConfiguracionPublica;
   token: string;
+  /** Se decide en el servidor: la hora del navegador no es de fiar. */
+  puedeEditar: boolean;
 }) {
   const { t } = useApp();
   const [editando, setEditando] = useState(false);
-
-  const puedeEditar =
-    Date.now() <= new Date(`${configuracion.fecha_limite_registro}T23:59:59`).getTime();
 
   if (editando) {
     return (

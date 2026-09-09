@@ -56,6 +56,9 @@ export function useRegistros() {
   }, [supabase]);
 
   useEffect(() => {
+  // La regla no distingue la frontera asíncrona: `cargar` es una promesa y su
+  // setState ocurre después del efecto, no de forma síncrona dentro de él.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
     void cargar();
   }, [cargar]);
 

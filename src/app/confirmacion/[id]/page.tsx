@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { crearClienteAdmin } from '@/lib/supabase/admin';
-import { leerConfiguracion } from '@/lib/servidor/configuracion';
+import { dentroDelPlazo, leerConfiguracion } from '@/lib/servidor/configuracion';
 import { PaginaConfirmacion } from './pagina-confirmacion';
 
 export const dynamic = 'force-dynamic';
@@ -24,5 +24,14 @@ export default async function Confirmacion({
   if (!registro || !token || token !== registro.token_edicion) notFound();
 
   const configuracion = await leerConfiguracion();
-  return <PaginaConfirmacion registro={registro} configuracion={configuracion} token={token} />;
+  const puedeEditar = dentroDelPlazo(configuracion.fecha_limite_registro);
+
+  return (
+    <PaginaConfirmacion
+      registro={registro}
+      configuracion={configuracion}
+      token={token}
+      puedeEditar={puedeEditar}
+    />
+  );
 }

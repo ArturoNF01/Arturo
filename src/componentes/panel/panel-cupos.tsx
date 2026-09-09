@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/componentes/proveedores';
 import { Ficha } from './tarjeta-grafica';
+import { EstadoSincronizacion } from './sincronizacion';
 import { interpolar } from '@/i18n';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 
@@ -143,6 +144,8 @@ export function PanelCupos({ configuracion }: { configuracion: ConfiguracionPubl
         </div>
         <p className="ayuda mt-3">{t.panel.agenda.provisional}</p>
       </div>
+
+      <EstadoSincronizacion />
     </div>
   );
 }

@@ -4,6 +4,8 @@ import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
+import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+import type { TooltipContentProps } from 'recharts';
 import { Leyenda } from './tarjeta-grafica';
 import { colorSerie, pasoSecuencial, type Conteo } from '@/lib/graficas';
 
@@ -27,12 +29,12 @@ function Emergente({ activo, contenido }: { activo?: boolean; contenido?: { nomb
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const emergenteRecharts = (props: any) => (
+/** Adaptador entre la carga útil de Recharts y la etiqueta emergente propia. */
+const emergenteRecharts = ({ active, payload }: TooltipContentProps<ValueType, NameType>) => (
   <Emergente
-    activo={props.active}
-    contenido={(props.payload ?? []).map((p: any) => ({
-      nombre: p.name ?? p.payload?.nombre ?? '',
+    activo={active}
+    contenido={(payload ?? []).map((p) => ({
+      nombre: String(p.name ?? (p.payload as { nombre?: string } | undefined)?.nombre ?? ''),
       valor: Number(p.value).toLocaleString(),
     }))}
   />

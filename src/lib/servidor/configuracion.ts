@@ -61,6 +61,12 @@ export async function leerConfiguracion(): Promise<ConfiguracionPublica> {
   }
 }
 
+/** ¿Sigue abierto el plazo de edición del registro? La hora la pone el servidor. */
+export function dentroDelPlazo(fechaLimite: string): boolean {
+  const limite = new Date(`${fechaLimite}T23:59:59`).getTime();
+  return Number.isFinite(limite) ? Date.now() <= limite : true;
+}
+
 export function lugaresPresencialesRestantes(config: ConfiguracionPublica): number | null {
   if (config.cupos_presenciales === null) return null;
   return Math.max(0, config.cupos_presenciales - config.ocupado_presencial);

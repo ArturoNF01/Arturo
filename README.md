@@ -76,6 +76,24 @@ Las pestañas normalizadas se crean solas en el primer registro.
 Importar el repositorio, cargar las mismas variables de entorno y fijar
 `NEXT_PUBLIC_URL_SITIO` al dominio definitivo.
 
+## Comandos
+
+```bash
+npm run dev         # servidor de desarrollo
+npm run build       # compilación de producción
+npm run typecheck   # comprobación de tipos
+npm run lint        # análisis estático
+npm test            # pruebas de la lógica crítica
+npm run sembrar 120 # 120 registros de demostración en Supabase
+npm run sembrar -- --borrar   # elimina sólo los registros de demostración
+```
+
+Las pruebas cubren la normalización hacia las pestañas de Google Sheets
+(incluido el cálculo de la hora de presentación del vehículo), la validación
+del formulario, la correspondencia entre valores canónicos y etiquetas en los
+tres idiomas, la normalización de países del mapa, la regresión de la
+proyección y la sustitución de variables en las plantillas de correo.
+
 ## Estructura
 
 ```
@@ -86,7 +104,20 @@ src/
   lib/                    Configuración, perfiles, validación, opciones canónicas,
                           paleta de gráficas y clientes de Supabase y Google
 supabase/migrations/      Esquema, políticas RLS, auditoría y plantillas
+pruebas/                  Pruebas de la lógica crítica
+guiones/                  Sembrado de datos de demostración
 ```
+
+## Operación
+
+- **Si falla la réplica en Google Sheets**, el registro no se pierde: queda en
+  Supabase con el error asentado y aparece en **Panel → Cupos y configuración →
+  Réplica en Google Sheets**, desde donde se puede reintentar uno a uno o en
+  lote.
+- **Auditoría**: toda alta, modificación o baja de registros, plantillas y
+  configuración queda asentada con usuario, rol, fecha y campos modificados.
+- **Cupos**: al llenarse los lugares presenciales, los registros nuevos pasan
+  automáticamente a lista de espera y reciben la plantilla correspondiente.
 
 ## Pendiente de confirmar con el comité organizador
 
