@@ -84,15 +84,23 @@ jobs:
   # Los recordatorios se envían una vez al día. El trabajo llama al mismo
   # endpoint que se puede disparar a mano desde el panel.
   - name: recordatorios
-    kind: CRON
-    schedule: '0 14 * * *'
+    kind: SCHEDULED
+    schedule:
+      # A las ocho de la mañana en Ciudad de México. Se declara en la zona
+      # horaria del congreso y no en UTC: así dice lo que quiere decir, sin
+      # que haya que traducirlo mentalmente.
+      cron: '0 8 * * *'
+      time_zone: America/Mexico_City
     environment_slug: node-js
     instance_size_slug: apps-s-1vcpu-0.5gb
     github:
       repo: ORGANIZACION/REPOSITORIO
       branch: master
+    # El trabajo sólo hace una llamada: compilar la aplicación entera para eso
+    # gastaría minutos de construcción en balde.
+    build_command: echo "sin compilación"
     run_command: >-
-      curl -fsS -X GET
+      curl -fsS --max-time 300
       -H "Authorization: Bearer $CRON_SECRET"
       "$APP_URL/api/recordatorios"
     envs:

@@ -143,8 +143,8 @@ Si la aplicación se creó desde `.do/app.yaml`, el trabajo programado ya está.
 Si se configuró a mano:
 
 1. En la aplicación: **Create → Job**, del mismo repositorio.
-2. Tipo **Scheduled**, con la expresión `0 14 * * *` (14:00 UTC, 8:00 en Ciudad
-   de México).
+2. Tipo **Scheduled**, con la expresión `0 8 * * *` y zona horaria
+   `America/Mexico_City`.
 3. Comando:
 
    ```bash

@@ -4,12 +4,41 @@ import { useId } from 'react';
 
 export interface Opcion { valor: string; etiqueta: string }
 
+/**
+ * Qué le dice cada campo al navegador para que ofrezca autocompletar.
+ *
+ * En un formulario público —y sobre todo en un teléfono— esto es la
+ * diferencia entre teclear el nombre, el correo y la institución a mano o
+ * aceptarlos de una vez. Sólo están los campos que el navegador sabe
+ * rellenar; el resto no lleva nada, que es lo correcto: un `autocomplete`
+ * inventado hace que ofrezca datos equivocados.
+ */
+const AUTOCOMPLETADO: Record<string, string> = {
+  nombres: 'given-name',
+  apellidos: 'family-name',
+  nombre_constancia: 'name',
+  correo: 'email',
+  telefono_whatsapp: 'tel',
+  institucion: 'organization',
+  cargo: 'organization-title',
+  pais_residencia: 'country-name',
+  entidad_federativa: 'address-level1',
+  ciudad_residencia: 'address-level2',
+  nacionalidad: 'country-name',
+};
+
 interface BaseProps {
   etiqueta: string;
   ayuda?: string;
   error?: string;
   requerido?: boolean;
   className?: string;
+  /**
+   * Clave del campo en el registro. Se usa como `name` —para que el navegador
+   * y los gestores de contraseñas lo reconozcan— y para decidir qué
+   * autocompletar ofrecer.
+   */
+  campo?: string;
 }
 
 function Envoltura({
@@ -42,6 +71,8 @@ export function CampoTexto({
     <Envoltura {...base} id={id}>
       <input
         id={id}
+        name={base.campo}
+        autoComplete={base.campo ? AUTOCOMPLETADO[base.campo] : undefined}
         type={tipo}
         className="campo"
         value={valor}
