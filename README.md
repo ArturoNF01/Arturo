@@ -70,7 +70,7 @@ npm run dev
 
 ```sql
 insert into usuarios_panel (id, correo, nombre, rol)
-values ('<uuid del usuario de auth>', 'persona@cissbienestar.org', 'Nombre', 'superadmin');
+values ('<uuid del usuario de auth>', 'persona@ciess.org', 'Nombre', 'superadmin');
 ```
 
 ### 2. Google Sheets y Drive

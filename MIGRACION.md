@@ -1,7 +1,7 @@
 # Arranque en las cuentas institucionales
 
-Plan para rehacer el despliegue en las cuentas del CIESS, con el dominio de
-correo `cissbienestar.org`. Escrito para retomarlo en frío.
+Plan para rehacer el despliegue en las cuentas institucionales del CIESS, con
+el dominio `ciess.org`. Escrito para retomarlo en frío.
 
 ---
 
@@ -70,21 +70,21 @@ Cada paso depende del anterior. En un rato tranquilo son unos 45 minutos.
 
    ```sql
    insert into usuarios_panel (id, correo, nombre, rol)
-   values ('<uuid>', '<persona>@cissbienestar.org', '<Nombre>', 'superadmin');
+   values ('<uuid>', '<persona>@ciess.org', '<Nombre>', 'superadmin');
    ```
 
-### 2.4 · Correo, con el dominio nuevo
+### 2.4 · Correo
 
 1. Cuenta de Resend con el correo institucional.
-2. **Domains → Add domain** → `cissbienestar.org`.
+2. **Domains → Add domain** → `ciess.org`.
 3. Resend da tres registros DNS (DKIM, SPF y uno de seguimiento). Se añaden
    donde esté el DNS del dominio. La verificación tarda de minutos a unas horas.
 4. En Vercel:
 
    ```
    RESEND_API_KEY
-   CORREO_REMITENTE=Congreso CIESS <congreso@cissbienestar.org>
-   CORREO_CONTACTO=congreso@cissbienestar.org
+   CORREO_REMITENTE=Congreso CIESS <congreso@ciess.org>
+   CORREO_CONTACTO=congreso@ciess.org
    ```
 
    El correo de contacto también se edita desde el panel, así que se puede
@@ -106,7 +106,7 @@ Con la cuenta institucional de Google:
 ### 2.6 · Dominio del sitio
 
 Decidir bajo qué dirección vivirá el registro: por ejemplo
-`congreso.cissbienestar.org`. En Vercel, *Settings → Domains → Add*, y crear en
+`congreso.ciess.org`. En Vercel, *Settings → Domains → Add*, y crear en
 el DNS el registro que pida. Si el DNS está en Cloudflare, la nube va en
 **gris** (*DNS only*): en naranja choca con el certificado de Vercel.
 
@@ -145,8 +145,8 @@ Nada de esto bloquea el despliegue —el sistema arranca con propuestas y todo s
 edita después desde el panel— pero conviene traerlo resuelto:
 
 1. **Organización y nombre del repositorio** en GitHub.
-2. **Dirección del sitio**: ¿`congreso.cissbienestar.org`? ¿otra?
-3. **Buzón del congreso**: ¿`congreso@cissbienestar.org`? Es el que verán los
+2. **Dirección del sitio**: ¿`congreso.ciess.org`? ¿otra?
+3. **Buzón del congreso**: ¿`congreso@ciess.org`? Es el que verán los
    participantes como remitente y como contacto.
 4. **Quién entra al panel** y con qué rol: superadministrador, organizador,
    científico de datos, lector.
