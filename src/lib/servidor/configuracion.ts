@@ -21,7 +21,7 @@ const RESPALDO: ConfiguracionPublica = {
   fecha_limite_registro: CONFIG.fechaLimiteRegistro,
   url_agenda: CONFIG.urlConvocatoria,
   url_video_login: CONFIG.urlVideoLogin,
-  correo_contacto: process.env.CORREO_CONTACTO ?? 'congreso@ciss-bienestar.org',
+  correo_contacto: process.env.CORREO_CONTACTO ?? 'congreso@cissbienestar.org',
   ocupado_presencial: 0,
   ocupado_en_linea: 0,
 };

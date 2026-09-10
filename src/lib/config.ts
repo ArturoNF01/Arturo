@@ -29,7 +29,7 @@ export const CONFIG = {
   versionAvisoPrivacidad: '1.1',
 } as const;
 
-export const CORREO_CONTACTO = process.env.CORREO_CONTACTO ?? 'congreso@ciss-bienestar.org';
+export const CORREO_CONTACTO = process.env.CORREO_CONTACTO ?? 'congreso@cissbienestar.org';
 
 export function urlSitio(): string {
   return (
