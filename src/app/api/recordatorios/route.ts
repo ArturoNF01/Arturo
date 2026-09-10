@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { consultar, unaFila } from '@/lib/bd/conexion';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
 import { leerDatosCongreso } from '@/lib/servidor/contenido';
 import { enviarCorreoRegistro } from '@/lib/servidor/correo';
@@ -18,8 +18,8 @@ const LOTE = 200;
 /**
  * Envía el recordatorio que corresponde al día de hoy.
  *
- * Lo dispara el cron de Vercel, que se autentica con CRON_SECRET; también
- * puede lanzarlo a mano un organizador desde el panel. Cada envío queda
+ * Lo dispara el trabajo programado, que se autentica con CRON_SECRET;
+ * también puede lanzarlo a mano un organizador desde el panel. Cada envío queda
  * asentado con una restricción única, así que repetir la llamada el mismo día
  * no vuelve a escribir a nadie.
  */
@@ -30,12 +30,9 @@ async function ejecutar(forzarClave?: string) {
 
   const [configuracion, congreso] = await Promise.all([leerConfiguracion(), leerDatosCongreso()]);
 
-  const admin = crearClienteAdmin();
-  const { data: filaConfig } = await admin
-    .from('configuracion')
-    .select('valor')
-    .eq('clave', 'recordatorios')
-    .maybeSingle();
+  const filaConfig = await unaFila<{ valor: unknown }>(
+    `select valor from configuracion where clave = 'recordatorios'`,
+  );
 
   const recordatorios = normalizarRecordatorios(filaConfig?.valor);
   const recordatorio = forzarClave
@@ -46,21 +43,25 @@ async function ejecutar(forzarClave?: string) {
     return { enviados: 0, omitidos: 0, fallidos: 0, recordatorio: null as string | null };
   }
 
-  const { data: registros } = await admin
-    .from('registros')
-    .select('*')
-    .not('correo', 'is', null)
-    .limit(2000);
+  // Quien ya lo recibió queda fuera en la propia consulta: con miles de
+  // registros, filtrarlo en memoria obligaría a traérselos todos.
+  const pendientes = await consultar<Record<string, unknown> & { id: string; estado: string }>(
+    `select r.* from registros r
+      where r.correo is not null
+        and not exists (
+          select 1 from envios_recordatorio e
+           where e.registro_id = r.id and e.clave = $1
+        )
+      order by r.creado_en
+      limit $2`,
+    [recordatorio.clave, LOTE],
+  ).then((filas) => filas.filter((r) => debeRecibirRecordatorio(r.estado)));
 
-  const { data: yaEnviados } = await admin
-    .from('envios_recordatorio')
-    .select('registro_id')
-    .eq('clave', recordatorio.clave);
-
-  const enviadosPrevios = new Set((yaEnviados ?? []).map((f) => f.registro_id as string));
-  const pendientes = (registros ?? [])
-    .filter((r) => debeRecibirRecordatorio(r.estado) && !enviadosPrevios.has(r.id))
-    .slice(0, LOTE);
+  const yaEnviados = await unaFila<{ total: string }>(
+    'select count(*)::text as total from envios_recordatorio where clave = $1',
+    [recordatorio.clave],
+  );
+  const enviadosPrevios = Number(yaEnviados?.total ?? 0);
 
   const diasFaltantes = diasHasta(congreso.fecha_inicio) ?? recordatorio.dias_antes;
   let enviados = 0;
@@ -84,11 +85,12 @@ async function ejecutar(forzarClave?: string) {
 
     // El envío se asienta pase lo que pase: así un fallo puntual queda
     // registrado y no se reintenta en bucle contra la misma dirección.
-    await admin.from('envios_recordatorio').insert({
-      registro_id: registro.id,
-      clave: recordatorio.clave,
-      error: resultado.enviado ? null : resultado.error ?? 'Error desconocido',
-    });
+    await consultar(
+      `insert into envios_recordatorio (registro_id, clave, error)
+       values ($1, $2, $3)
+       on conflict (registro_id, clave) do nothing`,
+      [registro.id, recordatorio.clave, resultado.enviado ? null : resultado.error ?? 'Error desconocido'],
+    );
 
     if (resultado.enviado) enviados += 1;
     else fallidos += 1;
@@ -97,12 +99,12 @@ async function ejecutar(forzarClave?: string) {
   return {
     enviados,
     fallidos,
-    omitidos: enviadosPrevios.size,
+    omitidos: enviadosPrevios,
     recordatorio: recordatorio.clave,
   };
 }
 
-/** Punto de entrada del cron de Vercel. */
+/** Punto de entrada del trabajo programado. */
 export async function GET(peticion: NextRequest) {
   const secreto = process.env.CRON_SECRET;
   const cabecera = peticion.headers.get('authorization');

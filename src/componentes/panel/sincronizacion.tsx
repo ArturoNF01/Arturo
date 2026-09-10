@@ -14,7 +14,7 @@ interface Pendiente {
  * Estado de la réplica en Google Sheets. Si un registro no llegó a la hoja
  * —por una caída de la API o por credenciales aún sin configurar— queda
  * listado aquí y se puede reintentar sin perder el dato, que ya está en
- * Supabase.
+ * la base.
  */
 export function EstadoSincronizacion() {
   const { t, idioma } = useApp();
@@ -69,7 +69,7 @@ export function EstadoSincronizacion() {
         <div>
           <h2 className="text-sm font-semibold">Réplica en Google Sheets</h2>
           <p className="ayuda !mt-1">
-            Cada registro se guarda primero en Supabase y después se replica en el libro de
+            Cada registro se guarda primero en la base y después se replica en el libro de
             seguimiento. Lo que no haya llegado a la hoja aparece aquí y se puede reintentar.
           </p>
         </div>

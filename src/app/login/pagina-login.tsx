@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BotonTema, SelectorIdioma } from '@/componentes/controles';
 import { useApp } from '@/componentes/proveedores';
-import { crearClienteNavegador } from '@/lib/supabase/cliente';
 import { VideoFondo } from '@/componentes/video-fondo';
 
 export function PaginaLogin({
@@ -13,7 +12,7 @@ export function PaginaLogin({
   configurado,
 }: {
   urlVideo: string;
-  /** Sin credenciales de Supabase el acceso al panel no puede funcionar. */
+  /** Sin base de datos el acceso al panel no puede funcionar. */
   configurado: boolean;
 }) {
   const { t } = useApp();
@@ -32,12 +31,12 @@ export function PaginaLogin({
     setAviso('');
     setCargando(true);
     try {
-      const supabase = crearClienteNavegador();
-      const { error: fallo } = await supabase.auth.signInWithPassword({
-        email: correo.trim(),
-        password: contrasena,
+      const respuesta = await fetch('/api/acceso', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modo: 'clave', correo: correo.trim(), clave: contrasena }),
       });
-      if (fallo) {
+      if (!respuesta.ok) {
         setError(t.login.error);
         return;
       }
@@ -58,13 +57,15 @@ export function PaginaLogin({
     setError('');
     setCargando(true);
     try {
-      const supabase = crearClienteNavegador();
-      const { error: fallo } = await supabase.auth.signInWithOtp({
-        email: correo.trim(),
-        options: { emailRedirectTo: `${window.location.origin}/panel` },
+      const respuesta = await fetch('/api/acceso', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modo: 'enlace', correo: correo.trim() }),
       });
-      if (fallo) setError(t.login.error);
-      else setAviso(t.login.enlaceEnviado);
+      // La respuesta es la misma exista o no la cuenta: decir «ese correo no
+      // está dado de alta» delataría quién forma parte del comité.
+      if (respuesta.ok) setAviso(t.login.enlaceEnviado);
+      else setError(t.login.error);
     } finally {
       setCargando(false);
     }
@@ -93,7 +94,7 @@ export function PaginaLogin({
             <div className="mb-4 rounded-xl border border-amber-400/40 bg-amber-500/15 p-4 text-sm text-amber-100">
               <p className="font-semibold">El panel todavía no está conectado.</p>
               <p className="mt-1 text-amber-100/85">
-                Falta configurar Supabase en las variables de entorno del despliegue. El formulario
+                Falta configurar la base de datos en las variables de entorno del despliegue. El formulario
                 de registro funciona con normalidad mientras tanto.
               </p>
               <p className="mt-2">

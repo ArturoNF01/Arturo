@@ -1,27 +1,22 @@
 /**
- * Genera registros de demostración en Supabase para poder evaluar el panel
- * antes de abrir el formulario al público.
+ * Genera registros de demostración para poder evaluar el panel antes de abrir
+ * el formulario al público.
  *
- *   npx tsx guiones/sembrar-demostracion.ts 120
- *   npx tsx guiones/sembrar-demostracion.ts --borrar
+ *   npm run sembrar 120
+ *   npm run sembrar -- --borrar
  *
  * Los registros llevan el folio marcado con DEMO, de modo que `--borrar` los
  * elimina sin tocar ningún registro real.
  */
-import { createClient } from '@supabase/supabase-js';
+import { armarInsercion, consultar } from '../src/lib/bd/conexion';
 import { PERFILES } from '../src/lib/perfiles';
 import { OPCIONES } from '../src/lib/opciones';
 import { EJES_POR_DEFECTO } from '../src/lib/contenido';
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const CLAVE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!URL || !CLAVE) {
-  console.error('Faltan NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY.');
+if (!process.env.DATABASE_URL) {
+  console.error('Falta DATABASE_URL.');
   process.exit(1);
 }
-
-const supabase = createClient(URL, CLAVE, { auth: { persistSession: false } });
 
 const PAISES: [string, string, string][] = [
   ['México', 'Ciudad de México', 'nacional'],
@@ -115,22 +110,21 @@ function construir(indice: number) {
 }
 
 async function borrar() {
-  const { error, count } = await supabase
-    .from('registros')
-    .delete({ count: 'exact' })
-    .like('folio', 'REG-DEMO-%');
-  if (error) throw error;
-  console.log(`Eliminados ${count ?? 0} registros de demostración.`);
+  const borrados = await consultar<{ id: string }>(
+    `delete from registros where folio like 'REG-DEMO-%' returning id`,
+  );
+  console.log(`Eliminados ${borrados.length} registros de demostración.`);
 }
 
 async function sembrar(cantidad: number) {
   const filas = Array.from({ length: cantidad }, (_, i) => construir(i + 1));
-  // En lotes para no exceder el tamaño de petición de PostgREST.
-  for (let inicio = 0; inicio < filas.length; inicio += 50) {
-    const lote = filas.slice(inicio, inicio + 50);
-    const { error } = await supabase.from('registros').insert(lote);
-    if (error) throw error;
-    console.log(`Insertados ${Math.min(inicio + lote.length, filas.length)} de ${filas.length}…`);
+
+  for (const [indice, fila] of filas.entries()) {
+    const { columnas, marcadores, valores } = armarInsercion(fila as Record<string, unknown>);
+    await consultar(`insert into registros (${columnas}) values (${marcadores})`, valores);
+    if ((indice + 1) % 25 === 0 || indice + 1 === filas.length) {
+      console.log(`Insertados ${indice + 1} de ${filas.length}…`);
+    }
   }
   console.log(`Listo: ${cantidad} registros de demostración.`);
 }

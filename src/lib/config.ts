@@ -1,7 +1,7 @@
 /**
  * Constantes que no cambian desde el panel. El nombre, la sede, las fechas,
  * los ejes temáticos, los límites del formulario, los cupos y los textos de
- * las páginas públicas viven en Supabase y se editan en
+ * las páginas públicas viven en la base y se editan en
  * Panel → Cupos y configuración y Panel → Contenido del sitio.
  */
 export const CONFIG = {
@@ -26,14 +26,23 @@ export const CONFIG = {
     'https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf',
 
   zonaHoraria: 'America/Mexico_City',
-  versionAvisoPrivacidad: '1.1',
+  versionAvisoPrivacidad: '1.2',
 } as const;
 
-export const CORREO_CONTACTO = process.env.CORREO_CONTACTO ?? 'congreso@ciss-bienestar.org';
+export const CORREO_CONTACTO = process.env.CORREO_CONTACTO ?? 'congreso@ciess.org';
 
+/** Dominio definitivo del congreso. */
+export const DOMINIO = 'congreso-dss.ciess.org';
+
+/**
+ * Dirección pública del sitio, para los enlaces que viajan en los correos.
+ *
+ * Manda la variable de entorno: en App Platform apunta al dominio definitivo
+ * y en las revisiones previas a la dirección temporal que asigna la
+ * plataforma. Sin ella se usa el dominio del congreso, salvo en desarrollo.
+ */
 export function urlSitio(): string {
-  return (
-    process.env.NEXT_PUBLIC_URL_SITIO ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-  );
+  if (process.env.NEXT_PUBLIC_URL_SITIO) return process.env.NEXT_PUBLIC_URL_SITIO;
+  if (process.env.NODE_ENV !== 'production') return 'http://localhost:3000';
+  return `https://${DOMINIO}`;
 }

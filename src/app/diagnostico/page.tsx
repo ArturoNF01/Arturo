@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { supabaseConfigurado } from '@/lib/supabase/admin';
+import { bdConfigurada } from '@/lib/bd/conexion';
 import { usuarioActual } from '@/lib/servidor/sesion';
 import { diagnosticar, type Estado, type Pieza } from '@/lib/servidor/diagnostico';
 
@@ -16,12 +16,12 @@ export const metadata: Metadata = {
  * Qué le falta a este despliegue.
  *
  * Es la única pantalla que tiene sentido ver *antes* de que el panel
- * funcione, así que mientras Supabase no esté conectado se muestra sin
+ * funcione, así que mientras la base no esté conectada se muestra sin
  * sesión: no revela nada que la página de acceso no diga ya. En cuanto hay
  * base de datos, exige sesión de superadministrador.
  */
 export default async function PaginaDiagnostico() {
-  if (supabaseConfigurado()) {
+  if (bdConfigurada()) {
     const usuario = await usuarioActual();
     if (!usuario) redirect('/login?destino=/diagnostico');
     if (usuario.rol !== 'superadmin') redirect('/panel');
@@ -76,11 +76,12 @@ export default async function PaginaDiagnostico() {
 
       {informe.piezas[0].estado !== 'falta' && (
         <section className="tarjeta mt-6 p-5">
-          <h2 className="text-sm font-semibold">Migraciones aplicadas</h2>
+          <h2 className="text-sm font-semibold">Esquema de la base</h2>
           <p className="ayuda !mt-1 mb-4">
-            Cada una se reconoce por algo que crea. Si falta alguna, basta pegar{' '}
-            <code className="font-mono text-[12px]">supabase/todas-las-migraciones.sql</code> en el
-            editor SQL de Supabase: se puede ejecutar más de una vez sin romper nada.
+            Cada pieza se reconoce por la tabla o la vista que crea. Si falta alguna, basta
+            ejecutar{' '}
+            <code className="font-mono text-[12px]">basedatos/esquema.sql</code> contra la base:
+            se puede ejecutar más de una vez sin romper nada.
           </p>
           <ul className="space-y-1.5">
             {informe.migraciones.map((m) => (

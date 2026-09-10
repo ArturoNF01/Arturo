@@ -231,38 +231,38 @@ export function FormularioRegistro({
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.identificacion} ayuda={t.formulario.secciones.identificacionAyuda} />
             <div className="grid gap-5 sm:grid-cols-2">
-              <CampoTexto etiqueta={t.formulario.campos.apellidos} requerido valor={texto('apellidos')} onChange={(v) => fijar('apellidos', v)} error={errores.apellidos} />
-              <CampoTexto etiqueta={t.formulario.campos.nombres} requerido valor={texto('nombres')} onChange={(v) => fijar('nombres', v)} error={errores.nombres} />
+              <CampoTexto campo="apellidos" etiqueta={t.formulario.campos.apellidos} requerido valor={texto('apellidos')} onChange={(v) => fijar('apellidos', v)} error={errores.apellidos} />
+              <CampoTexto campo="nombres" etiqueta={t.formulario.campos.nombres} requerido valor={texto('nombres')} onChange={(v) => fijar('nombres', v)} error={errores.nombres} />
             </div>
             {visible('nombre_personificador') && (
-              <CampoTexto etiqueta={t.formulario.campos.nombrePersonificador} ayuda={t.formulario.campos.nombrePersonificadorAyuda} requerido valor={texto('nombre_personificador')} onChange={(v) => fijar('nombre_personificador', v)} error={errores.nombre_personificador} />
+              <CampoTexto campo="nombre_personificador" etiqueta={t.formulario.campos.nombrePersonificador} ayuda={t.formulario.campos.nombrePersonificadorAyuda} requerido valor={texto('nombre_personificador')} onChange={(v) => fijar('nombre_personificador', v)} error={errores.nombre_personificador} />
             )}
             {visible('nombre_constancia') && (
-              <CampoTexto etiqueta={t.formulario.campos.nombreConstancia} ayuda={t.formulario.campos.nombreConstanciaAyuda} valor={texto('nombre_constancia')} onChange={(v) => fijar('nombre_constancia', v)} />
+              <CampoTexto campo="nombre_constancia" etiqueta={t.formulario.campos.nombreConstancia} ayuda={t.formulario.campos.nombreConstanciaAyuda} valor={texto('nombre_constancia')} onChange={(v) => fijar('nombre_constancia', v)} />
             )}
             <CampoSeleccion etiqueta={t.formulario.campos.genero} opciones={opciones('genero', t)} valor={texto('genero')} onChange={(v) => fijar('genero', v)} />
             <div className="grid gap-5 sm:grid-cols-2">
-              <CampoTexto etiqueta={t.formulario.campos.correo} tipo="email" requerido valor={texto('correo')} onChange={(v) => fijar('correo', v)} error={errores.correo} />
-              <CampoTexto etiqueta={t.formulario.campos.telefono} ayuda={t.formulario.campos.telefonoAyuda} tipo="tel" valor={texto('telefono_whatsapp')} onChange={(v) => fijar('telefono_whatsapp', v)} />
+              <CampoTexto campo="correo" etiqueta={t.formulario.campos.correo} tipo="email" requerido valor={texto('correo')} onChange={(v) => fijar('correo', v)} error={errores.correo} />
+              <CampoTexto campo="telefono_whatsapp" etiqueta={t.formulario.campos.telefono} ayuda={t.formulario.campos.telefonoAyuda} tipo="tel" valor={texto('telefono_whatsapp')} onChange={(v) => fijar('telefono_whatsapp', v)} />
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
-              <CampoTexto etiqueta={t.formulario.campos.institucion} requerido valor={texto('institucion')} onChange={(v) => fijar('institucion', v)} error={errores.institucion} />
-              <CampoTexto etiqueta={t.formulario.campos.cargo} valor={texto('cargo')} onChange={(v) => fijar('cargo', v)} />
+              <CampoTexto campo="institucion" etiqueta={t.formulario.campos.institucion} requerido valor={texto('institucion')} onChange={(v) => fijar('institucion', v)} error={errores.institucion} />
+              <CampoTexto campo="cargo" etiqueta={t.formulario.campos.cargo} valor={texto('cargo')} onChange={(v) => fijar('cargo', v)} />
             </div>
             {visible('procedencia') && (
               <CampoOpcionUnica etiqueta={t.formulario.campos.procedencia} ayuda={t.formulario.campos.procedenciaAyuda} opciones={opciones('procedencia', t)} valor={texto('procedencia')} onChange={(v) => fijar('procedencia', v)} />
             )}
             <div className="grid gap-5 sm:grid-cols-3">
-              <CampoTexto etiqueta={t.formulario.campos.pais} requerido valor={texto('pais_residencia')} onChange={(v) => fijar('pais_residencia', v)} error={errores.pais_residencia} />
-              <CampoTexto etiqueta={t.formulario.campos.entidad} ayuda={t.formulario.campos.entidadAyuda} valor={texto('entidad_federativa')} onChange={(v) => fijar('entidad_federativa', v)} />
-              <CampoTexto etiqueta={t.formulario.campos.ciudad} valor={texto('ciudad_residencia')} onChange={(v) => fijar('ciudad_residencia', v)} />
+              <CampoTexto campo="pais_residencia" etiqueta={t.formulario.campos.pais} requerido valor={texto('pais_residencia')} onChange={(v) => fijar('pais_residencia', v)} error={errores.pais_residencia} />
+              <CampoTexto campo="entidad_federativa" etiqueta={t.formulario.campos.entidad} ayuda={t.formulario.campos.entidadAyuda} valor={texto('entidad_federativa')} onChange={(v) => fijar('entidad_federativa', v)} />
+              <CampoTexto campo="ciudad_residencia" etiqueta={t.formulario.campos.ciudad} valor={texto('ciudad_residencia')} onChange={(v) => fijar('ciudad_residencia', v)} />
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
               {visible('nacionalidad') && (
-                <CampoTexto etiqueta={t.formulario.campos.nacionalidad} ayuda={t.formulario.campos.nacionalidadAyuda} valor={texto('nacionalidad')} onChange={(v) => fijar('nacionalidad', v)} />
+                <CampoTexto campo="nacionalidad" etiqueta={t.formulario.campos.nacionalidad} ayuda={t.formulario.campos.nacionalidadAyuda} valor={texto('nacionalidad')} onChange={(v) => fijar('nacionalidad', v)} />
               )}
               {visible('orcid') && (
-                <CampoTexto etiqueta={t.formulario.campos.orcid} ayuda={t.formulario.campos.orcidAyuda} marcador="0000-0000-0000-0000" valor={texto('orcid')} onChange={(v) => fijar('orcid', v)} error={errores.orcid} />
+                <CampoTexto campo="orcid" etiqueta={t.formulario.campos.orcid} ayuda={t.formulario.campos.orcidAyuda} marcador="0000-0000-0000-0000" valor={texto('orcid')} onChange={(v) => fijar('orcid', v)} error={errores.orcid} />
               )}
             </div>
           </section>
@@ -273,8 +273,8 @@ export function FormularioRegistro({
             <Cabecera titulo={t.formulario.secciones.academico} />
             <CampoOpcionUnica etiqueta={t.formulario.campos.modalidadParticipacion} opciones={opciones('roles', t)} valor={texto('modalidad_participacion')} onChange={(v) => fijar('modalidad_participacion', v)} error={errores.modalidad_participacion} columnas={2} />
             <CampoSeleccion etiqueta={t.formulario.campos.ejeTematico} opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valor={texto('eje_tematico')} onChange={(v) => fijar('eje_tematico', v)} />
-            <CampoTexto etiqueta={t.formulario.campos.tituloPonencia} ayuda={t.formulario.campos.tituloPonenciaAyuda} valor={texto('titulo_ponencia')} onChange={(v) => fijar('titulo_ponencia', v)} />
-            <CampoParrafo
+            <CampoTexto campo="titulo_ponencia" etiqueta={t.formulario.campos.tituloPonencia} ayuda={t.formulario.campos.tituloPonenciaAyuda} valor={texto('titulo_ponencia')} onChange={(v) => fijar('titulo_ponencia', v)} />
+            <CampoParrafo campo="resumen_ponencia"
               etiqueta={t.formulario.campos.resumen}
               ayuda={interpolar(t.formulario.campos.resumenAyuda, { max: congreso.limite_resumen_caracteres })}
               filas={7}
@@ -287,15 +287,15 @@ export function FormularioRegistro({
               onChange={(v) => fijar('resumen_ponencia', v)}
               error={errores.resumen_ponencia}
             />
-            <CampoTexto etiqueta={t.formulario.campos.palabrasClave} valor={texto('palabras_clave')} onChange={(v) => fijar('palabras_clave', v)} />
-            <CampoParrafo etiqueta={t.formulario.campos.coautoria} ayuda={t.formulario.campos.coautoriaAyuda} filas={3} valor={texto('coautoria')} onChange={(v) => fijar('coautoria', v)} />
+            <CampoTexto campo="palabras_clave" etiqueta={t.formulario.campos.palabrasClave} valor={texto('palabras_clave')} onChange={(v) => fijar('palabras_clave', v)} />
+            <CampoParrafo campo="coautoria" etiqueta={t.formulario.campos.coautoria} ayuda={t.formulario.campos.coautoriaAyuda} filas={3} valor={texto('coautoria')} onChange={(v) => fijar('coautoria', v)} />
           </section>
         )}
 
         {pasoActual === 'semblanza' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.semblanza} ayuda={t.formulario.secciones.semblanzaAyuda} />
-            <CampoParrafo
+            <CampoParrafo campo="semblanza"
               etiqueta={t.formulario.campos.semblanza}
               ayuda={interpolar(t.formulario.campos.semblanzaAyuda, {
                 palabras: congreso.limite_semblanza_palabras,
@@ -314,7 +314,7 @@ export function FormularioRegistro({
               onChange={(v) => fijar('semblanza', v)}
               error={errores.semblanza}
             />
-            <CampoTexto etiqueta={t.formulario.campos.lineaInvestigacion} valor={texto('linea_investigacion')} onChange={(v) => fijar('linea_investigacion', v)} />
+            <CampoTexto campo="linea_investigacion" etiqueta={t.formulario.campos.lineaInvestigacion} valor={texto('linea_investigacion')} onChange={(v) => fijar('linea_investigacion', v)} />
             <SubidaFotografia
               megabytesMaximo={congreso.foto_megabytes_maximo}
               valorUrl={texto('foto_url')}
@@ -329,8 +329,8 @@ export function FormularioRegistro({
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.documentacion} ayuda={t.formulario.secciones.documentacionAyuda} />
             <CampoCasillas etiqueta={t.formulario.campos.documentacionSolicitada} opciones={opciones('documentacion', t)} valores={lista('documentacion_solicitada')} onChange={(v) => fijar('documentacion_solicitada', v)} />
-            <CampoTexto etiqueta={t.formulario.campos.nombrePasaporte} ayuda={t.formulario.campos.nombrePasaporteAyuda} valor={texto('nombre_pasaporte')} onChange={(v) => fijar('nombre_pasaporte', v)} />
-            <CampoParrafo etiqueta={t.formulario.campos.destinatarioOficio} ayuda={t.formulario.campos.destinatarioOficioAyuda} filas={3} valor={texto('destinatario_oficio')} onChange={(v) => fijar('destinatario_oficio', v)} />
+            <CampoTexto campo="nombre_pasaporte" etiqueta={t.formulario.campos.nombrePasaporte} ayuda={t.formulario.campos.nombrePasaporteAyuda} valor={texto('nombre_pasaporte')} onChange={(v) => fijar('nombre_pasaporte', v)} />
+            <CampoParrafo campo="destinatario_oficio" etiqueta={t.formulario.campos.destinatarioOficio} ayuda={t.formulario.campos.destinatarioOficioAyuda} filas={3} valor={texto('destinatario_oficio')} onChange={(v) => fijar('destinatario_oficio', v)} />
           </section>
         )}
 
@@ -338,7 +338,7 @@ export function FormularioRegistro({
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.sala} />
             <CampoCasillas etiqueta={t.formulario.campos.requerimientosTecnicos} opciones={opciones('tecnicos', t)} valores={lista('requerimientos_tecnicos')} onChange={(v) => fijar('requerimientos_tecnicos', v)} />
-            <CampoParrafo etiqueta={t.formulario.campos.accesibilidad} ayuda={t.formulario.campos.accesibilidadAyuda} filas={3} valor={texto('requerimientos_accesibilidad')} onChange={(v) => fijar('requerimientos_accesibilidad', v)} />
+            <CampoParrafo campo="requerimientos_accesibilidad" etiqueta={t.formulario.campos.accesibilidad} ayuda={t.formulario.campos.accesibilidadAyuda} filas={3} valor={texto('requerimientos_accesibilidad')} onChange={(v) => fijar('requerimientos_accesibilidad', v)} />
           </section>
         )}
 
@@ -357,11 +357,11 @@ export function FormularioRegistro({
             {valores.requiere_alojamiento && (
               <>
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <CampoTexto etiqueta={t.formulario.campos.fechaEntradaHotel} tipo="date" valor={texto('fecha_entrada_hotel')} onChange={(v) => fijar('fecha_entrada_hotel', v)} />
-                  <CampoTexto etiqueta={t.formulario.campos.fechaSalidaHotel} tipo="date" valor={texto('fecha_salida_hotel')} onChange={(v) => fijar('fecha_salida_hotel', v)} error={errores.fecha_salida_hotel} />
+                  <CampoTexto campo="fecha_entrada_hotel" etiqueta={t.formulario.campos.fechaEntradaHotel} tipo="date" valor={texto('fecha_entrada_hotel')} onChange={(v) => fijar('fecha_entrada_hotel', v)} />
+                  <CampoTexto campo="fecha_salida_hotel" etiqueta={t.formulario.campos.fechaSalidaHotel} tipo="date" valor={texto('fecha_salida_hotel')} onChange={(v) => fijar('fecha_salida_hotel', v)} error={errores.fecha_salida_hotel} />
                 </div>
                 <CampoSeleccion etiqueta={t.formulario.campos.tipoHabitacion} opciones={opciones('habitacion', t)} valor={texto('tipo_habitacion')} onChange={(v) => fijar('tipo_habitacion', v)} />
-                <CampoTexto etiqueta={t.formulario.campos.comparteCon} valor={texto('comparte_habitacion_con')} onChange={(v) => fijar('comparte_habitacion_con', v)} />
+                <CampoTexto campo="comparte_habitacion_con" etiqueta={t.formulario.campos.comparteCon} valor={texto('comparte_habitacion_con')} onChange={(v) => fijar('comparte_habitacion_con', v)} />
               </>
             )}
           </section>
@@ -375,22 +375,22 @@ export function FormularioRegistro({
               <>
                 <CampoOpcionUnica etiqueta={t.formulario.campos.medioArribo} ayuda={t.formulario.campos.medioArriboAyuda} opciones={opciones('medioArribo', t)} valor={texto('medio_arribo')} onChange={(v) => fijar('medio_arribo', v)} />
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <CampoTexto etiqueta={t.formulario.campos.ciudadOrigen} valor={texto('ciudad_origen')} onChange={(v) => fijar('ciudad_origen', v)} />
-                  <CampoTexto etiqueta={t.formulario.campos.terminalOrigen} valor={texto('terminal_origen')} onChange={(v) => fijar('terminal_origen', v)} />
+                  <CampoTexto campo="ciudad_origen" etiqueta={t.formulario.campos.ciudadOrigen} valor={texto('ciudad_origen')} onChange={(v) => fijar('ciudad_origen', v)} />
+                  <CampoTexto campo="terminal_origen" etiqueta={t.formulario.campos.terminalOrigen} valor={texto('terminal_origen')} onChange={(v) => fijar('terminal_origen', v)} />
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <CampoTexto etiqueta={t.formulario.campos.fechaLlegada} tipo="date" valor={texto('fecha_llegada')} onChange={(v) => fijar('fecha_llegada', v)} />
-                  <CampoTexto etiqueta={t.formulario.campos.horaLlegada} tipo="time" valor={texto('hora_llegada')} onChange={(v) => fijar('hora_llegada', v)} />
-                  <CampoTexto etiqueta={t.formulario.campos.aerolineaLlegada} valor={texto('aerolinea_llegada')} onChange={(v) => fijar('aerolinea_llegada', v)} />
-                  <CampoTexto etiqueta={t.formulario.campos.vueloLlegada} valor={texto('vuelo_llegada')} onChange={(v) => fijar('vuelo_llegada', v)} />
+                  <CampoTexto campo="fecha_llegada" etiqueta={t.formulario.campos.fechaLlegada} tipo="date" valor={texto('fecha_llegada')} onChange={(v) => fijar('fecha_llegada', v)} />
+                  <CampoTexto campo="hora_llegada" etiqueta={t.formulario.campos.horaLlegada} tipo="time" valor={texto('hora_llegada')} onChange={(v) => fijar('hora_llegada', v)} />
+                  <CampoTexto campo="aerolinea_llegada" etiqueta={t.formulario.campos.aerolineaLlegada} valor={texto('aerolinea_llegada')} onChange={(v) => fijar('aerolinea_llegada', v)} />
+                  <CampoTexto campo="vuelo_llegada" etiqueta={t.formulario.campos.vueloLlegada} valor={texto('vuelo_llegada')} onChange={(v) => fijar('vuelo_llegada', v)} />
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <CampoTexto etiqueta={t.formulario.campos.fechaSalida} tipo="date" valor={texto('fecha_salida')} onChange={(v) => fijar('fecha_salida', v)} />
-                  <CampoTexto etiqueta={t.formulario.campos.horaSalida} tipo="time" valor={texto('hora_salida')} onChange={(v) => fijar('hora_salida', v)} />
-                  <CampoTexto etiqueta={t.formulario.campos.aerolineaSalida} valor={texto('aerolinea_salida')} onChange={(v) => fijar('aerolinea_salida', v)} />
-                  <CampoTexto etiqueta={t.formulario.campos.vueloSalida} valor={texto('vuelo_salida')} onChange={(v) => fijar('vuelo_salida', v)} />
+                  <CampoTexto campo="fecha_salida" etiqueta={t.formulario.campos.fechaSalida} tipo="date" valor={texto('fecha_salida')} onChange={(v) => fijar('fecha_salida', v)} />
+                  <CampoTexto campo="hora_salida" etiqueta={t.formulario.campos.horaSalida} tipo="time" valor={texto('hora_salida')} onChange={(v) => fijar('hora_salida', v)} />
+                  <CampoTexto campo="aerolinea_salida" etiqueta={t.formulario.campos.aerolineaSalida} valor={texto('aerolinea_salida')} onChange={(v) => fijar('aerolinea_salida', v)} />
+                  <CampoTexto campo="vuelo_salida" etiqueta={t.formulario.campos.vueloSalida} valor={texto('vuelo_salida')} onChange={(v) => fijar('vuelo_salida', v)} />
                 </div>
-                <CampoParrafo etiqueta={t.formulario.campos.observacionesTraslado} ayuda={t.formulario.campos.observacionesTrasladoAyuda} filas={3} valor={texto('observaciones_traslado')} onChange={(v) => fijar('observaciones_traslado', v)} />
+                <CampoParrafo campo="observaciones_traslado" etiqueta={t.formulario.campos.observacionesTraslado} ayuda={t.formulario.campos.observacionesTrasladoAyuda} filas={3} valor={texto('observaciones_traslado')} onChange={(v) => fijar('observaciones_traslado', v)} />
               </>
             )}
           </section>
@@ -402,25 +402,25 @@ export function FormularioRegistro({
             {visible('regimen_alimentario') && (
               <>
                 <CampoOpcionUnica etiqueta={t.formulario.campos.regimenAlimentario} opciones={opciones('regimen', t)} valor={texto('regimen_alimentario')} onChange={(v) => fijar('regimen_alimentario', v)} columnas={2} />
-                <CampoParrafo etiqueta={t.formulario.campos.alergias} ayuda={t.formulario.campos.alergiasAyuda} filas={2} valor={texto('alergias')} onChange={(v) => fijar('alergias', v)} />
+                <CampoParrafo campo="alergias" etiqueta={t.formulario.campos.alergias} ayuda={t.formulario.campos.alergiasAyuda} filas={2} valor={texto('alergias')} onChange={(v) => fijar('alergias', v)} />
               </>
             )}
             {visible('contacto_emergencia') && (
-              <CampoTexto etiqueta={t.formulario.campos.contactoEmergencia} valor={texto('contacto_emergencia')} onChange={(v) => fijar('contacto_emergencia', v)} />
+              <CampoTexto campo="contacto_emergencia" etiqueta={t.formulario.campos.contactoEmergencia} valor={texto('contacto_emergencia')} onChange={(v) => fijar('contacto_emergencia', v)} />
             )}
             {visible('apoyo_traslado') && (
               <>
                 <CampoInterruptor etiqueta={t.formulario.campos.apoyoTraslado} ayuda={t.formulario.campos.apoyoTrasladoAyuda} valor={valores.apoyo_traslado as boolean} onChange={(v) => fijar('apoyo_traslado', v)} />
                 {(valores.apoyo_traslado as boolean) && (
-                  <CampoParrafo etiqueta={t.formulario.campos.datosViatico} ayuda={t.formulario.campos.datosViaticoAyuda} filas={3} valor={texto('datos_viatico')} onChange={(v) => fijar('datos_viatico', v)} />
+                  <CampoParrafo campo="datos_viatico" etiqueta={t.formulario.campos.datosViatico} ayuda={t.formulario.campos.datosViaticoAyuda} filas={3} valor={texto('datos_viatico')} onChange={(v) => fijar('datos_viatico', v)} />
                 )}
               </>
             )}
             <CampoInterruptor etiqueta={t.formulario.campos.requiereFactura} valor={valores.requiere_factura as boolean} onChange={(v) => fijar('requiere_factura', v)} />
             {(valores.requiere_factura as boolean) && (
-              <CampoParrafo etiqueta={t.formulario.campos.datosFacturacion} filas={3} valor={texto('datos_facturacion')} onChange={(v) => fijar('datos_facturacion', v)} />
+              <CampoParrafo campo="datos_facturacion" etiqueta={t.formulario.campos.datosFacturacion} filas={3} valor={texto('datos_facturacion')} onChange={(v) => fijar('datos_facturacion', v)} />
             )}
-            <CampoParrafo etiqueta={t.formulario.campos.comentarios} filas={3} valor={texto('comentarios')} onChange={(v) => fijar('comentarios', v)} />
+            <CampoParrafo campo="comentarios" etiqueta={t.formulario.campos.comentarios} filas={3} valor={texto('comentarios')} onChange={(v) => fijar('comentarios', v)} />
           </section>
         )}
 

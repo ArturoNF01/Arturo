@@ -8,6 +8,24 @@ on:
 jobs:
   verificar:
     runs-on: ubuntu-latest
+
+    # El esquema y los disparadores de auditoría sólo se comprueban de verdad
+    # contra un motor real, así que la integración corre en cada empuje.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: congreso
+          POSTGRES_PASSWORD: congreso
+          POSTGRES_DB: congreso
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -28,10 +46,14 @@ jobs:
       - name: Ejecutar pruebas
         run: npm test
 
-      - name: Compilar
-        run: npm run build
+      - name: Cargar el esquema y probar contra PostgreSQL
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f basedatos/esquema.sql
+          npm run prueba-bd
         env:
-          # La compilación no necesita credenciales reales: las páginas se
-          # renderizan bajo demanda y la configuración tiene valores de respaldo.
-          NEXT_PUBLIC_SUPABASE_URL: https://demostracion.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: clave-de-compilacion
+          DATABASE_URL: postgresql://congreso:congreso@localhost:5432/congreso
+
+      - name: Compilar
+        # La compilación no necesita base de datos: las páginas se renderizan
+        # bajo demanda y la configuración tiene valores de respaldo.
+        run: npm run build

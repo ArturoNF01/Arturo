@@ -15,16 +15,26 @@ export const LIMITES_POR_DEFECTO: LimitesFormulario = {
 
 const textoOpcional = z.string().trim().max(500).optional().or(z.literal(''));
 const parrafoOpcional = z.string().trim().max(5000).optional().or(z.literal(''));
+/**
+ * Una fecha o una hora en blanco significan «no se dio», y eso en la base es
+ * null: PostgreSQL rechaza la cadena vacía en una columna de fecha. El
+ * formulario manda '' porque es lo que tiene un campo vacío en el navegador,
+ * así que la conversión se hace aquí, en la frontera.
+ */
 const fechaOpcional = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha no válido')
+  .union([
+    z.literal(''),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha no válido'),
+  ])
   .optional()
-  .or(z.literal(''));
+  .transform((valor) => (valor ? valor : null));
 const horaOpcional = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Formato de hora no válido')
+  .union([
+    z.literal(''),
+    z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Formato de hora no válido'),
+  ])
   .optional()
-  .or(z.literal(''));
+  .transform((valor) => (valor ? valor : null));
 
 /**
  * El esquema se construye con los límites vigentes: si el comité los cambia

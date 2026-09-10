@@ -1,6 +1,6 @@
 import 'server-only';
 import { Resend } from 'resend';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { unaFila } from '@/lib/bd/conexion';
 import { CONFIG, urlSitio } from '@/lib/config';
 import { etiquetaDe } from '@/lib/opciones';
 import { obtenerDiccionario } from '@/i18n';
@@ -83,14 +83,12 @@ export async function enviarCorreoRegistro(datos: DatosCorreo): Promise<{ enviad
     ? { ...datos, registro: { ...datos.registro, eje_tematico: traducir(eje.nombre, idioma as 'es') } }
     : datos;
 
-  const supabase = crearClienteAdmin();
-  const { data: plantilla } = await supabase
-    .from('plantillas_correo')
-    .select('asunto, cuerpo_html')
-    .eq('clave', datos.clave)
-    .eq('idioma', idioma)
-    .eq('activa', true)
-    .maybeSingle();
+  const plantilla = await unaFila<{ asunto: string; cuerpo_html: string }>(
+    `select asunto, cuerpo_html from plantillas_correo
+      where clave = $1 and idioma = $2 and activa
+      limit 1`,
+    [datos.clave, idioma],
+  );
 
   if (!plantilla) return { enviado: false, error: `Sin plantilla ${datos.clave}/${idioma}.` };
 
@@ -105,6 +103,36 @@ export async function enviarCorreoRegistro(datos: DatosCorreo): Promise<{ enviad
       replyTo: datos.correoContacto,
       subject: aplicarPlantilla(plantilla.asunto, variables),
       html: envolverHtml(aplicarPlantilla(plantilla.cuerpo_html, variables), t.congreso.titulo),
+    });
+    if (error) return { enviado: false, error: error.message };
+    return { enviado: true };
+  } catch (error) {
+    return { enviado: false, error: error instanceof Error ? error.message : 'Error de envío.' };
+  }
+}
+
+/**
+ * Envía un correo que no sale de una plantilla del panel: el enlace de
+ * acceso, que es del sistema y no del congreso.
+ */
+export async function enviarCorreoSimple({
+  para, asunto, html,
+}: {
+  para: string;
+  asunto: string;
+  html: string;
+}): Promise<{ enviado: boolean; error?: string }> {
+  const clave = process.env.RESEND_API_KEY;
+  const remitente = process.env.CORREO_REMITENTE;
+  if (!clave || !remitente) return { enviado: false, error: 'Resend no está configurado.' };
+
+  try {
+    const resend = new Resend(clave);
+    const { error } = await resend.emails.send({
+      from: remitente,
+      to: para,
+      subject: asunto,
+      html: envolverHtml(html, obtenerDiccionario('es').congreso.titulo),
     });
     if (error) return { enviado: false, error: error.message };
     return { enviado: true };

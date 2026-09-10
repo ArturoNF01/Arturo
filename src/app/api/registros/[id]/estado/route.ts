@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
-import { crearClienteServidor } from '@/lib/supabase/servidor';
+import { conActor, consultar, unaFila } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { leerConfiguracion, lugaresPresencialesRestantes } from '@/lib/servidor/configuracion';
 import { enviarCorreoRegistro, type ClavePlantilla } from '@/lib/servidor/correo';
@@ -16,7 +15,7 @@ const esquema = z.object({
 });
 
 /**
- * Cambia el estado de un registro. La escritura va con la sesión del usuario
+ * Cambia el estado de un registro. La escritura lleva el actor puesto
  * para que RLS valide el rol y el disparador de auditoría deje constancia de
  * quién lo hizo; el aviso por correo sale después, con la clave de servicio.
  */
@@ -33,12 +32,10 @@ export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{
     return NextResponse.json({ mensaje: 'Estado no válido.' }, { status: 422 });
   }
 
-  const admin = crearClienteAdmin();
-  const { data: previo } = await admin
-    .from('registros')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
+  const previo = await unaFila<Record<string, unknown> & { estado: string; modalidad: 'presencial' | 'en_linea' }>(
+    'select * from registros where id = $1',
+    [id],
+  );
 
   if (!previo) return NextResponse.json({ mensaje: 'Registro no encontrado.' }, { status: 404 });
 
@@ -54,16 +51,14 @@ export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{
     return NextResponse.json({ mensaje: veredicto.motivo }, { status: 409 });
   }
 
-  const supabase = await crearClienteServidor();
-  const { data: registro, error } = await supabase
-    .from('registros')
-    .update({ estado: analisis.data.estado })
-    .eq('id', id)
-    .select()
-    .single();
+  const [registro] = await conActor<Record<string, unknown> & { estado: string; folio: string }>(
+    usuario.id,
+    'update registros set estado = $1 where id = $2 returning *',
+    [analisis.data.estado, id],
+  );
 
-  if (error || !registro) {
-    return NextResponse.json({ mensaje: 'Su perfil no permite esta acción.' }, { status: 403 });
+  if (!registro) {
+    return NextResponse.json({ mensaje: 'Registro no encontrado.' }, { status: 404 });
   }
 
   let correo: { enviado: boolean; error?: string } = { enviado: false };
@@ -77,10 +72,7 @@ export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{
       urlAgenda: configuracion.url_agenda,
     });
     if (correo.enviado) {
-      await admin
-        .from('registros')
-        .update({ correo_enviado_en: new Date().toISOString() })
-        .eq('id', id);
+      await consultar('update registros set correo_enviado_en = now() where id = $1', [id]);
     }
   }
 

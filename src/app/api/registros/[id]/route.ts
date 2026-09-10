@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
-import { crearClienteServidor } from '@/lib/supabase/servidor';
+import { armarActualizacion, consultar, conActor, unaFila } from '@/lib/bd/conexion';
+import { permisos, usuarioActual } from '@/lib/servidor/sesion';
 import { crearEsquemaRegistro } from '@/lib/esquema';
 import { perfilPorClave } from '@/lib/perfiles';
 import { dentroDelPlazo, leerConfiguracion } from '@/lib/servidor/configuracion';
@@ -10,26 +10,27 @@ import { enviarCorreoRegistro } from '@/lib/servidor/correo';
 
 export const dynamic = 'force-dynamic';
 
+interface FilaRegistro extends Record<string, unknown> {
+  id: string;
+  folio: string;
+  token_edicion: string;
+}
+
 /** Devuelve el registro si el token de edición coincide o si hay sesión de panel. */
 async function autorizar(id: string, token: string | null) {
-  const admin = crearClienteAdmin();
-  const { data: registro } = await admin.from('registros').select('*').eq('id', id).maybeSingle();
-  if (!registro) return { registro: null, autorizado: false as const };
+  const registro = await unaFila<FilaRegistro>('select * from registros where id = $1', [id]);
+  if (!registro) return { registro: null, autorizado: false as const, usuario: null };
 
-  if (token && token === registro.token_edicion) return { registro, autorizado: true as const };
+  if (token && token === registro.token_edicion) {
+    return { registro, autorizado: true as const, usuario: null };
+  }
 
-  const supabase = await crearClienteServidor();
-  const { data: sesion } = await supabase.auth.getUser();
-  if (!sesion.user) return { registro, autorizado: false as const };
-
-  const { data: usuario } = await admin
-    .from('usuarios_panel')
-    .select('rol, activo')
-    .eq('id', sesion.user.id)
-    .maybeSingle();
-
-  const puedeEditar = Boolean(usuario?.activo) && ['superadmin', 'organizador'].includes(usuario?.rol ?? '');
-  return { registro, autorizado: puedeEditar };
+  const usuario = await usuarioActual();
+  return {
+    registro,
+    autorizado: Boolean(usuario && permisos(usuario.rol).editarRegistros),
+    usuario,
+  };
 }
 
 export async function GET(peticion: NextRequest, contexto: { params: Promise<{ id: string }> }) {
@@ -54,7 +55,7 @@ export async function PUT(peticion: NextRequest, contexto: { params: Promise<{ i
   }
 
   const token = (cuerpo.token as string) ?? peticion.nextUrl.searchParams.get('token');
-  const { registro: previo, autorizado } = await autorizar(id, token);
+  const { registro: previo, autorizado, usuario } = await autorizar(id, token);
   if (!previo) return NextResponse.json({ mensaje: 'Registro no encontrado.' }, { status: 404 });
   if (!autorizado) return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
 
@@ -85,16 +86,23 @@ export async function PUT(peticion: NextRequest, contexto: { params: Promise<{ i
   const perfil = perfilPorClave(datos.perfil);
   if (!perfil) return NextResponse.json({ mensaje: 'Perfil no válido.' }, { status: 422 });
 
-  const admin = crearClienteAdmin();
-  const { data: registro, error } = await admin
-    .from('registros')
-    .update({ ...datos, grupo: perfil.grupo })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error || !registro) {
+  const { asignaciones, valores } = armarActualizacion({ ...datos, grupo: perfil.grupo });
+  let registro: FilaRegistro | undefined;
+  try {
+    // Se escribe dentro de una transacción con el actor puesto, para que la
+    // auditoría sepa si el cambio lo hizo el panel o la propia persona con
+    // su enlace de edición.
+    const filas = await conActor<FilaRegistro>(
+      usuario?.id ?? null,
+      `update registros set ${asignaciones} where id = $${valores.length + 1} returning *`,
+      [...valores, id],
+    );
+    registro = filas[0];
+  } catch (error) {
     console.error('Edición de registro fallida:', error);
+  }
+
+  if (!registro) {
     return NextResponse.json({ mensaje: 'No fue posible guardar los cambios.' }, { status: 500 });
   }
 
@@ -109,29 +117,30 @@ export async function PUT(peticion: NextRequest, contexto: { params: Promise<{ i
     }),
   ]);
 
-  await admin
-    .from('registros')
-    .update(
-      sheets.status === 'fulfilled'
-        ? { sheets_sincronizado_en: new Date().toISOString(), sheets_error: null }
-        : { sheets_error: String(sheets.reason?.message ?? sheets.reason) },
-    )
-    .eq('id', id);
+  await consultar(
+    sheets.status === 'fulfilled'
+      ? `update registros set sheets_sincronizado_en = now(), sheets_error = null where id = $1`
+      : `update registros set sheets_error = $2 where id = $1`,
+    sheets.status === 'fulfilled'
+      ? [id]
+      : [id, String(sheets.reason?.message ?? sheets.reason)],
+  );
 
   return NextResponse.json({ id: registro.id, folio: registro.folio, token_edicion: registro.token_edicion });
 }
 
-export async function DELETE(peticion: NextRequest, contexto: { params: Promise<{ id: string }> }) {
+export async function DELETE(_peticion: NextRequest, contexto: { params: Promise<{ id: string }> }) {
   const { id } = await contexto.params;
-  const supabase = await crearClienteServidor();
-  const { data: sesion } = await supabase.auth.getUser();
-  if (!sesion.user) return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
 
-  // La baja se hace con la sesión del usuario para que RLS aplique la regla de
-  // rol y el disparador de auditoría registre quién la ejecutó.
-  const { error } = await supabase.from('registros').delete().eq('id', id);
-  if (error) {
+  // Dar de baja un registro es la operación más destructiva del panel, así
+  // que la reserva el rol más alto. Antes lo decidía una política en la base;
+  // ahora se comprueba aquí, que es donde vive la regla de permisos.
+  const usuario = await usuarioActual();
+  if (!usuario || !permisos(usuario.rol).eliminarRegistros) {
     return NextResponse.json({ mensaje: 'Su perfil no permite esta acción.' }, { status: 403 });
   }
+
+  // Con el actor puesto, la auditoría asienta quién ejecutó la baja.
+  await conActor(usuario.id, 'delete from registros where id = $1', [id]);
   return NextResponse.json({ eliminado: true });
 }

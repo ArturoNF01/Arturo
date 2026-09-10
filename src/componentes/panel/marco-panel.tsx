@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { BotonTema, SelectorIdioma } from '@/componentes/controles';
 import { useApp } from '@/componentes/proveedores';
-import { crearClienteNavegador } from '@/lib/supabase/cliente';
+import { ProveedorRegistros } from './proveedor-registros';
 import type { Permisos, UsuarioPanel } from '@/lib/servidor/sesion';
 import { AvisosRegistros } from './avisos-registros';
 import { ProveedorContenidoPanel } from './contexto-panel';
@@ -40,7 +40,7 @@ export function MarcoPanel({
   ].filter((s) => s.visible);
 
   async function salir() {
-    await crearClienteNavegador().auth.signOut();
+    await fetch('/api/acceso', { method: 'DELETE' });
     router.push('/login');
     router.refresh();
   }
@@ -49,6 +49,7 @@ export function MarcoPanel({
 
   return (
     <ProveedorContenidoPanel congreso={congreso} ejes={ejes}>
+    <ProveedorRegistros>
     <div className="flex min-h-screen flex-col lg:flex-row">
       <aside
         className="sticky top-0 z-40 border-b lg:h-screen lg:w-64 lg:shrink-0 lg:border-b-0 lg:border-r"
@@ -111,6 +112,7 @@ export function MarcoPanel({
         {children}
       </main>
     </div>
+    </ProveedorRegistros>
     </ProveedorContenidoPanel>
   );
 }

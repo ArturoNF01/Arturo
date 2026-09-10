@@ -116,11 +116,9 @@ describe('aviso por correo', () => {
 });
 
 describe('coherencia con las plantillas sembradas', () => {
-  it('toda plantilla de estado existe en la migración 0004 o en la 0002', async () => {
+  it('toda plantilla de estado está sembrada en el esquema, en los tres idiomas', async () => {
     const { readFileSync } = await import('node:fs');
-    const sql =
-      readFileSync('supabase/migrations/0002_plantillas_y_sql_lectura.sql', 'utf8') +
-      readFileSync('supabase/migrations/0004_estados_y_lista_espera.sql', 'utf8');
+    const sql = readFileSync('basedatos/esquema.sql', 'utf8');
 
     for (const estado of ESTADOS as readonly EstadoRegistro[]) {
       const clave = plantillaDeEstado(estado);

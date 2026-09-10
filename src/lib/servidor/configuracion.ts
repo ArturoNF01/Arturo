@@ -1,5 +1,5 @@
 import 'server-only';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { consultar, unaFila } from '@/lib/bd/conexion';
 import { CONFIG } from '@/lib/config';
 
 export interface ConfiguracionPublica {
@@ -21,25 +21,26 @@ const RESPALDO: ConfiguracionPublica = {
   fecha_limite_registro: CONFIG.fechaLimiteRegistro,
   url_agenda: CONFIG.urlConvocatoria,
   url_video_login: CONFIG.urlVideoLogin,
-  correo_contacto: process.env.CORREO_CONTACTO ?? 'congreso@ciss-bienestar.org',
+  correo_contacto: process.env.CORREO_CONTACTO ?? 'congreso@ciess.org',
   ocupado_presencial: 0,
   ocupado_en_linea: 0,
 };
 
 /**
  * Lee la configuración editable y la ocupación actual de cupos.
- * Si Supabase no está disponible devuelve valores de respaldo para que el
+ * Si la base no está disponible devuelve valores de respaldo para que el
  * formulario siga funcionando en entornos sin credenciales.
  */
 export async function leerConfiguracion(): Promise<ConfiguracionPublica> {
   try {
-    const supabase = crearClienteAdmin();
-    const [{ data: filas }, { data: cupos }] = await Promise.all([
-      supabase.from('configuracion').select('clave, valor'),
-      supabase.from('cupos_estado').select('*').single(),
+    const [filas, cupos] = await Promise.all([
+      consultar<{ clave: string; valor: unknown }>('select clave, valor from configuracion'),
+      unaFila<{ ocupado_presencial: string; ocupado_en_linea: string }>(
+        'select ocupado_presencial, ocupado_en_linea from cupos_estado',
+      ),
     ]);
 
-    const mapa = new Map((filas ?? []).map((f: { clave: string; valor: unknown }) => [f.clave, f.valor]));
+    const mapa = new Map(filas.map((f) => [f.clave, f.valor]));
     const leer = <T,>(clave: string, respaldo: T): T => {
       const valor = mapa.get(clave);
       return valor === undefined || valor === null ? respaldo : (valor as T);

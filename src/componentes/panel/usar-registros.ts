@@ -1,7 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { crearClienteNavegador } from '@/lib/supabase/cliente';
+import { useContextoRegistros } from './proveedor-registros';
 
 /** Proyección ligera de la tabla `registros` para el dashboard. */
 export interface RegistroPanel {
@@ -29,52 +28,14 @@ export interface RegistroPanel {
   requiere_traslado: string | null;
 }
 
-const COLUMNAS =
-  'id, folio, creado_en, perfil, grupo, modalidad, idioma, estado, nombres, apellidos, correo, ' +
-  'institucion, cargo, pais_residencia, entidad_federativa, ciudad_residencia, procedencia, ' +
-  'eje_tematico, modalidad_participacion, regimen_alimentario, requiere_alojamiento, requiere_traslado';
-
 /**
- * Carga los registros visibles para el rol de la sesión (RLS) y se mantiene
- * al día con los cambios en tiempo real de Supabase.
+ * Registros del panel, ya cargados por el proveedor que envuelve al panel
+ * entero. Se mantiene el nombre del gancho para que los componentes que lo
+ * usan no cambien.
  */
 export function useRegistros() {
-  const [registros, setRegistros] = useState<RegistroPanel[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const supabase = useMemo(() => crearClienteNavegador(), []);
-
-  const cargar = useCallback(async () => {
-    const { data, error: fallo } = await supabase
-      .from('registros')
-      .select(COLUMNAS)
-      .order('creado_en', { ascending: false });
-
-    if (fallo) setError(fallo.message);
-    else setRegistros((data ?? []) as unknown as RegistroPanel[]);
-    setCargando(false);
-  }, [supabase]);
-
-  useEffect(() => {
-  // La regla no distingue la frontera asíncrona: `cargar` es una promesa y su
-  // setState ocurre después del efecto, no de forma síncrona dentro de él.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-    void cargar();
-  }, [cargar]);
-
-  useEffect(() => {
-    const canal = supabase
-      .channel('registros-panel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'registros' }, () => {
-        void cargar();
-      })
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(canal);
-    };
-  }, [supabase, cargar]);
-
-  return { registros, cargando, error, recargar: cargar };
+  const { registros, cargando, error, recargar } = useContextoRegistros();
+  return { registros, cargando, error, recargar };
 }
 
 export interface Filtros {

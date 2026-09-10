@@ -8,7 +8,16 @@ import { pasoSecuencial } from '@/lib/graficas';
 import { nombrePais } from '@/lib/paises';
 import { useApp } from '@/componentes/proveedores';
 
-const ATLAS = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+/**
+ * El atlas se sirve desde el propio sitio, no desde un CDN.
+ *
+ * Son 105 KB que se piden una vez y quedan en la caché del navegador, y a
+ * cambio el mapa no depende de que un tercero esté en pie ni de que la red
+ * de la institución permita salir a ese dominio. Viene del paquete
+ * `world-atlas` (Natural Earth, dominio público) y se actualiza copiando el
+ * archivo de nuevo a `public/`.
+ */
+const ATLAS = '/atlas-paises.json';
 
 /**
  * Coropleta por país. La magnitud se codifica con una rampa secuencial de un

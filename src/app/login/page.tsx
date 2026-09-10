@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
-import { supabaseConfigurado } from '@/lib/supabase/admin';
+import { bdConfigurada } from '@/lib/bd/conexion';
 import { PaginaLogin } from './pagina-login';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export default async function Login() {
   return (
     <PaginaLogin
       urlVideo={configuracion.url_video_login}
-      configurado={supabaseConfigurado()}
+      configurado={bdConfigurada()}
     />
   );
 }

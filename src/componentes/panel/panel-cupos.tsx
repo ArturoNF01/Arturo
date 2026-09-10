@@ -54,8 +54,8 @@ function PruebaVideo({ url }: { url: string }) {
             {estado === 'falla' && (
               <span className="text-amber-500">
                 El navegador no pudo cargarlo. Suele ser que el servidor del archivo bloquea
-                enlaces externos o que la dirección ya no existe. Súbalo a Cloudflare R2, a
-                Vercel Blob o a la carpeta <code>public/</code> del proyecto.
+                enlaces externos o que la dirección ya no existe. Súbalo a un Space de
+                DigitalOcean o a la carpeta <code>public/</code> del proyecto.
               </span>
             )}
           </p>

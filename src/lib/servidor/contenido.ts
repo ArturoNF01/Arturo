@@ -1,12 +1,12 @@
 import 'server-only';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { armarInsercion, consultar as consultarBd } from '@/lib/bd/conexion';
 import {
   CONGRESO_POR_DEFECTO, EJES_POR_DEFECTO, avisoPorDefecto, faqsPorDefecto,
   type BloqueAvisoPrivacidad, type DatosCongreso, type EjeTematico, type Faq, type Multilingue,
 } from '@/lib/contenido';
 
 /**
- * Lectura del contenido editable. Si la tabla está vacía —o Supabase no está
+ * Lectura del contenido editable. Si la tabla está vacía —o la base no está
  * configurado todavía— se devuelven las propuestas del código, de modo que el
  * sitio funcione desde el primer arranque y el panel pueda sembrarlas después.
  */
@@ -23,10 +23,11 @@ async function consultar<T>(
   respaldo: T[],
 ): Promise<{ filas: T[]; desdeRespaldo: boolean }> {
   try {
-    const supabase = crearClienteAdmin();
-    const { data, error } = await supabase.from(tabla).select(columnas).order('orden');
-    if (error || !data || data.length === 0) return { filas: respaldo, desdeRespaldo: true };
-    return { filas: data as T[], desdeRespaldo: false };
+    // `tabla` y `columnas` son literales del propio código, nunca entrada
+    // del usuario.
+    const filas = await consultarBd(`select ${columnas} from ${tabla} order by orden`);
+    if (filas.length === 0) return { filas: respaldo, desdeRespaldo: true };
+    return { filas: filas as T[], desdeRespaldo: false };
   } catch {
     return { filas: respaldo, desdeRespaldo: true };
   }
@@ -65,26 +66,16 @@ export async function leerAvisoPrivacidad(): Promise<{
 /** Datos del congreso guardados en la tabla `configuracion`. */
 export async function leerDatosCongreso(): Promise<DatosCongreso> {
   try {
-    const supabase = crearClienteAdmin();
-    const { data } = await supabase
-      .from('configuracion')
-      .select('clave, valor')
-      .like('clave', 'congreso_%');
-
-    const limites = await supabase
-      .from('configuracion')
-      .select('clave, valor')
-      .in('clave', [
+    const filas = await consultarBd<{ clave: string; valor: unknown }>(
+      `select clave, valor from configuracion
+        where clave like 'congreso_%' or clave = any($1)`,
+      [[
         'limite_semblanza_palabras', 'limite_semblanza_caracteres',
         'limite_resumen_caracteres', 'foto_megabytes_maximo',
-      ]);
-
-    const mapa = new Map(
-      [...(data ?? []), ...(limites.data ?? [])].map((f: { clave: string; valor: unknown }) => [
-        f.clave,
-        f.valor,
-      ]),
+      ]],
     );
+
+    const mapa = new Map(filas.map((f) => [f.clave, f.valor]));
     if (mapa.size === 0) return CONGRESO_POR_DEFECTO;
 
     const texto = (clave: string, respaldo: Multilingue): Multilingue =>
@@ -120,16 +111,27 @@ export async function sembrarContenido(): Promise<{
   faqs: number;
   aviso: number;
 }> {
-  const supabase = crearClienteAdmin();
-
+  /**
+   * Inserta las filas que falten y deja intactas las que ya existan: quien
+   * haya editado un texto desde el panel no lo pierde al volver a sembrar.
+   */
   const insertar = async (tabla: string, filas: Record<string, unknown>[]) => {
     if (filas.length === 0) return 0;
-    const { data, error } = await supabase
-      .from(tabla)
-      .upsert(filas, { onConflict: 'clave', ignoreDuplicates: true })
-      .select('clave');
-    if (error) throw new Error(`${tabla}: ${error.message}`);
-    return data?.length ?? 0;
+
+    // Una fila a la vez: son unas decenas y así el molde de cada inserción lo
+    // arma el mismo ayudante que usan las rutas.
+    let insertadas = 0;
+    for (const fila of filas) {
+      const { columnas, marcadores, valores } = armarInsercion(fila);
+      const nuevas = await consultarBd<{ clave: string }>(
+        `insert into ${tabla} (${columnas}) values (${marcadores})
+         on conflict (clave) do nothing
+         returning clave`,
+        valores,
+      );
+      insertadas += nuevas.length;
+    }
+    return insertadas;
   };
 
   return {

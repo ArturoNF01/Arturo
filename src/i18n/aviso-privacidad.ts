@@ -10,7 +10,7 @@ export interface BloqueAviso { titulo: string; parrafos: string[] }
 export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloques: BloqueAviso[] }> = {
   es: {
     titulo: 'Aviso de privacidad y consentimiento de tratamiento de datos personales',
-    actualizado: 'Última actualización: versión 1.1',
+    actualizado: 'Última actualización: versión 1.2',
     bloques: [
       {
         titulo: '1. Responsable del tratamiento',
@@ -44,7 +44,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '5. Transferencias y encargados',
         parrafos: [
-          'Sus datos se almacenan en Supabase y en Google Workspace (Google Sheets y Google Drive), en calidad de encargados del tratamiento, y se utiliza Resend para el envío de los correos de confirmación. Estos proveedores pueden alojar información en servidores ubicados fuera de su país de residencia; en tales casos las transferencias se amparan en cláusulas contractuales tipo u otros mecanismos equivalentes.',
+          'Sus datos se almacenan en DigitalOcean y en Google Workspace (Google Sheets y Google Drive), en calidad de encargados del tratamiento, y se utiliza Resend para el envío de los correos de confirmación. Estos proveedores pueden alojar información en servidores ubicados fuera de su país de residencia; en tales casos las transferencias se amparan en cláusulas contractuales tipo u otros mecanismos equivalentes.',
           'Los datos estrictamente necesarios se comparten con los proveedores de hotelería, transporte y alimentación contratados por la organización, únicamente para la prestación del servicio correspondiente.',
           'No se realizan transferencias comerciales ni se venden o ceden sus datos a terceros con fines distintos a los aquí descritos.',
         ],
@@ -87,7 +87,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
   },
   en: {
     titulo: 'Privacy notice and consent to the processing of personal data',
-    actualizado: 'Last updated: version 1.1',
+    actualizado: 'Last updated: version 1.2',
     bloques: [
       {
         titulo: '1. Data controller',
@@ -121,7 +121,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '5. Transfers and processors',
         parrafos: [
-          'Your data are stored in Supabase and Google Workspace (Google Sheets and Google Drive) as processors, and Resend is used to send confirmation e-mails. These providers may host information on servers located outside your country of residence; in such cases transfers are covered by standard contractual clauses or equivalent mechanisms.',
+          'Your data are stored in DigitalOcean and Google Workspace (Google Sheets and Google Drive) as processors, and Resend is used to send confirmation e-mails. These providers may host information on servers located outside your country of residence; in such cases transfers are covered by standard contractual clauses or equivalent mechanisms.',
           'Strictly necessary data are shared with the hotel, transport and catering providers contracted by the organisation, solely for the provision of the corresponding service.',
           'No commercial transfers are made and your data are never sold or assigned to third parties for purposes other than those described here.',
         ],
@@ -164,7 +164,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
   },
   pt: {
     titulo: 'Aviso de privacidade e consentimento para o tratamento de dados pessoais',
-    actualizado: 'Última atualização: versão 1.1',
+    actualizado: 'Última atualização: versão 1.2',
     bloques: [
       {
         titulo: '1. Controlador dos dados',
@@ -198,7 +198,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '5. Transferências e operadores',
         parrafos: [
-          'Seus dados são armazenados no Supabase e no Google Workspace (Google Sheets e Google Drive), na qualidade de operadores, e o Resend é utilizado para o envio dos e-mails de confirmação. Esses fornecedores podem hospedar informações em servidores fora do seu país de residência; nesses casos, as transferências internacionais são amparadas por cláusulas contratuais padrão ou mecanismos equivalentes.',
+          'Seus dados são armazenados na DigitalOcean e no Google Workspace (Google Sheets e Google Drive), na qualidade de operadores, e o Resend é utilizado para o envio dos e-mails de confirmação. Esses fornecedores podem hospedar informações em servidores fora do seu país de residência; nesses casos, as transferências internacionais são amparadas por cláusulas contratuais padrão ou mecanismos equivalentes.',
           'Os dados estritamente necessários são compartilhados com os fornecedores de hotelaria, transporte e alimentação contratados pela organização, apenas para a prestação do serviço correspondente.',
           'Não há transferências comerciais, nem venda ou cessão dos seus dados a terceiros para finalidades distintas das aqui descritas.',
         ],

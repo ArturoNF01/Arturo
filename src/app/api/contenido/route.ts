@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { crearClienteServidor } from '@/lib/supabase/servidor';
+import { armarInsercion, conActor, consultar } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { sembrarContenido } from '@/lib/servidor/contenido';
 
@@ -58,10 +58,14 @@ export async function GET(peticion: NextRequest) {
     return NextResponse.json({ mensaje: 'Tabla no admitida.' }, { status: 400 });
   }
 
-  const supabase = await crearClienteServidor();
-  const { data, error } = await supabase.from(tabla).select('*').order('orden');
-  if (error) return NextResponse.json({ mensaje: error.message }, { status: 500 });
-  return NextResponse.json(data ?? []);
+  try {
+    // `tabla` viene de una lista blanca, nunca directamente del usuario.
+    const filas = await consultar(`select * from ${tabla} order by orden`);
+    return NextResponse.json(filas);
+  } catch (error) {
+    console.error('No se pudo leer el contenido:', error);
+    return NextResponse.json({ mensaje: 'No fue posible leer el contenido.' }, { status: 500 });
+  }
 }
 
 /** Alta o modificación de una fila, identificada por su clave. */
@@ -83,9 +87,22 @@ export async function PUT(peticion: NextRequest) {
     );
   }
 
-  const supabase = await crearClienteServidor();
-  const { error } = await supabase.from(tabla).upsert(analisis.data, { onConflict: 'clave' });
-  if (error) return NextResponse.json({ mensaje: error.message }, { status: 403 });
+  const { columnas, marcadores, valores } = armarInsercion(analisis.data);
+  const actualizables = Object.keys(analisis.data).filter((c) => c !== 'clave');
+
+  try {
+    await conActor(
+      usuario.id,
+      `insert into ${tabla} (${columnas}) values (${marcadores})
+       on conflict (clave) do update set
+         ${actualizables.map((c) => `${c} = excluded.${c}`).join(', ')}`,
+      valores,
+    );
+  } catch (error) {
+    console.error('No se pudo guardar el contenido:', error);
+    return NextResponse.json({ mensaje: 'No fue posible guardar el contenido.' }, { status: 500 });
+  }
+
   return NextResponse.json({ guardado: true });
 }
 
@@ -101,9 +118,13 @@ export async function DELETE(peticion: NextRequest) {
     return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
   }
 
-  const supabase = await crearClienteServidor();
-  const { error } = await supabase.from(tabla).delete().eq('clave', clave);
-  if (error) return NextResponse.json({ mensaje: error.message }, { status: 403 });
+  try {
+    await conActor(usuario.id, `delete from ${tabla} where clave = $1`, [clave]);
+  } catch (error) {
+    console.error('No se pudo eliminar el contenido:', error);
+    return NextResponse.json({ mensaje: 'No fue posible eliminar la fila.' }, { status: 500 });
+  }
+
   return NextResponse.json({ eliminado: true });
 }
 
