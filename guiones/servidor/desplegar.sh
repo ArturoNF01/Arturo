@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# =====================================================================
+# Actualiza el sitio con la última versión del repositorio.
+#
+#   sudo bash /opt/congreso/guiones/servidor/desplegar.sh
+#
+# Antes de tocar nada respalda la base y anota en qué versión estábamos.
+# Si la compilación falla, o si el sitio no responde después de
+# reiniciar, vuelve solo a la versión anterior: nunca deja el sitio
+# caído por una actualización que salió mal.
+# =====================================================================
+set -Eeuo pipefail
+
+RAIZ="${RAIZ:-/opt/congreso}"
+USUARIO="${USUARIO:-congreso}"
+RAMA="${RAMA:-master}"
+PUERTO="${PUERTO:-3000}"
+
+paso()  { printf '\n\033[1m── %s\033[0m\n' "$1"; }
+aviso() { printf '   %s\n' "$1"; }
+morir() { printf '\n\033[31mAlto: %s\033[0m\n' "$1" >&2; exit 1; }
+
+[ "$(id -u)" -eq 0 ] || morir "Ejecute con sudo: sudo bash $RAIZ/guiones/servidor/desplegar.sh"
+[ -d "$RAIZ/.git" ] || morir "No encuentro la instalación en $RAIZ. ¿Corrió antes instalar.sh?"
+
+como_usuario() { sudo -u "$USUARIO" env HOME="/home/$USUARIO" "$@"; }
+
+# ¿Responde el sitio? Se le dan hasta 30 segundos para arrancar.
+responde() {
+  for _ in $(seq 1 15); do
+    if curl -fsS --max-time 3 "http://localhost:$PUERTO/api/salud" >/dev/null 2>&1 \
+    || curl -fsS --max-time 3 "http://localhost:$PUERTO/" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+# ---------------------------------------------------------------------
+paso "Respaldo previo"
+if command -v respaldar-congreso >/dev/null; then
+  respaldar-congreso
+else
+  aviso "No hay guion de respaldo instalado; se continúa sin respaldar."
+fi
+
+# ---------------------------------------------------------------------
+paso "Versión actual"
+ANTERIOR=$(git -C "$RAIZ" rev-parse HEAD)
+aviso "$(git -C "$RAIZ" log --oneline -1)"
+
+volver_atras() {
+  printf '\n\033[33mAlgo falló. Volviendo a la versión anterior…\033[0m\n'
+  git -C "$RAIZ" reset --hard --quiet "$ANTERIOR"
+  chown -R "$USUARIO:$USUARIO" "$RAIZ"
+  cd "$RAIZ"
+  como_usuario npm ci --silent || true
+  como_usuario env NODE_ENV=production npm run build --silent || true
+  systemctl restart congreso
+  if responde; then
+    morir "La actualización no sirvió, pero el sitio volvió a la versión anterior y sigue en línea."
+  fi
+  morir "La actualización falló y la versión anterior tampoco arranca. Revise: journalctl -u congreso -n 50"
+}
+
+# ---------------------------------------------------------------------
+paso "Traer los cambios"
+git -C "$RAIZ" fetch --quiet origin "$RAMA"
+NUEVO=$(git -C "$RAIZ" rev-parse "origin/$RAMA")
+
+if [ "$ANTERIOR" = "$NUEVO" ]; then
+  aviso "Ya estaba en la última versión. No hay nada que actualizar."
+  exit 0
+fi
+
+git -C "$RAIZ" reset --hard --quiet "origin/$RAMA"
+chown -R "$USUARIO:$USUARIO" "$RAIZ"
+aviso "Ahora en: $(git -C "$RAIZ" log --oneline -1)"
+aviso "Cambios: $(git -C "$RAIZ" log --oneline "$ANTERIOR..$NUEVO" | wc -l) commit(s)."
+
+# A partir de aquí, cualquier tropiezo nos regresa a donde estábamos.
+trap volver_atras ERR
+
+# ---------------------------------------------------------------------
+paso "Esquema de la base"
+# El esquema se puede volver a aplicar entero sin romper nada, así que
+# se ejecuta siempre: es lo que trae las tablas o columnas nuevas.
+sudo -u postgres psql -v ON_ERROR_STOP=1 -q -d congreso -f "$RAIZ/basedatos/esquema.sql"
+sudo -u postgres psql -q -d congreso -c "grant all on all tables in schema public to congreso;
+  grant all on all sequences in schema public to congreso;" >/dev/null
+aviso "Al día."
+
+# ---------------------------------------------------------------------
+paso "Compilación"
+cd "$RAIZ"
+como_usuario npm ci --silent
+como_usuario env NODE_ENV=production npm run build --silent
+aviso "Compilada."
+
+# ---------------------------------------------------------------------
+paso "Reinicio"
+systemctl restart congreso
+responde || volver_atras
+trap - ERR
+aviso "El sitio responde."
+
+# ---------------------------------------------------------------------
+paso "Listo"
+cat <<FIN
+
+   Actualizado a: $(git -C "$RAIZ" log --oneline -1)
+   Comprobación:  https://$(grep -m1 '^NEXT_PUBLIC_URL_SITIO=' "$RAIZ/.env" | sed 's|.*//||')/diagnostico
+
+FIN
