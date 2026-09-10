@@ -72,7 +72,7 @@ const PONENCIAS = [
     palabras: 'envelhecimento; previdência; projeções', coautoria: '',
     estado: 'aceptada_con_cambios',
     comentarios: 'Ampliar la sección metodológica y precisar la fuente de las proyecciones demográficas.',
-    porCorreo: 'comite@ciess.org', enFecha: '2026-04-18',
+    porCorreo: 'comite@ciss-bienestar.org', enFecha: '2026-04-18',
   },
   {
     id: 'p3', folio: 'CG-000144', nombre: 'Ana Lucía Mendoza Fuentes',
@@ -81,7 +81,7 @@ const PONENCIAS = [
     titulo: 'Gasto de bolsillo en salud y protección financiera de los hogares',
     resumen: 'Medición del gasto catastrófico en hogares del primer quintil y su relación con la cobertura efectiva de medicamentos ambulatorios, con datos de 2018 a 2025.',
     palabras: 'salud; gasto de bolsillo; equidad', coautoria: '',
-    estado: 'aceptada', comentarios: '', porCorreo: 'comite@ciess.org', enFecha: '2026-04-20',
+    estado: 'aceptada', comentarios: '', porCorreo: 'comite@ciss-bienestar.org', enFecha: '2026-04-20',
   },
   {
     id: 'p4', folio: 'CG-000158', nombre: 'Carlos Berríos Andrade', institucion: 'CISS',
@@ -253,7 +253,7 @@ const datos = {
   // Cupo a propósito por debajo de la demanda: así se ve la regla que impide
   // confirmar por encima del aforo y el paso a lista de espera.
   cupoPresencial: 55,
-  correoContacto: 'congreso@ciess.org',
+  correoContacto: 'congreso@ciss-bienestar.org',
   // Día simulado: 30 antes del congreso, para que el recordatorio del día se
   // vea sin esperar a junio.
   hoy: '2026-05-04',
