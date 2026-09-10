@@ -1,7 +1,7 @@
 # Cómo poner el sitio en línea
 
-Esta guía va paso a paso. Empieza por lo que se puede hacer sin ninguna
-credencial y termina con el panel funcionando.
+El sistema vive entero en DigitalOcean: la aplicación en **App Platform** y la
+base en **PostgreSQL gestionado**. No hace falta administrar ningún servidor.
 
 ---
 
@@ -10,138 +10,128 @@ credencial y termina con el panel funcionando.
 | Para que funcione | Hace falta |
 |---|---|
 | Formulario, FAQs, aviso de privacidad, video de fondo | **nada** |
-| Guardar registros, panel de control, login | Supabase |
-| Correos de confirmación y recordatorio | Resend |
+| Guardar registros, panel de control, acceso | PostgreSQL |
+| Correos de confirmación, acceso y recordatorio | Resend |
 | Réplica en Google Sheets y fotos en Drive | cuenta de servicio de Google |
-| Recordatorios automáticos | `CRON_SECRET` + un cron |
+| Recordatorios automáticos | `CRON_SECRET` + el trabajo programado |
 
 El sitio **se despliega y se ve completo sin ninguna credencial**: el formulario
 funciona con las propuestas del código y el panel avisa que todavía no está
-conectado, en lugar de fallar. Se pueden ir añadiendo las piezas después.
+conectado, en lugar de fallar. Las piezas se añaden después, en cualquier orden.
+
+En cualquier momento, **`/diagnostico`** dice qué falta y cuál es el siguiente
+paso.
 
 ---
 
-## Paso 1 · Publicar el sitio
+## Paso 1 · La base de datos
 
-### Opción A · Vercel (la recomendada)
+1. En DigitalOcean: **Create → Databases**.
+2. Motor **PostgreSQL 16**. Región **NYC** (la misma que la aplicación).
+3. Plan: el más pequeño —1 vCPU y 1 GB— sostiene de sobra un congreso. Se puede
+   subir después sin tiempo de inactividad.
+4. Nombre: `congreso-bd`. **Create**.
+5. Cuando termine, en **Connection Details** elegir *Connection string* y
+   copiarla. Tiene esta forma:
 
-Es donde el proyecto ya está preparado: `vercel.json` trae programado el cron de
-los recordatorios y no hay que adaptar nada.
+   ```
+   postgresql://doadmin:CLAVE@congreso-bd-do-user-….db.ondigitalocean.com:25060/defaultdb?sslmode=require
+   ```
 
-1. Entrar a [vercel.com/new](https://vercel.com/new) con la cuenta de GitHub.
-2. **Import** en el repositorio `ArturoNF01/Arturo`.
-3. Vercel reconoce Next.js solo. No tocar la configuración de compilación.
-4. Si la rama de trabajo todavía no está fusionada, en *Settings → Git →
-   Production Branch* poner `claude/congreso-registration-system-d6r396`.
-5. **Deploy.** En un par de minutos hay una URL `…vercel.app` pública.
+6. Cargar el esquema. Desde una terminal con `psql` instalado:
 
-### Opción B · Cloudflare
+   ```bash
+   psql "LA_CADENA_DE_CONEXION" -v ON_ERROR_STOP=1 -f basedatos/esquema.sql
+   ```
 
-Se puede, pero hay que ser claro sobre el costo: Cloudflare no ejecuta Next.js
-de forma nativa, hace falta el adaptador **OpenNext**, y la réplica en Google
-Sheets usa `googleapis`, una biblioteca pesada pensada para Node que en Workers
-hay que sustituir por llamadas directas a la API REST firmadas con Web Crypto.
-Es trabajo real, no un cambio de casilla.
-
-Recomendación honesta: **publicar en Vercel y usar Cloudflare para el dominio**
-(paso 2). Se obtiene lo mejor de los dos sin reescribir nada. Si aun así se
-prefiere alojar en Cloudflare, el camino es:
-
-1. `npm i -D @opennextjs/cloudflare wrangler`
-2. Crear `wrangler.jsonc` con `nodejs_compat` en `compatibility_flags` y una
-   `compatibility_date` reciente.
-3. Sustituir la réplica en Sheets por llamadas REST firmadas (queda pendiente:
-   dígamelo y lo hago).
-4. Pasar el cron de `vercel.json` a un **Cron Trigger** de Cloudflare que llame
-   a `/api/recordatorios` con la cabecera `Authorization: Bearer <CRON_SECRET>`.
-5. `npx opennextjs-cloudflare build && npx wrangler deploy`
+   Si no hay `psql` a mano, sirve la consola que trae el propio panel de la base
+   (**Console**): pegar ahí el contenido de `basedatos/esquema.sql`. El archivo
+   se puede ejecutar más de una vez sin romper nada.
 
 ---
 
-## Paso 2 · El dominio, con Cloudflare
+## Paso 2 · La aplicación
 
-Sirve igual si el sitio está en Vercel.
+1. **Create → Apps**.
+2. Origen **GitHub**, elegir el repositorio y la rama `master`. Autorizar el
+   acceso si es la primera vez.
+3. App Platform reconoce Next.js solo. No hay que tocar los comandos.
+4. En **Environment Variables**, añadir:
 
-1. En Cloudflare, **Add a site** y escribir el dominio (por ejemplo
-   `congreso.ciess.org`). Cloudflare da dos servidores de nombres.
-2. Cambiar los servidores de nombres del dominio donde esté registrado, a los
-   que dio Cloudflare. Tarda de minutos a unas horas.
-3. En Vercel: *Settings → Domains → Add*, escribir el dominio. Vercel dirá qué
-   registro hay que crear.
-4. En Cloudflare, *DNS → Add record*, con lo que pidió Vercel:
-   - dominio raíz → registro **A** a la dirección que indique Vercel;
-   - subdominio (`congreso`) → registro **CNAME** a `cname.vercel-dns.com`.
-5. **Importante**: poner la nube en **gris** (*DNS only*) en ese registro. En
-   naranja, Cloudflare hace de intermediario y choca con el certificado de
-   Vercel.
-6. Esperar a que Vercel marque el dominio como *Valid*.
-7. Poner `NEXT_PUBLIC_URL_SITIO` con el dominio definitivo, para que los enlaces
-   de edición de los correos apunten bien.
+   ```
+   DATABASE_URL          = la cadena del paso 1
+   NEXT_PUBLIC_URL_SITIO = https://…  (la que dé App Platform; se corrige después)
+   CRON_SECRET           = una cadena larga al azar
+   ANTIABUSO_SAL         = otra cadena larga al azar
+   ```
+
+   `DATABASE_URL` conviene marcarla como **encrypted**.
+
+5. Plan **Basic**, el contenedor más pequeño. **Create Resources**.
+6. En unos minutos hay una URL `…ondigitalocean.app`. Abrir `/registro`: el
+   formulario funciona.
+7. Volver a Environment Variables y poner `NEXT_PUBLIC_URL_SITIO` con esa URL
+   definitiva, para que los enlaces de los correos apunten bien.
+
+> El archivo `.do/app.yaml` describe esta misma aplicación, incluido el trabajo
+> programado de los recordatorios. Se puede importar en lugar de configurarlo a
+> mano: **Create App → … → Edit App Spec**, o `doctl apps create --spec
+> .do/app.yaml`. Antes hay que sustituir `ORGANIZACION/REPOSITORIO`.
 
 ---
 
-## Paso 3 · Supabase, para encender el panel
+## Paso 3 · La primera cuenta del panel
 
-1. Crear un proyecto en [supabase.com](https://supabase.com).
-2. En **SQL Editor → New query**, pegar entero el archivo
-   [`supabase/todas-las-migraciones.sql`](supabase/todas-las-migraciones.sql) y
-   darle **Run**. Son las siete migraciones en orden, en un solo archivo; se
-   puede ejecutar más de una vez sin romper nada. (Si se prefiere, también
-   están sueltas en `supabase/migrations/`, de la `0001` a la `0007`.)
-3. En **Settings → API**, copiar: *Project URL*, *anon public* y
-   *service_role*.
-4. En Vercel, *Settings → Environment Variables*, añadir:
+Sin ninguna cuenta no hay con quién entrar, y las demás se crean desde el panel.
+La primera se da de alta desde la terminal, con el repositorio clonado:
 
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=…
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=…
-   SUPABASE_SERVICE_ROLE_KEY=…      ← nunca en el navegador
-   NEXT_PUBLIC_URL_SITIO=https://…
-   ```
+```bash
+npm install
+DATABASE_URL="LA_CADENA_DE_CONEXION" npm run crear-usuario -- \
+  persona@ciess.org "Nombre Apellido" superadmin
+```
 
-5. Crear la cuenta del panel: **Authentication → Users → Add user**, con correo
-   y contraseña. Copiar el **UUID** que aparece.
-6. En **SQL Editor**, darla de alta con su rol:
+Pide la contraseña por teclado —no queda en el historial— y admite dejarla
+vacía: entonces la persona entra pidiendo un enlace de acceso desde `/login`,
+lo que requiere tener el correo ya configurado (paso 4).
 
-   ```sql
-   insert into usuarios_panel (id, correo, nombre, rol)
-   values ('<uuid del paso anterior>', 'persona@ciess.org', 'Nombre', 'superadmin');
-   ```
-
-7. Volver a desplegar en Vercel (*Deployments → ⋯ → Redeploy*) para que tome las
-   variables.
+Con esa cuenta, en **Panel → Usuarios del panel** se dan de alta las demás sin
+volver a tocar la terminal.
 
 ---
 
-## Paso 4 · Correos
+## Paso 4 · Correo
 
-1. Cuenta en [resend.com](https://resend.com) y verificar el dominio del
-   congreso (Resend indica los registros DNS; se añaden en Cloudflare igual que
-   en el paso 2).
-2. Añadir en Vercel:
+1. Cuenta en [resend.com](https://resend.com) con el correo institucional.
+2. **Domains → Add domain** → `ciess.org`.
+3. Resend da tres registros DNS. Se añaden donde esté el DNS del dominio —en
+   DigitalOcean, **Networking → Domains → ciess.org**—. La verificación tarda
+   de minutos a unas horas.
+4. En App Platform, añadir:
 
    ```
-   RESEND_API_KEY=…
-   CORREO_REMITENTE=Congreso CIESS <congreso@ciess.org>
+   RESEND_API_KEY   = re_…
+   CORREO_REMITENTE = Congreso CIESS <congreso@ciess.org>
+   CORREO_CONTACTO  = congreso@ciess.org
    ```
 
 ---
 
 ## Paso 5 · Google Sheets y Drive
 
-1. En Google Cloud, crear un proyecto y habilitar **Google Sheets API** y
-   **Google Drive API**.
+1. Google Cloud → proyecto nuevo → habilitar **Google Sheets API** y **Google
+   Drive API**.
 2. Crear una **cuenta de servicio** y descargar su clave JSON.
-3. Crear la hoja de cálculo y la carpeta de Drive, y **compartirlas como editor
-   con el correo de la cuenta de servicio** (el que termina en
+3. Crear la hoja y la carpeta de Drive, y **compartirlas como editor con el
+   correo de la cuenta de servicio** (el que termina en
    `.iam.gserviceaccount.com`). Sin este paso nada funciona.
-4. Añadir en Vercel:
+4. En App Platform:
 
    ```
-   GOOGLE_SERVICE_ACCOUNT_EMAIL=…
-   GOOGLE_PRIVATE_KEY=…          ← con los saltos de línea escapados como \n
-   GOOGLE_SHEETS_ID=…            ← el tramo largo de la URL de la hoja
-   GOOGLE_DRIVE_FOLDER_ID=…      ← el tramo final de la URL de la carpeta
+   GOOGLE_SERVICE_ACCOUNT_EMAIL = …@….iam.gserviceaccount.com
+   GOOGLE_PRIVATE_KEY           = con los saltos de línea escapados como \n
+   GOOGLE_SHEETS_ID             = el tramo largo de la URL de la hoja
+   GOOGLE_DRIVE_FOLDER_ID       = el tramo final de la URL de la carpeta
    ```
 
 Las pestañas normalizadas (`REG`, `PAR`, `ALO`, `TRA`, `PSE`, `ALI`) se crean
@@ -149,71 +139,68 @@ solas con el primer registro.
 
 ---
 
-## Paso 6 · Recordatorios y protección del formulario
+## Paso 6 · Los recordatorios
 
-```
-CRON_SECRET=<una cadena larga al azar>
-ANTIABUSO_SAL=<otra cadena larga al azar>
-```
+Si la aplicación se creó desde `.do/app.yaml`, el trabajo programado ya está.
+Si se configuró a mano:
 
-En Vercel el cron ya está programado en `vercel.json` (14:00 UTC, 8:00 en Ciudad
-de México). En Cloudflare hay que crear el Cron Trigger a mano, como se explica
-en el paso 1B. El panel avisa en **Cupos y configuración** si falta
-`CRON_SECRET`.
+1. En la aplicación: **Create → Job**, del mismo repositorio.
+2. Tipo **Scheduled**, con la expresión `0 14 * * *` (14:00 UTC, 8:00 en Ciudad
+   de México).
+3. Comando:
+
+   ```bash
+   curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/recordatorios"
+   ```
+
+4. Darle las variables `CRON_SECRET` y `APP_URL`.
+
+Desde **Panel → Cupos y configuración** se ajusta la antelación de cada
+recordatorio, se desactivan y se puede disparar uno a mano.
 
 ---
 
-## Paso 7 · El video de fondo
+## Paso 7 · El dominio
 
-El video se muestra al 15 % en el login y en el formulario, y su dirección se
-edita desde **Panel → Cupos y configuración**. Ahí mismo hay un botón
-**Probar el video** que lo carga en pequeño y dice si el navegador pudo
-reproducirlo.
+1. En App Platform: **Settings → Domains → Add Domain**, escribir el subdominio
+   (por ejemplo `congreso.ciess.org`).
+2. Si el DNS del dominio ya está en DigitalOcean, se ofrece crear el registro
+   solo. Si está en otro proveedor, App Platform indica el CNAME que hay que
+   crear.
+3. El certificado se emite solo.
+4. Actualizar `NEXT_PUBLIC_URL_SITIO` con el dominio definitivo.
+
+---
+
+## Paso 8 · El video de fondo
+
+El video se muestra al 15 % en el acceso y en el formulario, y su dirección se
+edita desde **Panel → Cupos y configuración**, donde además hay un botón
+**Probar el video** que lo carga y dice si el navegador pudo reproducirlo.
 
 Si no se ve, casi siempre es una de estas tres:
 
-1. **Se está mirando la vista previa publicada como artefacto.** Ahí nunca se
-   verá: esa página bloquea los archivos multimedia externos. Hay que mirar el
-   sitio desplegado.
-2. **El servidor del archivo bloquea enlaces externos.** Muchos WordPress lo
-   hacen. Se comprueba abriendo la dirección del `.mp4` en una pestaña nueva: si
-   ahí no se reproduce, tampoco lo hará en el sitio.
-3. **La dirección cambió o el archivo no está publicado.**
+1. **El servidor del archivo bloquea enlaces externos.** Muchos WordPress lo
+   hacen. Se comprueba abriendo la dirección del `.mp4` en una pestaña nueva.
+2. **La dirección cambió** o el archivo no está publicado.
+3. Se está mirando una vista previa que bloquea el multimedia externo.
 
-La forma segura de resolverlo, y la recomendada, es **servir el video desde el
-propio sitio**:
+Lo seguro es servirlo desde infraestructura propia: **DigitalOcean Spaces**
+(crear un Space, subir el `.mp4`, marcarlo público y pegar su URL) o la carpeta
+`public/` del proyecto si el archivo es pequeño.
 
-- **Con el proyecto**: copiar el archivo a `public/video-congreso.mp4` y poner
-  `/video-congreso.mp4` como dirección en el panel. Conviene sólo si el archivo
-  pesa poco (menos de ~20 MB); el repositorio crece con él.
-- **Cloudflare R2**: crear un bucket, subir el `.mp4`, activar el acceso público
-  y pegar la URL que da R2. Es lo mejor para un archivo grande y va incluido en
-  el plan gratuito hasta 10 GB.
-- **Cloudflare Stream** si se quiere reproducción adaptativa; es de pago.
-
-Formato: **MP4 con H.264 y AAC** es el que reproducen todos los navegadores. Un
-`.mov` grande conviene convertirlo. Como es un fondo silenciado, se puede
-comprimir sin piedad: 1280 px de ancho y una tasa baja bastan.
+Formato: **MP4 con H.264 y AAC**. Como es un fondo silenciado, se puede
+comprimir sin piedad: 1280 px de ancho basta.
 
 ---
 
-## Cómo saber qué falta, en cualquier momento
-
-El sitio trae una pantalla de diagnóstico en **`/diagnostico`** que dice, pieza
-por pieza, qué está configurado y cuál es el siguiente paso: las variables de
-entorno (sólo si están puestas, nunca su valor), qué migraciones se ejecutaron
-y si ya hay alguna cuenta dada de alta en el panel.
-
-Mientras Supabase no esté conectado se puede abrir sin sesión —la página de
-acceso ya enlaza a ella—; en cuanto hay base de datos, pide sesión de
-superadministrador.
-
 ## Comprobación final
 
-1. Abrir el sitio: el formulario carga y el video se ve de fondo.
-2. Registrarse a modo de prueba: llega el correo y aparece el folio.
+1. `/registro` carga y el video se ve de fondo.
+2. Registrarse de prueba: llega el correo y aparece el folio.
 3. Entrar al panel: el registro está ahí.
-4. Revisar la hoja de Google: la fila también está.
-5. En **Cupos y configuración**, sustituir las propuestas por los datos
+4. La fila también está en la hoja de Google.
+5. `/diagnostico` no reporta nada pendiente.
+6. En **Cupos y configuración**, sustituir las propuestas por los datos
    definitivos del congreso.
-6. Borrar los registros de prueba antes de abrir el registro al público.
+7. Borrar los registros de prueba antes de abrir el registro al público.

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { consultar } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { resincronizarRegistro, sincronizarRegistro } from '@/lib/servidor/sheets';
 import { googleConfigurado } from '@/lib/servidor/google';
@@ -16,19 +16,24 @@ export async function GET() {
     return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
   }
 
-  const admin = crearClienteAdmin();
-  const { data, error } = await admin
-    .from('registros')
-    .select('id, folio, creado_en, sheets_error, sheets_sincronizado_en')
-    .is('sheets_sincronizado_en', null)
-    .order('creado_en', { ascending: true })
-    .limit(LOTE_MAXIMO);
-
-  if (error) return NextResponse.json({ mensaje: error.message }, { status: 500 });
+  let pendientes: Record<string, unknown>[];
+  try {
+    pendientes = await consultar(
+      `select id, folio, creado_en, sheets_error, sheets_sincronizado_en
+         from registros
+        where sheets_sincronizado_en is null
+        order by creado_en
+        limit $1`,
+      [LOTE_MAXIMO],
+    );
+  } catch (error) {
+    console.error('No se pudo leer el estado de la réplica:', error);
+    return NextResponse.json({ mensaje: 'No fue posible leer el estado.' }, { status: 500 });
+  }
 
   return NextResponse.json({
     configurado: googleConfigurado() && Boolean(process.env.GOOGLE_SHEETS_ID),
-    pendientes: data ?? [],
+    pendientes,
   });
 }
 
@@ -48,33 +53,44 @@ export async function POST(peticion: NextRequest) {
   }
 
   const cuerpo = (await peticion.json().catch(() => ({}))) as { id?: string };
-  const admin = crearClienteAdmin();
 
-  const consulta = admin.from('registros').select('*');
-  const { data: registros, error } = cuerpo.id
-    ? await consulta.eq('id', cuerpo.id).limit(1)
-    : await consulta.is('sheets_sincronizado_en', null).order('creado_en').limit(LOTE_MAXIMO);
-
-  if (error) return NextResponse.json({ mensaje: error.message }, { status: 500 });
+  let registros: (Record<string, unknown> & { id: string; folio: string })[];
+  try {
+    registros = cuerpo.id
+      ? await consultar('select * from registros where id = $1 limit 1', [cuerpo.id])
+      : await consultar(
+          `select * from registros
+            where sheets_sincronizado_en is null
+            order by creado_en
+            limit $1`,
+          [LOTE_MAXIMO],
+        );
+  } catch (error) {
+    console.error('No se pudieron leer los registros a replicar:', error);
+    return NextResponse.json({ mensaje: 'No fue posible leer los registros.' }, { status: 500 });
+  }
 
   let sincronizados = 0;
   const fallidos: { folio: string; error: string }[] = [];
 
-  for (const registro of registros ?? []) {
+  for (const registro of registros) {
     try {
       // Un reintento puntual resincroniza para no duplicar filas ya escritas;
       // el proceso por lotes sólo toca registros que nunca llegaron a la hoja.
       if (cuerpo.id) await resincronizarRegistro(registro);
       else await sincronizarRegistro(registro);
 
-      await admin
-        .from('registros')
-        .update({ sheets_sincronizado_en: new Date().toISOString(), sheets_error: null })
-        .eq('id', registro.id);
+      await consultar(
+        `update registros set sheets_sincronizado_en = now(), sheets_error = null where id = $1`,
+        [registro.id],
+      );
       sincronizados += 1;
     } catch (fallo) {
       const mensaje = fallo instanceof Error ? fallo.message : String(fallo);
-      await admin.from('registros').update({ sheets_error: mensaje }).eq('id', registro.id);
+      await consultar('update registros set sheets_error = $2 where id = $1', [
+        registro.id,
+        mensaje,
+      ]);
       fallidos.push({ folio: registro.folio, error: mensaje });
     }
   }

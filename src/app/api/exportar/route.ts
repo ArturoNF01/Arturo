@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
-import { crearClienteServidor } from '@/lib/supabase/servidor';
+import { consultar } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 
 export const dynamic = 'force-dynamic';
@@ -19,18 +19,15 @@ export async function GET(peticion: NextRequest) {
     return NextResponse.json({ mensaje: 'Formato no admitido.' }, { status: 400 });
   }
 
-  // Se consulta con la sesión del usuario para que RLS decida qué puede ver.
-  const supabase = await crearClienteServidor();
-  const { data, error } = await supabase
-    .from('registros')
-    .select('*')
-    .order('creado_en', { ascending: false });
-
-  if (error) {
-    return NextResponse.json({ mensaje: error.message }, { status: 500 });
+  let crudas: Record<string, unknown>[];
+  try {
+    crudas = await consultar('select * from registros order by creado_en desc');
+  } catch (error) {
+    console.error('No se pudo exportar:', error);
+    return NextResponse.json({ mensaje: 'No fue posible leer los registros.' }, { status: 500 });
   }
 
-  const filas = (data ?? []).map((fila) => {
+  const filas = crudas.map((fila) => {
     const plano: Record<string, unknown> = {};
     for (const [clave, valor] of Object.entries(fila)) {
       // El token de edición no sale nunca en una exportación.

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { unaFila } from '@/lib/bd/conexion';
 import { dentroDelPlazo, leerConfiguracion } from '@/lib/servidor/configuracion';
 import { leerDatosCongreso, leerEjes } from '@/lib/servidor/contenido';
 import { PaginaConfirmacion } from './pagina-confirmacion';
@@ -19,8 +19,10 @@ export default async function Confirmacion({
   const { id } = await params;
   const { token } = await searchParams;
 
-  const supabase = crearClienteAdmin();
-  const { data: registro } = await supabase.from('registros').select('*').eq('id', id).maybeSingle();
+  const registro = await unaFila<Record<string, unknown> & { token_edicion: string }>(
+    'select * from registros where id = $1',
+    [id],
+  ).catch(() => null);
 
   if (!registro || !token || token !== registro.token_edicion) notFound();
 

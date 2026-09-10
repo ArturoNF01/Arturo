@@ -1,5 +1,5 @@
 import 'server-only';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { consultar } from '@/lib/bd/conexion';
 
 /**
  * Qué le falta a este despliegue para funcionar del todo.
@@ -46,25 +46,27 @@ function evaluar(variables: Variable[]): Estado {
 }
 
 /**
- * Cada migración se reconoce por algo que crea. Si la consulta responde, la
- * migración corrió; si la tabla no existe, no.
+ * Cada pieza del esquema se reconoce por algo que crea. Si la tabla o la
+ * vista existe, esa parte se ejecutó.
  */
 const HUELLAS: { archivo: string; prueba: string; tabla: string }[] = [
-  { archivo: '0001_esquema_inicial.sql', tabla: 'registros', prueba: 'tabla registros' },
-  { archivo: '0002_plantillas_y_sql_lectura.sql', tabla: 'plantillas_correo', prueba: 'tabla plantillas_correo' },
-  { archivo: '0003_contenido_editable.sql', tabla: 'ejes_tematicos', prueba: 'tabla ejes_tematicos' },
-  { archivo: '0004_estados_y_lista_espera.sql', tabla: 'v_lista_espera', prueba: 'vista v_lista_espera' },
-  { archivo: '0005_dictamen_ponencias.sql', tabla: 'v_ponencias', prueba: 'vista v_ponencias' },
-  { archivo: '0006_recordatorios.sql', tabla: 'envios_recordatorio', prueba: 'tabla envios_recordatorio' },
-  { archivo: '0007_antiabuso.sql', tabla: 'intentos_registro', prueba: 'tabla intentos_registro' },
+  { archivo: 'Registros', tabla: 'registros', prueba: 'tabla registros' },
+  { archivo: 'Acceso al panel', tabla: 'sesiones', prueba: 'tabla sesiones' },
+  { archivo: 'Plantillas de correo', tabla: 'plantillas_correo', prueba: 'tabla plantillas_correo' },
+  { archivo: 'Contenido editable', tabla: 'ejes_tematicos', prueba: 'tabla ejes_tematicos' },
+  { archivo: 'Lista de espera', tabla: 'v_lista_espera', prueba: 'vista v_lista_espera' },
+  { archivo: 'Dictamen de ponencias', tabla: 'v_ponencias', prueba: 'vista v_ponencias' },
+  { archivo: 'Recordatorios', tabla: 'envios_recordatorio', prueba: 'tabla envios_recordatorio' },
+  { archivo: 'Protección del formulario', tabla: 'intentos_registro', prueba: 'tabla intentos_registro' },
 ];
 
 async function existe(tabla: string): Promise<boolean> {
   try {
-    const { error } = await crearClienteAdmin()
-      .from(tabla)
-      .select('*', { count: 'exact', head: true });
-    return !error;
+    const filas = await consultar<{ existe: boolean }>(
+      `select to_regclass($1) is not null as existe`,
+      [`public.${tabla}`],
+    );
+    return Boolean(filas[0]?.existe);
   } catch {
     return false;
   }
@@ -72,22 +74,19 @@ async function existe(tabla: string): Promise<boolean> {
 
 async function contar(tabla: string): Promise<number | null> {
   try {
-    const { count, error } = await crearClienteAdmin()
-      .from(tabla)
-      .select('*', { count: 'exact', head: true });
-    return error ? null : count ?? 0;
+    // `tabla` es un literal del propio código, nunca entrada del usuario.
+    const filas = await consultar<{ total: string }>(`select count(*)::text as total from ${tabla}`);
+    return Number(filas[0]?.total ?? 0);
   } catch {
     return null;
   }
 }
 
 export async function diagnosticar(): Promise<Informe> {
-  const supabase: Variable[] = [
-    { nombre: 'NEXT_PUBLIC_SUPABASE_URL', presente: hay('NEXT_PUBLIC_SUPABASE_URL'), obligatoria: true },
-    { nombre: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', presente: hay('NEXT_PUBLIC_SUPABASE_ANON_KEY'), obligatoria: true },
-    { nombre: 'SUPABASE_SERVICE_ROLE_KEY', presente: hay('SUPABASE_SERVICE_ROLE_KEY'), obligatoria: true },
+  const baseDeDatos: Variable[] = [
+    { nombre: 'DATABASE_URL', presente: hay('DATABASE_URL'), obligatoria: true },
   ];
-  const estadoSupabase = evaluar(supabase);
+  const estadoBd = evaluar(baseDeDatos);
 
   const correo: Variable[] = [
     { nombre: 'RESEND_API_KEY', presente: hay('RESEND_API_KEY'), obligatoria: true },
@@ -116,7 +115,7 @@ export async function diagnosticar(): Promise<Informe> {
   let usuariosPanel: number | null = null;
   let registros: number | null = null;
 
-  if (estadoSupabase === 'listo') {
+  if (estadoBd === 'listo') {
     const aplicadas = await Promise.all(HUELLAS.map((h) => existe(h.tabla)));
     migraciones = HUELLAS.map((h, i) => ({
       archivo: h.archivo,
@@ -131,32 +130,32 @@ export async function diagnosticar(): Promise<Informe> {
 
   const piezas: Pieza[] = [
     {
-      clave: 'supabase',
-      titulo: 'Supabase · base de datos y acceso al panel',
+      clave: 'base',
+      titulo: 'PostgreSQL · base de datos y acceso al panel',
       estado:
-        estadoSupabase !== 'listo' ? estadoSupabase
+        estadoBd !== 'listo' ? estadoBd
         : faltanMigraciones > 0 ? 'incompleto'
         : usuariosPanel === 0 ? 'incompleto'
         : 'listo',
       resumen:
-        estadoSupabase === 'falta'
+        estadoBd === 'falta'
           ? 'Sin conectar. El formulario funciona, pero nada se guarda todavía.'
-          : estadoSupabase === 'incompleto'
-          ? 'Faltan variables. Las tres son necesarias.'
+          : estadoBd === 'incompleto'
+          ? 'Falta la cadena de conexión.'
           : faltanMigraciones > 0
-          ? `Conectado, pero faltan ${faltanMigraciones} migraciones por ejecutar.`
+          ? `Conectado, pero el esquema está incompleto: faltan ${faltanMigraciones} piezas.`
           : usuariosPanel === 0
           ? 'Todo listo, pero no hay ninguna cuenta dada de alta en usuarios_panel.'
           : 'Conectado, con el esquema completo.',
       siguiente:
-        estadoSupabase !== 'listo'
-          ? 'Crear el proyecto en supabase.com y copiar las tres claves de Settings → API.'
+        estadoBd !== 'listo'
+          ? 'Crear la base en DigitalOcean y copiar su cadena de conexión a DATABASE_URL.'
           : faltanMigraciones > 0
-          ? 'Pegar supabase/todas-las-migraciones.sql en el editor SQL de Supabase y ejecutarlo.'
+          ? 'Ejecutar basedatos/esquema.sql contra la base.'
           : usuariosPanel === 0
-          ? 'Crear el usuario en Authentication → Users y darlo de alta en usuarios_panel con su rol.'
+          ? 'Dar de alta la primera cuenta del panel con el guion de arranque.'
           : 'Nada pendiente.',
-      variables: supabase,
+      variables: baseDeDatos,
     },
     {
       clave: 'correo',
@@ -176,7 +175,7 @@ export async function diagnosticar(): Promise<Informe> {
       resumen:
         evaluar(google) === 'listo'
           ? 'Configurado. Cada registro se replica en el libro de seguimiento.'
-          : 'Sin configurar. Los registros viven sólo en Supabase; se pueden exportar desde el panel.',
+          : 'Sin configurar. Los registros viven sólo en la base; se pueden exportar desde el panel.',
       siguiente:
         'Crear la cuenta de servicio, y compartir la hoja y la carpeta como editor con su correo.',
       variables: google,

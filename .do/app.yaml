@@ -1,0 +1,107 @@
+# =====================================================================
+# App Platform · 1er Congreso
+#
+# Este archivo describe la aplicación para DigitalOcean. Se puede importar
+# desde el panel (Create App → seleccionar el repositorio → Edit Plan →
+# App Spec) o aplicarlo con la herramienta de línea de comandos:
+#
+#   doctl apps create --spec .do/app.yaml
+#   doctl apps update <id> --spec .do/app.yaml
+#
+# Los valores marcados como SECRET se ponen en el panel de App Platform,
+# nunca aquí: este archivo va al repositorio.
+# =====================================================================
+name: congreso-ciess
+region: nyc
+
+services:
+  - name: sitio
+    # Next.js se detecta solo; el buildpack de Node corre `npm run build` y
+    # después `npm start`.
+    environment_slug: node-js
+    instance_size_slug: apps-s-1vcpu-1gb
+    instance_count: 1
+    http_port: 8080
+
+    github:
+      repo: ORGANIZACION/REPOSITORIO
+      branch: master
+      deploy_on_push: true
+
+    health_check:
+      # El formulario responde aunque falte todo lo demás: es la señal
+      # correcta de que la aplicación está en pie.
+      http_path: /registro
+
+    envs:
+      - key: DATABASE_URL
+        scope: RUN_AND_BUILD_TIME
+        value: ${congreso-bd.DATABASE_URL}
+      - key: NEXT_PUBLIC_URL_SITIO
+        scope: RUN_AND_BUILD_TIME
+        value: ${APP_URL}
+      - key: NODE_ENV
+        scope: RUN_AND_BUILD_TIME
+        value: production
+
+      # Los siguientes se rellenan en el panel, como secretos.
+      - key: RESEND_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: CORREO_REMITENTE
+        scope: RUN_TIME
+        value: Congreso CIESS <congreso@ciess.org>
+      - key: CORREO_CONTACTO
+        scope: RUN_TIME
+        value: congreso@ciess.org
+      - key: CRON_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: ANTIABUSO_SAL
+        scope: RUN_TIME
+        type: SECRET
+      - key: GOOGLE_SERVICE_ACCOUNT_EMAIL
+        scope: RUN_TIME
+        type: SECRET
+      - key: GOOGLE_PRIVATE_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: GOOGLE_SHEETS_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: GOOGLE_DRIVE_FOLDER_ID
+        scope: RUN_TIME
+        type: SECRET
+
+jobs:
+  # Los recordatorios se envían una vez al día. El trabajo llama al mismo
+  # endpoint que se puede disparar a mano desde el panel.
+  - name: recordatorios
+    kind: CRON
+    schedule: '0 14 * * *'
+    environment_slug: node-js
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    github:
+      repo: ORGANIZACION/REPOSITORIO
+      branch: master
+    run_command: >-
+      curl -fsS -X GET
+      -H "Authorization: Bearer $CRON_SECRET"
+      "$APP_URL/api/recordatorios"
+    envs:
+      - key: CRON_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: APP_URL
+        scope: RUN_TIME
+        value: ${APP_URL}
+
+databases:
+  - name: congreso-bd
+    engine: PG
+    version: '16'
+    production: true
+    # El tamaño más pequeño sostiene de sobra un congreso; se puede subir sin
+    # tiempo de inactividad si hiciera falta.
+    size: db-s-1vcpu-1gb
+    num_nodes: 1

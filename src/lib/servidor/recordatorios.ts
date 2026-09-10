@@ -1,5 +1,5 @@
 import 'server-only';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { consultar, unaFila } from '@/lib/bd/conexion';
 import {
   RECORDATORIOS_POR_DEFECTO, normalizarRecordatorios, type Recordatorio,
 } from '@/lib/recordatorios';
@@ -14,7 +14,7 @@ export interface EnvioRecordatorio {
 export interface EstadoRecordatorios {
   recordatorios: Recordatorio[];
   envios: EnvioRecordatorio[];
-  /** Sin CRON_SECRET el cron de Vercel no puede autenticarse. */
+  /** Sin CRON_SECRET el trabajo programado no puede autenticarse. */
   cronConfigurado: boolean;
 }
 
@@ -22,15 +22,16 @@ export interface EstadoRecordatorios {
 export async function leerEstadoRecordatorios(): Promise<EstadoRecordatorios> {
   const cronConfigurado = Boolean(process.env.CRON_SECRET);
   try {
-    const supabase = crearClienteAdmin();
-    const [{ data: fila }, { data: envios }] = await Promise.all([
-      supabase.from('configuracion').select('valor').eq('clave', 'recordatorios').maybeSingle(),
-      supabase.from('v_recordatorios_enviados').select('*'),
+    const [fila, envios] = await Promise.all([
+      unaFila<{ valor: unknown }>(
+        `select valor from configuracion where clave = 'recordatorios'`,
+      ),
+      consultar<EnvioRecordatorio>('select * from v_recordatorios_enviados'),
     ]);
 
     return {
       recordatorios: normalizarRecordatorios(fila?.valor),
-      envios: (envios ?? []) as EnvioRecordatorio[],
+      envios,
       cronConfigurado,
     };
   } catch {

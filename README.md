@@ -11,7 +11,7 @@ convocado por el **CIESS** y la **CISS**.
 - **Siete perfiles**: funcionario del CIESS, funcionario de la CISS y espectador
   en vivo (internos); espectador en línea, participante de otra institución,
   panelista y conferencista (externos).
-- **Almacenamiento sincronizado**: Supabase como base principal y Google Sheets
+- **Almacenamiento sincronizado**: PostgreSQL como base principal y Google Sheets
   como réplica en las pestañas normalizadas `REG`, `PAR`, `ALO`, `TRA`, `PSE` y
   `ALI`. Las fotografías se guardan en una carpeta de Google Drive.
 - **Trilingüe** (español por defecto, inglés y portugués) y **modo oscuro** activo
@@ -34,12 +34,8 @@ convocado por el **CIESS** y la **CISS**.
 - **Cumplimiento normativo**: aviso de privacidad y consentimiento conforme a la
   LFPDPPP (México), la LGPD (Brasil) y el RGPD (Unión Europea).
 
-> Para rehacer el despliegue en las cuentas institucionales del CIESS está
-> **[MIGRACION.md](MIGRACION.md)**, con el orden, lo que hay que decidir antes
-> y lo que cuesta cada servicio.
->
-> Para desplegar paso a paso —Vercel, dominio con Cloudflare, Supabase, correos,
-> Google, el cron y el video de fondo— está **[DESPLIEGUE.md](DESPLIEGUE.md)**.
+> Para desplegar paso a paso —base, aplicación, correo, Google, el trabajo
+> programado y el video de fondo— está **[DESPLIEGUE.md](DESPLIEGUE.md)**.
 
 ## Puesta en marcha
 
@@ -49,29 +45,23 @@ cp .env.example .env.local   # y llenar los valores
 npm run dev
 ```
 
-### 1. Supabase
+### 1. Base de datos
 
-1. Crear un proyecto en [supabase.com](https://supabase.com).
-2. Ejecutar el esquema. Lo más rápido es pegar de una vez
-   `supabase/todas-las-migraciones.sql` (SQL Editor → New query → Run); se
-   puede ejecutar más de una vez sin romper nada. Si se prefiere ir una por
-   una, en este orden:
-   - `supabase/migrations/0001_esquema_inicial.sql`
-   - `supabase/migrations/0002_plantillas_y_sql_lectura.sql`
-   - `supabase/migrations/0003_contenido_editable.sql`
-   - `supabase/migrations/0004_estados_y_lista_espera.sql`
-   - `supabase/migrations/0005_dictamen_ponencias.sql`
-   - `supabase/migrations/0006_recordatorios.sql`
-   - `supabase/migrations/0007_antiabuso.sql`
-3. Copiar a `.env.local` la URL del proyecto, la clave anónima y la clave de
-   servicio (`SUPABASE_SERVICE_ROLE_KEY`, sólo del lado del servidor).
-4. Crear las cuentas del panel en **Authentication → Users** y darles de alta en
-   la tabla `usuarios_panel` con el rol que corresponda:
+1. Crear una base **PostgreSQL 16**. En DigitalOcean: *Create → Databases*.
+2. Copiar su cadena de conexión a `DATABASE_URL`.
+3. Cargar el esquema: `npm run esquema`, o
+   `psql "$DATABASE_URL" -f basedatos/esquema.sql`. Se puede ejecutar más de
+   una vez sin romper nada.
+4. Dar de alta la primera cuenta del panel, que es la única que no se puede
+   crear desde el propio panel:
 
-```sql
-insert into usuarios_panel (id, correo, nombre, rol)
-values ('<uuid del usuario de auth>', 'persona@ciess.org', 'Nombre', 'superadmin');
+```bash
+npm run crear-usuario -- persona@ciess.org "Nombre Apellido" superadmin
 ```
+
+Pide la contraseña por teclado. Si se deja vacía, la persona entra pidiendo un
+enlace de acceso desde `/login`. Las demás cuentas se dan de alta en
+**Panel → Usuarios del panel**.
 
 ### 2. Google Sheets y Drive
 
@@ -92,37 +82,27 @@ Las pestañas normalizadas se crean solas en el primer registro.
    del congreso.
 2. Poner la clave en `RESEND_API_KEY` y el remitente en `CORREO_REMITENTE`.
 
-### 4. Despliegue en Vercel
+Resend envía tres cosas: el acuse de registro, los enlaces de acceso al panel y
+los recordatorios. Sin él, los registros se guardan igual, pero nadie recibe
+aviso y sólo se puede entrar al panel con contraseña.
+
+### 4. Despliegue
 
 **El sitio público no necesita ninguna credencial para desplegarse.** El
 formulario, las FAQs y el aviso de privacidad funcionan con las propuestas que
 trae el código, y el video institucional de fondo se ve en cuanto hay un
-dominio público. Sin Supabase, el panel avisa que todavía no está conectado en
-lugar de fallar.
+dominio público. Sin base de datos, el panel avisa que todavía no está
+conectado en lugar de fallar.
 
-1. Entrar a [vercel.com/new](https://vercel.com/new) e importar `ArturoNF01/Arturo`.
-2. Vercel detecta Next.js solo: no hay que tocar la configuración de compilación.
-3. **Deploy.** En un par de minutos hay una URL pública.
+`.do/app.yaml` describe la aplicación completa para DigitalOcean App Platform,
+incluidos la base y el trabajo programado de los recordatorios.
+**[DESPLIEGUE.md](DESPLIEGUE.md)** lo lleva paso a paso.
 
 ### 5. Recordatorios automáticos
 
-`vercel.json` deja programado el envío diario a las 14:00 UTC (8:00 en Ciudad de
-México). Para que funcione hay que definir `CRON_SECRET` en las variables de
-entorno de Vercel con una cadena larga al azar: el cron se autentica con ella y,
-sin ella, el endpoint responde 503 en lugar de escribir a nadie. El panel avisa
-en *Cupos y configuración* cuando falta.
-
-Desde esa misma pantalla se ajusta la antelación de cada recordatorio, se
-desactivan y se puede disparar uno a mano. Cada envío queda asentado, así que
-repetirlo no vuelve a escribir a quien ya lo recibió.
-
-Para activar el panel, añadir después en *Settings → Environment Variables* las
-mismas claves de `.env.example` y volver a desplegar. Conviene fijar
-`NEXT_PUBLIC_URL_SITIO` al dominio definitivo para que los enlaces de edición
-de los correos apunten bien.
-
-Si la rama de trabajo todavía no está fusionada, en *Settings → Git →
-Production Branch* se puede apuntar a `claude/congreso-registration-system-d6r396`.
+Un trabajo programado llama a diario a `/api/recordatorios` con `CRON_SECRET`
+en la cabecera. Sin ese secreto el endpoint responde 503 en lugar de escribir a
+nadie, y el panel lo avisa en **Cupos y configuración**.
 
 ## Comandos
 
@@ -132,7 +112,7 @@ npm run build       # compilación de producción
 npm run typecheck   # comprobación de tipos
 npm run lint        # análisis estático
 npm test            # pruebas de la lógica crítica
-npm run sembrar 120 # 120 registros de demostración en Supabase
+npm run sembrar 120 # 120 registros de demostración
 npm run sembrar -- --borrar   # elimina sólo los registros de demostración
 
 npx tsx guiones/generar-vista-previa.ts   # vista previa del formulario en un HTML
@@ -159,8 +139,8 @@ src/
   componentes/            Formulario, campos, controles y componentes del panel
   i18n/                   Diccionarios es/en/pt, aviso de privacidad y FAQs
   lib/                    Configuración, perfiles, validación, opciones canónicas,
-                          paleta de gráficas y clientes de Supabase y Google
-supabase/migrations/      Esquema, políticas RLS, auditoría y plantillas
+                          paleta de gráficas, conexión a PostgreSQL y Google
+basedatos/esquema.sql     Esquema completo: tablas, vistas, auditoría y plantillas
 pruebas/                  Pruebas de la lógica crítica
 guiones/                  Sembrado de datos de demostración
 ```
@@ -168,7 +148,7 @@ guiones/                  Sembrado de datos de demostración
 ## Operación
 
 - **Si falla la réplica en Google Sheets**, el registro no se pierde: queda en
-  Supabase con el error asentado y aparece en **Panel → Cupos y configuración →
+  la base con el error asentado y aparece en **Panel → Cupos y configuración →
   Réplica en Google Sheets**, desde donde se puede reintentar uno a uno o en
   lote.
 - **Auditoría**: toda alta, modificación o baja de registros, plantillas y
@@ -223,7 +203,7 @@ tocar el código ni volver a desplegar.
 | Preguntas frecuentes | Panel → Contenido del sitio | 20 preguntas, en los tres idiomas |
 | Aviso de privacidad | Panel → Contenido del sitio (superadmin) | 10 apartados conforme a LFPDPPP, LGPD y RGPD |
 | Plantillas de correo | Panel → Plantillas de correo | 3 plantillas × 3 idiomas |
-| Perfiles de participación | Tabla `perfiles` de Supabase | 7 perfiles |
+| Perfiles de participación | Tabla `perfiles` | 7 perfiles |
 
 **Cómo funciona el respaldo.** Las propuestas viven en el código
 (`src/lib/contenido.ts`, `src/i18n/faqs.ts`, `src/i18n/aviso-privacidad.ts`) y se

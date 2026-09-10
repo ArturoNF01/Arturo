@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crearClienteServidor } from '@/lib/supabase/servidor';
+import { conActor } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { esquemaConfiguracion } from '@/lib/esquema';
 
@@ -17,14 +17,20 @@ export async function PUT(peticion: NextRequest) {
     return NextResponse.json({ mensaje: 'Configuración no válida.' }, { status: 422 });
   }
 
-  const supabase = await crearClienteServidor();
-  for (const [clave, valor] of Object.entries(analisis.data)) {
-    if (valor === undefined) continue;
-    const { error } = await supabase
-      .from('configuracion')
-      .update({ valor, actualizado_por: usuario.id })
-      .eq('clave', clave);
-    if (error) return NextResponse.json({ mensaje: error.message }, { status: 403 });
+  try {
+    for (const [clave, valor] of Object.entries(analisis.data)) {
+      if (valor === undefined) continue;
+      await conActor(
+        usuario.id,
+        `update configuracion
+            set valor = $1::jsonb, actualizado_por = $2, actualizado_en = now()
+          where clave = $3`,
+        [JSON.stringify(valor), usuario.id, clave],
+      );
+    }
+  } catch (error) {
+    console.error('No se pudo guardar la configuración:', error);
+    return NextResponse.json({ mensaje: 'No fue posible guardar los cambios.' }, { status: 500 });
   }
 
   return NextResponse.json({ guardado: true });

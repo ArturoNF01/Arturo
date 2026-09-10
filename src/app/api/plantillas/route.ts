@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crearClienteServidor } from '@/lib/supabase/servidor';
+import { conActor, consultar } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { esquemaPlantilla } from '@/lib/esquema';
 import { aplicarPlantilla, envolverHtml } from '@/lib/servidor/correo';
@@ -13,15 +13,13 @@ export async function GET() {
   const usuario = await usuarioActual();
   if (!usuario) return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
 
-  const supabase = await crearClienteServidor();
-  const { data, error } = await supabase
-    .from('plantillas_correo')
-    .select('*')
-    .order('clave')
-    .order('idioma');
-
-  if (error) return NextResponse.json({ mensaje: error.message }, { status: 500 });
-  return NextResponse.json(data ?? []);
+  try {
+    const filas = await consultar('select * from plantillas_correo order by clave, idioma');
+    return NextResponse.json(filas);
+  } catch (error) {
+    console.error('No se pudieron leer las plantillas:', error);
+    return NextResponse.json({ mensaje: 'No fue posible leer las plantillas.' }, { status: 500 });
+  }
 }
 
 export async function PUT(peticion: NextRequest) {
@@ -35,20 +33,27 @@ export async function PUT(peticion: NextRequest) {
     return NextResponse.json({ mensaje: 'Plantilla no válida.' }, { status: 422 });
   }
 
-  // Se escribe con la sesión del usuario: RLS valida el rol y el disparador
-  // de auditoría deja constancia de quién hizo el cambio.
-  const supabase = await crearClienteServidor();
-  const { error } = await supabase
-    .from('plantillas_correo')
-    .update({
-      asunto: analisis.data.asunto,
-      cuerpo_html: analisis.data.cuerpo_html,
-      actualizado_por: usuario.id,
-    })
-    .eq('clave', analisis.data.clave)
-    .eq('idioma', analisis.data.idioma);
+  // La escritura lleva el actor puesto: el disparador de auditoría deja
+  // constancia de quién cambió la plantilla.
+  try {
+    await conActor(
+      usuario.id,
+      `update plantillas_correo
+          set asunto = $1, cuerpo_html = $2, actualizado_por = $3
+        where clave = $4 and idioma = $5`,
+      [
+        analisis.data.asunto,
+        analisis.data.cuerpo_html,
+        usuario.id,
+        analisis.data.clave,
+        analisis.data.idioma,
+      ],
+    );
+  } catch (error) {
+    console.error('No se pudo guardar la plantilla:', error);
+    return NextResponse.json({ mensaje: 'No fue posible guardar la plantilla.' }, { status: 500 });
+  }
 
-  if (error) return NextResponse.json({ mensaje: error.message }, { status: 403 });
   return NextResponse.json({ guardado: true });
 }
 

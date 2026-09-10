@@ -1,7 +1,7 @@
 /**
  * Constantes que no cambian desde el panel. El nombre, la sede, las fechas,
  * los ejes temáticos, los límites del formulario, los cupos y los textos de
- * las páginas públicas viven en Supabase y se editan en
+ * las páginas públicas viven en la base y se editan en
  * Panel → Cupos y configuración y Panel → Contenido del sitio.
  */
 export const CONFIG = {
@@ -26,7 +26,7 @@ export const CONFIG = {
     'https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf',
 
   zonaHoraria: 'America/Mexico_City',
-  versionAvisoPrivacidad: '1.1',
+  versionAvisoPrivacidad: '1.2',
 } as const;
 
 export const CORREO_CONTACTO = process.env.CORREO_CONTACTO ?? 'congreso@ciess.org';

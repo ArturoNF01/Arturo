@@ -1,5 +1,5 @@
 import 'server-only';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { consultar } from '@/lib/bd/conexion';
 import type { EstadoPonencia } from '@/lib/dictamen';
 
 /** Una propuesta recibida, tal como la muestra la pantalla de dictamen. */
@@ -33,15 +33,12 @@ export interface Ponencia {
  * Propuestas que hay que dictaminar, en orden de llegada.
  *
  * La vista ya excluye los registros cancelados y los que no traen ponencia.
- * Sin Supabase configurado devuelve una lista vacía para que el panel siga
+ * Sin base configurada devuelve una lista vacía para que el panel siga
  * abriendo en entornos sin credenciales.
  */
 export async function leerPonencias(): Promise<Ponencia[]> {
   try {
-    const supabase = crearClienteAdmin();
-    const { data, error } = await supabase.from('v_ponencias').select('*');
-    if (error || !data) return [];
-    return data as Ponencia[];
+    return await consultar<Ponencia>('select * from v_ponencias');
   } catch {
     return [];
   }

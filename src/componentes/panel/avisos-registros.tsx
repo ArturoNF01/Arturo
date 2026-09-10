@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/componentes/proveedores';
-import { crearClienteNavegador } from '@/lib/supabase/cliente';
+import { useContextoRegistros } from './proveedor-registros';
 import { nombrePerfil } from '@/lib/perfiles';
 import { useAlmacenLocal } from '@/componentes/usar-almacen-local';
 
@@ -19,8 +19,11 @@ interface Aviso {
 const CLAVE_SILENCIO = 'congreso.notificaciones';
 
 /**
- * Escucha en tiempo real las altas de la tabla `registros` y muestra un aviso
- * flotante; si el navegador lo permite, también una notificación del sistema.
+ * Avisa de los registros nuevos con un mensaje flotante y, si el navegador lo
+ * permite, con una notificación del sistema.
+ *
+ * Los detecta el proveedor del panel al consultar la lista: lo que aparece
+ * entre una consulta y la siguiente es lo que se anuncia aquí.
  */
 export function AvisosRegistros() {
   const { t, tt } = useApp();
@@ -29,52 +32,43 @@ export function AvisosRegistros() {
   const [preferencia, guardarPreferencia] = useAlmacenLocal(CLAVE_SILENCIO, 'activo');
   const silenciado = preferencia === 'silenciado';
 
-  // La suscripción en tiempo real se crea una sola vez; la referencia deja que
-  // su callback consulte el estado vigente sin volver a suscribirse.
-  const silenciadoRef = useRef(silenciado);
+  const { nuevos } = useContextoRegistros();
+
+  // Un mismo registro no se anuncia dos veces aunque el componente se vuelva
+  // a dibujar por otra razón.
+  const anunciados = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    silenciadoRef.current = silenciado;
-  }, [silenciado]);
+    if (silenciado || nuevos.length === 0) return;
 
-  useEffect(() => {
-    const supabase = crearClienteNavegador();
-    const canal = supabase
-      .channel('registros-nuevos')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'registros' },
-        (evento) => {
-          if (silenciadoRef.current) return;
-          const r = evento.new as Record<string, string>;
-          const aviso: Aviso = {
-            id: r.id,
-            folio: r.folio,
-            nombre: `${r.nombres ?? ''} ${r.apellidos ?? ''}`.trim(),
-            perfil: r.perfil,
-            pais: r.pais_residencia ?? '',
-          };
-          setAvisos((previos) => [aviso, ...previos].slice(0, 4));
-          router.refresh();
+    const porAnunciar = nuevos.filter((r) => !anunciados.current.has(r.id));
+    if (porAnunciar.length === 0) return;
+    porAnunciar.forEach((r) => anunciados.current.add(r.id));
 
-          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            new Notification(t.panel.notificacion.nuevo, {
-              body: tt(t.panel.notificacion.texto, {
-                nombre: aviso.nombre,
-                perfil: nombrePerfil(aviso.perfil, t),
-                pais: aviso.pais,
-              }),
-              tag: aviso.id,
-            });
-          }
-        },
-      )
-      .subscribe();
+    const recientes: Aviso[] = porAnunciar.map((r) => ({
+      id: r.id,
+      folio: r.folio,
+      nombre: `${r.nombres ?? ''} ${r.apellidos ?? ''}`.trim(),
+      perfil: r.perfil,
+      pais: r.pais_residencia ?? '',
+    }));
 
-    return () => {
-      void supabase.removeChannel(canal);
-    };
-  }, [router, t, tt]);
+    setAvisos((previos) => [...recientes, ...previos].slice(0, 4));
+    router.refresh();
+
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      recientes.forEach((aviso) => {
+        new Notification(t.panel.notificacion.nuevo, {
+          body: tt(t.panel.notificacion.texto, {
+            nombre: aviso.nombre,
+            perfil: nombrePerfil(aviso.perfil, t),
+            pais: aviso.pais,
+          }),
+          tag: aviso.id,
+        });
+      });
+    }
+  }, [nuevos, silenciado, router, t, tt]);
 
   useEffect(() => {
     if (avisos.length === 0) return;

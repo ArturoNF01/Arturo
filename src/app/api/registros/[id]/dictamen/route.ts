@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
-import { crearClienteServidor } from '@/lib/supabase/servidor';
+import { conActor, unaFila } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
 import { enviarCorreoRegistro, type ClavePlantilla } from '@/lib/servidor/correo';
@@ -29,8 +28,10 @@ export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{
     return NextResponse.json({ mensaje: 'Dictamen no válido.' }, { status: 422 });
   }
 
-  const admin = crearClienteAdmin();
-  const { data: previo } = await admin.from('registros').select('*').eq('id', id).maybeSingle();
+  const previo = await unaFila<{ titulo_ponencia: string | null; resumen_ponencia: string | null }>(
+    'select titulo_ponencia, resumen_ponencia from registros where id = $1',
+    [id],
+  );
   if (!previo) return NextResponse.json({ mensaje: 'Registro no encontrado.' }, { status: 404 });
 
   const veredicto = evaluarDictamen({
@@ -44,23 +45,25 @@ export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{
     return NextResponse.json({ mensaje: veredicto.motivo }, { status: 409 });
   }
 
-  // Se escribe con la sesión del usuario para que RLS valide el rol y la
-  // auditoría registre quién dictaminó.
-  const supabase = await crearClienteServidor();
-  const { data: registro, error } = await supabase
-    .from('registros')
-    .update({
-      estado_ponencia: analisis.data.estado_ponencia,
-      dictamen_comentarios: analisis.data.comentarios || null,
-      dictamen_por: usuario.id,
-      dictamen_en: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .select()
-    .single();
+  // La escritura lleva el actor puesto para que la auditoría registre quién
+  // dictaminó.
+  const [registro] = await conActor<Record<string, unknown> & { estado_ponencia: string; folio: string }>(
+    usuario.id,
+    `update registros
+        set estado_ponencia = $1, dictamen_comentarios = $2,
+            dictamen_por = $3, dictamen_en = now()
+      where id = $4
+      returning *`,
+    [
+      analisis.data.estado_ponencia,
+      analisis.data.comentarios || null,
+      usuario.id,
+      id,
+    ],
+  );
 
-  if (error || !registro) {
-    return NextResponse.json({ mensaje: 'Su perfil no permite esta acción.' }, { status: 403 });
+  if (!registro) {
+    return NextResponse.json({ mensaje: 'Registro no encontrado.' }, { status: 404 });
   }
 
   let correo: { enviado: boolean; error?: string } = { enviado: false };

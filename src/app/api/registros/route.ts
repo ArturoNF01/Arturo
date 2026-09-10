@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crearClienteAdmin } from '@/lib/supabase/admin';
+import { armarActualizacion, armarInsercion, consultar, unaFila } from '@/lib/bd/conexion';
+import { permisos, usuarioActual } from '@/lib/servidor/sesion';
 import { crearEsquemaRegistro } from '@/lib/esquema';
 import { perfilPorClave } from '@/lib/perfiles';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
@@ -13,6 +14,35 @@ import {
 } from '@/lib/servidor/antiabuso';
 
 export const dynamic = 'force-dynamic';
+
+/** Proyección que consume el panel. El token de edición nunca sale de aquí. */
+const COLUMNAS_PANEL = `id, folio, creado_en, perfil, grupo, modalidad, idioma, estado,
+  nombres, apellidos, correo, institucion, cargo, pais_residencia, entidad_federativa,
+  ciudad_residencia, procedencia, eje_tematico, modalidad_participacion,
+  regimen_alimentario, requiere_alojamiento, requiere_traslado`;
+
+/**
+ * Lista de registros para el panel.
+ *
+ * El navegador ya no habla con la base: el filtro por rol se comprueba aquí,
+ * que es donde vive la sesión.
+ */
+export async function GET() {
+  const usuario = await usuarioActual();
+  if (!usuario || !permisos(usuario.rol).verRegistros) {
+    return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
+  }
+
+  try {
+    const filas = await consultar(
+      `select ${COLUMNAS_PANEL} from registros order by creado_en desc`,
+    );
+    return NextResponse.json(filas, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) {
+    console.error('No se pudieron leer los registros:', error);
+    return NextResponse.json({ mensaje: 'No fue posible leer los registros.' }, { status: 500 });
+  }
+}
 
 export async function POST(peticion: NextRequest) {
   let cuerpo: unknown;
@@ -96,22 +126,23 @@ export async function POST(peticion: NextRequest) {
     estado = 'lista_espera';
   }
 
-  const supabase = crearClienteAdmin();
-  const { data: registro, error } = await supabase
-    .from('registros')
-    .insert({
-      ...datos,
-      grupo: perfil.grupo,
-      estado,
-      consentimiento_fecha: new Date().toISOString(),
-      consentimiento_version: CONFIG.versionAvisoPrivacidad,
-    })
-    .select()
-    .single();
+  const { columnas, marcadores, valores } = armarInsercion({
+    ...datos,
+    grupo: perfil.grupo,
+    estado,
+    consentimiento_fecha: new Date().toISOString(),
+    consentimiento_version: CONFIG.versionAvisoPrivacidad,
+  });
 
-  if (error || !registro) {
-    // El índice único del correo puede saltar si dos envíos entran a la vez.
-    if (error?.code === '23505') {
+  let registro: Record<string, unknown> | null = null;
+  try {
+    registro = await unaFila(
+      `insert into registros (${columnas}) values (${marcadores}) returning *`,
+      valores,
+    );
+  } catch (error) {
+    // El índice único del correo salta si dos envíos entran a la vez.
+    if ((error as { code?: string })?.code === '23505') {
       return NextResponse.json(
         {
           mensaje: 'Ya existe un registro con este correo.',
@@ -121,6 +152,9 @@ export async function POST(peticion: NextRequest) {
       );
     }
     console.error('Alta de registro fallida:', error);
+  }
+
+  if (!registro) {
     return NextResponse.json({ mensaje: 'No fue posible guardar el registro.' }, { status: 500 });
   }
 
@@ -153,7 +187,13 @@ export async function POST(peticion: NextRequest) {
     console.error('Envío de acuse fallido:', correo.value.error);
   }
 
-  await supabase.from('registros').update(parcheo).eq('id', registro.id);
+  if (Object.keys(parcheo).length > 0) {
+    const { asignaciones, valores: valoresParcheo } = armarActualizacion(parcheo);
+    await consultar(
+      `update registros set ${asignaciones} where id = $${valoresParcheo.length + 1}`,
+      [...valoresParcheo, registro.id],
+    );
+  }
 
   return NextResponse.json(
     {

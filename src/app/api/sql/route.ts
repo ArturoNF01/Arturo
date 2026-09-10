@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crearClienteServidor } from '@/lib/supabase/servidor';
+import { enSoloLectura } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { esquemaConsultaSql } from '@/lib/esquema';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Ejecuta una consulta de sólo lectura a través de la función
- * `ejecutar_sql_lectura`, que corre con los permisos del propio usuario:
- * las políticas RLS siguen aplicando y sólo admite SELECT o WITH.
+ * Ejecuta una consulta del perfil de ciencia de datos.
+ *
+ * La garantía de que no escribe la da el motor, no un filtro de palabras: la
+ * consulta corre dentro de una transacción `read only`, donde cualquier
+ * escritura falla aunque venga escondida en una función o en un CTE. El
+ * tiempo y el número de filas también los limita el propio servidor.
  */
 export async function POST(peticion: NextRequest) {
   const usuario = await usuarioActual();
@@ -22,17 +25,24 @@ export async function POST(peticion: NextRequest) {
   }
 
   const inicio = Date.now();
-  const supabase = await crearClienteServidor();
-  const { data, error } = await supabase.rpc('ejecutar_sql_lectura', {
-    consulta: analisis.data.consulta,
-    limite: analisis.data.limite,
-  });
 
-  if (error) {
-    return NextResponse.json({ mensaje: error.message }, { status: 400 });
+  let filas: Record<string, unknown>[];
+  try {
+    filas = await enSoloLectura(async (cliente) => {
+      const { rows } = await cliente.query(
+        `select * from (${analisis.data.consulta}) as consulta_del_panel limit $1`,
+        [analisis.data.limite],
+      );
+      return rows as Record<string, unknown>[];
+    });
+  } catch (error) {
+    // El mensaje de PostgreSQL es justo lo que necesita quien escribe la
+    // consulta: dónde está el error de sintaxis o qué columna no existe.
+    return NextResponse.json(
+      { mensaje: error instanceof Error ? error.message : 'La consulta falló.' },
+      { status: 400 },
+    );
   }
-
-  const filas = (data ?? []) as Record<string, unknown>[];
   return NextResponse.json({
     filas,
     columnas: filas.length > 0 ? Object.keys(filas[0]) : [],
