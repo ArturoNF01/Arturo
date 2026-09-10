@@ -53,8 +53,8 @@ paso.
 ## Paso 2 · La aplicación
 
 1. **Create → Apps**.
-2. Origen **GitHub**, elegir el repositorio y la rama `master`. Autorizar el
-   acceso si es la primera vez.
+2. Origen **GitHub**, elegir `desarrollos-ciess/congreso-dss` y la rama
+   `master`. La primera vez hay que autorizar a DigitalOcean en GitHub.
 3. App Platform reconoce Next.js solo. No hay que tocar los comandos.
 4. En **Environment Variables**, añadir:
 
@@ -74,7 +74,7 @@ paso.
 > El archivo `.do/app.yaml` describe esta misma aplicación, incluido el trabajo
 > programado de los recordatorios. Se puede importar en lugar de configurarlo a
 > mano: **Create App → … → Edit App Spec**, o `doctl apps create --spec
-> .do/app.yaml`. Antes hay que sustituir `ORGANIZACION/REPOSITORIO`.
+> .do/app.yaml`. Ya trae el repositorio, el dominio y el trabajo programado.
 
 ---
 

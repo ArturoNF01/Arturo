@@ -30,7 +30,7 @@ Cada paso depende del anterior. En un rato tranquilo son unos 45 minutos.
    ```bash
    git clone https://github.com/ArturoNF01/Arturo.git congreso
    cd congreso
-   git remote set-url origin https://github.com/<ORGANIZACION>/<REPO>.git
+   git remote set-url origin https://github.com/desarrollos-ciess/congreso-dss.git
    git push -u origin master
    ```
 
@@ -139,7 +139,8 @@ respetar los 100 diarios.
 Nada de esto bloquea el despliegue —el sistema arranca con propuestas y todo se
 edita después desde el panel— pero conviene traerlo resuelto:
 
-1. **Organización y nombre del repositorio** en GitHub.
+1. ~~Organización y nombre del repositorio~~ · resuelto:
+   `desarrollos-ciess/congreso-dss`.
 2. ~~Dirección del sitio~~ · resuelto: `congreso-dss.ciess.org`.
 3. **Buzón del congreso**: ¿`congreso@ciess.org`? Es el que verán los
    participantes como remitente y como contacto.

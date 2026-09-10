@@ -31,7 +31,7 @@ services:
     http_port: 8080
 
     github:
-      repo: ORGANIZACION/REPOSITORIO
+      repo: desarrollos-ciess/congreso-dss
       branch: master
       deploy_on_push: true
 
@@ -94,7 +94,7 @@ jobs:
     environment_slug: node-js
     instance_size_slug: apps-s-1vcpu-0.5gb
     github:
-      repo: ORGANIZACION/REPOSITORIO
+      repo: desarrollos-ciess/congreso-dss
       branch: master
     # El trabajo sólo hace una llamada: compilar la aplicación entera para eso
     # gastaría minutos de construcción en balde.
