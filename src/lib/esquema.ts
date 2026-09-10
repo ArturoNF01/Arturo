@@ -13,6 +13,18 @@ export const LIMITES_POR_DEFECTO: LimitesFormulario = {
   resumenCaracteres: CONGRESO_POR_DEFECTO.limite_resumen_caracteres,
 };
 
+/**
+ * ¿Este identificador tiene forma de UUID?
+ *
+ * Los identificadores viajan en la dirección, así que llegan enlaces rotos y
+ * sondeos automáticos. Sin esta comprobación, PostgreSQL rechaza el valor y
+ * la respuesta acaba siendo un 500: un error del servidor por algo que en
+ * realidad es una petición mal formada.
+ */
+export function esUuid(valor: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(valor);
+}
+
 const textoOpcional = z.string().trim().max(500).optional().or(z.literal(''));
 const parrafoOpcional = z.string().trim().max(5000).optional().or(z.literal(''));
 /**

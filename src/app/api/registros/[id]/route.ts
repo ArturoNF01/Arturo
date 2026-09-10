@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { armarActualizacion, consultar, conActor, unaFila } from '@/lib/bd/conexion';
 import { permisos, usuarioActual } from '@/lib/servidor/sesion';
-import { crearEsquemaRegistro } from '@/lib/esquema';
+import { crearEsquemaRegistro, esUuid } from '@/lib/esquema';
 import { perfilPorClave } from '@/lib/perfiles';
 import { dentroDelPlazo, leerConfiguracion } from '@/lib/servidor/configuracion';
 import { leerDatosCongreso } from '@/lib/servidor/contenido';
@@ -18,6 +18,8 @@ interface FilaRegistro extends Record<string, unknown> {
 
 /** Devuelve el registro si el token de edición coincide o si hay sesión de panel. */
 async function autorizar(id: string, token: string | null) {
+  if (!esUuid(id)) return { registro: null, autorizado: false as const, usuario: null };
+
   const registro = await unaFila<FilaRegistro>('select * from registros where id = $1', [id]);
   if (!registro) return { registro: null, autorizado: false as const, usuario: null };
 
@@ -131,6 +133,9 @@ export async function PUT(peticion: NextRequest, contexto: { params: Promise<{ i
 
 export async function DELETE(_peticion: NextRequest, contexto: { params: Promise<{ id: string }> }) {
   const { id } = await contexto.params;
+  if (!esUuid(id)) {
+    return NextResponse.json({ mensaje: 'Registro no encontrado.' }, { status: 404 });
+  }
 
   // Dar de baja un registro es la operación más destructiva del panel, así
   // que la reserva el rol más alto. Antes lo decidía una política en la base;

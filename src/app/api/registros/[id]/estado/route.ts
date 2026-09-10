@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { conActor, consultar, unaFila } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
+import { esUuid } from '@/lib/esquema';
 import { leerConfiguracion, lugaresPresencialesRestantes } from '@/lib/servidor/configuracion';
 import { enviarCorreoRegistro, type ClavePlantilla } from '@/lib/servidor/correo';
 import { ESTADOS, evaluarCambio, plantillaDeEstado, type EstadoRegistro } from '@/lib/estados';
@@ -21,6 +22,9 @@ const esquema = z.object({
  */
 export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{ id: string }> }) {
   const { id } = await contexto.params;
+  if (!esUuid(id)) {
+    return NextResponse.json({ mensaje: 'Registro no encontrado.' }, { status: 404 });
+  }
 
   const usuario = await usuarioActual();
   if (!usuario || !permisos(usuario.rol).editarRegistros) {

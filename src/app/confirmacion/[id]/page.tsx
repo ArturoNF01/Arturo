@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { unaFila } from '@/lib/bd/conexion';
+import { esUuid } from '@/lib/esquema';
 import { dentroDelPlazo, leerConfiguracion } from '@/lib/servidor/configuracion';
 import { leerDatosCongreso, leerEjes } from '@/lib/servidor/contenido';
 import { PaginaConfirmacion } from './pagina-confirmacion';
@@ -18,6 +19,8 @@ export default async function Confirmacion({
 }) {
   const { id } = await params;
   const { token } = await searchParams;
+
+  if (!esUuid(id)) notFound();
 
   const registro = await unaFila<Record<string, unknown> & { token_edicion: string }>(
     'select * from registros where id = $1',

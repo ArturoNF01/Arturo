@@ -1,5 +1,7 @@
 import 'server-only';
 import { consultar } from '@/lib/bd/conexion';
+import { leerConfiguracion } from '@/lib/servidor/configuracion';
+import { leerDatosCongreso } from '@/lib/servidor/contenido';
 
 /**
  * Qué le falta a este despliegue para funcionar del todo.
@@ -128,6 +130,23 @@ export async function diagnosticar(): Promise<Informe> {
 
   const faltanMigraciones = migraciones.filter((m) => !m.aplicada).length;
 
+  // Las fechas que trae el código son una propuesta, y una propuesta caduca.
+  // Con la fecha límite pasada, el formulario sigue aceptando registros pero
+  // nadie puede editar el suyo, y los recordatorios no salen nunca. Es un
+  // fallo silencioso: nada se rompe, sólo deja de ocurrir.
+  const hoy = new Date().toISOString().slice(0, 10);
+  const [configuracion, congreso] = await Promise.all([
+    leerConfiguracion().catch(() => null),
+    leerDatosCongreso().catch(() => null),
+  ]);
+
+  const limitePasado = Boolean(configuracion && configuracion.fecha_limite_registro < hoy);
+  const congresoPasado = Boolean(congreso && congreso.fecha_inicio < hoy);
+  const fechas: Variable[] = [
+    { nombre: 'fecha_limite_registro', presente: !limitePasado, obligatoria: true },
+    { nombre: 'congreso_fecha_inicio', presente: !congresoPasado, obligatoria: true },
+  ];
+
   const piezas: Pieza[] = [
     {
       clave: 'base',
@@ -190,6 +209,22 @@ export async function diagnosticar(): Promise<Informe> {
           : 'Sin CRON_SECRET el envío automático responde 503 y no escribe a nadie.',
       siguiente: 'Poner CRON_SECRET con una cadena larga al azar y volver a desplegar.',
       variables: recordatorios,
+    },
+    {
+      clave: 'fechas',
+      titulo: 'Fechas del congreso',
+      estado: limitePasado || congresoPasado ? 'incompleto' : 'listo',
+      resumen:
+        limitePasado && congresoPasado
+          ? `Las fechas que trae el sistema ya pasaron: el congreso figura el ${congreso?.fecha_inicio} y el registro cerró el ${configuracion?.fecha_limite_registro}. Son las propuestas del código, no las definitivas.`
+          : limitePasado
+          ? `La fecha límite de registro (${configuracion?.fecha_limite_registro}) ya pasó: se siguen aceptando registros, pero nadie puede editar el suyo.`
+          : congresoPasado
+          ? `La fecha del congreso (${congreso?.fecha_inicio}) ya pasó, así que los recordatorios no se envían.`
+          : `Congreso el ${congreso?.fecha_inicio}; el registro cierra el ${configuracion?.fecha_limite_registro}.`,
+      siguiente:
+        'Poner las fechas definitivas en Panel → Cupos y configuración.',
+      variables: fechas,
     },
     {
       clave: 'sitio',

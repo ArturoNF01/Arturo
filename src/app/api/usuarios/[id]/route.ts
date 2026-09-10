@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { armarActualizacion, conActor, contar } from '@/lib/bd/conexion';
 import { cifrarClave } from '@/lib/bd/claves';
 import { permisos, usuarioActual } from '@/lib/servidor/sesion';
+import { esUuid } from '@/lib/esquema';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,9 @@ const esquema = z.object({
 /** Cambia el rol, el nombre, el acceso o la contraseña de una cuenta. */
 export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{ id: string }> }) {
   const { id } = await contexto.params;
+  if (!esUuid(id)) {
+    return NextResponse.json({ mensaje: 'Cuenta no encontrada.' }, { status: 404 });
+  }
 
   const usuario = await usuarioActual();
   if (!usuario || !permisos(usuario.rol).gestionarUsuarios) {

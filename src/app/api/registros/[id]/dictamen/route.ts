@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { conActor, unaFila } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
+import { esUuid } from '@/lib/esquema';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
 import { enviarCorreoRegistro, type ClavePlantilla } from '@/lib/servidor/correo';
 import { ESTADOS_PONENCIA, evaluarDictamen, plantillaDeDictamen } from '@/lib/dictamen';
@@ -17,6 +18,9 @@ const esquema = z.object({
 /** Registra el dictamen de una ponencia y, si procede, avisa a quien la envió. */
 export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{ id: string }> }) {
   const { id } = await contexto.params;
+  if (!esUuid(id)) {
+    return NextResponse.json({ mensaje: 'Registro no encontrado.' }, { status: 404 });
+  }
 
   const usuario = await usuarioActual();
   if (!usuario || !permisos(usuario.rol).editarRegistros) {
