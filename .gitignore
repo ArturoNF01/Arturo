@@ -1,0 +1,19 @@
+node_modules/
+.next/
+out/
+build/
+.env
+.env.local
+.env*.local
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+.vercel
+
+# Reglas de agente generadas por el entorno
+AGENTS.md
+CLAUDE.md
+
+# Vistas previas generadas
+vista-previa-formulario.html
+vista-previa-congreso.html
