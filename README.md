@@ -34,6 +34,9 @@ convocado por el **CIESS** y la **CISS**.
 - **Cumplimiento normativo**: aviso de privacidad y consentimiento conforme a la
   LFPDPPP (México), la LGPD (Brasil) y el RGPD (Unión Europea).
 
+> Para desplegar paso a paso —Vercel, dominio con Cloudflare, Supabase, correos,
+> Google, el cron y el video de fondo— está **[DESPLIEGUE.md](DESPLIEGUE.md)**.
+
 ## Puesta en marcha
 
 ```bash

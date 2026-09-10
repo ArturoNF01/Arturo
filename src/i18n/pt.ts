@@ -253,6 +253,7 @@ export const pt: Diccionario = {
     },
     kpi: {
       total: 'Inscrições totais', presencial: 'Presenciais', enLinea: 'Online',
+      confirmados: 'Confirmados',
       hoy: 'Inscrições de hoje', paises: 'Países representados', instituciones: 'Instituições',
       ocupacion: 'Ocupação presencial', ultimos7: 'Últimos 7 dias',
     },

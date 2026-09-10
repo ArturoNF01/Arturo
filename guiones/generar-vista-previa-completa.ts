@@ -112,7 +112,120 @@ const PONENCIAS = [
   },
 ];
 
-const REGISTROS = [
+
+/**
+ * Cien registros inventados con una distribución verosímil: la mayoría de
+ * México, el resto repartido por América y un 1 % de Europa. Sirven para ver
+ * cómo se comporta el panel con volumen; se generan con una semilla fija para
+ * que la vista previa sea siempre la misma.
+ */
+const PAISES: Array<[string, number]> = [
+  ['México', 46], ['Brasil', 8], ['Colombia', 7], ['Argentina', 6], ['Chile', 5],
+  ['Perú', 4], ['Costa Rica', 3], ['Ecuador', 3], ['Guatemala', 2], ['Uruguay', 2],
+  ['Panamá', 2], ['República Dominicana', 2], ['El Salvador', 1], ['Honduras', 1],
+  ['Nicaragua', 1], ['Paraguay', 1], ['Bolivia', 1], ['Estados Unidos', 2],
+  ['Canadá', 1], ['Cuba', 1], ['España', 1],
+];
+
+const INSTITUCIONES: Record<string, string[]> = {
+  'México': ['IMSS', 'ISSSTE', 'CIESS', 'UNAM', 'INSABI', 'El Colegio de México'],
+  'Brasil': ['INSS', 'Fiocruz', 'IPEA', 'Universidade de São Paulo'],
+  'Colombia': ['Colpensiones', 'Universidad Nacional', 'Ministerio del Trabajo'],
+  'Argentina': ['ANSES', 'Universidad de Buenos Aires', 'CONICET'],
+  'Chile': ['Superintendencia de Pensiones', 'Universidad de Chile', 'FONASA'],
+  'Perú': ['EsSalud', 'ONP', 'Pontificia Universidad Católica'],
+  'Costa Rica': ['CCSS', 'Universidad de Costa Rica'],
+  'Ecuador': ['IESS', 'FLACSO Ecuador'],
+  'Guatemala': ['IGSS', 'Universidad de San Carlos'],
+  'Uruguay': ['BPS', 'Universidad de la República'],
+  'Panamá': ['CSS', 'Universidad de Panamá'],
+  'República Dominicana': ['CNSS', 'TSS'],
+  'El Salvador': ['ISSS'], 'Honduras': ['IHSS'], 'Nicaragua': ['INSS Nicaragua'],
+  'Paraguay': ['IPS'], 'Bolivia': ['Gestora Pública'],
+  'Estados Unidos': ['Social Security Administration', 'Georgetown University'],
+  'Canadá': ['Université de Montréal'], 'Cuba': ['Ministerio de Trabajo'],
+  'España': ['Universidad Complutense'],
+};
+
+const NOMBRES = ['Ana', 'Luis', 'Carmen', 'Jorge', 'Patricia', 'Miguel', 'Rosa', 'Andrés',
+  'Lucía', 'Fernando', 'Beatriz', 'Ricardo', 'Silvia', 'Alberto', 'Mónica', 'Javier',
+  'Teresa', 'Rafael', 'Elena', 'Guillermo', 'Adriana', 'Sergio', 'Paula', 'Héctor',
+  'Verónica', 'Emilio', 'Daniela', 'Óscar', 'Natalia', 'Raúl'];
+const APELLIDOS = ['García', 'Rodríguez', 'Martínez', 'López', 'Hernández', 'Pérez',
+  'Sánchez', 'Ramírez', 'Torres', 'Flores', 'Rivera', 'Gómez', 'Díaz', 'Vargas',
+  'Castillo', 'Morales', 'Ortiz', 'Silva', 'Núñez', 'Cabrera', 'Mendoza', 'Aguilar',
+  'Salazar', 'Rojas', 'Peña'];
+
+const PESOS_PERFIL: Array<[string, number]> = [
+  ['espectador_linea', 34], ['espectador_presencial', 22], ['participante_externo', 18],
+  ['funcionario_ciess', 8], ['funcionario_ciss', 7], ['panelista', 6], ['conferencista', 5],
+];
+
+/** Congruencial simple: misma semilla, misma lista, siempre. */
+function azar(semilla: number) {
+  let s = semilla;
+  return () => {
+    s = (s * 1103515245 + 12345) % 2147483648;
+    return s / 2147483648;
+  };
+}
+
+function elegir<T>(pesos: Array<[T, number]>, r: number): T {
+  const total = pesos.reduce((suma, [, p]) => suma + p, 0);
+  let acumulado = r * total;
+  for (const [valor, peso] of pesos) {
+    acumulado -= peso;
+    if (acumulado <= 0) return valor;
+  }
+  return pesos[pesos.length - 1][0];
+}
+
+function generarRegistros(cuantos: number) {
+  const r = azar(20260603);
+  const lista = [];
+  for (let i = 0; i < cuantos; i += 1) {
+    const pais = elegir(PAISES, r());
+    const perfil = elegir(PESOS_PERFIL, r());
+    const instituciones = INSTITUCIONES[pais] ?? ['Institución independiente'];
+    const nombre = NOMBRES[Math.floor(r() * NOMBRES.length)] + ' ' +
+      APELLIDOS[Math.floor(r() * APELLIDOS.length)] + ' ' +
+      APELLIDOS[Math.floor(r() * APELLIDOS.length)];
+
+    // Quien se registra en línea nunca ocupa lugar presencial.
+    const soloLinea = perfil === 'espectador_linea';
+    const soloPresencial = perfil === 'espectador_presencial';
+    const modalidad = soloLinea ? 'en_linea' : soloPresencial ? 'presencial'
+      : r() < 0.62 ? 'presencial' : 'en_linea';
+
+    const estado = elegir(
+      [['confirmado', 62], ['en_proceso', 24], ['lista_espera', 9], ['cancelado', 5]],
+      r(),
+    );
+
+    // Las altas se acumulan hacia el cierre del registro, como suele pasar.
+    const dia = Math.floor(Math.pow(r(), 0.65) * 46);
+    const fecha = new Date(Date.UTC(2026, 2, 25) + dia * 86400000);
+    const idioma = pais === 'Brasil' ? 'pt'
+      : pais === 'Estados Unidos' || pais === 'Canadá' ? 'en' : 'es';
+
+    lista.push({
+      id: 'g' + i,
+      folio: 'CG-' + String(200 + i).padStart(6, '0'),
+      nombre,
+      institucion: instituciones[Math.floor(r() * instituciones.length)],
+      pais,
+      perfil,
+      modalidad,
+      estado,
+      idioma,
+      creado: fecha.toISOString().slice(0, 10),
+      hora: 8 + Math.floor(r() * 13),
+    });
+  }
+  return lista;
+}
+
+const REGISTROS_BASE = [
   { id: 'r1', folio: 'CG-000101', nombre: 'Elena Vargas Cruz', institucion: 'IMSS', pais: 'México', perfil: 'espectador_presencial', modalidad: 'presencial', estado: 'confirmado', creado: '2026-03-28' },
   { id: 'r2', folio: 'CG-000108', nombre: 'Rodrigo Salinas Peña', institucion: 'CIESS', pais: 'México', perfil: 'funcionario_ciess', modalidad: 'presencial', estado: 'confirmado', creado: '2026-03-29' },
   { id: 'r3', folio: 'CG-000115', nombre: 'Mariana Duarte Silva', institucion: 'INSS', pais: 'Brasil', perfil: 'participante_externo', modalidad: 'presencial', estado: 'en_proceso', creado: '2026-04-01' },
@@ -122,6 +235,8 @@ const REGISTROS = [
   { id: 'r7', folio: 'CG-000141', nombre: 'Andrés Bermúdez Toro', institucion: 'Colpensiones', pais: 'Colombia', perfil: 'espectador_presencial', modalidad: 'presencial', estado: 'lista_espera', creado: '2026-04-07' },
   { id: 'r8', folio: 'CG-000149', nombre: 'Verónica Iriarte Nuño', institucion: 'ANSES', pais: 'Argentina', perfil: 'espectador_presencial', modalidad: 'presencial', estado: 'lista_espera', creado: '2026-04-08' },
 ];
+
+const REGISTROS = REGISTROS_BASE.concat(generarRegistros(100) as typeof REGISTROS_BASE);
 
 const datos = {
   diccionarios,
@@ -135,9 +250,9 @@ const datos = {
     fechas: CONGRESO_POR_DEFECTO.fechas,
     nombre_corto: CONGRESO_POR_DEFECTO.nombre_corto,
   },
-  // Cupo apretado a propósito: con cuatro lugares presenciales y cuatro
-  // ocupados se ve la regla que impide confirmar por encima del aforo.
-  cupoPresencial: 4,
+  // Cupo a propósito por debajo de la demanda: así se ve la regla que impide
+  // confirmar por encima del aforo y el paso a lista de espera.
+  cupoPresencial: 55,
   correoContacto: 'congreso@ciess.org',
   // Día simulado: 30 antes del congreso, para que el recordatorio del día se
   // vea sin esperar a junio.
@@ -179,6 +294,9 @@ const html = `<title>Congreso CIESS 2026</title>
   --alto-soft: rgba(163, 50, 63, 0.13);
   --info: #2b6f9c;
   --info-soft: rgba(43, 111, 156, 0.13);
+  /* Series de las gráficas: los mismos pasos validados del proyecto. */
+  --serie-1: #2a78d6; --serie-2: #eb6834; --serie-3: #1baf7a;
+  --rejilla: #e3e9f1;
   --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --serif: 'Source Serif 4', 'Iowan Old Style', Palatino, Georgia, serif;
   --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -186,26 +304,30 @@ const html = `<title>Congreso CIESS 2026</title>
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ground: #0b1622; --surface: #131f2e; --surface-2: #0f1a27;
-    --line: #26374b; --line-soft: #1c2b3c;
-    --ink: #e8eef7; --ink-2: #a3b4c9; --ink-3: #7a8da4;
-    --brand: #6ea3dd; --brand-ink: #0b1622; --brand-soft: rgba(110, 163, 221, 0.16);
-    --ok: #4cc08d; --ok-soft: rgba(76, 192, 141, 0.16);
-    --aviso: #d9b445; --aviso-soft: rgba(217, 180, 69, 0.16);
-    --alto: #e08592; --alto-soft: rgba(224, 133, 146, 0.16);
-    --info: #79b6e4; --info-soft: rgba(121, 182, 228, 0.16);
+    --ground: #0b1622; --surface: #152437; --surface-2: #101c2b;
+    --line: #32485f; --line-soft: #24374c;
+    --ink: #eaf0f8; --ink-2: #b3c4d6; --ink-3: #95a8bf;
+    --brand: #8fb6e4; --brand-ink: #0b1622; --brand-soft: rgba(143, 182, 228, 0.18);
+    --ok: #4cc08d; --ok-soft: rgba(76, 192, 141, 0.2);
+    --aviso: #e2c05a; --aviso-soft: rgba(226, 192, 90, 0.2);
+    --alto: #ef97a3; --alto-soft: rgba(239, 151, 163, 0.2);
+    --info: #85bdea; --info-soft: rgba(133, 189, 234, 0.2);
+    --serie-1: #3987e5; --serie-2: #d95926; --serie-3: #199e70;
+    --rejilla: #2a3f57;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --ground: #0b1622; --surface: #131f2e; --surface-2: #0f1a27;
-  --line: #26374b; --line-soft: #1c2b3c;
-  --ink: #e8eef7; --ink-2: #a3b4c9; --ink-3: #7a8da4;
-  --brand: #6ea3dd; --brand-ink: #0b1622; --brand-soft: rgba(110, 163, 221, 0.16);
-  --ok: #4cc08d; --ok-soft: rgba(76, 192, 141, 0.16);
-  --aviso: #d9b445; --aviso-soft: rgba(217, 180, 69, 0.16);
-  --alto: #e08592; --alto-soft: rgba(224, 133, 146, 0.16);
-  --info: #79b6e4; --info-soft: rgba(121, 182, 228, 0.16);
+  --ground: #0b1622; --surface: #152437; --surface-2: #101c2b;
+  --line: #32485f; --line-soft: #24374c;
+  --ink: #eaf0f8; --ink-2: #b3c4d6; --ink-3: #95a8bf;
+  --brand: #8fb6e4; --brand-ink: #0b1622; --brand-soft: rgba(143, 182, 228, 0.18);
+  --ok: #4cc08d; --ok-soft: rgba(76, 192, 141, 0.2);
+  --aviso: #e2c05a; --aviso-soft: rgba(226, 192, 90, 0.2);
+  --alto: #ef97a3; --alto-soft: rgba(239, 151, 163, 0.2);
+  --info: #85bdea; --info-soft: rgba(133, 189, 234, 0.2);
+  --serie-1: #3987e5; --serie-2: #d95926; --serie-3: #199e70;
+  --rejilla: #2a3f57;
   color-scheme: dark;
 }
 
@@ -364,6 +486,23 @@ textarea { resize: vertical; }
 .tabla tr:last-child td { border-bottom: 0; }
 .tabla input[type="number"] { width: 5.5rem; }
 .acciones-fila { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ------------------------------------------------------------ gráficas */
+.rejilla-graficas { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(25rem, 1fr)); }
+.caja-grafica { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.caja-grafica.ancha { grid-column: 1 / -1; }
+.caja-grafica h3 { font-size: 14px; margin-bottom: 12px; }
+.grafica { width: 100%; height: auto; display: block; }
+.barras { display: grid; gap: 7px; }
+.barra-fila { display: grid; grid-template-columns: minmax(5.5rem, 9rem) 1fr auto; gap: 10px; align-items: center; font-size: 12.5px; }
+.barra-et { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barra-pista { background: var(--surface-2); border-radius: 3px; height: 12px; overflow: hidden; }
+.barra-marca { display: block; height: 100%; border-radius: 0 3px 3px 0; }
+.barra-val { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 500; min-width: 2.2rem; text-align: right; }
+@media (max-width: 520px) {
+  .barra-fila { grid-template-columns: 1fr auto; }
+  .barra-pista { grid-column: 1 / -1; }
+}
 
 #avisos { position: fixed; right: 14px; bottom: 14px; z-index: 60; display: grid; gap: 8px; max-width: min(24rem, calc(100vw - 28px)); }
 .aviso {

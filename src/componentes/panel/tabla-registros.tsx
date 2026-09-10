@@ -83,7 +83,9 @@ export function TablaRegistros({ permisos }: { permisos: Permisos }) {
         <div className="tarjeta desplazable overflow-x-auto">
           <table className="w-full min-w-[1000px] text-left text-sm">
             <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--borde)' }}>
+              {/* La cabecera lleva la regla fuerte: separa el encabezado de los
+                  datos también en modo oscuro, donde la hairline se pierde. */}
+              <tr className="border-b" style={{ borderColor: 'var(--borde-fuerte)' }}>
                 {[columnas.folio, columnas.nombre, columnas.perfil, columnas.modalidad,
                   columnas.estado, columnas.institucion, columnas.pais, columnas.fecha,
                   columnas.acciones].map((c) => (

@@ -306,6 +306,7 @@ export const es = {
       presencial: 'Presenciales',
       enLinea: 'En línea',
       hoy: 'Registros de hoy',
+      confirmados: 'Confirmados',
       paises: 'Países representados',
       instituciones: 'Instituciones',
       ocupacion: 'Ocupación presencial',

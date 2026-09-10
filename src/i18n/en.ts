@@ -252,6 +252,7 @@ export const en: Diccionario = {
     },
     kpi: {
       total: 'Total registrations', presencial: 'On site', enLinea: 'Online',
+      confirmados: 'Confirmed',
       hoy: "Today's registrations", paises: 'Countries represented', instituciones: 'Institutions',
       ocupacion: 'On-site occupancy', ultimos7: 'Last 7 days',
     },

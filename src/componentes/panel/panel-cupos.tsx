@@ -13,6 +13,58 @@ import { CampoMultilingue } from './campo-multilingue';
 import { SeccionRecordatorios } from './recordatorios';
 import type { EstadoRecordatorios } from '@/lib/servidor/recordatorios';
 
+/**
+ * Comprueba que la URL del video se puede reproducir desde el navegador.
+ * Es la única forma de saberlo: el servidor puede alcanzar un archivo que el
+ * navegador de un participante no, por CORS o por protección de enlaces.
+ */
+function PruebaVideo({ url }: { url: string }) {
+  const [estado, setEstado] = useState<'sin_probar' | 'probando' | 'ok' | 'falla'>('sin_probar');
+
+  if (!url) return null;
+
+  return (
+    <div className="mt-2">
+      {estado === 'sin_probar' && (
+        <button
+          type="button"
+          className="boton-secundario !px-3 !py-1.5 !text-xs"
+          onClick={() => setEstado('probando')}
+        >
+          Probar el video
+        </button>
+      )}
+
+      {estado !== 'sin_probar' && (
+        <div className="flex flex-wrap items-center gap-3">
+          <video
+            className="h-20 w-36 rounded-lg object-cover"
+            style={{ backgroundColor: 'var(--fondo)' }}
+            src={url}
+            muted
+            playsInline
+            autoPlay
+            loop
+            onCanPlay={() => setEstado('ok')}
+            onError={() => setEstado('falla')}
+          />
+          <p className="text-xs" style={{ color: estado === 'falla' ? 'var(--texto)' : undefined }}>
+            {estado === 'probando' && <span className="tenue">Cargando…</span>}
+            {estado === 'ok' && <span className="text-emerald-500">Se reproduce correctamente.</span>}
+            {estado === 'falla' && (
+              <span className="text-amber-500">
+                El navegador no pudo cargarlo. Suele ser que el servidor del archivo bloquea
+                enlaces externos o que la dirección ya no existe. Súbalo a Cloudflare R2, a
+                Vercel Blob o a la carpeta <code>public/</code> del proyecto.
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PanelCupos({
   configuracion,
   congreso,
@@ -248,6 +300,7 @@ export function PanelCupos({
               Se muestra al 15 % de opacidad. Quien haya pedido menos movimiento en su sistema
               ve sólo el fondo, sin descargar el video. Dejar vacío para quitarlo.
             </span>
+            <PruebaVideo url={valores.url_video_login} />
           </label>
         </div>
 
