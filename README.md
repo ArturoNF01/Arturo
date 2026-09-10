@@ -34,6 +34,10 @@ convocado por el **CIESS** y la **CISS**.
 - **Cumplimiento normativo**: aviso de privacidad y consentimiento conforme a la
   LFPDPPP (México), la LGPD (Brasil) y el RGPD (Unión Europea).
 
+> Para rehacer el despliegue en las cuentas institucionales del CIESS está
+> **[MIGRACION.md](MIGRACION.md)**, con el orden, lo que hay que decidir antes
+> y lo que cuesta cada servicio.
+>
 > Para desplegar paso a paso —Vercel, dominio con Cloudflare, Supabase, correos,
 > Google, el cron y el video de fondo— está **[DESPLIEGUE.md](DESPLIEGUE.md)**.
 
@@ -66,7 +70,7 @@ npm run dev
 
 ```sql
 insert into usuarios_panel (id, correo, nombre, rol)
-values ('<uuid del usuario de auth>', 'persona@ciess.org', 'Nombre', 'superadmin');
+values ('<uuid del usuario de auth>', 'persona@ciss-bienestar.org', 'Nombre', 'superadmin');
 ```
 
 ### 2. Google Sheets y Drive

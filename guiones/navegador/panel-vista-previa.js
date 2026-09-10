@@ -486,7 +486,7 @@
       return;
     }
     p.estado = estado;
-    p.porCorreo = 'admin@ciess.org';
+    p.porCorreo = 'admin@ciss-bienestar.org';
     p.enFecha = D.hoy;
     pintar();
     avisar(t().panel.dictamen.guardado + ' · ' + p.folio, 'ok');

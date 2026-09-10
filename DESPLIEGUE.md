@@ -63,7 +63,7 @@ prefiere alojar en Cloudflare, el camino es:
 Sirve igual si el sitio está en Vercel.
 
 1. En Cloudflare, **Add a site** y escribir el dominio (por ejemplo
-   `congreso.ciess.org`). Cloudflare da dos servidores de nombres.
+   `congreso.ciss-bienestar.org`). Cloudflare da dos servidores de nombres.
 2. Cambiar los servidores de nombres del dominio donde esté registrado, a los
    que dio Cloudflare. Tarda de minutos a unas horas.
 3. En Vercel: *Settings → Domains → Add*, escribir el dominio. Vercel dirá qué
@@ -105,7 +105,7 @@ Sirve igual si el sitio está en Vercel.
 
    ```sql
    insert into usuarios_panel (id, correo, nombre, rol)
-   values ('<uuid del paso anterior>', 'persona@ciess.org', 'Nombre', 'superadmin');
+   values ('<uuid del paso anterior>', 'persona@ciss-bienestar.org', 'Nombre', 'superadmin');
    ```
 
 7. Volver a desplegar en Vercel (*Deployments → ⋯ → Redeploy*) para que tome las
@@ -122,7 +122,7 @@ Sirve igual si el sitio está en Vercel.
 
    ```
    RESEND_API_KEY=…
-   CORREO_REMITENTE=Congreso CIESS <congreso@ciess.org>
+   CORREO_REMITENTE=Congreso CIESS <congreso@ciss-bienestar.org>
    ```
 
 ---

@@ -636,7 +636,7 @@ function render() {
   document.getElementById('sede-fechas').textContent = tr(D.congreso.sede) + ' · ' + tr(D.congreso.fechas);
   document.getElementById('datos-clave').innerHTML = \`
     <div><dt>\${esc(t().formulario.fechaLimite)}</dt><dd>2026-05-15</dd></div>
-    <div><dt>\${esc(t().formulario.contacto)}</dt><dd>congreso@ciess.org</dd></div>
+    <div><dt>\${esc(t().formulario.contacto)}</dt><dd>congreso@ciss-bienestar.org</dd></div>
     <div><dt>\${esc(t().modalidad.cuposDisponibles)}</dt><dd>300</dd></div>\`;
 
   document.getElementById('rail').innerHTML = enviado ? '' : pasos.map((paso, i) => \`
