@@ -48,7 +48,10 @@ npm run dev
 ### 1. Supabase
 
 1. Crear un proyecto en [supabase.com](https://supabase.com).
-2. Ejecutar en el editor SQL, en orden:
+2. Ejecutar el esquema. Lo más rápido es pegar de una vez
+   `supabase/todas-las-migraciones.sql` (SQL Editor → New query → Run); se
+   puede ejecutar más de una vez sin romper nada. Si se prefiere ir una por
+   una, en este orden:
    - `supabase/migrations/0001_esquema_inicial.sql`
    - `supabase/migrations/0002_plantillas_y_sql_lectura.sql`
    - `supabase/migrations/0003_contenido_editable.sql`

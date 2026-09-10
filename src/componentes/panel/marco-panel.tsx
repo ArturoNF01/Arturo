@@ -36,6 +36,7 @@ export function MarcoPanel({
     { href: '/panel/contenido', texto: t.panel.secciones.contenido, visible: permisos.editarConfiguracion, icono: 'texto' },
     { href: '/panel/auditoria', texto: t.panel.secciones.auditoria, visible: permisos.verAuditoria, icono: 'escudo' },
     { href: '/panel/usuarios', texto: t.panel.secciones.usuarios, visible: permisos.gestionarUsuarios, icono: 'personas' },
+    { href: '/diagnostico', texto: 'Diagnóstico', visible: usuario.rol === 'superadmin', icono: 'pulso' },
   ].filter((s) => s.visible);
 
   async function salir() {
@@ -125,6 +126,7 @@ function Icono({ nombre }: { nombre: string }) {
     ajustes: 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 006 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 003 14a2 2 0 110-4 1.6 1.6 0 001.1-2.7l-.1-.1a2 2 0 112.8-2.8l.1.1A1.6 1.6 0 0110 3a2 2 0 114 0 1.6 1.6 0 002.7 1.1l.1-.1a2 2 0 112.8 2.8l-.1.1A1.6 1.6 0 0021 10a2 2 0 110 4 1.6 1.6 0 00-1.6 1z',
     escudo: 'M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6l8-3z',
     texto: 'M4 7V5h16v2M9 20h6M12 5v15',
+    pulso: 'M3 12h4l3 8 4-16 3 8h4',
     personas: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8',
   };
   return (

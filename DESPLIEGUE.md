@@ -83,9 +83,11 @@ Sirve igual si el sitio está en Vercel.
 ## Paso 3 · Supabase, para encender el panel
 
 1. Crear un proyecto en [supabase.com](https://supabase.com).
-2. En **SQL Editor**, ejecutar en orden los archivos de
-   `supabase/migrations/`: `0001`, `0002`, `0003`, `0004`, `0005`, `0006`, `0007`.
-   Uno por uno, de arriba abajo.
+2. En **SQL Editor → New query**, pegar entero el archivo
+   [`supabase/todas-las-migraciones.sql`](supabase/todas-las-migraciones.sql) y
+   darle **Run**. Son las siete migraciones en orden, en un solo archivo; se
+   puede ejecutar más de una vez sin romper nada. (Si se prefiere, también
+   están sueltas en `supabase/migrations/`, de la `0001` a la `0007`.)
 3. En **Settings → API**, copiar: *Project URL*, *anon public* y
    *service_role*.
 4. En Vercel, *Settings → Environment Variables*, añadir:
@@ -194,6 +196,17 @@ Formato: **MP4 con H.264 y AAC** es el que reproducen todos los navegadores. Un
 comprimir sin piedad: 1280 px de ancho y una tasa baja bastan.
 
 ---
+
+## Cómo saber qué falta, en cualquier momento
+
+El sitio trae una pantalla de diagnóstico en **`/diagnostico`** que dice, pieza
+por pieza, qué está configurado y cuál es el siguiente paso: las variables de
+entorno (sólo si están puestas, nunca su valor), qué migraciones se ejecutaron
+y si ya hay alguna cuenta dada de alta en el panel.
+
+Mientras Supabase no esté conectado se puede abrir sin sesión —la página de
+acceso ya enlaza a ella—; en cuanto hay base de datos, pide sesión de
+superadministrador.
 
 ## Comprobación final
 
