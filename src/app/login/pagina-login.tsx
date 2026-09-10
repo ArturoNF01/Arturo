@@ -96,6 +96,11 @@ export function PaginaLogin({
                 Falta configurar Supabase en las variables de entorno del despliegue. El formulario
                 de registro funciona con normalidad mientras tanto.
               </p>
+              <p className="mt-2">
+                <Link href="/diagnostico" className="font-medium underline underline-offset-4">
+                  Ver qué falta
+                </Link>
+              </p>
             </div>
           )}
 
