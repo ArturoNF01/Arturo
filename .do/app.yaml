@@ -11,8 +11,15 @@
 # Los valores marcados como SECRET se ponen en el panel de App Platform,
 # nunca aquí: este archivo va al repositorio.
 # =====================================================================
-name: congreso-ciess
+name: congreso-dss
 region: nyc
+
+# El dominio vive en la misma cuenta de DigitalOcean, así que App Platform
+# crea el registro y emite el certificado sin intervención.
+domains:
+  - domain: congreso-dss.ciess.org
+    type: PRIMARY
+    zone: ciess.org
 
 services:
   - name: sitio
@@ -39,7 +46,7 @@ services:
         value: ${congreso-bd.DATABASE_URL}
       - key: NEXT_PUBLIC_URL_SITIO
         scope: RUN_AND_BUILD_TIME
-        value: ${APP_URL}
+        value: https://congreso-dss.ciess.org
       - key: NODE_ENV
         scope: RUN_AND_BUILD_TIME
         value: production
@@ -94,7 +101,7 @@ jobs:
         type: SECRET
       - key: APP_URL
         scope: RUN_TIME
-        value: ${APP_URL}
+        value: https://congreso-dss.ciess.org
 
 databases:
   - name: congreso-bd

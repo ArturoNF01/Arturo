@@ -98,10 +98,10 @@ Con la cuenta institucional de Google:
 
 ### 2.6 · Dominio del sitio
 
-Decidir bajo qué dirección vivirá el registro: por ejemplo
-`congreso.ciess.org`. En App Platform, *Settings → Domains → Add Domain*. Como
-el DNS del dominio ya está en DigitalOcean, se ofrece crear el registro solo y
-el certificado se emite sin intervención.
+El sitio vive en `congreso-dss.ciess.org`. En App Platform, *Settings →
+Domains → Add Domain*. Como el DNS de `ciess.org` ya está en esta cuenta de
+DigitalOcean, el registro se crea solo y el certificado se emite sin
+intervención.
 
 Después, poner `NEXT_PUBLIC_URL_SITIO` con esa dirección para que los enlaces
 de los correos apunten bien.
@@ -140,7 +140,7 @@ Nada de esto bloquea el despliegue —el sistema arranca con propuestas y todo s
 edita después desde el panel— pero conviene traerlo resuelto:
 
 1. **Organización y nombre del repositorio** en GitHub.
-2. **Dirección del sitio**: ¿`congreso.ciess.org`? ¿otra?
+2. ~~Dirección del sitio~~ · resuelto: `congreso-dss.ciess.org`.
 3. **Buzón del congreso**: ¿`congreso@ciess.org`? Es el que verán los
    participantes como remitente y como contacto.
 4. **Quién entra al panel** y con qué rol: superadministrador, organizador,

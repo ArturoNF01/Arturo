@@ -31,9 +31,18 @@ export const CONFIG = {
 
 export const CORREO_CONTACTO = process.env.CORREO_CONTACTO ?? 'congreso@ciess.org';
 
+/** Dominio definitivo del congreso. */
+export const DOMINIO = 'congreso-dss.ciess.org';
+
+/**
+ * Dirección pública del sitio, para los enlaces que viajan en los correos.
+ *
+ * Manda la variable de entorno: en App Platform apunta al dominio definitivo
+ * y en las revisiones previas a la dirección temporal que asigna la
+ * plataforma. Sin ella se usa el dominio del congreso, salvo en desarrollo.
+ */
 export function urlSitio(): string {
-  return (
-    process.env.NEXT_PUBLIC_URL_SITIO ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-  );
+  if (process.env.NEXT_PUBLIC_URL_SITIO) return process.env.NEXT_PUBLIC_URL_SITIO;
+  if (process.env.NODE_ENV !== 'production') return 'http://localhost:3000';
+  return `https://${DOMINIO}`;
 }

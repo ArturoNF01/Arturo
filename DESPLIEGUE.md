@@ -60,7 +60,7 @@ paso.
 
    ```
    DATABASE_URL          = la cadena del paso 1
-   NEXT_PUBLIC_URL_SITIO = https://…  (la que dé App Platform; se corrige después)
+   NEXT_PUBLIC_URL_SITIO = https://congreso-dss.ciess.org
    CRON_SECRET           = una cadena larga al azar
    ANTIABUSO_SAL         = otra cadena larga al azar
    ```
@@ -69,9 +69,7 @@ paso.
 
 5. Plan **Basic**, el contenedor más pequeño. **Create Resources**.
 6. En unos minutos hay una URL `…ondigitalocean.app`. Abrir `/registro`: el
-   formulario funciona.
-7. Volver a Environment Variables y poner `NEXT_PUBLIC_URL_SITIO` con esa URL
-   definitiva, para que los enlaces de los correos apunten bien.
+   formulario funciona. El dominio definitivo se conecta en el paso 7.
 
 > El archivo `.do/app.yaml` describe esta misma aplicación, incluido el trabajo
 > programado de los recordatorios. Se puede importar en lugar de configurarlo a
@@ -162,13 +160,17 @@ recordatorio, se desactivan y se puede disparar uno a mano.
 
 ## Paso 7 · El dominio
 
-1. En App Platform: **Settings → Domains → Add Domain**, escribir el subdominio
-   (por ejemplo `congreso.ciess.org`).
-2. Si el DNS del dominio ya está en DigitalOcean, se ofrece crear el registro
-   solo. Si está en otro proveedor, App Platform indica el CNAME que hay que
-   crear.
-3. El certificado se emite solo.
-4. Actualizar `NEXT_PUBLIC_URL_SITIO` con el dominio definitivo.
+El sitio vive en **`congreso-dss.ciess.org`**.
+
+1. En App Platform: **Settings → Domains → Add Domain**.
+2. Escribir `congreso-dss.ciess.org` y elegir **We manage your domain**: el DNS
+   de `ciess.org` ya está en esta misma cuenta de DigitalOcean, así que el
+   registro se crea solo.
+3. El certificado se emite sin intervención. Tarda unos minutos.
+4. Comprobar que `NEXT_PUBLIC_URL_SITIO` vale `https://congreso-dss.ciess.org`.
+
+Si se importó `.do/app.yaml`, el dominio ya viene descrito ahí y este paso
+está hecho.
 
 ---
 
@@ -196,7 +198,7 @@ comprimir sin piedad: 1280 px de ancho basta.
 
 ## Comprobación final
 
-1. `/registro` carga y el video se ve de fondo.
+1. `https://congreso-dss.ciess.org/registro` carga y el video se ve de fondo.
 2. Registrarse de prueba: llega el correo y aparece el folio.
 3. Entrar al panel: el registro está ahí.
 4. La fila también está en la hoja de Google.
