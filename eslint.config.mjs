@@ -2,7 +2,9 @@ import next from 'eslint-config-next';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts'] },
+  // El guion del navegador de la vista previa se incrusta tal cual en el HTML
+  // generado: no forma parte de la aplicación ni pasa por el compilador.
+  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', 'guiones/navegador/**'] },
   ...next,
   ...tseslint.configs.recommended,
   {
