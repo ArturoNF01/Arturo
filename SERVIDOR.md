@@ -198,6 +198,13 @@ Una sola orden. Tarda entre cinco y diez minutos y va diciendo qué hace.
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/desarrollos-ciess/congreso-dss/master/guiones/servidor/instalar.sh)"
 ```
 
+Si el código está en otro repositorio o en otra rama, se le indica al
+invocarlo, sin editar nada:
+
+```bash
+sudo REPOSITORIO=https://github.com/otra/cuenta.git RAMA=master bash -c "$(curl -fsSL ...)"
+```
+
 Deja funcionando, en este orden:
 
 1. **PostgreSQL**, con una contraseña generada al momento que queda sólo

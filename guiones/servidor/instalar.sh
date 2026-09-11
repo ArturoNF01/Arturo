@@ -20,6 +20,9 @@ RAIZ="${RAIZ:-/opt/congreso}"
 USUARIO="${USUARIO:-congreso}"
 BASE="${BASE:-congreso}"
 PUERTO="${PUERTO:-3000}"
+# De dónde se toma el código. Se pueden cambiar al invocar, por ejemplo:
+#   sudo REPOSITORIO=https://github.com/otra/cuenta.git RAMA=master bash instalar.sh
+RAMA="${RAMA:-master}"
 
 paso()  { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 aviso() { printf '   %s\n' "$1"; }
@@ -51,7 +54,7 @@ if ss -lnt 2>/dev/null | awk '{print $4}' | grep -qE ':(80|443)$'; then
 fi
 
 aviso "Dominio: $DOMINIO"
-aviso "Repositorio: $REPOSITORIO"
+aviso "Repositorio: $REPOSITORIO (rama $RAMA)"
 
 # ---------------------------------------------------------------------
 paso "Paquetes del sistema"
@@ -121,11 +124,12 @@ paso "Código de la aplicación"
 mkdir -p "$RAIZ"
 if [ -d "$RAIZ/.git" ]; then
   aviso "Actualizando lo que ya estaba…"
-  git -C "$RAIZ" fetch --quiet origin
-  git -C "$RAIZ" reset --hard --quiet origin/master
+  git -C "$RAIZ" remote set-url origin "$REPOSITORIO"
+  git -C "$RAIZ" fetch --quiet origin "$RAMA"
+  git -C "$RAIZ" reset --hard --quiet "origin/$RAMA"
 else
   aviso "Clonando…"
-  git clone --quiet "$REPOSITORIO" "$RAIZ"
+  git clone --quiet --branch "$RAMA" "$REPOSITORIO" "$RAIZ"
 fi
 chown -R "$USUARIO:$USUARIO" "$RAIZ"
 aviso "En $RAIZ · $(git -C "$RAIZ" log --oneline -1)"

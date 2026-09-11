@@ -13,7 +13,6 @@ set -Eeuo pipefail
 
 RAIZ="${RAIZ:-/opt/congreso}"
 USUARIO="${USUARIO:-congreso}"
-RAMA="${RAMA:-master}"
 PUERTO="${PUERTO:-3000}"
 
 paso()  { printf '\n\033[1m── %s\033[0m\n' "$1"; }
@@ -22,6 +21,12 @@ morir() { printf '\n\033[31mAlto: %s\033[0m\n' "$1" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || morir "Ejecute con sudo: sudo bash $RAIZ/guiones/servidor/desplegar.sh"
 [ -d "$RAIZ/.git" ] || morir "No encuentro la instalación en $RAIZ. ¿Corrió antes instalar.sh?"
+
+# Se actualiza desde la misma rama que se instaló, no desde una fija: si
+# el servidor quedó en una rama de pruebas, traerle master lo cambiaría
+# por debajo sin avisar.
+RAMA="${RAMA:-$(git -C "$RAIZ" rev-parse --abbrev-ref HEAD)}"
+[ "$RAMA" != "HEAD" ] || morir "La instalación no está en ninguna rama. Indique cuál: sudo RAMA=master bash $0"
 
 como_usuario() { sudo -u "$USUARIO" env HOME="/home/$USUARIO" "$@"; }
 
