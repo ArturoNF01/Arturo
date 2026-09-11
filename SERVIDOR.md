@@ -334,6 +334,7 @@ sudo systemctl start congreso
 |---|---|---|
 | El sitio no abre y el navegador dice que no encuentra el servidor | El dominio no apunta al droplet | `dig +short congreso-dss.ciess.org` debe dar la IP. Revise el registro A. |
 | Sale «no es seguro» o falla el candado | Caddy no consiguió el certificado | `sudo journalctl -u caddy -n 30`. Casi siempre es que el dominio aún no apuntaba cuando se instaló: `sudo systemctl restart caddy`. |
+| «Rechazó la conexión» (ERR_CONNECTION_REFUSED) | Nada escucha: el servidor web no arrancó | `sudo journalctl -u caddy -n 30` dice por qué. Si se queja de la bitácora: `sudo install -d -o caddy -g caddy -m 755 /var/log/caddy && sudo systemctl restart caddy`. |
 | Error 502 | La aplicación no está corriendo | `sudo systemctl restart congreso`; si sigue, `journalctl -u congreso -n 50`. |
 | La instalación se detuvo diciendo que el puerto 80 está ocupado | Ese droplet ya sirve otro sitio | Use otro droplet, o avísenos para adaptar la instalación a lo que ya hay. |
 | El formulario da error al guardar | Casi siempre la base | Abra `/diagnostico`. |

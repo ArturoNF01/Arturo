@@ -234,6 +234,10 @@ if ! grep -q 'import /etc/caddy/sitios/' /etc/caddy/Caddyfile 2>/dev/null; then
   aviso "El servidor web ahora puede alojar varios sitios."
 fi
 
+# Caddy corre como su propio usuario: si no puede escribir su bitácora, no
+# arranca. El paquete no siempre deja esta carpeta lista.
+install -d -o caddy -g caddy -m 755 /var/log/caddy
+
 cat > /etc/caddy/sitios/congreso.caddy <<CADDY
 # El certificado se pide y se renueva solo.
 $DOMINIO {
@@ -246,14 +250,31 @@ $DOMINIO {
 }
 CADDY
 
-# Si la configuración tiene un error, Caddy sigue sirviendo la anterior:
-# mejor eso que dejar todos los sitios del servidor caídos.
-if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
+# La comprobación se hace COMO EL USUARIO QUE CORRE CADDY, no como root:
+# root puede escribir donde sea, así que validando como root una bitácora
+# sin permisos pasa la prueba y luego revienta al arrancar de verdad.
+if ! sudo -u caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
   rm -f /etc/caddy/sitios/congreso.caddy
   morir "La configuración del servidor web quedó mal y se deshizo. Los sitios que ya había siguen en pie."
 fi
 
 systemctl reload caddy 2>/dev/null || systemctl restart caddy
+
+# Recargar puede «salir bien» y dejar a Caddy muerto: la configuración se
+# valida al cargarla, no al mandarla. Sin esta comprobación la instalación
+# anuncia un sitio que no existe, que es peor que fallar.
+sleep 2
+if ! systemctl is-active --quiet caddy; then
+  rm -f /etc/caddy/sitios/congreso.caddy
+  systemctl restart caddy 2>/dev/null || true
+  journalctl -u caddy -n 25 --no-pager
+  morir "El servidor web no arrancó; arriba está el porqué. Se quitó la configuración de este sitio para que los demás sigan sirviendo."
+fi
+
+if ! ss -lnt | awk '{print $4}' | grep -qE ':(80|443)$'; then
+  journalctl -u caddy -n 25 --no-pager
+  morir "El servidor web dice estar activo pero nadie escucha en 80/443. Arriba está su registro."
+fi
 aviso "Sirviendo $DOMINIO."
 
 # ---------------------------------------------------------------------
