@@ -31,6 +31,12 @@ en_repo() { git -C "$RAIZ" -c safe.directory="$RAIZ" "$@"; }
 [ "$(id -u)" -eq 0 ] || morir "Ejecute con sudo: sudo bash $RAIZ/guiones/servidor/desplegar.sh"
 [ -d "$RAIZ/.git" ] || morir "No encuentro la instalación en $RAIZ. ¿Corrió antes instalar.sh?"
 
+# Todo el despliegue corre desde la carpeta del proyecto. Se suele invocar
+# desde /root, y varios pasos cambian a otro usuario —postgres, el del
+# servicio— que no puede entrar ahí: basta con eso para que una orden tan
+# inocente como «find» se queje y tumbe el despliegue entero.
+cd "$RAIZ"
+
 # Se actualiza desde la misma rama que se instaló, no desde una fija: si
 # el servidor quedó en una rama de pruebas, traerle master lo cambiaría
 # por debajo sin avisar.

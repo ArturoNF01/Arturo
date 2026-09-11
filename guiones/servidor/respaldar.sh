@@ -33,6 +33,12 @@ if [ "$(id -un)" != "postgres" ]; then
   exec sudo -u postgres BASE="$BASE" DESTINO="$DESTINO" DIAS="$DIAS" "$0" "$@"
 fi
 
+# Se corre desde la raíz porque «sudo» conserva el directorio actual, y este
+# guion suele invocarse desde /root —el despliegue va como root—, donde el
+# usuario postgres no puede entrar. Con el directorio actual prohibido, find
+# se queja al terminar y tumba el respaldo entero.
+cd /
+
 mkdir -p "$DESTINO"
 
 marca=$(date +%Y-%m-%d-%H%M)
