@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LogoCiess } from '@/componentes/logo';
 import { useState } from 'react';
 import { IDIOMAS, diccionarios, type Idioma } from '@/i18n';
 import { useApp } from './proveedores';
@@ -79,14 +80,11 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
     >
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ciess-500 text-sm font-bold text-white">
-            C
-          </span>
-          <span className="min-w-0">
+          <LogoCiess className="h-9 w-auto shrink-0" />
+          <span className="min-w-0 border-l pl-2.5" style={{ borderColor: 'var(--borde)' }}>
             <span className="block truncate text-sm font-semibold leading-tight">
               {t.congreso.tituloCorto}
             </span>
-            <span className="hidden text-xs tenue sm:block">CIESS · CISS</span>
           </span>
         </Link>
 
@@ -152,11 +150,7 @@ export function PieDePagina() {
   return (
     <footer className="mt-16 border-t sin-impresion" style={{ borderColor: 'var(--borde)' }}>
       <div className="mx-auto max-w-7xl px-4 py-8 text-xs tenue sm:px-6">
-        <p className="font-medium">{t.congreso.titulo}</p>
-        <p className="mt-1">
-          {t.congreso.organiza} · {t.congreso.coorganiza}
-        </p>
-        <p className="mt-3">{t.privacidad.marcoLegal}</p>
+        <p>{t.privacidad.marcoLegal}</p>
       </div>
     </footer>
   );

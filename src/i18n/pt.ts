@@ -4,9 +4,8 @@ export const pt: Diccionario = {
   meta: { nombre: 'Português', bandera: '🇧🇷', codigo: 'pt-BR' },
   congreso: {
     titulo: '1º Congresso Desafios da seguridade social nas Américas no primeiro quarto do século XXI',
-    tituloCorto: '1º Congresso de Estudos Interamericanos de Seguridade Social',
+    tituloCorto: '1º Congresso · Desafios da seguridade social nas Américas',
     organiza: 'CIESS · Centro Interamericano de Estudos de Seguridade Social',
-    coorganiza: 'CISS · Conferência Interamericana de Seguridade Social',
   },
   nav: {
     registro: 'Inscrição', faqs: 'Perguntas frequentes', privacidad: 'Aviso de privacidade',
@@ -205,7 +204,7 @@ export const pt: Diccionario = {
   privacidad: {
     titulo: 'Aviso de privacidade e consentimento de tratamento de dados',
     aceptar: 'Li o aviso de privacidade e autorizo o tratamento dos meus dados exclusivamente para fins organizacionais e acadêmicos.',
-    comunicaciones: 'Autorizo receber comunicações sobre futuras atividades acadêmicas do CIESS e da CISS (opcional).',
+    comunicaciones: 'Autorizo receber comunicações sobre futuras atividades acadêmicas do CIESS (opcional).',
     leerCompleto: 'Ler o aviso completo',
     marcoLegal: 'Marco legal aplicável: LFPDPPP (México), LGPD (Brasil) e RGPD/GDPR (União Europeia).',
   },

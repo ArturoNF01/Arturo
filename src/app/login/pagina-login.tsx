@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { LogoCiess } from '@/componentes/logo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BotonTema, SelectorIdioma } from '@/componentes/controles';
 import { useApp } from '@/componentes/proveedores';
@@ -83,10 +84,8 @@ export function PaginaLogin({
       <main className="relative z-10 flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-md">
           <div className="mb-6 text-center text-white">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ciess-300">
-              CIESS · CISS
-            </p>
-            <h1 className="mt-3 text-xl font-bold leading-tight">{t.congreso.tituloCorto}</h1>
+            <LogoCiess className="mx-auto h-12 w-auto" forzar="oscuro" />
+            <h1 className="mt-4 text-xl font-bold leading-tight">{t.congreso.titulo}</h1>
             <p className="mt-2 text-sm text-white/70">{t.login.subtitulo}</p>
           </div>
 

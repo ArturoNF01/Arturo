@@ -6,9 +6,8 @@ export const es = {
   },
   congreso: {
     titulo: '1er Congreso Desafíos de la seguridad social en las Américas en el primer cuarto del siglo XXI',
-    tituloCorto: '1er Congreso de Estudios Interamericanos de Seguridad Social',
+    tituloCorto: '1er Congreso · Desafíos de la seguridad social en las Américas',
     organiza: 'CIESS · Centro Interamericano de Estudios de Seguridad Social',
-    coorganiza: 'CISS · Conferencia Interamericana de Seguridad Social',
   },
   nav: {
     registro: 'Registro',
@@ -246,7 +245,7 @@ export const es = {
   privacidad: {
     titulo: 'Aviso de privacidad y consentimiento de tratamiento de datos',
     aceptar: 'He leído el aviso de privacidad y autorizo el tratamiento de mis datos con fines exclusivamente organizativos y académicos.',
-    comunicaciones: 'Autorizo recibir comunicaciones sobre futuras actividades académicas del CIESS y la CISS (opcional).',
+    comunicaciones: 'Autorizo recibir comunicaciones sobre futuras actividades académicas del CIESS (opcional).',
     leerCompleto: 'Leer el aviso completo',
     marcoLegal: 'Marco legal aplicable: LFPDPPP (México), LGPD (Brasil) y RGPD/GDPR (Unión Europea).',
   },

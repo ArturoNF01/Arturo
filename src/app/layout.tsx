@@ -7,7 +7,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: '1er Congreso · Desafíos de la seguridad social en las Américas',
   description:
-    'Registro y panel de control del 1er Congreso Desafíos de la seguridad social en las Américas en el primer cuarto del siglo XXI · CIESS · CISS',
+    'Registro y panel de control del 1er Congreso Desafíos de la seguridad social en las Américas en el primer cuarto del siglo XXI · CIESS',
   robots: { index: true, follow: true },
 };
 

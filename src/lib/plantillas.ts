@@ -26,8 +26,7 @@ export function envolverHtml(contenido: string, titulo: string): string {
         </td></tr>
         <tr><td style="padding:28px;font-size:15px;line-height:1.6;">${contenido}</td></tr>
         <tr><td style="padding:18px 28px;background:#f2f5f9;font-size:12px;color:#5b6b7f;">
-          CIESS · Centro Interamericano de Estudios de Seguridad Social<br>
-          CISS · Conferencia Interamericana de Seguridad Social
+          CIESS · Centro Interamericano de Estudios de Seguridad Social
         </td></tr>
       </table>
     </td></tr>

@@ -33,7 +33,7 @@ export default async function PaginaDiagnostico() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <header className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-widest tenue">CIESS · CISS</p>
+        <p className="text-xs font-semibold uppercase tracking-widest tenue">CIESS</p>
         <h1 className="mt-2 text-2xl font-bold">Diagnóstico del despliegue</h1>
         <p className="ayuda max-w-prose">
           Qué falta para que el sistema funcione del todo. Se informa si cada variable está

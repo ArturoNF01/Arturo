@@ -4,9 +4,8 @@ export const en: Diccionario = {
   meta: { nombre: 'English', bandera: '🇺🇸', codigo: 'en-US' },
   congreso: {
     titulo: '1st Congress: Challenges of social security in the Americas in the first quarter of the 21st century',
-    tituloCorto: '1st Congress of Inter-American Social Security Studies',
+    tituloCorto: '1st Congress · Social security challenges in the Americas',
     organiza: 'CIESS · Inter-American Center for Social Security Studies',
-    coorganiza: 'CISS · Inter-American Conference on Social Security',
   },
   nav: {
     registro: 'Registration', faqs: 'FAQs', privacidad: 'Privacy notice', agenda: 'Agenda',
@@ -204,7 +203,7 @@ export const en: Diccionario = {
   privacidad: {
     titulo: 'Privacy notice and data processing consent',
     aceptar: 'I have read the privacy notice and authorise the processing of my data for organisational and academic purposes only.',
-    comunicaciones: 'I agree to receive communications about future academic activities of CIESS and CISS (optional).',
+    comunicaciones: 'I agree to receive communications about future academic activities of CIESS (optional).',
     leerCompleto: 'Read the full notice',
     marcoLegal: 'Applicable legal framework: LFPDPPP (Mexico), LGPD (Brazil) and GDPR (European Union).',
   },
