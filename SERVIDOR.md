@@ -272,6 +272,12 @@ Respalda la base, trae los cambios, aplica el esquema, recompila y
 reinicia. Si algo falla o el sitio no responde, **vuelve solo a la
 versión anterior**: una actualización mal salida no deja el sitio caído.
 
+**Ver quién ha visitado el sitio:**
+
+```bash
+sudo journalctl -u caddy -f      # en vivo (Ctrl+C para salir)
+```
+
 **Ver si algo va mal:**
 
 ```bash
@@ -334,7 +340,7 @@ sudo systemctl start congreso
 |---|---|---|
 | El sitio no abre y el navegador dice que no encuentra el servidor | El dominio no apunta al droplet | `dig +short congreso-dss.ciess.org` debe dar la IP. Revise el registro A. |
 | Sale «no es seguro» o falla el candado | Caddy no consiguió el certificado | `sudo journalctl -u caddy -n 30`. Casi siempre es que el dominio aún no apuntaba cuando se instaló: `sudo systemctl restart caddy`. |
-| «Rechazó la conexión» (ERR_CONNECTION_REFUSED) | Nada escucha: el servidor web no arrancó | `sudo journalctl -u caddy -n 30` dice por qué. Si se queja de la bitácora: `sudo install -d -o caddy -g caddy -m 755 /var/log/caddy && sudo systemctl restart caddy`. |
+| «Rechazó la conexión» (ERR_CONNECTION_REFUSED) | Nada escucha: el servidor web no arrancó | `sudo journalctl -u caddy -n 30` dice por qué. Casi siempre es un error en `/etc/caddy/sitios/`: un fallo ahí no deja arrancar a Caddy y tumba **todos** los sitios del servidor, no sólo el del error. |
 | Error 502 | La aplicación no está corriendo | `sudo systemctl restart congreso`; si sigue, `journalctl -u congreso -n 50`. |
 | La instalación se detuvo diciendo que el puerto 80 está ocupado | Ese droplet ya sirve otro sitio | Use otro droplet, o avísenos para adaptar la instalación a lo que ya hay. |
 | El formulario da error al guardar | Casi siempre la base | Abra `/diagnostico`. |
@@ -373,5 +379,4 @@ sudo systemctl start congreso
 | `/etc/caddy/sitios/congreso.caddy` | Cómo se sirve este dominio en concreto |
 | `/etc/cron.d/congreso` | El horario del respaldo |
 | `/var/respaldos/congreso/` | Los respaldos |
-| `/var/log/caddy/congreso.log` | Quién ha visitado el sitio |
-| `/var/log/respaldo-congreso.log` | Cómo fue cada respaldo |
+| `/var/respaldos/congreso/respaldo.log` | Cómo fue cada respaldo |

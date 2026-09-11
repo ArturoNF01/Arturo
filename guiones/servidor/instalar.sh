@@ -234,19 +234,16 @@ if ! grep -q 'import /etc/caddy/sitios/' /etc/caddy/Caddyfile 2>/dev/null; then
   aviso "El servidor web ahora puede alojar varios sitios."
 fi
 
-# Caddy corre como su propio usuario: si no puede escribir su bitácora, no
-# arranca. El paquete no siempre deja esta carpeta lista.
-install -d -o caddy -g caddy -m 755 /var/log/caddy
-
 cat > /etc/caddy/sitios/congreso.caddy <<CADDY
 # El certificado se pide y se renueva solo.
+#
+# Sin bitácora en archivo a propósito: Caddy ya registra todo en el diario
+# del sistema (journalctl -u caddy), y un archivo propio sólo añade una
+# forma de que el servidor web no arranque —un permiso mal puesto en esa
+# ruta lo mata entero, y con él todos los sitios del servidor—.
 $DOMINIO {
     reverse_proxy localhost:$PUERTO
     encode gzip zstd
-    log {
-        output file /var/log/caddy/congreso.log
-        format console
-    }
 }
 CADDY
 
@@ -292,11 +289,15 @@ install -o postgres -g postgres -m 750 -d /var/respaldos/congreso
 cp "$RAIZ/guiones/servidor/respaldar.sh" /usr/local/bin/respaldar-congreso
 chmod 755 /usr/local/bin/respaldar-congreso
 
+# El registro va junto a los respaldos, no a /var/log: esa carpeta es de
+# root, y postgres —que es quien corre esto— no puede crear archivos ahí.
+# Escribirlo donde no se puede es perder el aviso justo cuando hace falta.
 cat > /etc/cron.d/congreso <<CRON
 # Respaldo de la base, todas las noches a las 03:15
-15 3 * * * postgres /usr/local/bin/respaldar-congreso >> /var/log/respaldo-congreso.log 2>&1
+15 3 * * * postgres /usr/local/bin/respaldar-congreso >> /var/respaldos/congreso/respaldo.log 2>&1
 CRON
 aviso "Cada noche a las 03:15, con 30 días de historial en /var/respaldos/congreso."
+aviso "Cómo fue cada uno: /var/respaldos/congreso/respaldo.log"
 
 # ---------------------------------------------------------------------
 paso "Listo"
