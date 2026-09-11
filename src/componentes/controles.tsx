@@ -67,6 +67,7 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
   const enlaces =
     variante === 'publico'
       ? [
+          { href: '/', texto: t.nav.inicio },
           { href: '/registro', texto: t.nav.registro },
           { href: '/faqs', texto: t.nav.faqs },
           { href: '/aviso-privacidad', texto: t.nav.privacidad },

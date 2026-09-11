@@ -23,7 +23,9 @@ export function LogoCiess({
   className?: string;
   forzar?: 'claro' | 'oscuro';
 }) {
-  const alt = 'CIESS · Centro Interamericano de Estudios de Seguridad Social';
+  // Corto a propósito: si la imagen no carga, este texto ocupa su lugar, y
+  // el nombre completo desbordaba el encabezado.
+  const alt = 'CIESS';
 
   if (forzar) {
     return <img src={forzar === 'oscuro' ? OSCURO : CLARO} alt={alt} className={className} />;

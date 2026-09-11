@@ -28,11 +28,19 @@ export function VideoFondo({
   url,
   opacidad = 0.15,
   variante = 'claro-oscuro',
+  posicion = 'pantalla',
 }: {
   url: string;
   opacidad?: number;
   /** 'oscuro' fija el velo oscuro del login; 'claro-oscuro' lo toma del tema. */
   variante?: 'oscuro' | 'claro-oscuro';
+  /**
+   * 'pantalla' cubre toda la ventana: es lo que quiere el login, que ocupa
+   * la pantalla entera. 'contenido' se queda dentro de su contenedor, que es
+   * lo que necesita una portada donde debajo hay secciones claras: fijo, el
+   * velo las teñiría todas al desplazarse.
+   */
+  posicion?: 'pantalla' | 'contenido';
 }) {
   const [conMovimiento, setConMovimiento] = useState(false);
 
@@ -50,7 +58,12 @@ export function VideoFondo({
       : 'color-mix(in srgb, var(--fondo) 30%, transparent)';
 
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden sin-impresion" aria-hidden>
+    <div
+      className={`pointer-events-none overflow-hidden sin-impresion ${
+        posicion === 'pantalla' ? 'fixed inset-0 -z-10' : 'absolute inset-0 z-0'
+      }`}
+      aria-hidden
+    >
       {url && conMovimiento && (
         <video
           className="h-full w-full object-cover"

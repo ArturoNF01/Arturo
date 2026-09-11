@@ -18,22 +18,46 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const PAISES: [string, string, string][] = [
-  ['México', 'Ciudad de México', 'nacional'],
-  ['México', 'Guadalajara', 'nacional'],
-  ['Brasil', 'Brasilia', 'internacional'],
-  ['Brasil', 'São Paulo', 'internacional'],
-  ['Argentina', 'Buenos Aires', 'internacional'],
-  ['Colombia', 'Bogotá', 'internacional'],
-  ['Chile', 'Santiago', 'internacional'],
-  ['Perú', 'Lima', 'internacional'],
-  ['Uruguay', 'Montevideo', 'internacional'],
-  ['Costa Rica', 'San José', 'internacional'],
-  ['Estados Unidos', 'Washington', 'internacional'],
-  ['España', 'Madrid', 'internacional'],
-  ['Canadá', 'Ottawa', 'internacional'],
-  ['Ecuador', 'Quito', 'internacional'],
+/**
+ * Procedencia de los registros de demostración, con su peso.
+ *
+ * No se reparte al azar por igual: un congreso del CIESS en Ciudad de México
+ * llena de mexicanos, y un tablero que muestre catorce países empatados no
+ * se parece a nada. Europa aparece como lo que será: una presencia mínima.
+ */
+const PAISES: [string, string, string, number][] = [
+  ['México', 'Ciudad de México', 'nacional', 26],
+  ['México', 'Guadalajara', 'nacional', 7],
+  ['México', 'Monterrey', 'nacional', 6],
+  ['México', 'Mérida', 'nacional', 4],
+  ['Brasil', 'Brasilia', 'internacional', 6],
+  ['Brasil', 'São Paulo', 'internacional', 5],
+  ['Argentina', 'Buenos Aires', 'internacional', 6],
+  ['Colombia', 'Bogotá', 'internacional', 6],
+  ['Chile', 'Santiago', 'internacional', 5],
+  ['Perú', 'Lima', 'internacional', 4],
+  ['Uruguay', 'Montevideo', 'internacional', 3],
+  ['Costa Rica', 'San José', 'internacional', 3],
+  ['Ecuador', 'Quito', 'internacional', 3],
+  ['Panamá', 'Ciudad de Panamá', 'internacional', 3],
+  ['República Dominicana', 'Santo Domingo', 'internacional', 3],
+  ['Guatemala', 'Guatemala', 'internacional', 2],
+  ['El Salvador', 'San Salvador', 'internacional', 2],
+  ['Estados Unidos', 'Washington', 'internacional', 3],
+  ['Canadá', 'Ottawa', 'internacional', 2],
+  ['España', 'Madrid', 'internacional', 1],
 ];
+
+/** Elige respetando los pesos de arriba. */
+function azarPonderado<T extends readonly [string, string, string, number]>(lista: readonly T[]): T {
+  const total = lista.reduce((suma, fila) => suma + fila[3], 0);
+  let punto = Math.random() * total;
+  for (const fila of lista) {
+    punto -= fila[3];
+    if (punto <= 0) return fila;
+  }
+  return lista[lista.length - 1];
+}
 
 const INSTITUCIONES = [
   'CIESS', 'CISS', 'Instituto Mexicano del Seguro Social',
@@ -67,7 +91,7 @@ function fechaAleatoria(diasAtras: number): Date {
 
 function construir(indice: number) {
   const perfil = azar(PERFILES);
-  const [pais, ciudad, procedencia] = azar(PAISES);
+  const [pais, ciudad, procedencia] = azarPonderado(PAISES);
   // Todos los perfiles admiten ambas; se reparte 60/40 hacia lo presencial.
   const modalidad = Math.random() < 0.6 ? 'presencial' : 'en_linea';
   const nombres = azar(NOMBRES);
@@ -127,12 +151,12 @@ async function sembrar(cantidad: number) {
   console.log(`Listo: ${cantidad} registros de demostración.`);
 }
 
-const argumento = process.argv[2] ?? '80';
+const argumento = process.argv[2] ?? '100';
 
 (async () => {
   try {
     if (argumento === '--borrar') await borrar();
-    else await sembrar(Math.min(Math.max(Number(argumento) || 80, 1), 2000));
+    else await sembrar(Math.min(Math.max(Number(argumento) || 100, 1), 2000));
   } catch (error) {
     console.error('Falló el sembrado:', error instanceof Error ? error.message : error);
     process.exit(1);
