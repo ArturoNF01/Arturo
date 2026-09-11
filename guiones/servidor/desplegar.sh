@@ -51,10 +51,12 @@ responde() {
 
 # ---------------------------------------------------------------------
 paso "Respaldo previo"
-if command -v respaldar-congreso >/dev/null; then
-  respaldar-congreso
+if [ -x "$RAIZ/guiones/servidor/respaldar.sh" ]; then
+  # Se usa la copia del repositorio, no la instalada en /usr/local/bin: así
+  # las dos no se separan con el tiempo y una corrección llega enseguida.
+  bash "$RAIZ/guiones/servidor/respaldar.sh"
 else
-  aviso "No hay guion de respaldo instalado; se continúa sin respaldar."
+  aviso "No encuentro el guion de respaldo; se continúa sin respaldar."
 fi
 
 # ---------------------------------------------------------------------
@@ -93,6 +95,15 @@ aviso "Cambios: $(en_repo log --oneline "$ANTERIOR..$NUEVO" | wc -l) commit(s)."
 
 # A partir de aquí, cualquier tropiezo nos regresa a donde estábamos.
 trap volver_atras ERR
+
+# ---------------------------------------------------------------------
+paso "Guiones del sistema"
+# El respaldo nocturno corre desde /usr/local/bin, así que sin esto una
+# corrección al respaldo no llegaría nunca a la tarea de cada noche.
+if [ -f "$RAIZ/guiones/servidor/respaldar.sh" ]; then
+  install -m 755 "$RAIZ/guiones/servidor/respaldar.sh" /usr/local/bin/respaldar-congreso
+  aviso "Respaldo nocturno al día."
+fi
 
 # ---------------------------------------------------------------------
 paso "Esquema de la base"

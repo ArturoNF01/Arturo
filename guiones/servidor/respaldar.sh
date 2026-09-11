@@ -47,7 +47,11 @@ pg_dump --no-owner --no-privileges "$BASE" | gzip -9 > "$parcial"
 # Comprobación: el archivo se descomprime entero y trae la tabla que
 # importa. Un volcado truncado falla aquí y no llega a renombrarse.
 gzip -t "$parcial"
-gunzip -c "$parcial" | grep -q 'CREATE TABLE public.registros' \
+# Sin «-q» a propósito: grep -q cierra la tubería en cuanto encuentra lo que
+# busca, gunzip muere con la tubería rota y pipefail lo lee como un fallo.
+# Es decir, con -q la comprobación fallaba justo cuando el respaldo estaba
+# bien. Con -c lee el volcado entero y responde por lo que de verdad hay.
+gunzip -c "$parcial" | grep -c 'CREATE TABLE public.registros' > /dev/null \
   || { rm -f "$parcial"; echo "El respaldo salió incompleto: no contiene la tabla de registros." >&2; exit 1; }
 
 mv "$parcial" "$archivo"

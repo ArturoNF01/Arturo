@@ -28,6 +28,16 @@ paso()  { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 aviso() { printf '   %s\n' "$1"; }
 morir() { printf '\n\033[31mAlto: %s\033[0m\n' "$1" >&2; exit 1; }
 
+# «head» corta la tubería en cuanto tiene los caracteres que pide, y quien
+# escribe detrás muere con la tubería rota. Con pipefail eso sería un fallo,
+# así que se apaga dentro de esta función —que corre en su propia subcapa—
+# en vez de en todo el guion.
+aleatorio() {
+  set +o pipefail
+  head -c 64 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c "${1:-32}"
+}
+
+
 [ "$(id -u)" -eq 0 ] || morir "Ejecute con sudo: sudo bash instalar.sh"
 
 # ---------------------------------------------------------------------
@@ -46,7 +56,10 @@ libre=$(df --output=avail -m / | tail -1)
 [ "$libre" -ge 5000 ] || morir "Hacen falta al menos 5 GB libres; hay ${libre} MB."
 
 # Nadie debe estar usando el 80 y el 443, salvo que sea nuestro propio Caddy.
-if ss -lnt 2>/dev/null | awk '{print $4}' | grep -qE ':(80|443)$'; then
+# Sin «-q»: grep -q corta la tubería al primer acierto y, con pipefail, eso
+# se lee como que nadie escucha. Aquí eso sería grave: es la comprobación
+# que impide instalar encima de un sitio que ya está sirviendo.
+if ss -lnt 2>/dev/null | awk '{print $4}' | grep -cE ':(80|443)$' > /dev/null; then
   if ! systemctl is-active --quiet caddy 2>/dev/null; then
     morir "Algo ya escucha en el puerto 80 o 443. Este servidor sirve otro sitio: elija otro servidor, o dígamelo y adaptamos la instalación a lo que ya hay."
   fi
@@ -79,7 +92,7 @@ if [ -f "$RAIZ/.env" ] && grep -q '^DATABASE_URL=' "$RAIZ/.env"; then
   aviso "La base ya estaba configurada; se conserva su contraseña."
   CLAVE_BD=$(grep '^DATABASE_URL=' "$RAIZ/.env" | sed -E 's|.*://[^:]+:([^@]+)@.*|\1|')
 else
-  CLAVE_BD=$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32)
+  CLAVE_BD=$(aleatorio)
 fi
 
 sudo -u postgres psql -v ON_ERROR_STOP=1 -q <<SQL
@@ -92,7 +105,7 @@ do \$\$ begin
 end \$\$;
 SQL
 
-if ! sudo -u postgres psql -lqt | cut -d'|' -f1 | grep -qw "$BASE"; then
+if ! sudo -u postgres psql -lqt | cut -d'|' -f1 | grep -cw "$BASE" > /dev/null; then
   sudo -u postgres createdb -O "$BASE" "$BASE"
   aviso "Base «$BASE» creada."
 else
@@ -151,8 +164,8 @@ DATABASE_URL=postgresql://$BASE:$CLAVE_BD@localhost:5432/$BASE?sslmode=disable
 NEXT_PUBLIC_URL_SITIO=https://$DOMINIO
 PORT=$PUERTO
 NODE_ENV=production
-CRON_SECRET=$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32)
-ANTIABUSO_SAL=$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32)
+CRON_SECRET=$(aleatorio)
+ANTIABUSO_SAL=$(aleatorio)
 
 # RESEND_API_KEY=
 # CORREO_REMITENTE=Congreso CIESS <congreso@ciess.org>
@@ -275,7 +288,7 @@ if ! systemctl is-active --quiet caddy; then
   morir "El servidor web no arrancó; arriba está el porqué. Se quitó la configuración de este sitio para que los demás sigan sirviendo."
 fi
 
-if ! ss -lnt | awk '{print $4}' | grep -qE ':(80|443)$'; then
+if ! ss -lnt | awk '{print $4}' | grep -cE ':(80|443)$' > /dev/null; then
   journalctl -u caddy -n 25 --no-pager
   morir "El servidor web dice estar activo pero nadie escucha en 80/443. Arriba está su registro."
 fi
