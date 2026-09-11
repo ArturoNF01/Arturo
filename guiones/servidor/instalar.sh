@@ -220,7 +220,17 @@ if ! command -v caddy >/dev/null; then
   aviso "Caddy instalado."
 fi
 
-cat > /etc/caddy/Caddyfile <<CADDY
+# Cada sitio en su propio archivo, y el principal sólo los incluye. Así
+# este servidor puede alojar varios proyectos sin que la instalación de
+# uno borre la configuración de los demás.
+mkdir -p /etc/caddy/sitios
+if ! grep -q 'import /etc/caddy/sitios/' /etc/caddy/Caddyfile 2>/dev/null; then
+  # Se conserva lo que hubiera antes; sólo se le añade la línea que incluye.
+  printf '\n# Cada proyecto alojado aquí tiene su archivo en esta carpeta.\nimport /etc/caddy/sitios/*.caddy\n' >> /etc/caddy/Caddyfile
+  aviso "El servidor web ahora puede alojar varios sitios."
+fi
+
+cat > /etc/caddy/sitios/congreso.caddy <<CADDY
 # El certificado se pide y se renueva solo.
 $DOMINIO {
     reverse_proxy localhost:$PUERTO
@@ -231,6 +241,13 @@ $DOMINIO {
     }
 }
 CADDY
+
+# Si la configuración tiene un error, Caddy sigue sirviendo la anterior:
+# mejor eso que dejar todos los sitios del servidor caídos.
+if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
+  rm -f /etc/caddy/sitios/congreso.caddy
+  morir "La configuración del servidor web quedó mal y se deshizo. Los sitios que ya había siguen en pie."
+fi
 
 systemctl reload caddy 2>/dev/null || systemctl restart caddy
 aviso "Sirviendo $DOMINIO."

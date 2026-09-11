@@ -46,6 +46,64 @@ dentro de él, no en un servicio aparte.
 
 ---
 
+## Un droplet para varios desarrollos
+
+Este mismo servidor puede alojar otros proyectos además del congreso, cada
+uno con su dominio y su base, sin estorbarse. Es lo razonable: un solo
+servidor que administrar, una sola factura, y los sitios que ya están en
+producción en otros droplets no corren ningún riesgo.
+
+Funciona así:
+
+- **El servidor web** guarda cada sitio en su propio archivo dentro de
+  `/etc/caddy/sitios/`. El archivo principal sólo los incluye. Instalar un
+  proyecto nuevo agrega un archivo; **no borra los de los demás**. Antes
+  de recargar, la configuración se valida: si quedó mal, se deshace y los
+  sitios que ya estaban siguen en pie.
+- **La base de datos** es un solo PostgreSQL, pero cada proyecto tiene su
+  base y su usuario, con su propia contraseña. Uno no puede leer los datos
+  del otro.
+- **Cada aplicación** es un servicio aparte y escucha en su propio puerto
+  interno (el congreso usa el 3000; el siguiente usaría el 3001). Si uno
+  se cae, los demás siguen.
+- **Los respaldos** son por base, en archivos separados.
+
+### Qué tamaño conviene
+
+| Proyectos | Memoria | Por qué |
+|---|---|---|
+| 1 | 2 GB | Es el mínimo. La compilación es lo que más memoria pide y con 2 GB va justa. |
+| 2 a 4 | **4 GB** | Lo recomendable. Holgura para compilar sin tumbar lo que está sirviendo. |
+| 5 o más | 8 GB | O separar en dos droplets. |
+
+Con **Ubuntu 24.04 LTS**, y en la misma región que los demás droplets del
+CIESS, para que la administración quede junta.
+
+> Un detalle que muerde: compilar una aplicación mientras otra está
+> sirviendo puede agotar la memoria y hacer que el sistema mate procesos
+> al azar —incluido un sitio en producción—. Con 4 GB no pasa. Con 2 GB y
+> dos proyectos, conviene agregar memoria de intercambio:
+>
+> ```bash
+> sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+> sudo mkswap /swapfile && sudo swapon /swapfile
+> echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+> ```
+
+### Al crear el droplet
+
+- **Ubuntu 24.04 LTS**, plan **Basic / Regular**.
+- **Autenticación por llave SSH**, no por contraseña. DigitalOcean guía
+  para crearla; si se complica, la contraseña sirve, pero la llave es
+  mejor.
+- **Backups semanales** (cuestan un 20% extra): son del disco entero, y
+  complementan al respaldo de la base que hace este sistema. Uno salva de
+  un borrado; el otro, de un servidor perdido.
+- **Monitoring** activado: es gratis y avisa si se llena el disco.
+- Nombre que se entienda dentro de un año: `desarrollos-ciess`.
+
+---
+
 ## Vocabulario mínimo
 
 | Palabra | Qué es |
@@ -65,9 +123,12 @@ Hacen falta tres cosas:
 
 1. Un droplet con **Ubuntu 22.04 o más nuevo**, al menos **2 GB de
    memoria** y **5 GB libres**.
-2. Que ese droplet **no esté sirviendo ya otro sitio web**. Si algo está
-   usando los puertos 80 o 443, la instalación se detiene sola y avisa,
-   en lugar de tumbar lo que ya funciona.
+2. Que ese droplet **no esté sirviendo ya otro sitio con un servidor web
+   distinto** (nginx, Apache, Plesk). Si algo ajeno está usando los
+   puertos 80 o 443, la instalación se detiene sola y avisa, en lugar de
+   tumbar lo que ya funciona. Si el que está es Caddy —porque aquí ya se
+   instaló otro proyecto igual—, no hay problema: ver *Un droplet para
+   varios desarrollos*, más abajo.
 3. Poder editar el dominio `ciess.org` para agregarle un subdominio.
 
 ---
@@ -287,6 +348,9 @@ sudo systemctl start congreso
   no tocando archivos.
 - **No corra la aplicación como `root`.** El instalador crea el usuario
   `congreso` justamente para eso.
+- **No edite `/etc/caddy/Caddyfile` para agregar otro sitio.** Cada
+  proyecto va en su propio archivo dentro de `/etc/caddy/sitios/`; así uno
+  no se lleva entre las patas al otro.
 
 ---
 
@@ -297,7 +361,8 @@ sudo systemctl start congreso
 | `/opt/congreso` | El código |
 | `/opt/congreso/.env` | Contraseñas y secretos (sólo lo lee el usuario `congreso`) |
 | `/etc/systemd/system/congreso.service` | Cómo arranca la aplicación |
-| `/etc/caddy/Caddyfile` | Cómo se sirve el dominio |
+| `/etc/caddy/Caddyfile` | El archivo principal del servidor web; sólo incluye los de abajo |
+| `/etc/caddy/sitios/congreso.caddy` | Cómo se sirve este dominio en concreto |
 | `/etc/cron.d/congreso` | El horario del respaldo |
 | `/var/respaldos/congreso/` | Los respaldos |
 | `/var/log/caddy/congreso.log` | Quién ha visitado el sitio |
