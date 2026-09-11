@@ -6,15 +6,52 @@
  *
  *   npm run crear-usuario -- correo@ciess.org "Nombre" superadmin
  *
- * La contraseña se pide por teclado y no queda en el historial del intérprete
- * de comandos. Si se deja vacía, la cuenta entra por enlace de acceso.
+ * La contraseña se pide por teclado —sin que se vea al escribirla— y no queda
+ * en el historial del intérprete de comandos. Si se deja vacía, la cuenta entra
+ * por enlace de acceso.
  */
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
+import { Writable } from 'node:stream';
 import { cifrarClave } from '../src/lib/bd/claves';
 import { consultar } from '../src/lib/bd/conexion';
 
 const ROLES = ['superadmin', 'organizador', 'cientifico_datos', 'lector'] as const;
+
+/**
+ * Lector de teclado que no refleja en pantalla lo que se escribe.
+ *
+ * Estas cuentas se crean por consola remota, a menudo con alguien mirando o
+ * compartiendo pantalla, y lo tecleado queda además en el desplazamiento de la
+ * terminal y en cualquier captura. Una contraseña visible al escribirla nace
+ * comprometida.
+ *
+ * readline va escribiendo en su salida cada tecla que recibe; si esa salida no
+ * lleva a ninguna parte, no queda nada a la vista. Los avisos los imprimimos
+ * aparte, directo a la pantalla. Es un solo lector para todas las preguntas:
+ * abrir uno por pregunta hace que el primero se quede con lo que venía detrás
+ * y el segundo espere para siempre.
+ */
+function lectorSilencioso() {
+  const interactivo = Boolean(stdin.isTTY);
+  const sumidero = new Writable({ write(_trozo, _codificacion, listo) { listo(); } });
+  const consola = createInterface({
+    input: stdin,
+    // Sin terminal (tuberías, automatizaciones) no hay eco que ocultar.
+    output: interactivo ? sumidero : stdout,
+    terminal: interactivo,
+  });
+
+  return {
+    async preguntar(mensaje: string): Promise<string> {
+      stdout.write(mensaje);
+      const valor = await consola.question('');
+      if (interactivo) stdout.write('\n');
+      return valor;
+    },
+    cerrar: () => consola.close(),
+  };
+}
 
 async function principal() {
   const [correo, nombre, rol = 'superadmin'] = process.argv.slice(2);
@@ -33,16 +70,24 @@ async function principal() {
     process.exit(1);
   }
 
-  const consola = createInterface({ input: stdin, output: stdout });
-  const clave = await consola.question(
-    'Contraseña (vacío para que entre por enlace de acceso): ',
-  );
-  consola.close();
+  const teclado = lectorSilencioso();
+  const clave = await teclado.preguntar('Contraseña (vacío para que entre por enlace de acceso): ');
 
   if (clave && clave.length < 10) {
+    teclado.cerrar();
     console.error('La contraseña va de 10 caracteres en adelante.');
     process.exit(1);
   }
+  if (clave) {
+    // Como no se ve al teclearla, se pide dos veces: no hay forma de revisarla.
+    const confirmacion = await teclado.preguntar('Repítala: ');
+    if (confirmacion !== clave) {
+      teclado.cerrar();
+      console.error('No coinciden. No se creó nada; vuelva a intentarlo.');
+      process.exit(1);
+    }
+  }
+  teclado.cerrar();
 
   const claveHash = clave ? await cifrarClave(clave) : null;
 
