@@ -292,6 +292,19 @@ journalctl -u congreso -f        # ver en vivo (Ctrl+C para salir)
 sudo systemctl restart congreso
 ```
 
+**Conectar con Google Sheets:** descargue la llave de la cuenta de servicio
+desde la consola de Google, cree el archivo en el servidor y ejecute:
+
+```bash
+cat > /tmp/llave.json      # pegue el contenido y cierre con Ctrl+D
+sudo bash /opt/congreso/guiones/servidor/conectar-google.sh /tmp/llave.json ID_DE_LA_HOJA
+```
+
+Se hace con un guion y no editando el archivo de entorno a mano porque la
+llave lleva saltos de línea que al pegarlos en un editor se parten, y el
+fallo que eso produce no dice lo que pasó. El guion la guarda como debe,
+borra el archivo y reinicia el servicio.
+
 **Cambiar una clave de correo o de Google:**
 
 ```bash
