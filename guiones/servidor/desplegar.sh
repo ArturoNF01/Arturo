@@ -19,16 +19,23 @@ paso()  { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 aviso() { printf '   %s\n' "$1"; }
 morir() { printf '\n\033[31mAlto: %s\033[0m\n' "$1" >&2; exit 1; }
 
+como_usuario() { sudo -u "$USUARIO" env HOME="/home/$USUARIO" "$@"; }
+
+# El repositorio es del usuario del servicio, pero estas órdenes corren como
+# root, y git se niega a operar sobre un repositorio ajeno: es su defensa
+# contra que alguien sin privilegios le cuele configuración a root. Se
+# declara la excepción aquí, para este repositorio y esta invocación, en vez
+# de tocar la configuración global del servidor.
+en_repo() { git -C "$RAIZ" -c safe.directory="$RAIZ" "$@"; }
+
 [ "$(id -u)" -eq 0 ] || morir "Ejecute con sudo: sudo bash $RAIZ/guiones/servidor/desplegar.sh"
 [ -d "$RAIZ/.git" ] || morir "No encuentro la instalación en $RAIZ. ¿Corrió antes instalar.sh?"
 
 # Se actualiza desde la misma rama que se instaló, no desde una fija: si
 # el servidor quedó en una rama de pruebas, traerle master lo cambiaría
 # por debajo sin avisar.
-RAMA="${RAMA:-$(git -C "$RAIZ" rev-parse --abbrev-ref HEAD)}"
+RAMA="${RAMA:-$(en_repo rev-parse --abbrev-ref HEAD)}"
 [ "$RAMA" != "HEAD" ] || morir "La instalación no está en ninguna rama. Indique cuál: sudo RAMA=master bash $0"
-
-como_usuario() { sudo -u "$USUARIO" env HOME="/home/$USUARIO" "$@"; }
 
 # ¿Responde el sitio? Se le dan hasta 30 segundos para arrancar.
 responde() {
@@ -52,12 +59,12 @@ fi
 
 # ---------------------------------------------------------------------
 paso "Versión actual"
-ANTERIOR=$(git -C "$RAIZ" rev-parse HEAD)
-aviso "$(git -C "$RAIZ" log --oneline -1)"
+ANTERIOR=$(en_repo rev-parse HEAD)
+aviso "$(en_repo log --oneline -1)"
 
 volver_atras() {
   printf '\n\033[33mAlgo falló. Volviendo a la versión anterior…\033[0m\n'
-  git -C "$RAIZ" reset --hard --quiet "$ANTERIOR"
+  en_repo reset --hard --quiet "$ANTERIOR"
   chown -R "$USUARIO:$USUARIO" "$RAIZ"
   cd "$RAIZ"
   como_usuario npm ci --silent || true
@@ -71,18 +78,18 @@ volver_atras() {
 
 # ---------------------------------------------------------------------
 paso "Traer los cambios"
-git -C "$RAIZ" fetch --quiet origin "$RAMA"
-NUEVO=$(git -C "$RAIZ" rev-parse "origin/$RAMA")
+en_repo fetch --quiet origin "$RAMA"
+NUEVO=$(en_repo rev-parse "origin/$RAMA")
 
 if [ "$ANTERIOR" = "$NUEVO" ]; then
   aviso "Ya estaba en la última versión. No hay nada que actualizar."
   exit 0
 fi
 
-git -C "$RAIZ" reset --hard --quiet "origin/$RAMA"
+en_repo reset --hard --quiet "origin/$RAMA"
 chown -R "$USUARIO:$USUARIO" "$RAIZ"
-aviso "Ahora en: $(git -C "$RAIZ" log --oneline -1)"
-aviso "Cambios: $(git -C "$RAIZ" log --oneline "$ANTERIOR..$NUEVO" | wc -l) commit(s)."
+aviso "Ahora en: $(en_repo log --oneline -1)"
+aviso "Cambios: $(en_repo log --oneline "$ANTERIOR..$NUEVO" | wc -l) commit(s)."
 
 # A partir de aquí, cualquier tropiezo nos regresa a donde estábamos.
 trap volver_atras ERR
@@ -114,7 +121,7 @@ aviso "El sitio responde."
 paso "Listo"
 cat <<FIN
 
-   Actualizado a: $(git -C "$RAIZ" log --oneline -1)
+   Actualizado a: $(en_repo log --oneline -1)
    Comprobación:  https://$(grep -m1 '^NEXT_PUBLIC_URL_SITIO=' "$RAIZ/.env" | sed 's|.*//||')/diagnostico
 
 FIN

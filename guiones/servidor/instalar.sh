@@ -119,20 +119,27 @@ else
   aviso "El usuario «$USUARIO» ya existía."
 fi
 
+# El repositorio es del usuario del servicio, pero estas órdenes corren como
+# root, y git se niega a operar sobre un repositorio ajeno: es su defensa
+# contra que alguien sin privilegios le cuele configuración a root. Se
+# declara la excepción aquí, para este repositorio y esta invocación, en vez
+# de tocar la configuración global del servidor.
+en_repo() { git -C "$RAIZ" -c safe.directory="$RAIZ" "$@"; }
+
 # ---------------------------------------------------------------------
 paso "Código de la aplicación"
 mkdir -p "$RAIZ"
 if [ -d "$RAIZ/.git" ]; then
   aviso "Actualizando lo que ya estaba…"
-  git -C "$RAIZ" remote set-url origin "$REPOSITORIO"
-  git -C "$RAIZ" fetch --quiet origin "$RAMA"
-  git -C "$RAIZ" reset --hard --quiet "origin/$RAMA"
+  en_repo remote set-url origin "$REPOSITORIO"
+  en_repo fetch --quiet origin "$RAMA"
+  en_repo reset --hard --quiet "origin/$RAMA"
 else
   aviso "Clonando…"
   git clone --quiet --branch "$RAMA" "$REPOSITORIO" "$RAIZ"
 fi
 chown -R "$USUARIO:$USUARIO" "$RAIZ"
-aviso "En $RAIZ · $(git -C "$RAIZ" log --oneline -1)"
+aviso "En $RAIZ · $(en_repo log --oneline -1)"
 
 # ---------------------------------------------------------------------
 paso "Variables de entorno"
