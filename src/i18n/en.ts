@@ -3,8 +3,9 @@ import type { Diccionario } from './es';
 export const en: Diccionario = {
   meta: { nombre: 'English', bandera: '🇺🇸', codigo: 'en-US' },
   congreso: {
-    titulo: '1st Congress: Challenges of social security in the Americas in the first quarter of the 21st century',
-    tituloCorto: '1st Congress · Social security challenges in the Americas',
+    titulo: '1st Congress of Inter-American Social Security Studies',
+    subtitulo: 'Challenges of social security in the Americas in the first quarter of the 21st century',
+    tituloCorto: '1st Congress of Inter-American Social Security Studies',
     organiza: 'CIESS · Inter-American Center for Social Security Studies',
   },
   nav: {

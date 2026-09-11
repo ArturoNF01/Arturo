@@ -86,6 +86,7 @@ export function PaginaLogin({
           <div className="mb-6 text-center text-white">
             <LogoCiess className="mx-auto h-12 w-auto" forzar="oscuro" />
             <h1 className="mt-4 text-xl font-bold leading-tight">{t.congreso.titulo}</h1>
+            <p className="mt-2 text-sm italic text-ciess-200">{t.congreso.subtitulo}</p>
             <p className="mt-2 text-sm text-white/70">{t.login.subtitulo}</p>
           </div>
 

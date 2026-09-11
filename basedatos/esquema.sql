@@ -353,10 +353,10 @@ insert into configuracion (clave, valor, descripcion) values
   ('cupos_en_linea',     'null'::jsonb, 'Lugares en línea;
 null = sin límite'),
   ('registro_abierto',   'true'::jsonb, 'Permite recibir nuevos registros'),
-  ('fecha_limite_registro', '"2026-05-15"'::jsonb, 'Fecha límite de registro y de edición'),
+  ('fecha_limite_registro', '"2026-10-30"'::jsonb, 'Fecha límite de registro y de edición'),
   ('url_agenda',  '"https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf"'::jsonb, 'PDF de agenda/convocatoria'),
   ('url_video_login', '"https://home.ciess.org/wp-content/uploads/2026/03/1er-Congreso-de-Estudios-Interamericanos-de-Seguridad-Social-B.mp4"'::jsonb, 'Video de fondo del login'),
-  ('correo_contacto', '"congreso@ciess.org"'::jsonb, 'Correo de contacto del comité organizador')
+  ('correo_contacto', '"teresa.davila@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador')
 on conflict (clave) do nothing;
 drop trigger if exists trg_config_actualizado on configuracion;
 create trigger trg_config_actualizado before update on configuracion
@@ -530,7 +530,7 @@ end $$;
 -- ---------------------------------------------------------------------
 insert into configuracion (clave, valor, descripcion) values
   ('congreso_nombre',
-   '{"es": "1er Congreso Desafíos de la seguridad social en las Américas en el primer cuarto del siglo XXI", "en": "1st Congress: Challenges of social security in the Americas in the first quarter of the 21st century", "pt": "1º Congresso Desafios da seguridade social nas Américas no primeiro quarto do século XXI"}'::jsonb,
+   '{"es": "1er Congreso de Estudios Interamericanos de Seguridad Social", "en": "1st Congress of Inter-American Social Security Studies", "pt": "1º Congresso de Estudos Interamericanos de Seguridade Social"}'::jsonb,
    'Nombre completo del congreso, en los tres idiomas'),
 
   ('congreso_nombre_corto',
@@ -539,14 +539,14 @@ insert into configuracion (clave, valor, descripcion) values
 
   ('congreso_sede',
    '{"es": "CIESS · Ciudad de México, México", "en": "CIESS · Mexico City, Mexico", "pt": "CIESS · Cidade do México, México"}'::jsonb,
-   'PROPUESTA · Sede del congreso'),
+   'Sede del congreso'),
 
   ('congreso_fechas',
-   '{"es": "3, 4 y 5 de junio de 2026", "en": "3-5 June 2026", "pt": "3, 4 e 5 de junho de 2026"}'::jsonb,
-   'PROPUESTA · Fechas del congreso tal como se muestran'),
+   '{"es": "11, 12 y 13 de noviembre de 2026", "en": "11-13 November 2026", "pt": "11, 12 e 13 de novembro de 2026"}'::jsonb,
+   'Fechas del congreso tal como se muestran'),
 
-  ('congreso_fecha_inicio', '"2026-06-03"'::jsonb, 'PROPUESTA · Primer día del congreso'),
-  ('congreso_fecha_fin',    '"2026-06-05"'::jsonb, 'PROPUESTA · Último día del congreso'),
+  ('congreso_fecha_inicio', '"2026-11-11"'::jsonb, 'Primer día del congreso'),
+  ('congreso_fecha_fin',    '"2026-11-13"'::jsonb, 'Último día del congreso'),
 
   ('limite_semblanza_palabras',   '60'::jsonb,   'Extensión máxima de la semblanza, en palabras'),
   ('limite_semblanza_caracteres', '420'::jsonb,  'Límite que verifica el formulario'),
@@ -573,31 +573,55 @@ create trigger trg_auditoria_ejes after insert or update or delete on ejes_temat
   for each row execute function registrar_auditoria();
 -- PROPUESTA de ejes, a partir de los temas centrales de la seguridad social
 -- en las Américas. Editables y ampliables desde el panel.
+-- Los nueve ejes temáticos de la convocatoria oficial.
 insert into ejes_tematicos (clave, nombre, descripcion, orden) values
-  ('cobertura_informalidad',
-   '{"es": "Cobertura, informalidad y nuevas formas de trabajo", "en": "Coverage, informality and new forms of work", "pt": "Cobertura, informalidade e novas formas de trabalho"}'::jsonb,
-   '{"es": "Extensión de la cobertura a personas trabajadoras informales, independientes y de plataformas digitales.", "en": "Extending coverage to informal, self-employed and platform workers.", "pt": "Extensão da cobertura a trabalhadores informais, autônomos e de plataformas digitais."}'::jsonb, 1),
+  ('seguridad_salud_trabajo',
+   '{"es": "Seguridad y salud en el trabajo", "en": "Occupational safety and health", "pt": "Segurança e saúde no trabalho"}'::jsonb,
+   '{"es": "Prevención de riesgos laborales, accidentes y enfermedades de trabajo, y salud de las personas trabajadoras.", "en": "Occupational risk prevention, work-related accidents and diseases, and workers’ health.", "pt": "Prevenção de riscos laborais, acidentes e doenças do trabalho e saúde das pessoas trabalhadoras."}'::jsonb, 1),
 
-  ('sostenibilidad_pensiones',
-   '{"es": "Sostenibilidad financiera y reformas de los sistemas de pensiones", "en": "Financial sustainability and pension system reform", "pt": "Sustentabilidade financeira e reformas dos sistemas de previdência"}'::jsonb,
-   '{"es": "Suficiencia de las prestaciones, equilibrio actuarial y economía política de las reformas.", "en": "Benefit adequacy, actuarial balance and the political economy of reform.", "pt": "Suficiência dos benefícios, equilíbrio atuarial e economia política das reformas."}'::jsonb, 2),
+  ('pensiones',
+   '{"es": "Pensiones", "en": "Pensions", "pt": "Previdência"}'::jsonb,
+   '{"es": "Suficiencia de las prestaciones, equilibrio actuarial, reformas y economía política de los sistemas de pensiones.", "en": "Benefit adequacy, actuarial balance, reform and the political economy of pension systems.", "pt": "Suficiência dos benefícios, equilíbrio atuarial, reformas e economia política dos sistemas previdenciários."}'::jsonb, 2),
 
-  ('salud_cuidados_envejecimiento',
-   '{"es": "Salud, cuidados de largo plazo y envejecimiento", "en": "Health, long-term care and ageing", "pt": "Saúde, cuidados de longa duração e envelhecimento"}'::jsonb,
-   '{"es": "Transición demográfica, sistemas de cuidados y sostenibilidad de los servicios de salud.", "en": "Demographic transition, care systems and the sustainability of health services.", "pt": "Transição demográfica, sistemas de cuidados e sustentabilidade dos serviços de saúde."}'::jsonb, 3),
+  ('salud',
+   '{"es": "Salud", "en": "Health", "pt": "Saúde"}'::jsonb,
+   '{"es": "Cobertura, financiamiento y calidad de los servicios de salud de la seguridad social.", "en": "Coverage, financing and quality of social security health services.", "pt": "Cobertura, financiamento e qualidade dos serviços de saúde da seguridade social."}'::jsonb, 3),
 
-  ('desigualdad_genero',
-   '{"es": "Protección social, desigualdad y género", "en": "Social protection, inequality and gender", "pt": "Proteção social, desigualdade e gênero"}'::jsonb,
-   '{"es": "Brechas de acceso, trabajo de cuidados no remunerado y diseño de prestaciones con perspectiva de género.", "en": "Access gaps, unpaid care work and gender-responsive benefit design.", "pt": "Lacunas de acesso, trabalho de cuidado não remunerado e desenho de benefícios com perspectiva de gênero."}'::jsonb, 4),
+  ('financiamiento',
+   '{"es": "Financiamiento de la seguridad social", "en": "Financing of social security", "pt": "Financiamento da seguridade social"}'::jsonb,
+   '{"es": "Fuentes de ingreso, sostenibilidad fiscal y arquitectura financiera de los sistemas de protección social.", "en": "Revenue sources, fiscal sustainability and the financial architecture of social protection systems.", "pt": "Fontes de receita, sustentabilidade fiscal e arquitetura financeira dos sistemas de proteção social."}'::jsonb, 4),
 
-  ('digitalizacion_gobernanza',
-   '{"es": "Transformación digital y gobernanza de las instituciones", "en": "Digital transformation and institutional governance", "pt": "Transformação digital e governança das instituições"}'::jsonb,
-   '{"es": "Datos, inteligencia artificial, transparencia y capacidad institucional de los organismos de seguridad social.", "en": "Data, artificial intelligence, transparency and institutional capacity of social security bodies.", "pt": "Dados, inteligência artificial, transparência e capacidade institucional dos organismos de seguridade social."}'::jsonb, 5),
+  ('servicios_sociales',
+   '{"es": "Servicios sociales", "en": "Social services", "pt": "Serviços sociais"}'::jsonb,
+   '{"es": "Prestaciones sociales, cuidados, servicios culturales y deportivos de las instituciones de seguridad social.", "en": "Social benefits, care services, and the cultural and sports services of social security institutions.", "pt": "Benefícios sociais, cuidados e serviços culturais e esportivos das instituições de seguridade social."}'::jsonb, 5),
 
-  ('migracion_portabilidad',
-   '{"es": "Migración, portabilidad de derechos y convenios internacionales", "en": "Migration, portability of rights and international agreements", "pt": "Migração, portabilidade de direitos e acordos internacionais"}'::jsonb,
-   '{"es": "Convenios multilaterales, totalización de periodos y protección de personas trabajadoras migrantes.", "en": "Multilateral agreements, totalisation of periods and protection of migrant workers.", "pt": "Acordos multilaterais, totalização de períodos e proteção de trabalhadores migrantes."}'::jsonb, 6)
+  ('poblacion_migrante',
+   '{"es": "Acceso a la seguridad social de la población migrante", "en": "Access to social security for migrant populations", "pt": "Acesso à seguridade social da população migrante"}'::jsonb,
+   '{"es": "Portabilidad de derechos, convenios internacionales y protección de personas trabajadoras migrantes.", "en": "Portability of rights, international agreements and protection of migrant workers.", "pt": "Portabilidade de direitos, acordos internacionais e proteção de trabalhadores migrantes."}'::jsonb, 6),
+
+  ('genero',
+   '{"es": "Seguridad social y género", "en": "Social security and gender", "pt": "Seguridade social e gênero"}'::jsonb,
+   '{"es": "Brechas de cobertura y de prestaciones, trabajo de cuidados no remunerado y diseño de políticas con perspectiva de género.", "en": "Coverage and benefit gaps, unpaid care work, and gender-responsive policy design.", "pt": "Lacunas de cobertura e de benefícios, trabalho de cuidado não remunerado e desenho de políticas com perspectiva de gênero."}'::jsonb, 7),
+
+  ('seguridad_social_america',
+   '{"es": "La seguridad social en América", "en": "Social security in the Americas", "pt": "A seguridade social na América"}'::jsonb,
+   '{"es": "Estudios comparados, historia y trayectorias institucionales de la seguridad social en el continente.", "en": "Comparative studies, history and institutional trajectories of social security across the continent.", "pt": "Estudos comparados, história e trajetórias institucionais da seguridade social no continente."}'::jsonb, 8),
+
+  ('mercado_laboral',
+   '{"es": "Mercado laboral y seguridad social", "en": "Labour market and social security", "pt": "Mercado de trabalho e seguridade social"}'::jsonb,
+   '{"es": "Informalidad, nuevas formas de trabajo, plataformas digitales y su relación con la protección social.", "en": "Informality, new forms of work, digital platforms and their relationship with social protection.", "pt": "Informalidade, novas formas de trabalho, plataformas digitais e sua relação com a proteção social."}'::jsonb, 9)
 on conflict (clave) do nothing;
+
+-- Los seis ejes provisionales que precedieron a la convocatoria se apagan,
+-- pero no se borran: algún registro podría apuntar a uno y perderíamos el
+-- dato. Se nombran uno por uno a propósito —no «todo lo que no esté en la
+-- lista»— para que reactivar alguno desde el panel no se deshaga en el
+-- siguiente despliegue.
+update ejes_tematicos set activo = false
+ where clave in ('cobertura_informalidad', 'sostenibilidad_pensiones',
+                 'salud_cuidados_envejecimiento', 'desigualdad_genero',
+                 'digitalizacion_gobernanza', 'migracion_portabilidad')
+   and activo;
 -- ---------------------------------------------------------------------
 -- Preguntas frecuentes
 -- ---------------------------------------------------------------------

@@ -3,8 +3,9 @@ import type { Diccionario } from './es';
 export const pt: Diccionario = {
   meta: { nombre: 'Português', bandera: '🇧🇷', codigo: 'pt-BR' },
   congreso: {
-    titulo: '1º Congresso Desafios da seguridade social nas Américas no primeiro quarto do século XXI',
-    tituloCorto: '1º Congresso · Desafios da seguridade social nas Américas',
+    titulo: '1º Congresso de Estudos Interamericanos de Seguridade Social',
+    subtitulo: 'Desafios da seguridade social nas Américas no primeiro quarto do século XXI',
+    tituloCorto: '1º Congresso de Estudos Interamericanos de Seguridade Social',
     organiza: 'CIESS · Centro Interamericano de Estudos de Seguridade Social',
   },
   nav: {

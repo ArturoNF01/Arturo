@@ -5,8 +5,9 @@ export const es = {
     codigo: 'es-MX',
   },
   congreso: {
-    titulo: '1er Congreso Desafíos de la seguridad social en las Américas en el primer cuarto del siglo XXI',
-    tituloCorto: '1er Congreso · Desafíos de la seguridad social en las Américas',
+    titulo: '1er Congreso de Estudios Interamericanos de Seguridad Social',
+    subtitulo: 'Desafíos de la seguridad social en las Américas en el primer cuarto del siglo XXI',
+    tituloCorto: '1er Congreso de Estudios Interamericanos de Seguridad Social',
     organiza: 'CIESS · Centro Interamericano de Estudios de Seguridad Social',
   },
   nav: {

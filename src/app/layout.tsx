@@ -5,9 +5,11 @@ import { esIdiomaValido, IDIOMA_POR_DEFECTO, obtenerDiccionario } from '@/i18n';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '1er Congreso · Desafíos de la seguridad social en las Américas',
+  title: '1er Congreso de Estudios Interamericanos de Seguridad Social',
   description:
-    'Registro y panel de control del 1er Congreso Desafíos de la seguridad social en las Américas en el primer cuarto del siglo XXI · CIESS',
+    'Desafíos de la seguridad social en las Américas en el primer cuarto del siglo XXI. Ciudad de México, 11 al 13 de noviembre de 2026. Convoca el CIESS.',
+  // El favicon vive en el sitio institucional, igual que el logotipo y el video.
+  icons: { icon: 'https://home.ciess.org/wp-content/uploads/2025/12/cropped-FAV-CIESS-.png' },
   robots: { index: true, follow: true },
 };
 
