@@ -68,9 +68,8 @@ function fechaAleatoria(diasAtras: number): Date {
 function construir(indice: number) {
   const perfil = azar(PERFILES);
   const [pais, ciudad, procedencia] = azar(PAISES);
-  const modalidad = perfil.permitePresencial && (Math.random() < 0.6 || !perfil.permiteEnLinea)
-    ? 'presencial'
-    : 'en_linea';
+  // Todos los perfiles admiten ambas; se reparte 60/40 hacia lo presencial.
+  const modalidad = Math.random() < 0.6 ? 'presencial' : 'en_linea';
   const nombres = azar(NOMBRES);
   const apellidos = `${azar(APELLIDOS)} ${azar(APELLIDOS)}`;
   const creado = fechaAleatoria(21);
@@ -78,12 +77,11 @@ function construir(indice: number) {
   return {
     folio: `REG-DEMO-${String(indice).padStart(4, '0')}`,
     perfil: perfil.clave,
-    grupo: perfil.grupo,
     modalidad,
     idioma: azar(['es', 'es', 'es', 'en', 'pt']),
     apellidos,
     nombres,
-    nombre_personificador: perfil.requiereSemblanza ? `Dr. ${nombres} ${apellidos}` : null,
+    nombre_personificador: perfil.enPrograma ? `Dr. ${nombres} ${apellidos}` : null,
     correo: `demo${indice}@ejemplo.org`,
     telefono_whatsapp: '+52 55 0000 0000',
     institucion: azar(INSTITUCIONES),
@@ -91,14 +89,14 @@ function construir(indice: number) {
     procedencia: azar(OPCIONES.procedencia) === 'local' ? 'local' : procedencia,
     pais_residencia: pais,
     ciudad_residencia: ciudad,
-    eje_tematico: perfil.requiereAcademico ? azar(EJES) : null,
-    modalidad_participacion: perfil.requiereAcademico ? azar(OPCIONES.roles) : null,
-    semblanza: perfil.requiereSemblanza
+    eje_tematico: perfil.presentaPonencia ? azar(EJES) : null,
+    modalidad_participacion: perfil.presentaPonencia ? azar(OPCIONES.roles) : null,
+    semblanza: perfil.enPrograma
       ? 'Persona investigadora especializada en seguridad social, con trabajo sobre cobertura y sostenibilidad de los sistemas de pensiones en América Latina.'
       : null,
     regimen_alimentario: modalidad === 'presencial' ? azar(OPCIONES.regimen) : null,
-    requiere_alojamiento: perfil.requiereLogistica && modalidad === 'presencial' && Math.random() < 0.5,
-    requiere_traslado: perfil.requiereLogistica && modalidad === 'presencial'
+    requiere_alojamiento: perfil.invitado && modalidad === 'presencial' && Math.random() < 0.5,
+    requiere_traslado: perfil.invitado && modalidad === 'presencial'
       ? azar(OPCIONES.traslado)
       : 'no',
     medio_arribo: azar(OPCIONES.medioArribo),

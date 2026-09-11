@@ -16,7 +16,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 /** Proyección que consume el panel. El token de edición nunca sale de aquí. */
-const COLUMNAS_PANEL = `id, folio, creado_en, perfil, grupo, modalidad, idioma, estado,
+const COLUMNAS_PANEL = `id, folio, creado_en, perfil, modalidad, idioma, estado,
   nombres, apellidos, correo, institucion, cargo, pais_residencia, entidad_federativa,
   ciudad_residencia, procedencia, eje_tematico, modalidad_participacion,
   regimen_alimentario, requiere_alojamiento, requiere_traslado`;
@@ -128,7 +128,6 @@ export async function POST(peticion: NextRequest) {
 
   const { columnas, marcadores, valores } = armarInsercion({
     ...datos,
-    grupo: perfil.grupo,
     estado,
     consentimiento_fecha: new Date().toISOString(),
     consentimiento_version: CONFIG.versionAvisoPrivacidad,

@@ -18,14 +18,14 @@ describe('botón principal del formulario', () => {
   });
 
   it('ofrece enviar sólo en el último paso de un recorrido real', () => {
-    const pasos = pasosVisibles(perfilPorClave('espectador_linea'), 'en_linea');
+    const pasos = pasosVisibles(perfilPorClave('publico_general'), 'en_linea');
     expect(muestraEnviar(pasos, 0)).toBe(false);
     expect(muestraEnviar(pasos, pasos.length - 2)).toBe(false);
     expect(muestraEnviar(pasos, pasos.length - 1)).toBe(true);
   });
 
   it('el último paso siempre es el de protección de datos', () => {
-    for (const clave of ['espectador_linea', 'funcionario_ciess', 'conferencista'] as const) {
+    for (const clave of ['publico_general', 'dictaminador', 'conferencista'] as const) {
       const pasos = pasosVisibles(perfilPorClave(clave), 'presencial');
       expect(pasos.at(-1), clave).toBe('privacidad');
     }

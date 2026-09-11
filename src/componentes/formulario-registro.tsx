@@ -13,6 +13,7 @@ import {
   PERFILES, campoVisible, pasosVisibles, perfilPorClave,
   type ClavePerfil, type Modalidad, type PasoFormulario,
 } from '@/lib/perfiles';
+import { ZONAS_HORARIAS, diasDelCongreso } from '@/lib/husos';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import { opciones } from '@/lib/opciones';
 import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
@@ -121,7 +122,7 @@ export function FormularioRegistro({
       if (texto('orcid') && !/^\d{4}-\d{4}-\d{4}-\d{3}[\dXx]$/.test(texto('orcid'))) {
         nuevos.orcid = t.formulario.validacion.orcid;
       }
-      if (perfil?.requiereSemblanza) obligatorio('nombre_personificador');
+      if (perfil?.enPrograma && valores.modalidad === 'presencial') obligatorio('nombre_personificador');
     }
 
     if (paso === 'semblanza' && texto('semblanza').length > congreso.limite_semblanza_caracteres) {
@@ -129,7 +130,7 @@ export function FormularioRegistro({
         max: congreso.limite_semblanza_caracteres,
       });
     }
-    if (paso === 'academico' && texto('resumen_ponencia').length > congreso.limite_resumen_caracteres) {
+    if (paso === 'ponencia' && texto('resumen_ponencia').length > congreso.limite_resumen_caracteres) {
       nuevos.resumen_ponencia = interpolar(t.formulario.validacion.resumenLargo, {
         max: congreso.limite_resumen_caracteres,
       });
@@ -268,27 +269,49 @@ export function FormularioRegistro({
           </section>
         )}
 
-        {pasoActual === 'academico' && (
+        {pasoActual === 'ponencia' && (
           <section className="space-y-5">
-            <Cabecera titulo={t.formulario.secciones.academico} />
-            <CampoOpcionUnica etiqueta={t.formulario.campos.modalidadParticipacion} opciones={opciones('roles', t)} valor={texto('modalidad_participacion')} onChange={(v) => fijar('modalidad_participacion', v)} error={errores.modalidad_participacion} columnas={2} />
-            <CampoSeleccion etiqueta={t.formulario.campos.ejeTematico} opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valor={texto('eje_tematico')} onChange={(v) => fijar('eje_tematico', v)} />
-            <CampoTexto campo="titulo_ponencia" etiqueta={t.formulario.campos.tituloPonencia} ayuda={t.formulario.campos.tituloPonenciaAyuda} valor={texto('titulo_ponencia')} onChange={(v) => fijar('titulo_ponencia', v)} />
-            <CampoParrafo campo="resumen_ponencia"
-              etiqueta={t.formulario.campos.resumen}
-              ayuda={interpolar(t.formulario.campos.resumenAyuda, { max: congreso.limite_resumen_caracteres })}
-              filas={7}
-              maximo={congreso.limite_resumen_caracteres}
-              contador
-              textoContador={interpolar(t.formulario.validacion.caracteres, {
-                n: texto('resumen_ponencia').length, max: congreso.limite_resumen_caracteres,
-              })}
-              valor={texto('resumen_ponencia')}
-              onChange={(v) => fijar('resumen_ponencia', v)}
-              error={errores.resumen_ponencia}
-            />
-            <CampoTexto campo="palabras_clave" etiqueta={t.formulario.campos.palabrasClave} valor={texto('palabras_clave')} onChange={(v) => fijar('palabras_clave', v)} />
+            {/* La convocatoria ya cerró y el comité dictaminó: aquí no se
+                propone nada, se confirma cómo debe salir en el programa. */}
+            <Cabecera titulo={t.formulario.secciones.ponencia} ayuda={t.formulario.secciones.ponenciaAyuda} />
+            <CampoSeleccion etiqueta={t.formulario.campos.ejeTematico} opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valor={texto('eje_tematico')} onChange={(v) => fijar('eje_tematico', v)} error={errores.eje_tematico} />
+            <CampoTexto campo="titulo_ponencia" etiqueta={t.formulario.campos.tituloPonencia} ayuda={t.formulario.campos.tituloPonenciaAyuda} valor={texto('titulo_ponencia')} onChange={(v) => fijar('titulo_ponencia', v)} error={errores.titulo_ponencia} />
+            <CampoOpcionUnica etiqueta={t.formulario.campos.idiomaPonencia} ayuda={t.formulario.campos.idiomaPonenciaAyuda} opciones={[{ valor: 'es', etiqueta: 'Español' }, { valor: 'pt', etiqueta: 'Português' }, { valor: 'en', etiqueta: 'English' }]} valor={texto('idioma_ponencia')} onChange={(v) => fijar('idioma_ponencia', v)} columnas={2} />
             <CampoParrafo campo="coautoria" etiqueta={t.formulario.campos.coautoria} ayuda={t.formulario.campos.coautoriaAyuda} filas={3} valor={texto('coautoria')} onChange={(v) => fijar('coautoria', v)} />
+            <CampoInterruptor etiqueta={t.formulario.campos.autorizaPublicacion} ayuda={t.formulario.campos.autorizaPublicacionAyuda} valor={Boolean(valores.autoriza_publicacion)} onChange={(v) => fijar('autoriza_publicacion', v)} />
+          </section>
+        )}
+
+        {pasoActual === 'sesion' && (
+          <section className="space-y-5">
+            <Cabecera titulo={t.formulario.secciones.sesion} ayuda={t.formulario.secciones.sesionAyuda} />
+            <CampoSeleccion etiqueta={t.formulario.campos.sesionAsignada} opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valor={texto('sesion_asignada')} onChange={(v) => fijar('sesion_asignada', v)} error={errores.sesion_asignada} />
+            {/* Saber qué días puede cada quien antes de armar el programa
+                ahorra rehacerlo después. */}
+            <CampoCasillas etiqueta={t.formulario.campos.disponibilidadDias} opciones={diasDelCongreso(t, congreso.fecha_inicio, congreso.fecha_fin)} valores={lista('disponibilidad_dias')} onChange={(v) => fijar('disponibilidad_dias', v)} />
+          </section>
+        )}
+
+        {pasoActual === 'dictamen' && (
+          <section className="space-y-5">
+            <Cabecera titulo={t.formulario.secciones.dictamen} ayuda={t.formulario.secciones.dictamenAyuda} />
+            <CampoCasillas etiqueta={t.formulario.campos.ejesDictamen} ayuda={t.formulario.campos.ejesDictamenAyuda} opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valores={lista('ejes_dictamen')} onChange={(v) => fijar('ejes_dictamen', v)} error={errores.ejes_dictamen} />
+            <CampoTexto campo="ponencias_maximas" tipo="number" etiqueta={t.formulario.campos.ponenciasMaximas} ayuda={t.formulario.campos.ponenciasMaximasAyuda} valor={texto('ponencias_maximas')} onChange={(v) => fijar('ponencias_maximas', v)} />
+            {/* Un dictamen sin conflictos declarados es impugnable. */}
+            <CampoParrafo campo="conflicto_interes" etiqueta={t.formulario.campos.conflictoInteres} ayuda={t.formulario.campos.conflictoInteresAyuda} filas={3} valor={texto('conflicto_interes')} onChange={(v) => fijar('conflicto_interes', v)} />
+          </section>
+        )}
+
+        {pasoActual === 'conexion' && (
+          <section className="space-y-5">
+            <Cabecera titulo={t.formulario.secciones.conexion} ayuda={t.formulario.secciones.conexionAyuda} />
+            {/* Sin huso horario, un aviso «a las 9:00» llega mal a media
+                región: el congreso se sigue desde todo el continente. */}
+            <CampoSeleccion etiqueta={t.formulario.campos.zonaHoraria} ayuda={t.formulario.campos.zonaHorariaAyuda} opciones={ZONAS_HORARIAS} valor={texto('zona_horaria')} onChange={(v) => fijar('zona_horaria', v)} error={errores.zona_horaria} />
+            <CampoCasillas etiqueta={t.formulario.campos.requerimientosTecnicos} opciones={opciones('tecnicos', t)} valores={lista('requerimientos_tecnicos')} onChange={(v) => fijar('requerimientos_tecnicos', v)} />
+            {perfil?.enPrograma && (
+              <CampoInterruptor etiqueta={t.formulario.campos.pruebaConexion} ayuda={t.formulario.campos.pruebaConexionAyuda} valor={Boolean(valores.prueba_conexion)} onChange={(v) => fijar('prueba_conexion', v)} />
+            )}
           </section>
         )}
 
@@ -522,12 +545,10 @@ function PasoPerfil({
   const perfilSeleccionado = perfilPorClave(valores.perfil as string);
 
   function elegirPerfil(clave: ClavePerfil) {
-    const definicion = PERFILES.find((p) => p.clave === clave)!;
     fijar('perfil', clave);
-    let modalidad: Modalidad = definicion.modalidadDefault;
-    if (modalidad === 'presencial' && (presencialAgotado || !definicion.permitePresencial)) {
-      modalidad = definicion.permiteEnLinea ? 'en_linea' : 'presencial';
-    }
+    // Todos los perfiles admiten las dos modalidades. Se propone presencial,
+    // salvo que ya no queden lugares.
+    const modalidad: Modalidad = presencialAgotado ? 'en_linea' : 'presencial';
     fijar('modalidad', modalidad);
   }
 
@@ -535,31 +556,29 @@ function PasoPerfil({
     <section className="space-y-6">
       <Cabecera titulo={t.perfiles.titulo} ayuda={t.perfiles.ayuda} />
 
-      {(['interno', 'externo'] as const).map((grupo) => (
-        <div key={grupo}>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide tenue">
-            {t.perfiles.grupos[grupo]}
-          </h3>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {PERFILES.filter((p) => p.grupo === grupo).map((p) => (
-              <button
-                key={p.clave}
-                type="button"
-                onClick={() => elegirPerfil(p.clave)}
-                aria-pressed={valores.perfil === p.clave}
-                className={`rounded-lg border p-3.5 text-left text-sm font-medium transition ${
-                  valores.perfil === p.clave
-                    ? 'border-ciess-400 bg-ciess-500/10'
-                    : 'hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
-                style={{ borderColor: valores.perfil === p.clave ? undefined : 'var(--borde)' }}
-              >
-                {nombres[p.clave]}
-              </button>
-            ))}
-          </div>
-        </div>
-      ))}
+      {/* Sin grupos: lo que distingue a un perfil de otro es qué viene a
+          hacer, y cada uno lleva la línea que lo aclara para que nadie
+          tenga que adivinar cuál le toca. */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        {PERFILES.map((p) => (
+          <button
+            key={p.clave}
+            type="button"
+            onClick={() => elegirPerfil(p.clave)}
+            aria-pressed={valores.perfil === p.clave}
+            className={`rounded-lg border p-3.5 text-left transition ${
+              valores.perfil === p.clave
+                ? 'border-ciess-400 bg-ciess-500/10'
+                : 'hover:bg-black/5 dark:hover:bg-white/5'
+            }`}
+            style={{ borderColor: valores.perfil === p.clave ? undefined : 'var(--borde)' }}
+          >
+            <span className="block text-sm font-medium">{nombres[p.clave]}</span>
+            <span className="mt-0.5 block text-xs tenue">{nombres[`${p.clave}Ayuda`]}</span>
+          </button>
+        ))}
+      </div>
+
       {errores.perfil && <p className="error">{errores.perfil}</p>}
 
       {perfilSeleccionado && (
@@ -567,9 +586,6 @@ function PasoPerfil({
           <h3 className="etiqueta">{t.modalidad.titulo}</h3>
           <div className="grid gap-2 sm:grid-cols-2">
             {(['presencial', 'en_linea'] as const)
-              .filter((m) =>
-                m === 'presencial' ? perfilSeleccionado.permitePresencial : perfilSeleccionado.permiteEnLinea,
-              )
               .map((m) => {
                 const bloqueado = m === 'presencial' && presencialAgotado;
                 return (

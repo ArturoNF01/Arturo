@@ -88,7 +88,7 @@ export async function PUT(peticion: NextRequest, contexto: { params: Promise<{ i
   const perfil = perfilPorClave(datos.perfil);
   if (!perfil) return NextResponse.json({ mensaje: 'Perfil no válido.' }, { status: 422 });
 
-  const { asignaciones, valores } = armarActualizacion({ ...datos, grupo: perfil.grupo });
+  const { asignaciones, valores } = armarActualizacion(datos);
   let registro: FilaRegistro | undefined;
   try {
     // Se escribe dentro de una transacción con el actor puesto, para que la

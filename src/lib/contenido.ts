@@ -196,28 +196,27 @@ export interface DatosCongreso {
 
 export const CONGRESO_POR_DEFECTO: DatosCongreso = {
   nombre: {
-    es: '1er Congreso Desafíos de la seguridad social en las Américas en el primer cuarto del siglo XXI',
-    en: '1st Congress: Challenges of social security in the Americas in the first quarter of the 21st century',
-    pt: '1º Congresso Desafios da seguridade social nas Américas no primeiro quarto do século XXI',
+    es: '1er Congreso de Estudios Interamericanos de Seguridad Social',
+    en: '1st Congress of Inter-American Social Security Studies',
+    pt: '1º Congresso de Estudos Interamericanos de Seguridade Social',
   },
   nombre_corto: {
     es: '1er Congreso de Estudios Interamericanos de Seguridad Social',
     en: '1st Congress of Inter-American Social Security Studies',
     pt: '1º Congresso de Estudos Interamericanos de Seguridade Social',
   },
-  // PROPUESTA: pendiente de confirmar con el comité organizador.
   sede: {
     es: 'CIESS · Ciudad de México, México',
     en: 'CIESS · Mexico City, Mexico',
     pt: 'CIESS · Cidade do México, México',
   },
   fechas: {
-    es: '3, 4 y 5 de junio de 2026',
-    en: '3-5 June 2026',
-    pt: '3, 4 e 5 de junho de 2026',
+    es: '11, 12 y 13 de noviembre de 2026',
+    en: '11-13 November 2026',
+    pt: '11, 12 e 13 de novembro de 2026',
   },
-  fecha_inicio: '2026-06-03',
-  fecha_fin: '2026-06-05',
+  fecha_inicio: '2026-11-11',
+  fecha_fin: '2026-11-13',
   limite_semblanza_palabras: 60,
   limite_semblanza_caracteres: 420,
   limite_resumen_caracteres: 2000,

@@ -66,6 +66,9 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
     nombre_constancia: textoOpcional,
     genero: textoOpcional,
     correo: z.string().trim().email().max(200),
+    // Los institucionales rebotan o filtran; con el congreso encima, un
+    // correo que no llega es una baja.
+    correo_alterno: z.string().trim().email('Correo no válido').optional().or(z.literal('')),
     telefono_whatsapp: z.string().trim().max(60).optional().or(z.literal('')),
     institucion: z.string().trim().min(1).max(250),
     cargo: z.string().trim().max(250).optional().or(z.literal('')),
@@ -81,10 +84,15 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
       .optional()
       .or(z.literal('')),
 
-    // 2. Participación académica
+    // 2. La ponencia ya aceptada, tal como debe salir en el programa
     modalidad_participacion: textoOpcional,
     eje_tematico: textoOpcional,
     titulo_ponencia: textoOpcional,
+    // El congreso es trilingüe: hay que saber en qué idioma se presenta.
+    idioma_ponencia: z.enum(['es', 'en', 'pt']).optional(),
+    // La convocatoria pregunta si el trabajo puede ir en la publicación
+    // conmemorativa que editará el CIESS.
+    autoriza_publicacion: z.boolean().optional(),
     resumen_ponencia: z
       .string()
       .trim()
@@ -93,6 +101,16 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
       .or(z.literal('')),
     palabras_clave: textoOpcional,
     coautoria: parrafoOpcional,
+
+    // 2.1 Sesión a cargo de quien coordina o modera
+    sesion_asignada: textoOpcional,
+    disponibilidad_dias: z.array(z.string().max(40)).max(10).default([]),
+
+    // 2.2 Comité científico
+    ejes_dictamen: z.array(z.string().max(80)).max(20).default([]),
+    ponencias_maximas: z.coerce.number().int().min(0).max(50).optional(),
+    // Sin declararlo, un dictamen es impugnable.
+    conflicto_interes: parrafoOpcional,
 
     // 3. Semblanza
     semblanza: z
@@ -110,6 +128,15 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
     nombre_pasaporte: textoOpcional,
     destinatario_oficio: parrafoOpcional,
     autorizaciones: z.array(z.string().max(300)).max(10).default([]),
+
+    // 3.2 Participación a distancia
+    // Un congreso continental se transmite a husos horarios distintos: sin
+    // esto, un recordatorio «a las 9:00» llega mal a media región.
+    zona_horaria: textoOpcional,
+    // A quien expone en línea se le agenda un ensayo previo.
+    prueba_conexion: z.boolean().optional(),
+    // Quien aparece en la transmisión tiene que autorizarlo por escrito.
+    autoriza_grabacion: z.boolean().optional(),
 
     // 4. Requerimientos en sala
     requerimientos_tecnicos: z.array(z.string().max(200)).max(10).default([]),
@@ -157,24 +184,62 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
     const perfil = perfilPorClave(datos.perfil);
     if (!perfil) return;
 
-    if (datos.modalidad === 'presencial' && !perfil.permitePresencial) {
-      ctx.addIssue({ code: 'custom', path: ['modalidad'], message: 'Este perfil no admite modalidad presencial' });
-    }
-    if (datos.modalidad === 'en_linea' && !perfil.permiteEnLinea) {
-      ctx.addIssue({ code: 'custom', path: ['modalidad'], message: 'Este perfil no admite modalidad en línea' });
-    }
-    if (perfil.requiereAcademico && !datos.titulo_ponencia && !datos.modalidad_participacion) {
+    // Todos los perfiles admiten las dos modalidades: el congreso se
+    // transmite completo, así que no hay combinación que rechazar.
+
+    // La ponencia ya fue dictaminada; lo que falta es su título tal como
+    // debe salir en el programa.
+    if (perfil.presentaPonencia && !datos.titulo_ponencia) {
       ctx.addIssue({
         code: 'custom',
-        path: ['modalidad_participacion'],
-        message: 'Indique su modalidad de participación académica',
+        path: ['titulo_ponencia'],
+        message: 'Indique el título de su ponencia tal como debe aparecer en el programa',
       });
     }
-    if (perfil.requiereSemblanza && !datos.nombre_personificador) {
+    if (perfil.presentaPonencia && !datos.eje_tematico) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['eje_tematico'],
+        message: 'Indique el eje temático en el que fue aceptado su trabajo',
+      });
+    }
+    if (perfil.tieneSesion && !datos.sesion_asignada) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['sesion_asignada'],
+        message: 'Indique la mesa o el eje que tiene a su cargo',
+      });
+    }
+    // Un dictamen sin ejes declarados no se puede repartir.
+    if (perfil.dictamina && !(datos.ejes_dictamen && datos.ejes_dictamen.length)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ejes_dictamen'],
+        message: 'Indique al menos un eje temático que pueda dictaminar',
+      });
+    }
+    // Quien sale en la transmisión tiene que autorizarlo por escrito.
+    if (perfil.enPrograma && datos.autoriza_grabacion !== true) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['autoriza_grabacion'],
+        message: 'Su participación se transmite y se graba: hace falta su autorización',
+      });
+    }
+    // El letrero de la mesa sólo existe para quien se sienta en ella.
+    if (perfil.enPrograma && datos.modalidad === 'presencial' && !datos.nombre_personificador) {
       ctx.addIssue({
         code: 'custom',
         path: ['nombre_personificador'],
         message: 'El nombre para el personificador es obligatorio para este perfil',
+      });
+    }
+    // Sin huso horario no se le puede avisar a qué hora conectarse.
+    if (datos.modalidad === 'en_linea' && !datos.zona_horaria) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['zona_horaria'],
+        message: 'Indique su zona horaria para enviarle el enlace a la hora correcta',
       });
     }
     if (datos.requiere_alojamiento && datos.fecha_entrada_hotel && datos.fecha_salida_hotel) {

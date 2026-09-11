@@ -69,30 +69,69 @@ exception when duplicate_object then null; end $$;
 -- ---------------------------------------------------------------------
 create table if not exists perfiles (
   clave              text primary key,
-  grupo              grupo_participante not null,
   nombre_es          text not null,
   nombre_en          text not null,
   nombre_pt          text not null,
   modalidad_default  modalidad_asistencia not null default 'presencial',
-  permite_presencial boolean not null default true,
-  permite_en_linea   boolean not null default true,
-  requiere_academico boolean not null default false,  -- ponencia, resumen, eje temático
-  requiere_semblanza boolean not null default false,  -- semblanza + personificador + foto
-  requiere_logistica boolean not null default false,  -- alojamiento y traslados
   orden              int not null default 0,
   activo             boolean not null default true
 );
-insert into perfiles (clave, grupo, nombre_es, nombre_en, nombre_pt, modalidad_default,
-                      permite_presencial, permite_en_linea, requiere_academico,
-                      requiere_semblanza, requiere_logistica, orden) values
-  ('funcionario_ciess',     'interno', 'Funcionario del CIESS',            'CIESS staff',                      'Funcionário do CIESS',                'presencial', true,  true,  false, false, false, 1),
-  ('funcionario_ciss',      'interno', 'Funcionario de la CISS',           'CISS staff',                       'Funcionário da CISS',                 'presencial', true,  true,  false, false, false, 2),
-  ('espectador_presencial', 'interno', 'Espectador en vivo',               'On-site attendee',                 'Espectador presencial',               'presencial', true,  false, false, false, false, 3),
-  ('espectador_linea',      'externo', 'Espectador en línea',              'Online attendee',                  'Espectador online',                   'en_linea',   false, true,  false, false, false, 4),
-  ('participante_externo',  'externo', 'Participante de otra institución', 'Participant from another entity',  'Participante de outra instituição',   'presencial', true,  true,  true,  false, true,  5),
-  ('panelista',             'externo', 'Panelista',                        'Panelist',                         'Painelista',                          'presencial', true,  true,  true,  true,  true,  6),
-  ('conferencista',         'externo', 'Conferencista',                    'Keynote speaker',                  'Conferencista',                       'presencial', true,  true,  true,  true,  true,  7)
+
+-- Los perfiles cambiaron al cerrarse la convocatoria: lo que define el
+-- formulario ya no es de dónde viene la persona —ya no hay internos ni
+-- externos— sino qué viene a hacer al congreso. Estas alteraciones dejan al
+-- día una base instalada antes de ese cambio, y no hacen nada en una nueva.
+alter table perfiles add column if not exists en_programa       boolean not null default false;
+alter table perfiles add column if not exists presenta_ponencia boolean not null default false;
+alter table perfiles add column if not exists tiene_sesion      boolean not null default false;
+alter table perfiles add column if not exists dictamina         boolean not null default false;
+alter table perfiles add column if not exists invitado          boolean not null default false;
+-- «grupo» y los «requiere_*» sobreviven sólo para las filas viejas: se les
+-- quita la obligatoriedad en vez de borrarlos, porque tirar una columna
+-- borra sus datos y aquí no hay nada que ganar con eso.
+do $$ begin
+  alter table perfiles alter column grupo drop not null;
+exception when undefined_column then null; end $$;
+
+insert into perfiles (clave, nombre_es, nombre_en, nombre_pt, modalidad_default,
+                      en_programa, presenta_ponencia, tiene_sesion, dictamina, invitado, orden) values
+  ('ponente',         'Ponente',                      'Speaker',            'Palestrante',                'presencial', true,  true,  false, false, true,  1),
+  ('conferencista',   'Conferencista',                'Keynote speaker',    'Conferencista',              'presencial', true,  false, false, false, true,  2),
+  ('coordinador',     'Coordinador o coordinadora',   'Coordinator',        'Coordenador ou coordenadora','presencial', true,  false, true,  false, true,  3),
+  ('moderador',       'Moderador o moderadora',       'Moderator',          'Moderador ou moderadora',    'presencial', true,  false, true,  false, true,  4),
+  ('dictaminador',    'Dictaminador o dictaminadora', 'Reviewer',           'Parecerista',                'presencial', true,  false, false, true,  false, 5),
+  ('publico_general', 'Público general',              'General public',     'Público geral',              'presencial', false, false, false, false, false, 6)
 on conflict (clave) do nothing;
+
+-- Las banderas describen qué preguntará el formulario, no son contenido que
+-- nadie edite desde el panel, así que se fijan siempre: «conferencista» ya
+-- existía antes del cambio y el insert de arriba no lo habría tocado. Los
+-- nombres sí se respetan, por si se ajustaron desde el panel.
+update perfiles p set
+    en_programa       = v.en_programa,
+    presenta_ponencia = v.presenta_ponencia,
+    tiene_sesion      = v.tiene_sesion,
+    dictamina         = v.dictamina,
+    invitado          = v.invitado,
+    orden             = v.orden,
+    activo            = true
+  from (values
+    ('ponente',         true,  true,  false, false, true,  1),
+    ('conferencista',   true,  false, false, false, true,  2),
+    ('coordinador',     true,  false, true,  false, true,  3),
+    ('moderador',       true,  false, true,  false, true,  4),
+    ('dictaminador',    true,  false, false, true,  false, 5),
+    ('publico_general', false, false, false, false, false, 6)
+  ) as v(clave, en_programa, presenta_ponencia, tiene_sesion, dictamina, invitado, orden)
+ where p.clave = v.clave;
+
+-- Los perfiles anteriores se apagan pero no se borran: hay registros que
+-- apuntan a ellos y la llave foránea los necesita. Se nombran uno por uno
+-- para que reactivar alguno desde el panel no se deshaga al desplegar.
+update perfiles set activo = false
+ where clave in ('funcionario_ciess', 'funcionario_ciss', 'espectador_presencial',
+                 'espectador_linea', 'participante_externo', 'panelista')
+   and activo;
 -- ---------------------------------------------------------------------
 -- Registros de participantes (todos los campos del formulario .gs)
 -- ---------------------------------------------------------------------
@@ -100,7 +139,9 @@ create table if not exists registros (
   id                          uuid primary key default gen_random_uuid(),
   folio                       text unique not null,
   perfil                      text not null references perfiles(clave),
-  grupo                       grupo_participante not null,
+  -- «grupo» ya no se llena: se conserva por las filas anteriores al cambio
+  -- de perfiles. Ver las alteraciones que siguen a esta tabla.
+  grupo                       grupo_participante,
   modalidad                   modalidad_asistencia not null,
   idioma                      idioma not null default 'es',
 
@@ -198,6 +239,37 @@ create table if not exists registros (
   creado_en                   timestamptz not null default now(),
   actualizado_en              timestamptz not null default now()
 );
+
+-- Campos que trajo el registro de asistencia al congreso. Se añaden con
+-- «if not exists» para que una base ya instalada se ponga al día sola.
+alter table registros alter column grupo drop not null;
+
+-- Un congreso continental se transmite a husos horarios distintos: sin esto,
+-- un recordatorio «a las 9:00» llega mal a la mitad del continente.
+alter table registros add column if not exists zona_horaria        text;
+-- Los correos institucionales rebotan o filtran; con el congreso encima, un
+-- correo que no llega es una baja.
+alter table registros add column if not exists correo_alterno      text;
+-- El congreso es trilingüe: hay que saber en qué idioma se presenta cada
+-- trabajo y si hace falta interpretación.
+alter table registros add column if not exists idioma_ponencia     text;
+-- Quien aparece ante cámara o en la transmisión tiene que autorizarlo por
+-- escrito; es exigencia legal, no trámite.
+alter table registros add column if not exists autoriza_grabacion  boolean;
+-- La convocatoria pregunta si el trabajo puede ir en la publicación
+-- conmemorativa que editará el CIESS.
+alter table registros add column if not exists autoriza_publicacion boolean;
+-- A quien expone en línea se le agenda un ensayo previo: un ponente que
+-- falla el día del congreso se pierde.
+alter table registros add column if not exists prueba_conexion     boolean;
+-- Mesa o eje a cargo de quien coordina o modera, y qué días puede.
+alter table registros add column if not exists sesion_asignada     text;
+alter table registros add column if not exists disponibilidad_dias text[];
+-- Del comité científico: qué ejes puede dictaminar, cuántos trabajos acepta
+-- y con quién no debe evaluar. Sin lo último, el dictamen es impugnable.
+alter table registros add column if not exists ejes_dictamen       text[];
+alter table registros add column if not exists ponencias_maximas   int;
+alter table registros add column if not exists conflicto_interes   text;
 create index if not exists registros_creado_en_idx on registros (creado_en desc);
 create index if not exists registros_perfil_idx    on registros (perfil);
 create index if not exists registros_pais_idx      on registros (pais_residencia);

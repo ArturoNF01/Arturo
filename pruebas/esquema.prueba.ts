@@ -7,8 +7,9 @@ import {
 /** Registro válido mínimo, tal como lo envía el formulario. */
 function valido(extra: Record<string, unknown> = {}) {
   return {
-    perfil: 'espectador_linea',
+    perfil: 'publico_general',
     modalidad: 'en_linea',
+    zona_horaria: 'America/Mexico_City',
     idioma: 'es',
     apellidos: 'Ruiz',
     nombres: 'Ana',
@@ -39,17 +40,44 @@ describe('esquema de registro', () => {
     expect(esquemaRegistro.safeParse(valido({ perfil: 'invitado_misterioso' })).success).toBe(false);
   });
 
-  it('no deja elegir una modalidad que el perfil no admite', () => {
-    const resultado = esquemaRegistro.safeParse(
-      valido({ perfil: 'espectador_linea', modalidad: 'presencial' }),
-    );
-    expect(resultado.success).toBe(false);
-    expect(resultado.error?.issues.some((i) => i.path[0] === 'modalidad')).toBe(true);
+  it('todos los perfiles admiten ambas modalidades: el congreso se transmite entero', () => {
+    for (const perfil of ['ponente', 'conferencista', 'coordinador', 'moderador',
+                          'dictaminador', 'publico_general']) {
+      const presencial = esquemaRegistro.safeParse(valido({
+        perfil, modalidad: 'presencial',
+        nombre_personificador: 'Dra. Ana Ruiz', autoriza_grabacion: true,
+        titulo_ponencia: 'Título', eje_tematico: 'pensiones',
+        sesion_asignada: 'pensiones', ejes_dictamen: ['pensiones'],
+      }));
+      expect(presencial.error?.issues.some((i) => i.path[0] === 'modalidad'), perfil).toBeFalsy();
+    }
   });
 
-  it('exige nombre para el personificador a panelistas y conferencistas', () => {
+  it('sin autorizar la grabación no pasa quien sale en el programa', () => {
+    const resultado = esquemaRegistro.safeParse(valido({
+      perfil: 'conferencista', modalidad: 'en_linea', autoriza_grabacion: false,
+    }));
+    expect(resultado.success).toBe(false);
+    expect(resultado.error?.issues.some((i) => i.path[0] === 'autoriza_grabacion')).toBe(true);
+  });
+
+  it('en línea, sin zona horaria no se puede avisar a qué hora conectarse', () => {
+    const resultado = esquemaRegistro.safeParse(valido({ zona_horaria: '' }));
+    expect(resultado.success).toBe(false);
+    expect(resultado.error?.issues.some((i) => i.path[0] === 'zona_horaria')).toBe(true);
+  });
+
+  it('un dictaminador sin ejes declarados no se puede repartir', () => {
+    const resultado = esquemaRegistro.safeParse(valido({
+      perfil: 'dictaminador', autoriza_grabacion: true, ejes_dictamen: [],
+    }));
+    expect(resultado.success).toBe(false);
+    expect(resultado.error?.issues.some((i) => i.path[0] === 'ejes_dictamen')).toBe(true);
+  });
+
+  it('exige nombre para el personificador a quien se sienta en la mesa', () => {
     const resultado = esquemaRegistro.safeParse(
-      valido({ perfil: 'panelista', modalidad: 'presencial', modalidad_participacion: 'ponencia_mesa' }),
+      valido({ perfil: 'conferencista', modalidad: 'presencial', autoriza_grabacion: true }),
     );
     expect(resultado.success).toBe(false);
     expect(resultado.error?.issues.some((i) => i.path[0] === 'nombre_personificador')).toBe(true);
@@ -77,11 +105,11 @@ describe('esquema de registro', () => {
   it('rechaza una salida de hotel anterior a la entrada', () => {
     const resultado = esquemaRegistro.safeParse(
       valido({
-        perfil: 'panelista', modalidad: 'presencial',
-        nombre_personificador: 'Dra. Ana Ruiz', modalidad_participacion: 'ponencia_mesa',
+        perfil: 'conferencista', modalidad: 'presencial',
+        nombre_personificador: 'Dra. Ana Ruiz', autoriza_grabacion: true,
         requiere_alojamiento: true,
-        fecha_entrada_hotel: '2026-06-04',
-        fecha_salida_hotel: '2026-06-01',
+        fecha_entrada_hotel: '2026-11-12',
+        fecha_salida_hotel: '2026-11-10',
       }),
     );
     expect(resultado.success).toBe(false);

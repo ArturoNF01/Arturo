@@ -44,8 +44,11 @@ export function Dashboard({
     () => contarPor(activos, (r) => r.perfil, (v) => nombrePerfil(v, t), { etiquetaOtros: t.panel.filtros.todos }),
     [activos, t],
   );
-  const porGrupo = useMemo(
-    () => contarPor(activos, (r) => r.grupo, (v) => t.perfiles.grupos[v as 'interno' | 'externo']),
+  // Antes aquí iba «internos vs. externos». Al cerrarse la convocatoria esa
+  // división desapareció, y el reparto que de verdad se mira a diario es en
+  // qué punto está cada registro.
+  const porEstado = useMemo(
+    () => contarPor(activos, (r) => r.estado, (v) => t.panel.estadosRegistro[v as 'en_proceso' | 'confirmado' | 'lista_espera' | 'cancelado'] ?? v),
     [activos, t],
   );
   const porModalidad = useMemo(
@@ -176,12 +179,12 @@ export function Dashboard({
             </TarjetaGrafica>
 
             <TarjetaGrafica
-              titulo={t.panel.graficas.porGrupo}
-              filas={porGrupo.map((d) => [d.nombre, d.total])}
+              titulo={t.panel.graficas.porEstado}
+              filas={porEstado.map((d) => [d.nombre, d.total])}
               columnas={[t.perfiles.titulo, t.panel.graficas.registros]}
               alto={280}
             >
-              <GraficaPastel datos={porGrupo} unidad={t.panel.graficas.registros} />
+              <GraficaPastel datos={porEstado} unidad={t.panel.graficas.registros} />
             </TarjetaGrafica>
 
             <TarjetaGrafica
