@@ -47,7 +47,14 @@ datos=$(node -e '
   // La llave se guarda con los saltos escapados, que es como sabe leerla
   // la aplicación y como sobrevive dentro de un archivo de entorno.
   process.stdout.write(j.client_email + "\n" + JSON.stringify(j.private_key));
-' "$LLAVE") || morir "No pude leer el archivo de llave."
+' "$LLAVE") || morir "No pude leer el archivo de llave: no es un JSON válido.
+
+  Si lo creó con «cat > archivo.json» y pegó el contenido, hay que cerrar
+  con Ctrl+D. Sin eso, cat sigue capturando y todo lo que se teclee
+  después —incluida esta misma orden— acaba dentro del archivo.
+
+  Para quitar lo que sobra sin volver a pegar la llave:
+    sed -n '1,/^}\$/p' $LLAVE > /tmp/limpia.json && mv /tmp/limpia.json $LLAVE"
 
 CORREO=$(printf '%s' "$datos" | head -1)
 CLAVE=$(printf '%s' "$datos" | tail -n +2)
