@@ -15,6 +15,22 @@ RAIZ="${RAIZ:-/opt/congreso}"
 USUARIO="${USUARIO:-congreso}"
 PUERTO="${PUERTO:-3000}"
 
+# Este guion se reescribe a sí mismo: unas líneas más abajo hace «git reset»
+# sobre el repositorio donde vive. Y bash no lee los guiones enteros, los va
+# leyendo por donde va: cambiarle el archivo debajo lo deja siguiendo por un
+# desplazamiento que en el archivo nuevo cae en cualquier sitio. Se ejecuta
+# entonces un trozo de otra línea, o ninguna, y sin un solo mensaje de error.
+#
+# Eso tumbó el sitio: la actualización decía haber terminado y el servicio se
+# reiniciaba sin haber compilado. Por eso lo primero es apartarse del
+# repositorio y trabajar desde una copia, que ya nadie va a tocar.
+if [ "${COPIA_PROPIA:-}" != "sí" ]; then
+  copia=$(mktemp /tmp/desplegar.XXXXXX.sh)
+  cp "$0" "$copia"
+  chmod +x "$copia"
+  COPIA_PROPIA=sí exec bash "$copia" "$@"
+fi
+
 paso()  { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 aviso() { printf '   %s\n' "$1"; }
 morir() { printf '\n\033[31mAlto: %s\033[0m\n' "$1" >&2; exit 1; }
@@ -75,8 +91,19 @@ volver_atras() {
   en_repo reset --hard --quiet "$ANTERIOR"
   chown -R "$USUARIO:$USUARIO" "$RAIZ"
   cd "$RAIZ"
-  como_usuario npm ci --silent || true
-  como_usuario env NODE_ENV=production npm run build --silent || true
+  rm -rf "$RAIZ/.next-nuevo"
+
+  # Lo de antes sigue compilado: se recupera tal cual. Volver a compilar
+  # aquí era pedirle al servidor justo lo que acababa de salirle mal, y si
+  # la causa seguía ahí —disco lleno, memoria— el sitio se quedaba caído.
+  if [ -d "$RAIZ/.next-anterior" ]; then
+    rm -rf "$RAIZ/.next"
+    mv "$RAIZ/.next-anterior" "$RAIZ/.next"
+    aviso "Recuperada la compilación anterior."
+  else
+    como_usuario npm ci --silent || true
+    como_usuario env NODE_ENV=production npm run build --silent || true
+  fi
   systemctl restart congreso
   if responde; then
     morir "La actualización no sirvió, pero el sitio volvió a la versión anterior y sigue en línea."
@@ -136,11 +163,33 @@ sudo -u postgres psql -q -d congreso -c "grant all on all tables in schema publi
 aviso "Al día."
 
 # ---------------------------------------------------------------------
-paso "Compilación"
+paso "Dependencias"
 cd "$RAIZ"
-como_usuario npm ci --silent
-como_usuario env NODE_ENV=production npm run build --silent
+# «npm ci» borra node_modules y lo rehace. El sitio está corriendo con esos
+# archivos: si la reinstalación se queda a medias —sin disco, sin red— se
+# lleva por delante al servidor que estaba en pie. Así que sólo se hace
+# cuando de verdad cambiaron las dependencias, que es casi nunca.
+if [ -z "$(en_repo diff --name-only "$ANTERIOR" "$NUEVO" -- package.json package-lock.json)" ] \
+   && [ -d "$RAIZ/node_modules" ]; then
+  aviso "Sin cambios; no hace falta reinstalarlas."
+else
+  como_usuario npm ci --silent
+  aviso "Reinstaladas."
+fi
+
+# ---------------------------------------------------------------------
+paso "Compilación"
+# Se compila en una carpeta aparte y sólo al final se cambia por la buena.
+# Compilar encima de la que el sitio está sirviendo lo tumbaba en cuanto
+# algo fallaba a mitad: quedaba a medio escribir y ya no arrancaba nada.
+rm -rf "$RAIZ/.next-nuevo"
+como_usuario env NODE_ENV=production NEXT_DIST_DIR=.next-nuevo npm run build --silent
+[ -f "$RAIZ/.next-nuevo/BUILD_ID" ] || morir "la compilación terminó incompleta"
 aviso "Compilada."
+
+rm -rf "$RAIZ/.next-anterior"
+[ -d "$RAIZ/.next" ] && mv "$RAIZ/.next" "$RAIZ/.next-anterior"
+mv "$RAIZ/.next-nuevo" "$RAIZ/.next"
 
 # ---------------------------------------------------------------------
 paso "Reinicio"
