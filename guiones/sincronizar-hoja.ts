@@ -1,8 +1,9 @@
 /**
  * Copia a Google Sheets los registros que aún no están en la hoja.
  *
- *   npm run sincronizar          # todos los pendientes
- *   npm run sincronizar -- 20    # sólo los primeros 20
+ *   npm run sincronizar             # todos los pendientes
+ *   npm run sincronizar -- 20       # sólo los primeros 20
+ *   npm run sincronizar -- --callado  # sin ruido si no había nada (cron)
  *
  * Hace lo mismo que el botón del panel, pero desde el servidor. Esa es la
  * razón de que exista: si el panel no abre, o la sesión caducó, la hoja se
@@ -39,7 +40,15 @@ async function principal() {
     process.exit(1);
   }
 
-  const tope = Math.min(Math.max(Number(process.argv[2]) || 500, 1), 5000);
+  // Desde cron conviene el silencio: un registro cada diez minutos diciendo
+  // «no había nada» sepulta el aviso del día en que sí falle algo.
+  const callado = process.argv.includes('--callado');
+  const decir = (mensaje: string) => {
+    if (!callado) console.log(mensaje);
+  };
+
+  const numerico = process.argv.slice(2).find((a) => /^\d+$/.test(a));
+  const tope = Math.min(Math.max(Number(numerico) || 500, 1), 5000);
   const pendientes = await consultar<Record<string, unknown> & { id: string; folio: string }>(
     `select * from registros
       where sheets_sincronizado_en is null
@@ -49,11 +58,11 @@ async function principal() {
   );
 
   if (pendientes.length === 0) {
-    console.log('No hay nada pendiente: la hoja ya está al día.');
+    decir('No hay nada pendiente: la hoja ya está al día.');
     return;
   }
 
-  console.log(`Por copiar: ${pendientes.length} registros.`);
+  decir(`Por copiar: ${pendientes.length} registros.`);
   let copiados = 0;
   const fallidos: { folio: string; motivo: string }[] = [];
 
@@ -66,7 +75,7 @@ async function principal() {
       );
       copiados += 1;
       if (copiados % 25 === 0 || copiados === pendientes.length) {
-        console.log(`Copiados ${copiados} de ${pendientes.length}…`);
+        decir(`Copiados ${copiados} de ${pendientes.length}…`);
       }
     } catch (fallo) {
       const motivo = fallo instanceof Error ? fallo.message : String(fallo);
@@ -81,7 +90,7 @@ async function principal() {
     }
   }
 
-  console.log(`Copiados ${copiados} registros a la hoja.`);
+  decir(`Copiados ${copiados} registros a la hoja.`);
   if (fallidos.length > 0) {
     console.error(`\nNo se pudieron copiar ${fallidos.length}:`);
     for (const f of fallidos.slice(0, 5)) console.error(`  ${f.folio}: ${f.motivo}`);

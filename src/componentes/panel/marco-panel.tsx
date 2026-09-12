@@ -115,6 +115,12 @@ export function MarcoPanel({
       <main className="min-w-0 flex-1">
         <AvisosRegistros />
         {children}
+
+        {/* El marco legal se dice una vez y aquí: es un recordatorio para
+            quien maneja los datos, no un anuncio para quien se registra. */}
+        <p className="border-t px-6 py-6 text-center text-xs tenue" style={{ borderColor: 'var(--borde)' }}>
+          {t.privacidad.marcoLegal}
+        </p>
       </main>
     </div>
     </ProveedorRegistros>

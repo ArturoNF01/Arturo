@@ -53,6 +53,12 @@ update aviso_privacidad
        orden = 8
  where clave = 'bloque_10';
 
+-- La convocatoria es la definitiva: ninguna pregunta frecuente debe seguir
+-- marcada como provisional. Esa marca pintaba un aviso ámbar en la página
+-- pública —«documento provisional, se sustituirá»— que hacía ver el portal
+-- como un borrador. La casilla sigue en el panel para cuando haga falta.
+update faqs set provisional = false where provisional;
+
 commit;
 
 select clave, valor from configuracion
@@ -63,3 +69,5 @@ select clave, valor from configuracion
 
 select clave, orden, titulo->>'es' as apartado
   from aviso_privacidad where activo order by orden;
+
+select count(*) as faqs_provisionales from faqs where provisional;

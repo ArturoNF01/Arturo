@@ -110,6 +110,21 @@ if [ -f "$RAIZ/guiones/servidor/respaldar.sh" ]; then
   install -m 755 "$RAIZ/guiones/servidor/respaldar.sh" /usr/local/bin/respaldar-congreso
   aviso "Respaldo nocturno al día."
 fi
+if [ -f "$RAIZ/guiones/servidor/sincronizar.sh" ]; then
+  install -m 755 "$RAIZ/guiones/servidor/sincronizar.sh" /usr/local/bin/sincronizar-congreso
+  install -o "$USUARIO" -g "$USUARIO" -m 750 -d /var/log/congreso
+  # Los servidores instalados antes de que existiera esta tarea no la
+  # tienen en su cron: se añade aquí, y sólo si falta, para no duplicarla
+  # en cada despliegue.
+  if [ -f /etc/cron.d/congreso ] && ! grep -q 'sincronizar-congreso' /etc/cron.d/congreso; then
+    printf '%s\n%s\n' \
+      '# Rezagados de la hoja de Google: lo normal es que no haya ninguno' \
+      "*/10 * * * * $USUARIO /usr/local/bin/sincronizar-congreso >> /var/log/congreso/hoja.log 2>&1" \
+      >> /etc/cron.d/congreso
+    aviso "Añadida la recogida de rezagados de la hoja, cada diez minutos."
+  fi
+  aviso "Copia a la hoja de Google al día."
+fi
 
 # ---------------------------------------------------------------------
 paso "Esquema de la base"

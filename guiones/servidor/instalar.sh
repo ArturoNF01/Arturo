@@ -312,12 +312,21 @@ chmod 755 /usr/local/bin/respaldar-congreso
 # El registro va junto a los respaldos, no a /var/log: esa carpeta es de
 # root, y postgres —que es quien corre esto— no puede crear archivos ahí.
 # Escribirlo donde no se puede es perder el aviso justo cuando hace falta.
+install -m 755 "$RAIZ/guiones/servidor/sincronizar.sh" /usr/local/bin/sincronizar-congreso
+# Su registro NO puede ir a /var/respaldos/congreso: esa carpeta es de
+# postgres y quien corre esto es el usuario del sitio. Un registro que no
+# se puede escribir es un aviso perdido.
+install -o "$USUARIO" -g "$USUARIO" -m 750 -d /var/log/congreso
+
 cat > /etc/cron.d/congreso <<CRON
 # Respaldo de la base, todas las noches a las 03:15
 15 3 * * * postgres /usr/local/bin/respaldar-congreso >> /var/respaldos/congreso/respaldo.log 2>&1
+# Rezagados de la hoja de Google: lo normal es que no haya ninguno
+*/10 * * * * $USUARIO /usr/local/bin/sincronizar-congreso >> /var/log/congreso/hoja.log 2>&1
 CRON
 aviso "Cada noche a las 03:15, con 30 días de historial en /var/respaldos/congreso."
 aviso "Cómo fue cada uno: /var/respaldos/congreso/respaldo.log"
+aviso "Y cada diez minutos se recoge lo que no llegara a la hoja de Google."
 
 # ---------------------------------------------------------------------
 paso "Listo"

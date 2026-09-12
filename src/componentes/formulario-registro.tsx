@@ -449,7 +449,7 @@ export function FormularioRegistro({
 
         {pasoActual === 'privacidad' && (
           <section className="space-y-5">
-            <Cabecera titulo={t.privacidad.titulo} ayuda={t.privacidad.marcoLegal} />
+            <Cabecera titulo={t.privacidad.titulo} />
             <div className="rounded-lg border p-4 text-sm" style={{ borderColor: 'var(--borde)' }}>
               <CampoInterruptor etiqueta={t.privacidad.aceptar} valor={valores.consentimiento_datos as boolean} onChange={(v) => fijar('consentimiento_datos', v)} />
               {errores.consentimiento_datos && <p className="error">{errores.consentimiento_datos}</p>}

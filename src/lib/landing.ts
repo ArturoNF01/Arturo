@@ -10,6 +10,27 @@ import type { Idioma } from '@/i18n';
  *
  * El contenido viene de la convocatoria oficial.
  */
+/**
+ * La sede, en el mapa.
+ *
+ * Son dos direcciones distintas a propósito: la primera abre Google Maps en
+ * una pestaña nueva —con la chincheta puesta en las coordenadas exactas, que
+ * no dependen de cómo esté escrito el nombre del lugar—; la segunda es la que
+ * admite el <iframe>, que no acepta una dirección normal de Maps.
+ *
+ * Si algún día cambia la sede, se cambian aquí las dos.
+ */
+export const SEDE_COORDENADAS = '19.3302527,-99.2185406';
+
+export const SEDE_MAPA_ENLACE =
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(SEDE_COORDENADAS)}`;
+
+export const SEDE_MAPA_EMBED =
+  'https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d1668.7261201983124!2d-99.21854063656188' +
+  '!3d19.330252729551088!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85cdff8ae5a84c0f%3A0x91abb759b9f75bc3' +
+  '!2sConferencia%20Interamericana%20de%20Seguridad%20Social%20CISS!5e1!3m2!1ses!2smx' +
+  '!4v1789188134782!5m2!1ses!2smx';
+
 export interface HitoCalendario {
   fecha: Record<Idioma, string>;
   hecho: Record<Idioma, string>;
@@ -74,15 +95,13 @@ export interface TextosLanding {
   ejesAyuda: string;
   calendarioTitulo: string;
   calendarioAyuda: string;
+  sedeTitulo: string;
+  sedeAyuda: string;
+  verEnMapa: string;
   participarTitulo: string;
   participarAyuda: string;
   registrarse: string;
   verConvocatoria: string;
-  dudasTitulo: string;
-  dudasRegistro: string;
-  dudasTrabajos: string;
-  cierreTitulo: string;
-  cierreTexto: string;
   cumplido: string;
 }
 
@@ -100,17 +119,15 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     ejesAyuda: 'Los trabajos del congreso se organizan en estas nueve líneas de discusión.',
     calendarioTitulo: 'Fechas importantes',
     calendarioAyuda: 'Del lanzamiento de la convocatoria a los tres días de sesiones.',
+    sedeTitulo: 'Cómo llegar',
+    sedeAyuda:
+      'Las sesiones presenciales se celebran en la sede del CIESS, en la Ciudad de México. Quien participe en línea recibirá el enlace de conexión antes del congreso.',
+    verEnMapa: 'Abrir en Google Maps',
     participarTitulo: 'Participe en el congreso',
     participarAyuda:
       'El registro está abierto para asistir, presencialmente en la Ciudad de México o en línea desde cualquier país.',
     registrarse: 'Registrarse',
     verConvocatoria: 'Ver la convocatoria',
-    dudasTitulo: 'Contacto',
-    dudasRegistro: 'Dudas sobre el registro',
-    dudasTrabajos: 'Envío de trabajos',
-    cierreTitulo: 'Convoca',
-    cierreTexto:
-      'Centro Interamericano de Estudios de Seguridad Social, órgano de docencia, capacitación e investigación de la Conferencia Interamericana de Seguridad Social.',
     cumplido: 'Cumplido',
   },
   en: {
@@ -126,17 +143,15 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     ejesAyuda: 'The congress organises its sessions along these nine lines of discussion.',
     calendarioTitulo: 'Key dates',
     calendarioAyuda: 'From the opening of the call for papers to the three days of sessions.',
+    sedeTitulo: 'Getting there',
+    sedeAyuda:
+      'In-person sessions are held at the CIESS headquarters in Mexico City. Online participants will receive the connection link before the congress.',
+    verEnMapa: 'Open in Google Maps',
     participarTitulo: 'Take part',
     participarAyuda:
       'Registration is open to attend, in person in Mexico City or online from anywhere.',
     registrarse: 'Register',
     verConvocatoria: 'Read the call for papers',
-    dudasTitulo: 'Contact',
-    dudasRegistro: 'Registration enquiries',
-    dudasTrabajos: 'Paper submissions',
-    cierreTitulo: 'Convened by',
-    cierreTexto:
-      'The Inter-American Center for Social Security Studies, the teaching, training and research body of the Inter-American Conference on Social Security.',
     cumplido: 'Completed',
   },
   pt: {
@@ -152,20 +167,16 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     ejesAyuda: 'Os trabalhos do congresso organizam-se nestas nove linhas de discussão.',
     calendarioTitulo: 'Datas importantes',
     calendarioAyuda: 'Do lançamento da convocatória aos três dias de sessões.',
+    sedeTitulo: 'Como chegar',
+    sedeAyuda:
+      'As sessões presenciais acontecem na sede do CIESS, na Cidade do México. Quem participar on-line receberá o link de conexão antes do congresso.',
+    verEnMapa: 'Abrir no Google Maps',
     participarTitulo: 'Participe do congresso',
     participarAyuda:
       'As inscrições estão abertas para participar presencialmente na Cidade do México ou online de qualquer país.',
     registrarse: 'Inscrever-se',
     verConvocatoria: 'Ver a convocatória',
-    dudasTitulo: 'Contato',
-    dudasRegistro: 'Dúvidas sobre a inscrição',
-    dudasTrabajos: 'Envio de trabalhos',
-    cierreTitulo: 'Convoca',
-    cierreTexto:
-      'Centro Interamericano de Estudos de Seguridade Social, órgão de ensino, capacitação e pesquisa da Conferência Interamericana de Seguridade Social.',
     cumplido: 'Concluído',
   },
 };
 
-/** Correo al que se envían los trabajos, según la convocatoria. */
-export const CORREO_TRABAJOS = 'monicarodriguez@ciss-bienestar.org';

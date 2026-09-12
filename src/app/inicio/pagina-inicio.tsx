@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { useApp } from '@/componentes/proveedores';
 import { Encabezado, PieDePagina } from '@/componentes/controles';
-import { ENLACE_CIESS, ENLACE_RIUSS, LogoCiess } from '@/componentes/logo';
+import { LogoCiess } from '@/componentes/logo';
 import { VideoFondo } from '@/componentes/video-fondo';
-import { CALENDARIO, LANDING } from '@/lib/landing';
+import { CALENDARIO, LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from '@/lib/landing';
 import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 
@@ -45,9 +45,27 @@ export function PaginaInicio({
               <span className="rounded-full border border-white/25 px-4 py-1.5">
                 {traducir(congreso.fechas, idioma)}
               </span>
-              <span className="rounded-full border border-white/25 px-4 py-1.5">
+              {/* La sede es el único dato del banner sobre el que alguien
+                  querrá hacer algo: ver dónde cae. Se abre en otra pestaña
+                  para no sacar a nadie del registro a medias. */}
+              <a
+                href={SEDE_MAPA_ENLACE}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-1.5 rounded-full border border-white/25 px-4 py-1.5 transition hover:border-white/60 hover:bg-white/10"
+              >
                 {traducir(congreso.sede, idioma)}
-              </span>
+                <svg
+                  width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                  aria-hidden
+                  className="opacity-60 transition-opacity group-hover:opacity-100"
+                >
+                  <path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span className="sr-only"> · {textos.verEnMapa}</span>
+              </a>
               <span className="rounded-full border border-white/25 px-4 py-1.5">
                 {t.modalidad.presencial} · {t.modalidad.en_linea}
               </span>
@@ -165,6 +183,53 @@ export function PaginaInicio({
           </ol>
         </section>
 
+        {/* Sede ---------------------------------------------------------- */}
+        {/* Aquí estaba «Convoca», que repetía palabra por palabra los dos
+            enlaces del pie de página. En su lugar va lo que sí falta al
+            final de la página: dónde es. */}
+        <section className="border-t" style={{ borderColor: 'var(--borde)' }}>
+          <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
+            <div className="grid gap-8 lg:grid-cols-[1fr,1.3fr] lg:items-center">
+              <div>
+                <h2 className="titulo-seccion">{textos.sedeTitulo}</h2>
+                <p className="mt-4 text-base leading-relaxed">{traducir(congreso.sede, idioma)}</p>
+                <p className="mt-3 leading-relaxed tenue">{textos.sedeAyuda}</p>
+                <a
+                  href={SEDE_MAPA_ENLACE}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-ciess-600 underline underline-offset-4 hover:text-ciess-500 dark:text-ciess-300 dark:hover:text-ciess-200"
+                >
+                  {textos.verEnMapa}
+                  <svg
+                    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+                  >
+                    <path d="M7 17 17 7M9 7h8v8" />
+                  </svg>
+                </a>
+              </div>
+
+              {/* loading="lazy": el mapa está al final de la página y pesa
+                  más que todo lo demás junto; no tiene por qué retrasar la
+                  portada de quien nunca baja hasta aquí. */}
+              <div
+                className="overflow-hidden rounded-xl border"
+                style={{ borderColor: 'var(--borde)' }}
+              >
+                <iframe
+                  src={SEDE_MAPA_EMBED}
+                  title={`${textos.sedeTitulo} · ${traducir(congreso.sede, idioma)}`}
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                  className="block h-[320px] w-full border-0 sm:h-[380px]"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Llamado a registrarse ---------------------------------------- */}
         <section className="border-t" style={{ borderColor: 'var(--borde)' }}>
           <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-20">
@@ -173,31 +238,6 @@ export function PaginaInicio({
             <Link href="/registro" className="boton-primario mt-8 inline-flex px-8 py-3">
               {textos.registrarse}
             </Link>
-
-            {/* Quien convoca, con enlace a cada institución: es la pregunta
-                que sigue a «¿quién organiza esto?». */}
-            <div className="mx-auto mt-12 max-w-xl text-xs leading-relaxed tenue">
-              <p className="font-semibold uppercase tracking-wide">{textos.cierreTitulo}</p>
-              <p className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4">
-                <a
-                  href={ENLACE_CIESS}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline underline-offset-4 hover:text-ciess-600 dark:hover:text-ciess-300"
-                >
-                  {t.congreso.organiza}
-                </a>
-                <a
-                  href={ENLACE_RIUSS}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline underline-offset-4 hover:text-ciess-600 dark:hover:text-ciess-300"
-                >
-                  {t.congreso.riuss}
-                </a>
-              </p>
-              <p className="mt-3">{textos.cierreTexto}</p>
-            </div>
           </div>
         </section>
       </main>
