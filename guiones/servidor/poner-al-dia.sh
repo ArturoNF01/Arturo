@@ -43,18 +43,18 @@ demostracion=no
 entorno() { sudo -u "$USUARIO" env $(grep '^DATABASE_URL=' "$RAIZ/.env") "$@"; }
 
 # ---------------------------------------------------------------------
-paso "1 de 4 · Traer los cambios"
+paso "1 de 5 · Traer los cambios"
 bash "$RAIZ/guiones/servidor/desplegar.sh" || morir "traer los cambios"
 
 # ---------------------------------------------------------------------
-paso "2 de 4 · Datos y contenido acordados"
+paso "2 de 5 · Datos y contenido acordados"
 set -a; . "$RAIZ/.env"; set +a
 sudo -u "$USUARIO" psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q \
   -f "$RAIZ/basedatos/actualizar-convocatoria.sql" > /dev/null || morir "aplicar los datos"
 aviso "Fechas, sede, correos y aviso de privacidad al día."
 
 # ---------------------------------------------------------------------
-paso "3 de 4 · Google Sheets"
+paso "3 de 5 · Conexión con Google"
 # Este paso no detiene al resto. La hoja es una copia de consulta: que falte
 # no es razón para dejar el servidor sin sus registros ni sin sus datos, que
 # es lo que pasaba cuando cualquier tropiezo aquí cortaba la secuencia.
@@ -68,12 +68,28 @@ else
 fi
 
 # ---------------------------------------------------------------------
-paso "4 de 4 · Registros de demostración"
+paso "4 de 5 · Registros de demostración"
 if [ "$demostracion" = "sí" ]; then
   cd "$RAIZ"
   entorno npm run sembrar || morir "sembrar los registros"
 else
   aviso "No se pidieron. Para añadirlos: sudo bash $0 --demostracion"
+fi
+
+# ---------------------------------------------------------------------
+# Este paso lo hacía el botón del panel. Dejarlo ahí era pedirle a alguien
+# que abriera el navegador, iniciara sesión y encontrara el botón para que
+# la hoja dejara de estar vacía; y si el panel no abría, la hoja se quedaba
+# vacía sin explicación. Desde aquí el fallo se ve, con folio y motivo.
+paso "5 de 5 · Copiar los registros a la hoja"
+fallo_copia=no
+if [ "$fallo_google" = "sí" ]; then
+  aviso "Se salta: Google no quedó conectado en el paso 3."
+elif ! grep -q '^GOOGLE_PRIVATE_KEY=' "$RAIZ/.env"; then
+  aviso "Se salta: Google no está conectado todavía."
+else
+  cd "$RAIZ"
+  entorno npm run sincronizar || fallo_copia=sí
 fi
 
 # ---------------------------------------------------------------------
@@ -90,8 +106,13 @@ fi
 aviso "Registros en la base: $cuantos"
 aviso "Pendientes de copiar a la hoja: $pendientes"
 printf '\n'
-if [ "$pendientes" != "0" ] && [ "$pendientes" != "?" ]; then
-  aviso "Para volcarlos: entre al panel, «Cupos y configuración», al final."
+if [ "$fallo_copia" = "sí" ]; then
+  printf '   \033[33mLa copia a la hoja falló; el motivo está unas líneas más arriba.\033[0m\n'
+  aviso "Lo más común: la cuenta de servicio no es Editora de la hoja, o el"
+  aviso "GOOGLE_SHEETS_ID del .env no es el de la hoja que está mirando."
+  aviso "Para reintentar sólo esto: cd $RAIZ && sudo -u $USUARIO npm run sincronizar"
+elif [ "$pendientes" = "0" ]; then
+  aviso "La hoja está al día."
 fi
 aviso "El sitio: https://congreso-dss.ciess.org"
 printf '\n'

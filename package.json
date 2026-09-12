@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "sembrar": "tsx --conditions=react-server guiones/sembrar-demostracion.ts",
+    "sincronizar": "tsx --conditions=react-server guiones/sincronizar-hoja.ts",
     "crear-usuario": "tsx --conditions=react-server guiones/crear-usuario.ts",
     "esquema": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f basedatos/esquema.sql",
     "prueba-bd": "tsx --conditions=react-server pruebas/integracion/base-de-datos.ts"
