@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { VideoFondo } from '@/componentes/video-fondo';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { BotonTema, SelectorIdioma } from '@/componentes/controles';
@@ -12,12 +13,13 @@ import { ProveedorContenidoPanel } from './contexto-panel';
 import type { DatosCongreso, EjeTematico } from '@/lib/contenido';
 
 export function MarcoPanel({
-  usuario, permisos, congreso, ejes, children,
+  usuario, permisos, congreso, ejes, urlVideo, children,
 }: {
   usuario: UsuarioPanel;
   permisos: Permisos;
   congreso: DatosCongreso;
   ejes: EjeTematico[];
+  urlVideo: string;
   children: React.ReactNode;
 }) {
   const { t, tt } = useApp();
@@ -50,6 +52,9 @@ export function MarcoPanel({
   return (
     <ProveedorContenidoPanel congreso={congreso} ejes={ejes}>
     <ProveedorRegistros>
+    {/* Más tenue que en el login: aquí hay gráficas y tablas que leer, y
+        el video no debe competir con ellas. */}
+    <VideoFondo url={urlVideo} opacidad={0.08} />
     <div className="flex min-h-screen flex-col lg:flex-row">
       <aside
         className="sticky top-0 z-40 border-b lg:h-screen lg:w-64 lg:shrink-0 lg:border-b-0 lg:border-r"

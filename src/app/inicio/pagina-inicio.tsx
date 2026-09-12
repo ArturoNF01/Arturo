@@ -5,7 +5,7 @@ import { useApp } from '@/componentes/proveedores';
 import { Encabezado, PieDePagina } from '@/componentes/controles';
 import { LogoCiess } from '@/componentes/logo';
 import { VideoFondo } from '@/componentes/video-fondo';
-import { CALENDARIO, CORREO_TRABAJOS, LANDING } from '@/lib/landing';
+import { CALENDARIO, LANDING } from '@/lib/landing';
 import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 
@@ -32,7 +32,7 @@ export function PaginaInicio({
           <VideoFondo url={configuracion.url_video_login} variante="oscuro" posicion="contenido" />
 
           <div className="relative z-10 mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-28">
-            <LogoCiess className="mx-auto h-14 w-auto" forzar="oscuro" />
+            <LogoCiess className="mx-auto h-16 sm:h-20" forzar="oscuro" />
 
             <h1 className="mt-8 text-3xl font-bold leading-tight sm:text-5xl">
               {t.congreso.titulo}
@@ -92,18 +92,32 @@ export function PaginaInicio({
             <h2 className="titulo-seccion">{textos.ejesTitulo}</h2>
             <p className="mt-2 tenue">{textos.ejesAyuda}</p>
 
-            <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/* El número va en una columna propia, grande y fuera del texto:
+                así los nueve ejes se recorren de un vistazo y los títulos
+                quedan alineados aunque midan distinto. La tarjeta entera se
+                tiñe al pasar el ratón, no sólo el borde. */}
+            <ol className="mt-10 grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-3"
+                style={{ borderColor: 'var(--borde)', backgroundColor: 'var(--borde)' }}>
               {ejes.map((eje, i) => (
-                <li key={eje.clave} className="tarjeta">
-                  <span className="text-xs font-semibold text-ciess-600 dark:text-ciess-300">
+                <li
+                  key={eje.clave}
+                  className="group flex gap-4 p-5 transition-colors duration-200"
+                  style={{ backgroundColor: 'var(--fondo)' }}
+                >
+                  <span
+                    aria-hidden
+                    className="shrink-0 font-serif text-3xl font-bold leading-none text-ciess-600/25 transition-colors duration-200 group-hover:text-ciess-600 dark:text-ciess-300/25 dark:group-hover:text-ciess-300"
+                  >
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <h3 className="mt-1 text-sm font-semibold leading-snug">
-                    {traducir(eje.nombre, idioma)}
-                  </h3>
-                  <p className="mt-2 text-xs leading-relaxed tenue">
-                    {traducir(eje.descripcion, idioma)}
-                  </p>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold leading-snug">
+                      {traducir(eje.nombre, idioma)}
+                    </h3>
+                    <p className="mt-1.5 text-xs leading-relaxed tenue">
+                      {traducir(eje.descripcion, idioma)}
+                    </p>
+                  </div>
                 </li>
               ))}
             </ol>
@@ -159,27 +173,6 @@ export function PaginaInicio({
             <Link href="/registro" className="boton-primario mt-8 inline-flex px-8 py-3">
               {textos.registrarse}
             </Link>
-
-            <div className="mt-12 grid gap-4 text-left sm:grid-cols-2">
-              <div className="tarjeta">
-                <h3 className="text-sm font-semibold">{textos.dudasRegistro}</h3>
-                <a
-                  href={`mailto:${configuracion.correo_contacto}`}
-                  className="mt-1 block break-all text-sm text-ciess-600 underline underline-offset-4 dark:text-ciess-300"
-                >
-                  {configuracion.correo_contacto}
-                </a>
-              </div>
-              <div className="tarjeta">
-                <h3 className="text-sm font-semibold">{textos.dudasTrabajos}</h3>
-                <a
-                  href={`mailto:${CORREO_TRABAJOS}`}
-                  className="mt-1 block break-all text-sm text-ciess-600 underline underline-offset-4 dark:text-ciess-300"
-                >
-                  {CORREO_TRABAJOS}
-                </a>
-              </div>
-            </div>
 
             <p className="mx-auto mt-12 max-w-xl text-xs leading-relaxed tenue">
               <span className="font-semibold">{textos.cierreTitulo}: </span>

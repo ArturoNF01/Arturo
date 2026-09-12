@@ -192,7 +192,7 @@ export function PanelCupos({
             etiqueta="Fechas, tal como se muestran"
             valor={datos.fechas}
             onChange={(v) => setDatos({ ...datos, fechas: v })}
-            ayuda="Texto libre. Ejemplo: 3, 4 y 5 de junio de 2026."
+            ayuda="Texto libre. Ejemplo: 11, 12 y 13 de noviembre de 2026."
             maximo={120}
           />
 

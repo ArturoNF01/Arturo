@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------
--- Datos oficiales de la convocatoria, sobre una base ya instalada.
+-- Datos y contenido acordados, sobre una base ya instalada.
 --
 --   psql "$DATABASE_URL" -f basedatos/actualizar-convocatoria.sql
 --
@@ -27,6 +27,32 @@ update configuracion set valor =
 
 update configuracion set valor = '"teresa.davila@ciss-bienestar.org"'::jsonb where clave = 'correo_contacto';
 
+-- ---------------------------------------------------------------------
+-- Aviso de privacidad: fuera los apartados de derechos y de seguridad.
+--
+-- Se apagan, no se borran: el texto sigue ahí por si el área jurídica los
+-- quiere de vuelta, y basta con volver a encenderlos desde el panel.
+update aviso_privacidad set activo = false
+ where clave in ('bloque_07', 'bloque_08') and activo;
+
+-- Los que seguían quedan renumerados: un aviso legal que salta del 6 al 9
+-- se lee como un documento mal hecho.
+update aviso_privacidad
+   set titulo = jsonb_build_object(
+         'es', regexp_replace(titulo->>'es', '^9\.', '7.'),
+         'en', regexp_replace(titulo->>'en', '^9\.', '7.'),
+         'pt', regexp_replace(titulo->>'pt', '^9\.', '7.')),
+       orden = 7
+ where clave = 'bloque_09';
+
+update aviso_privacidad
+   set titulo = jsonb_build_object(
+         'es', regexp_replace(titulo->>'es', '^10\.', '8.'),
+         'en', regexp_replace(titulo->>'en', '^10\.', '8.'),
+         'pt', regexp_replace(titulo->>'pt', '^10\.', '8.')),
+       orden = 8
+ where clave = 'bloque_10';
+
 commit;
 
 select clave, valor from configuracion
@@ -34,3 +60,6 @@ select clave, valor from configuracion
                  'congreso_fecha_inicio', 'congreso_fecha_fin',
                  'fecha_limite_registro', 'correo_contacto')
  order by clave;
+
+select clave, orden, titulo->>'es' as apartado
+  from aviso_privacidad where activo order by orden;

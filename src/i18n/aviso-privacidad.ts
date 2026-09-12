@@ -56,29 +56,13 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
         ],
       },
       {
-        titulo: '7. Derechos que le asisten',
-        parrafos: [
-          'Usted puede ejercer sus derechos de acceso, rectificación, cancelación y oposición (derechos ARCO conforme a la LFPDPPP), así como los de confirmación de tratamiento, portabilidad, limitación, supresión, revisión de decisiones automatizadas e información sobre el uso compartido (LGPD y RGPD).',
-          'Para ejercerlos escriba al correo de contacto del comité organizador indicando su nombre completo, su folio de registro y el derecho que desea ejercer. La solicitud se atenderá en un plazo máximo de 20 días hábiles.',
-          'Puede revocar su consentimiento en cualquier momento. La revocación no afecta la licitud del tratamiento previo, pero puede impedir la continuación de su participación en el congreso.',
-          'Si considera que su derecho a la protección de datos fue vulnerado, puede acudir a la autoridad nacional competente en materia de protección de datos personales de su país de residencia.',
-        ],
-      },
-      {
-        titulo: '8. Seguridad y medidas técnicas',
-        parrafos: [
-          'La información se transmite mediante conexiones cifradas (TLS) y se almacena con controles de acceso por rol. El acceso al panel de control está restringido a personas autorizadas del comité organizador y del equipo de análisis, y toda modificación o eliminación de registros queda asentada en un registro de auditoría que documenta quién y cuándo la realizó.',
-          'Para evitar envíos automatizados, el formulario guarda una huella criptográfica irreversible derivada de la dirección de origen —nunca la dirección misma— durante un máximo de 24 horas, y la elimina después. Esa huella no se asocia a su registro ni se usa para ninguna otra finalidad.',
-        ],
-      },
-      {
-        titulo: '9. Uso de almacenamiento local',
+        titulo: '7. Uso de almacenamiento local',
         parrafos: [
           'El sitio guarda en su navegador únicamente su preferencia de idioma y de tema (claro u oscuro), así como la sesión de acceso al panel para las personas autorizadas. No se utilizan cookies de publicidad ni de seguimiento de terceros.',
         ],
       },
       {
-        titulo: '10. Cambios al aviso',
+        titulo: '8. Cambios al aviso',
         parrafos: [
           'Cualquier modificación a este aviso se publicará en esta misma página, indicando la versión y la fecha de actualización.',
         ],
@@ -133,29 +117,13 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
         ],
       },
       {
-        titulo: '7. Your rights',
-        parrafos: [
-          'You may exercise your rights of access, rectification, cancellation and objection (ARCO rights under the LFPDPPP), as well as confirmation of processing, portability, restriction, erasure, review of automated decisions and information on data sharing (LGPD and GDPR).',
-          'To exercise them, write to the organising committee contact address stating your full name, your registration reference and the right you wish to exercise. Requests are answered within a maximum of 20 working days.',
-          'You may withdraw your consent at any time. Withdrawal does not affect the lawfulness of prior processing but may prevent the continuation of your participation in the congress.',
-          'If you consider that your right to data protection has been infringed, you may lodge a complaint with the competent national data protection authority in your country of residence.',
-        ],
-      },
-      {
-        titulo: '8. Security and technical measures',
-        parrafos: [
-          'Information is transmitted over encrypted connections (TLS) and stored with role-based access controls. Access to the control panel is restricted to authorised members of the organising committee and the analytics team, and every modification or deletion of records is written to an audit log documenting who performed it and when.',
-          'To prevent automated submissions, the form stores an irreversible cryptographic fingerprint derived from the originating address — never the address itself — for at most 24 hours, and deletes it afterwards. This fingerprint is not linked to your registration and is not used for any other purpose.',
-        ],
-      },
-      {
-        titulo: '9. Local storage',
+        titulo: '7. Local storage',
         parrafos: [
           'The site stores in your browser only your language and theme (light or dark) preference, plus the panel session for authorised users. No advertising or third-party tracking cookies are used.',
         ],
       },
       {
-        titulo: '10. Changes to this notice',
+        titulo: '8. Changes to this notice',
         parrafos: [
           'Any amendment to this notice will be published on this same page, indicating the version and the date of update.',
         ],
@@ -210,29 +178,13 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
         ],
       },
       {
-        titulo: '7. Seus direitos',
-        parrafos: [
-          'Você pode exercer os direitos de confirmação da existência de tratamento, acesso, correção, anonimização, bloqueio, eliminação, portabilidade, informação sobre compartilhamento, revogação do consentimento e revisão de decisões automatizadas (LGPD), bem como os direitos ARCO (LFPDPPP) e os direitos previstos no RGPD.',
-          'Para exercê-los, escreva para o e-mail de contato do comitê organizador informando seu nome completo, o protocolo da inscrição e o direito que deseja exercer. A solicitação será atendida em até 20 dias úteis.',
-          'Você pode revogar seu consentimento a qualquer momento. A revogação não afeta a licitude do tratamento anterior, mas pode impedir a continuidade da sua participação no congresso.',
-          'Caso considere que seu direito à proteção de dados foi violado, pode apresentar reclamação à autoridade nacional de proteção de dados do seu país de residência.',
-        ],
-      },
-      {
-        titulo: '8. Segurança e medidas técnicas',
-        parrafos: [
-          'As informações são transmitidas por conexões criptografadas (TLS) e armazenadas com controle de acesso por perfil. O acesso ao painel de controle é restrito a pessoas autorizadas do comitê organizador e da equipe de análise, e toda alteração ou exclusão de registros fica assentada em um log de auditoria que documenta quem a realizou e quando.',
-          'Para evitar envios automatizados, o formulário guarda uma impressão criptográfica irreversível derivada do endereço de origem — nunca o endereço em si — por no máximo 24 horas, e a exclui em seguida. Essa impressão não é associada ao seu cadastro nem usada para qualquer outra finalidade.',
-        ],
-      },
-      {
-        titulo: '9. Armazenamento local',
+        titulo: '7. Armazenamento local',
         parrafos: [
           'O site guarda no seu navegador apenas a preferência de idioma e de tema (claro ou escuro), além da sessão de acesso ao painel para pessoas autorizadas. Não são utilizados cookies de publicidade nem de rastreamento de terceiros.',
         ],
       },
       {
-        titulo: '10. Alterações neste aviso',
+        titulo: '8. Alterações neste aviso',
         parrafos: [
           'Qualquer alteração neste aviso será publicada nesta mesma página, indicando a versão e a data de atualização.',
         ],

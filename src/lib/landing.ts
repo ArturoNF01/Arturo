@@ -102,7 +102,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     calendarioAyuda: 'Del lanzamiento de la convocatoria a los tres días de sesiones.',
     participarTitulo: 'Participe en el congreso',
     participarAyuda:
-      'El registro está abierto para asistir, presencialmente en la Ciudad de México o en línea desde cualquier país. El formulario se adapta a su perfil: sólo verá las preguntas que le correspondan.',
+      'El registro está abierto para asistir, presencialmente en la Ciudad de México o en línea desde cualquier país.',
     registrarse: 'Registrarse',
     verConvocatoria: 'Ver la convocatoria',
     dudasTitulo: 'Contacto',
@@ -128,7 +128,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     calendarioAyuda: 'From the opening of the call for papers to the three days of sessions.',
     participarTitulo: 'Take part',
     participarAyuda:
-      'Registration is open to attend, in person in Mexico City or online from anywhere. The form adapts to your profile: you will only see the questions that apply to you.',
+      'Registration is open to attend, in person in Mexico City or online from anywhere.',
     registrarse: 'Register',
     verConvocatoria: 'Read the call for papers',
     dudasTitulo: 'Contact',
@@ -154,7 +154,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     calendarioAyuda: 'Do lançamento da convocatória aos três dias de sessões.',
     participarTitulo: 'Participe do congresso',
     participarAyuda:
-      'As inscrições estão abertas para participar presencialmente na Cidade do México ou online de qualquer país. O formulário se adapta ao seu perfil: você verá apenas as perguntas que lhe dizem respeito.',
+      'As inscrições estão abertas para participar presencialmente na Cidade do México ou online de qualquer país.',
     registrarse: 'Inscrever-se',
     verConvocatoria: 'Ver a convocatória',
     dudasTitulo: 'Contato',

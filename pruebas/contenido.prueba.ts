@@ -61,12 +61,26 @@ describe('propuestas por defecto', () => {
 
   it('el aviso de privacidad conserva los párrafos de los tres idiomas', () => {
     const bloques = avisoPorDefecto();
-    expect(bloques).toHaveLength(10);
+    // Se comprueba que los tres idiomas vayan parejos, no cuántos apartados
+    // hay: fijar el número obliga a tocar la prueba cada vez que el área
+    // jurídica quita o añade uno, y eso no es lo que aquí se protege.
+    expect(bloques.length).toBeGreaterThan(0);
     for (const bloque of bloques) {
       for (const idioma of IDIOMAS) {
         expect(bloque.titulo[idioma], `${bloque.clave}.${idioma}`).toBeTruthy();
         expect((bloque.parrafos[idioma] ?? []).length, `${bloque.clave}.${idioma}`).toBeGreaterThan(0);
       }
+    }
+  });
+
+  it('la numeración del aviso es consecutiva y no salta', () => {
+    // Quitar un apartado y olvidar renumerar deja un aviso que salta del 6
+    // al 9, y eso en un documento legal se nota.
+    for (const idioma of IDIOMAS) {
+      const numeros = avisoPorDefecto()
+        .map((b) => Number((b.titulo[idioma] ?? '').match(/^(\d+)\./)?.[1]))
+        .filter((n) => !Number.isNaN(n));
+      expect(numeros, idioma).toEqual(numeros.map((_, i) => i + 1));
     }
   });
 
