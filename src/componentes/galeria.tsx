@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from './proveedores';
 import { LANDING } from '@/lib/landing';
 
@@ -22,6 +22,7 @@ export function Galeria({ fotos, porTanda = 24 }: { fotos: string[]; porTanda?: 
   const textos = LANDING[idioma];
 
   const [visibles, setVisibles] = useState(porTanda);
+  const centinela = useRef<HTMLDivElement | null>(null);
   const [rotas, setRotas] = useState<Set<string>>(new Set());
   const [abierta, setAbierta] = useState<number | null>(null);
 
@@ -35,6 +36,23 @@ export function Galeria({ fotos, porTanda = 24 }: { fotos: string[]; porTanda?: 
   const total = buenas.length;
   const mover = (paso: number) =>
     setAbierta((a) => (a === null ? null : Math.min(Math.max(a + paso, 0), total - 1)));
+
+  // Trae la siguiente tanda cuando el pie de la lista se acerca a la
+  // pantalla. El margen de 600 píxeles hace que las fotografías empiecen a
+  // pedirse antes de llegar abajo, y así el desplazamiento no se detiene.
+  useEffect(() => {
+    const pie = centinela.current;
+    if (!pie || typeof IntersectionObserver === 'undefined') return;
+
+    const observador = new IntersectionObserver(
+      ([entrada]) => {
+        if (entrada.isIntersecting) setVisibles((v) => v + porTanda);
+      },
+      { rootMargin: '600px' },
+    );
+    observador.observe(pie);
+    return () => observador.disconnect();
+  }, [visibles, porTanda]);
 
   useEffect(() => {
     if (abierta === null) return;
@@ -81,15 +99,14 @@ export function Galeria({ fotos, porTanda = 24 }: { fotos: string[]; porTanda?: 
         ))}
       </ul>
 
+      {/* El pie de la lista. Cuando asoma por la pantalla se trae la
+          siguiente tanda: no hay que apretar nada para seguir bajando.
+          Queda el texto por si el navegador no soporta el observador, y
+          porque un lector de pantalla necesita que alguien le diga que la
+          lista todavía crece. */}
       {quedan > 0 && (
-        <div className="mt-8 text-center">
-          <button
-            type="button"
-            onClick={() => setVisibles((v) => v + porTanda)}
-            className="boton-secundario px-6 py-2.5"
-          >
-            {textos.galeriaVerMas} ({quedan})
-          </button>
+        <div ref={centinela} className="mt-8 text-center text-sm tenue" aria-live="polite">
+          {textos.galeriaCargando} ({quedan})
         </div>
       )}
 

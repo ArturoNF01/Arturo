@@ -46,6 +46,23 @@ export function fotoInstalaciones(numero: number): string {
   return `${GALERIA_BASE}/CISS-${String(numero).padStart(3, '0')}.jpg`;
 }
 
+/**
+ * Una baraja de fotografías distinta en cada visita.
+ *
+ * Se reparte en el navegador, no al construir la página: si se hiciera en el
+ * servidor, todo el mundo vería la misma «casualidad» hasta el siguiente
+ * despliegue. Y se pide el sorteo desde un efecto, nunca al pintar, para que
+ * lo que llega del servidor y lo que React pinta después coincidan.
+ */
+export function barajar<T>(lista: readonly T[]): T[] {
+  const copia = [...lista];
+  for (let i = copia.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+  }
+  return copia;
+}
+
 /** Las direcciones de las 200, en orden. */
 export const GALERIA: string[] = Array.from({ length: GALERIA_TOTAL }, (_, i) =>
   fotoInstalaciones(i + 1),
@@ -121,7 +138,7 @@ export interface TextosLanding {
   galeriaTitulo: string;
   galeriaAyuda: string;
   galeriaVerTodas: string;
-  galeriaVerMas: string;
+  galeriaCargando: string;
   galeriaCerrar: string;
   galeriaAnterior: string;
   galeriaSiguiente: string;
@@ -155,7 +172,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     galeriaTitulo: 'Nuestras instalaciones',
     galeriaAyuda: 'El campus del CIESS en la Ciudad de México: aulas, auditorios, biblioteca y áreas comunes.',
     galeriaVerTodas: 'Ver la galería',
-    galeriaVerMas: 'Ver más fotografías',
+    galeriaCargando: 'Cargando más fotografías…',
     galeriaCerrar: 'Cerrar',
     galeriaAnterior: 'Anterior',
     galeriaSiguiente: 'Siguiente',
@@ -188,7 +205,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     galeriaTitulo: 'Our campus',
     galeriaAyuda: 'The CIESS campus in Mexico City: lecture rooms, auditoriums, library and common areas.',
     galeriaVerTodas: 'View the gallery',
-    galeriaVerMas: 'Show more photographs',
+    galeriaCargando: 'Loading more photographs…',
     galeriaCerrar: 'Close',
     galeriaAnterior: 'Previous',
     galeriaSiguiente: 'Next',
@@ -221,7 +238,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     galeriaTitulo: 'Nossas instalações',
     galeriaAyuda: 'O campus do CIESS na Cidade do México: salas de aula, auditórios, biblioteca e áreas comuns.',
     galeriaVerTodas: 'Ver a galeria',
-    galeriaVerMas: 'Ver mais fotografias',
+    galeriaCargando: 'Carregando mais fotografias…',
     galeriaCerrar: 'Fechar',
     galeriaAnterior: 'Anterior',
     galeriaSiguiente: 'Seguinte',

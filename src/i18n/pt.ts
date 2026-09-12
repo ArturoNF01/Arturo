@@ -10,7 +10,8 @@ export const pt: Diccionario = {
     riuss: 'RIUSS · Rede Interamericana de Universidades para a Seguridade Social',
   },
   nav: {
-    registro: 'Inscrição', instalaciones: 'Instalações', faqs: 'Perguntas frequentes', privacidad: 'Aviso de privacidade',
+    registro: 'Inscrição', instalaciones: 'Instalações', menu: 'Menu',
+    faqs: 'Perguntas frequentes', privacidad: 'Aviso de privacidade',
     agenda: 'Agenda', panel: 'Painel', login: 'Entrar', salir: 'Sair', inicio: 'Início',
   },
   acciones: {

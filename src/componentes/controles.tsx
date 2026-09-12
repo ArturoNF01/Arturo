@@ -100,32 +100,41 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
           ))}
         </nav>
 
+        {/* En pantallas anchas, todo a la vista. En las estrechas sólo el
+            botón del menú: el idioma y el tema se consultan una vez y no
+            merecen el sitio que ocupaban en una barra de 390 píxeles. */}
         <div className="ml-auto flex items-center gap-2 md:ml-2">
-          <SelectorIdioma compacto />
-          <BotonTema />
-          {variante === 'publico' && (
-            <Link href="/login" className="boton-secundario hidden whitespace-nowrap sm:inline-flex">
-              {t.nav.login}
-            </Link>
-          )}
-          {enlaces.length > 0 && (
-            <button
-              type="button"
-              className="boton-secundario !px-2.5 !py-2 md:hidden"
-              aria-expanded={abierto}
-              aria-label={t.nav.inicio}
-              onClick={() => setAbierto((v) => !v)}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                <path d="M3 6h18M3 12h18M3 18h18" />
-              </svg>
-            </button>
-          )}
+          <div className="hidden items-center gap-2 md:flex">
+            <SelectorIdioma compacto />
+            <BotonTema />
+            {variante === 'publico' && (
+              <Link href="/login" className="boton-secundario whitespace-nowrap">
+                {t.nav.login}
+              </Link>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="boton-secundario !px-2.5 !py-2 md:hidden"
+            aria-expanded={abierto}
+            aria-controls="menu-movil"
+            aria-label={t.nav.menu}
+            onClick={() => setAbierto((v) => !v)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+              {abierto ? <path d="M18 6 6 18M6 6l12 12" /> : <path d="M3 6h18M3 12h18M3 18h18" />}
+            </svg>
+          </button>
         </div>
       </div>
 
       {abierto && (
-        <nav className="border-t px-4 pb-3 md:hidden" style={{ borderColor: 'var(--borde)' }}>
+        <nav
+          id="menu-movil"
+          className="border-t px-4 pb-4 md:hidden"
+          style={{ borderColor: 'var(--borde)' }}
+        >
           {enlaces.map((e) => (
             <Link
               key={e.href}
@@ -136,9 +145,24 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
               {e.texto}
             </Link>
           ))}
-          <Link href="/login" onClick={() => setAbierto(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium">
-            {t.nav.login}
-          </Link>
+
+          {variante === 'publico' && (
+            <Link
+              href="/login"
+              onClick={() => setAbierto(false)}
+              className="block rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
+            >
+              {t.nav.login}
+            </Link>
+          )}
+
+          <div
+            className="mt-3 flex items-center justify-between gap-3 border-t pt-3"
+            style={{ borderColor: 'var(--borde)' }}
+          >
+            <SelectorIdioma compacto />
+            <BotonTema />
+          </div>
         </nav>
       )}
     </header>

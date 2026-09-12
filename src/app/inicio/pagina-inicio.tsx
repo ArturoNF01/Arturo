@@ -5,6 +5,7 @@ import { useApp } from '@/componentes/proveedores';
 import { Encabezado, PieDePagina } from '@/componentes/controles';
 import { LogoCiess } from '@/componentes/logo';
 import { VideoFondo } from '@/componentes/video-fondo';
+import { Collage } from '@/componentes/collage';
 import { CALENDARIO, GALERIA, LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from '@/lib/landing';
 import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
@@ -232,32 +233,14 @@ export function PaginaInicio({
 
         {/* Instalaciones ------------------------------------------------- */}
         {/* Un adelanto, no la galería: son doscientas fotografías y aquí
-            caben ocho. Quien quiera verlas entra a su página, donde se
-            cargan por tandas. */}
+            caben nueve. Quien quiera verlas entra a su página. */}
         <section className="border-t" style={{ borderColor: 'var(--borde)' }}>
           <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
             <h2 className="titulo-seccion">{textos.galeriaTitulo}</h2>
             <p className="mt-2 max-w-2xl tenue">{textos.galeriaAyuda}</p>
 
-            <ul className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-              {GALERIA.slice(0, 8).map((url, i) => (
-                <li key={url} className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--borde)' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt={textos.galeriaFoto(i + 1)}
-                    loading="lazy"
-                    decoding="async"
-                    className="aspect-[4/3] w-full bg-black/5 object-cover dark:bg-white/5"
-                  />
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-8 text-center">
-              <Link href="/instalaciones" className="boton-secundario inline-flex px-6 py-2.5">
-                {textos.galeriaVerTodas}
-              </Link>
+            <div className="mt-8">
+              <Collage fotos={GALERIA} />
             </div>
           </div>
         </section>

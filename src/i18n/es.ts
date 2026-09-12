@@ -15,6 +15,7 @@ export const es = {
     registro: 'Registro',
     faqs: 'Preguntas frecuentes',
     instalaciones: 'Instalaciones',
+    menu: 'Menú',
     privacidad: 'Aviso de privacidad',
     agenda: 'Agenda',
     panel: 'Panel',
