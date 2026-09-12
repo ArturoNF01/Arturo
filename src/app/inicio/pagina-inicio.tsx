@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useApp } from '@/componentes/proveedores';
 import { Encabezado, PieDePagina } from '@/componentes/controles';
-import { LogoCiess } from '@/componentes/logo';
+import { ENLACE_CIESS, ENLACE_RIUSS, LogoCiess } from '@/componentes/logo';
 import { VideoFondo } from '@/componentes/video-fondo';
 import { CALENDARIO, LANDING } from '@/lib/landing';
 import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
@@ -174,10 +174,30 @@ export function PaginaInicio({
               {textos.registrarse}
             </Link>
 
-            <p className="mx-auto mt-12 max-w-xl text-xs leading-relaxed tenue">
-              <span className="font-semibold">{textos.cierreTitulo}: </span>
-              {textos.cierreTexto}
-            </p>
+            {/* Quien convoca, con enlace a cada institución: es la pregunta
+                que sigue a «¿quién organiza esto?». */}
+            <div className="mx-auto mt-12 max-w-xl text-xs leading-relaxed tenue">
+              <p className="font-semibold uppercase tracking-wide">{textos.cierreTitulo}</p>
+              <p className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4">
+                <a
+                  href={ENLACE_CIESS}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-4 hover:text-ciess-600 dark:hover:text-ciess-300"
+                >
+                  {t.congreso.organiza}
+                </a>
+                <a
+                  href={ENLACE_RIUSS}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-4 hover:text-ciess-600 dark:hover:text-ciess-300"
+                >
+                  {t.congreso.riuss}
+                </a>
+              </p>
+              <p className="mt-3">{textos.cierreTexto}</p>
+            </div>
           </div>
         </section>
       </main>

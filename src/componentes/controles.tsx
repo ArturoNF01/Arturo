@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogoCiess } from '@/componentes/logo';
+import { ENLACE_CIESS, ENLACE_RIUSS, LogoCiess } from '@/componentes/logo';
 import { useState } from 'react';
 import { IDIOMAS, diccionarios, type Idioma } from '@/i18n';
 import { useApp } from './proveedores';
@@ -150,8 +150,28 @@ export function PieDePagina() {
   const { t } = useApp();
   return (
     <footer className="mt-16 border-t sin-impresion" style={{ borderColor: 'var(--borde)' }}>
-      <div className="mx-auto max-w-7xl px-4 py-8 text-xs tenue sm:px-6">
-        <p>{t.privacidad.marcoLegal}</p>
+      <div className="mx-auto max-w-3xl px-4 py-8 text-center text-xs tenue sm:px-6">
+        {/* Las dos instituciones que convocan, cada una a su sitio. */}
+        <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <a
+            href={ENLACE_CIESS}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-4 hover:text-ciess-600 dark:hover:text-ciess-300"
+          >
+            {t.congreso.organiza}
+          </a>
+          <span aria-hidden>·</span>
+          <a
+            href={ENLACE_RIUSS}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-4 hover:text-ciess-600 dark:hover:text-ciess-300"
+          >
+            {t.congreso.riuss}
+          </a>
+        </p>
+        <p className="mt-3">{t.privacidad.marcoLegal}</p>
       </div>
     </footer>
   );

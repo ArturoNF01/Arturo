@@ -9,6 +9,7 @@ export const es = {
     subtitulo: 'Desafíos de la seguridad social en las Américas en el primer cuarto del siglo XXI',
     tituloCorto: '1er Congreso de Estudios Interamericanos de Seguridad Social',
     organiza: 'CIESS · Centro Interamericano de Estudios de Seguridad Social',
+    riuss: 'RIUSS · Red Interamericana de Universidades para la Seguridad Social',
   },
   nav: {
     registro: 'Registro',

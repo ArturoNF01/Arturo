@@ -7,6 +7,7 @@ export const en: Diccionario = {
     subtitulo: 'Challenges of social security in the Americas in the first quarter of the 21st century',
     tituloCorto: '1st Congress of Inter-American Social Security Studies',
     organiza: 'CIESS · Inter-American Center for Social Security Studies',
+    riuss: 'RIUSS · Inter-American Network of Universities for Social Security',
   },
   nav: {
     registro: 'Registration', faqs: 'FAQs', privacidad: 'Privacy notice', agenda: 'Agenda',

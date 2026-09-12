@@ -39,10 +39,6 @@ export function PaginaRegistro({
               <dt className="text-xs uppercase tracking-wide tenue">{t.formulario.fechaLimite}</dt>
               <dd className="font-medium">{configuracion.fecha_limite_registro}</dd>
             </div>
-            <div>
-              <dt className="text-xs uppercase tracking-wide tenue">{t.formulario.contacto}</dt>
-              <dd className="font-medium">{configuracion.correo_contacto}</dd>
-            </div>
           </dl>
         </section>
         <FormularioRegistro configuracion={configuracion} congreso={congreso} ejes={ejes} />

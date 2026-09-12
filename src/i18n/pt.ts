@@ -7,6 +7,7 @@ export const pt: Diccionario = {
     subtitulo: 'Desafios da seguridade social nas Américas no primeiro quarto do século XXI',
     tituloCorto: '1º Congresso de Estudos Interamericanos de Seguridade Social',
     organiza: 'CIESS · Centro Interamericano de Estudos de Seguridade Social',
+    riuss: 'RIUSS · Rede Interamericana de Universidades para a Seguridade Social',
   },
   nav: {
     registro: 'Inscrição', faqs: 'Perguntas frequentes', privacidad: 'Aviso de privacidade',

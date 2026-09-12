@@ -17,6 +17,11 @@
  * video de fondo. Para no depender de ese sitio basta con guardarlos en
  * «public» y cambiar estas dos direcciones.
  */
+/** Sitios de las dos instituciones que convocan. */
+export const ENLACE_CIESS = 'https://home.ciess.org/';
+export const ENLACE_RIUSS =
+  'https://home.ciess.org/red-interamericaa-de-universidades-para-la-seguridad-social/';
+
 const CLARO = 'https://home.ciess.org/wp-content/uploads/2026/09/Logos-CIESS-RIUSS-2026.png';
 const OSCURO = 'https://home.ciess.org/wp-content/uploads/2026/09/Logos-CIESS-RIUSS-2026-W.png';
 
