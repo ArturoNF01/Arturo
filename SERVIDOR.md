@@ -350,7 +350,7 @@ que había en el respaldo.
 sudo systemctl stop congreso
 sudo -u postgres dropdb congreso
 sudo -u postgres createdb -O congreso congreso
-gunzip -c /var/respaldos/congreso/congreso-2026-06-01-0315.sql.gz \
+gunzip -c /var/respaldos/congreso/congreso-2026-11-01-0315.sql.gz \
   | sudo -u postgres psql -d congreso
 sudo systemctl start congreso
 ```
