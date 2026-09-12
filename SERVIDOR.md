@@ -262,6 +262,19 @@ Después: entre al panel, registre una prueba, expórtela y bórrela.
 
 Todo esto se hace desde la consola del droplet.
 
+**Ponerlo todo al día de una vez** —código, datos acordados, Google y, si
+se pide, los registros de demostración—:
+
+```bash
+sudo bash /opt/congreso/guiones/servidor/poner-al-dia.sh
+sudo bash /opt/congreso/guiones/servidor/poner-al-dia.sh --demostracion
+```
+
+Se para en el primer paso que falle, para no seguir encima de un error. Lo
+primero que hace es trabajar desde una copia de sí mismo: el despliegue
+reescribe ese mismo archivo, y bash lee los guiones a trozos, así que
+cambiarlo a media ejecución lo dejaría a medias sin decir nada.
+
 **Actualizar el sitio** cuando haya cambios nuevos en GitHub:
 
 ```bash
