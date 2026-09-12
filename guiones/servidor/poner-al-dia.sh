@@ -23,6 +23,8 @@ LLAVE="${LLAVE:-/tmp/llave.json}"
 # guiones a trozos, según los va necesitando, así que cambiarlo mientras
 # corre lo corrompe a media ejecución. Por eso lo primero es trabajar desde
 # una copia, fuera del repositorio.
+ORIGEN="${ORIGEN:-$(readlink -f "$0")}"
+export ORIGEN
 if [ "${COPIA_PROPIA:-}" != "sí" ]; then
   copia=$(mktemp /tmp/poner-al-dia.XXXXXX.sh)
   cp "$0" "$copia"
@@ -43,8 +45,25 @@ demostracion=no
 entorno() { sudo -u "$USUARIO" env $(grep '^DATABASE_URL=' "$RAIZ/.env") "$@"; }
 
 # ---------------------------------------------------------------------
-paso "1 de 5 · Traer los cambios"
-bash "$RAIZ/guiones/servidor/desplegar.sh" || morir "traer los cambios"
+if [ "${YA_DESPLEGADO:-}" = "sí" ]; then
+  paso "1 de 5 · Traer los cambios"
+  aviso "Hecho hace un momento, antes de recargar este guion."
+else
+  paso "1 de 5 · Traer los cambios"
+  bash "$RAIZ/guiones/servidor/desplegar.sh" || morir "traer los cambios"
+
+  # La copia de /tmp es de antes del despliegue: si el despliegue trajo una
+  # versión nueva de este mismo guion, lo que sigue sería el código viejo
+  # sobre un repositorio nuevo. Pasó: el servidor decía «actualizado» y
+  # seguía ejecutando los pasos de la versión anterior. Se recarga y sigue.
+  if [ -f "$ORIGEN" ] && ! cmp -s "$ORIGEN" "$0"; then
+    aviso "Este guion cambió con la actualización: se recarga y continúa."
+    nueva=$(mktemp /tmp/poner-al-dia.XXXXXX.sh)
+    cp "$ORIGEN" "$nueva"
+    chmod +x "$nueva"
+    COPIA_PROPIA=sí YA_DESPLEGADO=sí exec bash "$nueva" "$@"
+  fi
+fi
 
 # ---------------------------------------------------------------------
 paso "2 de 5 · Datos y contenido acordados"
