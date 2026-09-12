@@ -89,7 +89,10 @@ export function pasosVisibles(
   if (!presencial) pasos.push('conexion');
   if (presencial) {
     if (perfil.invitado) pasos.push('documentacion');
-    pasos.push('sala');
+    // Los requerimientos de sala —proyector, micrófono— son de quien expone,
+    // no de quien viene a escuchar. La accesibilidad no está aquí: esa la
+    // puede necesitar cualquiera y va en el cierre, que todos ven.
+    if (perfil.enPrograma) pasos.push('sala');
     if (perfil.invitado) pasos.push('alojamiento', 'traslados');
   }
 
@@ -130,6 +133,8 @@ export function campoVisible(
     case 'alergias':
     case 'contacto_emergencia':
       return presencial;
+    case 'requerimientos_tecnicos':
+      return perfil.enPrograma;
     case 'apoyo_traslado':
     case 'datos_viatico':
       return perfil.invitado && presencial;

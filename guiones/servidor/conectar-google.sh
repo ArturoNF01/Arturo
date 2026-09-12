@@ -31,6 +31,35 @@ HOJA="${2:-}"
 [ -f "$ENTORNO" ] || morir "No encuentro $ENTORNO. ¿Está instalado el sistema?"
 
 # ---------------------------------------------------------------------
+# Crear el archivo con «cat >» y no cerrarlo con Ctrl+D hace que las órdenes
+# tecleadas después acaben dentro. Es el tropiezo más común de este trámite,
+# y tiene arreglo evidente: quedarse con el JSON y descartar lo que venga
+# detrás de su llave de cierre. Se avisa, pero no se detiene por ello.
+if ! node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$LLAVE" 2>/dev/null; then
+  # El corte se hace contando llaves, no buscando una línea con «}»: según
+  # cómo se haya pegado, lo de más puede quedar enganchado a la misma línea.
+  if node -e '
+    const fs = require("fs");
+    const texto = fs.readFileSync(process.argv[1], "utf8");
+    let hondo = 0, dentro = false, escapado = false, corte = -1;
+    for (let i = 0; i < texto.length; i++) {
+      const c = texto[i];
+      if (escapado) { escapado = false; continue; }
+      if (c === "\\") { escapado = true; continue; }
+      if (c === "\"") { dentro = !dentro; continue; }
+      if (dentro) continue;
+      if (c === "{") hondo++;
+      else if (c === "}" && --hondo === 0) { corte = i + 1; break; }
+    }
+    if (corte < 0) process.exit(1);
+    const recortado = texto.slice(0, corte);
+    JSON.parse(recortado);              // si no es válido, no se toca nada
+    fs.writeFileSync(process.argv[1], recortado + "\n");
+  ' "$LLAVE" 2>/dev/null; then
+    aviso "El archivo traía texto de más al final; se recortó al JSON."
+  fi
+fi
+
 # Leer el JSON con node, que ya está instalado: así los saltos de línea
 # de la llave se manejan como lo que son y no como texto a trocear.
 datos=$(node -e '
@@ -47,14 +76,11 @@ datos=$(node -e '
   // La llave se guarda con los saltos escapados, que es como sabe leerla
   // la aplicación y como sobrevive dentro de un archivo de entorno.
   process.stdout.write(j.client_email + "\n" + JSON.stringify(j.private_key));
-' "$LLAVE") || morir "No pude leer el archivo de llave: no es un JSON válido.
+' "$LLAVE") || morir "el archivo no sirve como llave; arriba dice por qué.
 
   Si lo creó con «cat > archivo.json» y pegó el contenido, hay que cerrar
-  con Ctrl+D. Sin eso, cat sigue capturando y todo lo que se teclee
-  después —incluida esta misma orden— acaba dentro del archivo.
-
-  Para quitar lo que sobra sin volver a pegar la llave:
-    sed -n '1,/^}\$/p' $LLAVE > /tmp/limpia.json && mv /tmp/limpia.json $LLAVE"
+  con Ctrl+D. Sin eso, cat sigue capturando y lo que se teclee después acaba
+  dentro del archivo. Ese caso se arregla solo; los demás, no."
 
 CORREO=$(printf '%s' "$datos" | head -1)
 CLAVE=$(printf '%s' "$datos" | tail -n +2)

@@ -361,7 +361,6 @@ export function FormularioRegistro({
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.sala} />
             <CampoCasillas etiqueta={t.formulario.campos.requerimientosTecnicos} opciones={opciones('tecnicos', t)} valores={lista('requerimientos_tecnicos')} onChange={(v) => fijar('requerimientos_tecnicos', v)} />
-            <CampoParrafo campo="requerimientos_accesibilidad" etiqueta={t.formulario.campos.accesibilidad} ayuda={t.formulario.campos.accesibilidadAyuda} filas={3} valor={texto('requerimientos_accesibilidad')} onChange={(v) => fijar('requerimientos_accesibilidad', v)} />
           </section>
         )}
 
@@ -422,6 +421,7 @@ export function FormularioRegistro({
         {pasoActual === 'cierre' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.cierre} />
+            <CampoParrafo campo="requerimientos_accesibilidad" etiqueta={t.formulario.campos.accesibilidad} ayuda={t.formulario.campos.accesibilidadAyuda} filas={3} valor={texto('requerimientos_accesibilidad')} onChange={(v) => fijar('requerimientos_accesibilidad', v)} />
             {visible('regimen_alimentario') && (
               <>
                 <CampoOpcionUnica etiqueta={t.formulario.campos.regimenAlimentario} opciones={opciones('regimen', t)} valor={texto('regimen_alimentario')} onChange={(v) => fijar('regimen_alimentario', v)} columnas={2} />

@@ -55,8 +55,12 @@ aviso "Fechas, sede, correos y aviso de privacidad al día."
 
 # ---------------------------------------------------------------------
 paso "3 de 4 · Google Sheets"
+# Este paso no detiene al resto. La hoja es una copia de consulta: que falte
+# no es razón para dejar el servidor sin sus registros ni sin sus datos, que
+# es lo que pasaba cuando cualquier tropiezo aquí cortaba la secuencia.
+fallo_google=no
 if [ -f "$LLAVE" ]; then
-  bash "$RAIZ/guiones/servidor/conectar-google.sh" "$LLAVE" "$HOJA" || morir "conectar Google"
+  bash "$RAIZ/guiones/servidor/conectar-google.sh" "$LLAVE" "$HOJA" || fallo_google=sí
 elif grep -q '^GOOGLE_PRIVATE_KEY=' "$RAIZ/.env"; then
   aviso "Ya estaba conectado; no hay llave nueva que cargar."
 else
@@ -79,6 +83,10 @@ pendientes=$(sudo -u "$USUARIO" psql "$DATABASE_URL" -tAc \
   'select count(*) from registros where sheets_sincronizado_en is null' 2>/dev/null || echo '?')
 
 printf '\n\033[1m══ Listo\033[0m\n'
+if [ "$fallo_google" = "sí" ]; then
+  printf '   \033[33mGoogle Sheets no quedó conectado; lo de arriba dice por qué.\033[0m\n'
+  aviso "El resto sí se completó. Se puede reintentar sólo ese paso cuando quiera."
+fi
 aviso "Registros en la base: $cuantos"
 aviso "Pendientes de copiar a la hoja: $pendientes"
 printf '\n'

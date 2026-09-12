@@ -9,12 +9,21 @@ describe('pasos del formulario según el perfil', () => {
     expect(pasos).toEqual(['perfil', 'identificacion', 'conexion', 'cierre', 'privacidad']);
   });
 
-  it('el público general presencial añade la sala, pero no logística de invitado', () => {
+  it('al público general no se le preguntan requerimientos de sala', () => {
+    // Proyector y micrófono son de quien expone, no de quien viene a
+    // escuchar. La accesibilidad no está ahí: va en el cierre, que todos ven.
     const pasos = pasosVisibles(perfilPorClave('publico_general'), 'presencial');
-    expect(pasos).toContain('sala');
+    expect(pasos).not.toContain('sala');
     expect(pasos).not.toContain('documentacion');
     expect(pasos).not.toContain('alojamiento');
     expect(pasos).not.toContain('semblanza');
+    expect(pasos).toContain('cierre');
+  });
+
+  it('quien sale en el programa sí los ve, si asiste en persona', () => {
+    for (const clave of ['ponente', 'conferencista', 'coordinador', 'moderador', 'dictaminador'] as const) {
+      expect(pasosVisibles(perfilPorClave(clave), 'presencial'), clave).toContain('sala');
+    }
   });
 
   it('un ponente presencial recorre todas las secciones que le tocan', () => {
