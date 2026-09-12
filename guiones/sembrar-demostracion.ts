@@ -7,6 +7,10 @@
  *
  * Los registros llevan el folio marcado con DEMO, de modo que `--borrar` los
  * elimina sin tocar ningún registro real.
+ *
+ * Sembrar es repetible: antes de insertar barre los DEMO que hubiera. Si una
+ * corrida anterior se quedó a medias —y eso pasa— la siguiente no choca contra
+ * el folio ya usado, y al terminar hay exactamente la cantidad pedida.
  */
 import { armarInsercion, consultar } from '../src/lib/bd/conexion';
 import { PERFILES } from '../src/lib/perfiles';
@@ -131,14 +135,20 @@ function construir(indice: number) {
   };
 }
 
-async function borrar() {
+/** Quita los de demostración y devuelve cuántos eran. Nunca toca un registro real. */
+async function borrar(): Promise<number> {
   const borrados = await consultar<{ id: string }>(
     `delete from registros where folio like 'REG-DEMO-%' returning id`,
   );
-  console.log(`Eliminados ${borrados.length} registros de demostración.`);
+  return borrados.length;
 }
 
 async function sembrar(cantidad: number) {
+  const previos = await borrar();
+  if (previos > 0) {
+    console.log(`Se retiraron ${previos} registros de demostración anteriores.`);
+  }
+
   const filas = Array.from({ length: cantidad }, (_, i) => construir(i + 1));
 
   for (const [indice, fila] of filas.entries()) {
@@ -155,8 +165,9 @@ const argumento = process.argv[2] ?? '100';
 
 (async () => {
   try {
-    if (argumento === '--borrar') await borrar();
-    else await sembrar(Math.min(Math.max(Number(argumento) || 100, 1), 2000));
+    if (argumento === '--borrar') {
+      console.log(`Eliminados ${await borrar()} registros de demostración.`);
+    } else await sembrar(Math.min(Math.max(Number(argumento) || 100, 1), 2000));
   } catch (error) {
     console.error('Falló el sembrado:', error instanceof Error ? error.message : error);
     process.exit(1);
