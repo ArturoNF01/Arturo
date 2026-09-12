@@ -31,6 +31,26 @@ export const SEDE_MAPA_EMBED =
   '!2sConferencia%20Interamericana%20de%20Seguridad%20Social%20CISS!5e1!3m2!1ses!2smx' +
   '!4v1789188134782!5m2!1ses!2smx';
 
+/**
+ * Las fotografías de las instalaciones.
+ *
+ * Están numeradas de la 001 a la 200 en el sitio del CISS y se nombran solas,
+ * así que no hace falta listarlas una por una ni mantener un índice: se
+ * construyen las direcciones. Si alguna no existe, la galería la descarta al
+ * no poder cargarla, y nadie ve un hueco roto.
+ */
+export const GALERIA_BASE = 'https://ciss-bienestar.org/ciss2025/wp-content/uploads/2026/04';
+export const GALERIA_TOTAL = 200;
+
+export function fotoInstalaciones(numero: number): string {
+  return `${GALERIA_BASE}/CISS-${String(numero).padStart(3, '0')}.jpg`;
+}
+
+/** Las direcciones de las 200, en orden. */
+export const GALERIA: string[] = Array.from({ length: GALERIA_TOTAL }, (_, i) =>
+  fotoInstalaciones(i + 1),
+);
+
 export interface HitoCalendario {
   fecha: Record<Idioma, string>;
   hecho: Record<Idioma, string>;
@@ -98,6 +118,15 @@ export interface TextosLanding {
   sedeTitulo: string;
   sedeAyuda: string;
   verEnMapa: string;
+  galeriaTitulo: string;
+  galeriaAyuda: string;
+  galeriaVerTodas: string;
+  galeriaVerMas: string;
+  galeriaCerrar: string;
+  galeriaAnterior: string;
+  galeriaSiguiente: string;
+  galeriaFoto: (n: number) => string;
+  galeriaVacia: string;
   participarTitulo: string;
   participarAyuda: string;
   registrarse: string;
@@ -123,6 +152,15 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     sedeAyuda:
       'Las sesiones presenciales se celebran en la sede del CIESS, en la Ciudad de México. Quien participe en línea recibirá el enlace de conexión antes del congreso.',
     verEnMapa: 'Abrir en Google Maps',
+    galeriaTitulo: 'Nuestras instalaciones',
+    galeriaAyuda: 'El campus del CIESS en la Ciudad de México: aulas, auditorios, biblioteca y áreas comunes.',
+    galeriaVerTodas: 'Ver la galería',
+    galeriaVerMas: 'Ver más fotografías',
+    galeriaCerrar: 'Cerrar',
+    galeriaAnterior: 'Anterior',
+    galeriaSiguiente: 'Siguiente',
+    galeriaFoto: (n: number) => `Instalaciones del CIESS, fotografía ${n}`,
+    galeriaVacia: 'Las fotografías no están disponibles en este momento.',
     participarTitulo: 'Participe en el congreso',
     participarAyuda:
       'El registro está abierto para asistir, presencialmente en la Ciudad de México o en línea desde cualquier país.',
@@ -147,6 +185,15 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     sedeAyuda:
       'In-person sessions are held at the CIESS headquarters in Mexico City. Online participants will receive the connection link before the congress.',
     verEnMapa: 'Open in Google Maps',
+    galeriaTitulo: 'Our campus',
+    galeriaAyuda: 'The CIESS campus in Mexico City: lecture rooms, auditoriums, library and common areas.',
+    galeriaVerTodas: 'View the gallery',
+    galeriaVerMas: 'Show more photographs',
+    galeriaCerrar: 'Close',
+    galeriaAnterior: 'Previous',
+    galeriaSiguiente: 'Next',
+    galeriaFoto: (n: number) => `CIESS campus, photograph ${n}`,
+    galeriaVacia: 'The photographs are unavailable at the moment.',
     participarTitulo: 'Take part',
     participarAyuda:
       'Registration is open to attend, in person in Mexico City or online from anywhere.',
@@ -171,6 +218,15 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     sedeAyuda:
       'As sessões presenciais acontecem na sede do CIESS, na Cidade do México. Quem participar on-line receberá o link de conexão antes do congresso.',
     verEnMapa: 'Abrir no Google Maps',
+    galeriaTitulo: 'Nossas instalações',
+    galeriaAyuda: 'O campus do CIESS na Cidade do México: salas de aula, auditórios, biblioteca e áreas comuns.',
+    galeriaVerTodas: 'Ver a galeria',
+    galeriaVerMas: 'Ver mais fotografias',
+    galeriaCerrar: 'Fechar',
+    galeriaAnterior: 'Anterior',
+    galeriaSiguiente: 'Seguinte',
+    galeriaFoto: (n: number) => `Instalações do CIESS, fotografia ${n}`,
+    galeriaVacia: 'As fotografias não estão disponíveis no momento.',
     participarTitulo: 'Participe do congresso',
     participarAyuda:
       'As inscrições estão abertas para participar presencialmente na Cidade do México ou online de qualquer país.',

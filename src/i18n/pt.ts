@@ -10,7 +10,7 @@ export const pt: Diccionario = {
     riuss: 'RIUSS · Rede Interamericana de Universidades para a Seguridade Social',
   },
   nav: {
-    registro: 'Inscrição', faqs: 'Perguntas frequentes', privacidad: 'Aviso de privacidade',
+    registro: 'Inscrição', instalaciones: 'Instalações', faqs: 'Perguntas frequentes', privacidad: 'Aviso de privacidade',
     agenda: 'Agenda', panel: 'Painel', login: 'Entrar', salir: 'Sair', inicio: 'Início',
   },
   acciones: {
@@ -53,6 +53,8 @@ export const pt: Diccionario = {
     titulo: 'Inscrição de participantes',
     intro: 'Esta inscrição reúne as informações acadêmicas e logísticas necessárias para a elaboração do programa, dos identificadores de mesa, das apresentações biográficas, da reserva de hospedagem e da coordenação de traslados.',
     fechaLimite: 'Prazo final de inscrição',
+    limiteHoy: 'último dia',
+    limiteDias: (n: number) => (n === 1 ? 'falta 1 dia' : `faltam ${n} dias`),
     contacto: 'Dúvidas',
     paso: 'Etapa',
     de: 'de',

@@ -51,6 +51,24 @@ async function asegurarHojas(idLibro: string) {
   });
 }
 
+/**
+ * Pone un apóstrofo delante de lo que Sheets intentaría interpretar.
+ *
+ * Un teléfono «+52 55 …» entra como fórmula y la celda acaba en #ERROR!, que
+ * es lo que se veía. Los otros tres signos —=, - y @— abren el mismo camino,
+ * y ahí ya no es sólo un número mal puesto: son datos que escribe cualquiera
+ * desde el formulario público, y una celda que empieza por «=» se ejecuta al
+ * abrir la hoja. El apóstrofo no se guarda ni se ve: le dice a Sheets «esto
+ * es texto» y la celda muestra el número tal cual.
+ */
+const PELIGROSOS = /^[=+\-@]/;
+
+export function blindar(valor: string | number): string | number {
+  // Los números van como números: un cupo o un límite de palabras debe poder
+  // sumarse en la hoja.
+  return typeof valor === 'string' && PELIGROSOS.test(valor) ? `'${valor}` : valor;
+}
+
 /** Añade un registro a todas las pestañas que le corresponden. */
 export async function sincronizarRegistro(registro: Registro): Promise<void> {
   const idLibro = process.env.GOOGLE_SHEETS_ID;
@@ -68,9 +86,29 @@ export async function sincronizarRegistro(registro: Registro): Promise<void> {
       range: `${hoja}!A1`,
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
-      requestBody: { values: valores },
+      requestBody: { values: valores.map((fila) => fila.map(blindar)) },
     });
   }
+}
+
+/**
+ * Borra el contenido de todas las pestañas, dejando los encabezados.
+ *
+ * Hace falta cuando lo que cambia es *cómo* se escribe una celda —y no el
+ * registro— y hay que volver a volcarlo todo: reenviar sin más añadiría
+ * cien filas repetidas debajo de las cien que ya están.
+ */
+export async function vaciarHojas(): Promise<void> {
+  const idLibro = process.env.GOOGLE_SHEETS_ID;
+  if (!googleConfigurado() || !idLibro) throw new Error('Google Sheets no está configurado.');
+
+  await asegurarHojas(idLibro);
+  const sheets = clienteSheets();
+  await sheets.spreadsheets.values.batchClear({
+    spreadsheetId: idLibro,
+    // Desde la fila 2: la 1 lleva los encabezados y se queda.
+    requestBody: { ranges: Object.keys(HOJAS).map((hoja) => `${hoja}!A2:ZZ`) },
+  });
 }
 
 /**

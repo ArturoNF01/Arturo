@@ -17,7 +17,6 @@ export function PaginaFaqs({ urlAgenda, faqs }: { urlAgenda: string; faqs: Faq[]
         categoria: traducir(f.categoria, idioma),
         pregunta: traducir(f.pregunta, idioma),
         respuesta: traducir(f.respuesta, idioma),
-        provisional: f.provisional,
       })),
     [faqs, idioma],
   );
@@ -92,9 +91,6 @@ export function PaginaFaqs({ urlAgenda, faqs }: { urlAgenda: string; faqs: Faq[]
                         {abierta === p.id && (
                           <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: 'var(--borde)' }}>
                             <p className="text-sm leading-relaxed tenue">{p.respuesta}</p>
-                            {p.provisional && (
-                              <p className="mt-3 text-xs text-amber-500">{t.panel.agenda.provisional}</p>
-                            )}
                           </div>
                         )}
                       </article>

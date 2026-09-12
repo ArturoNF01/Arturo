@@ -14,6 +14,7 @@ export const es = {
   nav: {
     registro: 'Registro',
     faqs: 'Preguntas frecuentes',
+    instalaciones: 'Instalaciones',
     privacidad: 'Aviso de privacidad',
     agenda: 'Agenda',
     panel: 'Panel',
@@ -78,6 +79,8 @@ export const es = {
     titulo: 'Registro de participantes',
     intro: 'Este registro concentra la información académica y logística necesaria para la elaboración del programa, los personificadores, las semblanzas de presentación, la reserva de alojamiento y la coordinación de traslados.',
     fechaLimite: 'Fecha límite de registro',
+    limiteHoy: 'último día',
+    limiteDias: (n: number) => (n === 1 ? 'queda 1 día' : `quedan ${n} días`),
     contacto: 'Consultas',
     paso: 'Paso',
     de: 'de',

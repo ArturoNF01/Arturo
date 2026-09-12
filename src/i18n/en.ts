@@ -10,7 +10,8 @@ export const en: Diccionario = {
     riuss: 'RIUSS · Inter-American Network of Universities for Social Security',
   },
   nav: {
-    registro: 'Registration', faqs: 'FAQs', privacidad: 'Privacy notice', agenda: 'Agenda',
+    registro: 'Registration', instalaciones: 'Facilities', faqs: 'FAQs',
+    privacidad: 'Privacy notice', agenda: 'Agenda',
     panel: 'Dashboard', login: 'Sign in', salir: 'Sign out', inicio: 'Home',
   },
   acciones: {
@@ -53,6 +54,8 @@ export const en: Diccionario = {
     titulo: 'Participant registration',
     intro: 'This registration gathers the academic and logistical information required to prepare the programme, name plates, introductory biographies, hotel booking and transfer coordination.',
     fechaLimite: 'Registration deadline',
+    limiteHoy: 'last day',
+    limiteDias: (n: number) => (n === 1 ? '1 day left' : `${n} days left`),
     contacto: 'Enquiries',
     paso: 'Step',
     de: 'of',

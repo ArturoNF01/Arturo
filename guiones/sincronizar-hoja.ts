@@ -4,6 +4,7 @@
  *   npm run sincronizar             # todos los pendientes
  *   npm run sincronizar -- 20       # sólo los primeros 20
  *   npm run sincronizar -- --callado  # sin ruido si no había nada (cron)
+ *   npm run sincronizar -- --rehacer  # vacía la hoja y la escribe entera
  *
  * Hace lo mismo que el botón del panel, pero desde el servidor. Esa es la
  * razón de que exista: si el panel no abre, o la sesión caducó, la hoja se
@@ -31,7 +32,7 @@ async function principal() {
   // Se importan aquí, ya cargado el entorno: el módulo de la base abre la
   // conexión con lo que encuentre en el momento de cargarse.
   const { consultar } = await import('../src/lib/bd/conexion');
-  const { sincronizarRegistro } = await import('../src/lib/servidor/sheets');
+  const { sincronizarRegistro, vaciarHojas } = await import('../src/lib/servidor/sheets');
   const { googleConfigurado } = await import('../src/lib/servidor/google');
 
   const problema = faltante(googleConfigurado());
@@ -49,6 +50,14 @@ async function principal() {
 
   const numerico = process.argv.slice(2).find((a) => /^\d+$/.test(a));
   const tope = Math.min(Math.max(Number(numerico) || 500, 1), 5000);
+
+  // Volver a escribirlo todo: se vacía la hoja y se marcan los registros como
+  // no copiados. Sin vaciar antes, lo que saldría son las filas duplicadas.
+  if (process.argv.includes('--rehacer')) {
+    console.log('Vaciando la hoja para escribirla entera…');
+    await vaciarHojas();
+    await consultar('update registros set sheets_sincronizado_en = null, sheets_error = null');
+  }
   const pendientes = await consultar<Record<string, unknown> & { id: string; folio: string }>(
     `select * from registros
       where sheets_sincronizado_en is null

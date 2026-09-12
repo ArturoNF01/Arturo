@@ -69,6 +69,7 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
       ? [
           { href: '/', texto: t.nav.inicio },
           { href: '/registro', texto: t.nav.registro },
+          { href: '/instalaciones', texto: t.nav.instalaciones },
           { href: '/faqs', texto: t.nav.faqs },
           { href: '/aviso-privacidad', texto: t.nav.privacidad },
         ]
@@ -80,13 +81,11 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
       style={{ borderColor: 'var(--borde)', backgroundColor: 'color-mix(in srgb, var(--fondo) 88%, transparent)' }}
     >
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
-        <Link href="/" className="flex min-w-0 items-center gap-2.5">
-          <LogoCiess className="h-8 shrink-0 sm:h-10" />
-          <span className="min-w-0 border-l pl-2.5" style={{ borderColor: 'var(--borde)' }}>
-            <span className="block truncate text-sm font-semibold leading-tight">
-              {t.congreso.tituloCorto}
-            </span>
-          </span>
+        {/* Sólo los logos. El título del congreso estaba aquí cortado a
+            «1er Congreso de Estud…», que no dice nada, y encima repetía lo
+            primero que se lee en la portada. El hueco lo aprovecha el menú. */}
+        <Link href="/" className="shrink-0" aria-label={t.congreso.titulo}>
+          <LogoCiess className="h-9 sm:h-11" />
         </Link>
 
         <nav className="ml-auto hidden items-center gap-1 md:flex">
