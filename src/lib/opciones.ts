@@ -13,14 +13,16 @@ export const OPCIONES = {
     'conferencia_magistral', 'ponencia_mesa', 'moderacion_mesa', 'comite_cientifico',
     'comite_organizador', 'cartel', 'asistente', 'prensa',
   ],
-  documentacion: ['carta_visa', 'carta_ingles', 'oficio_institucion', 'constancia_anticipada', 'ninguna'],
-  autorizaciones: ['publicar_semblanza_foto', 'grabar_intervencion', 'publicar_memoria'],
+  // La documentación se pide distinta según de dónde venga cada quien: una
+  // carta para la visa mexicana no le sirve a nadie que viva en México.
+  documentacionExtranjero: ['carta_visa', 'boleto_vuelo', 'oficio_institucion', 'otra'],
+  documentacionNacional: ['oficio_institucion', 'otra'],
+  autorizaciones: ['publicar_semblanza', 'grabar_intervencion'],
   tecnicos: ['proyeccion', 'audio', 'video', 'internet', 'interpretacion', 'videoconferencia', 'ninguno'],
   alojamiento: ['si', 'no'],
-  habitacion: ['sencilla', 'doble_compartida', 'doble_uso_sencillo'],
   traslado: ['llegada_y_salida', 'solo_llegada', 'solo_salida', 'no'],
   medioArribo: ['aereo', 'terrestre', 'vehiculo_propio'],
-  regimen: ['sin_restriccion', 'vegetariano', 'vegano', 'sin_gluten', 'sin_lactosa'],
+  condicionAlimentaria: ['si', 'no'],
 } as const;
 
 export type GrupoOpciones = keyof typeof OPCIONES;

@@ -63,10 +63,19 @@ async function asegurarHojas(idLibro: string) {
  */
 const PELIGROSOS = /^[=+\-@]/;
 
+/**
+ * La única fórmula que sale de aquí: el enlace «Descargar» de los archivos
+ * en Drive. Se reconoce por su forma exacta, no por empezar con «=», para
+ * que una celda que alguien escriba imitándola siga siendo texto.
+ */
+const ENLACE_PROPIO = /^=HYPERLINK\("https:\/\/[^"]*";"[^"]*"\)$/;
+
 export function blindar(valor: string | number): string | number {
   // Los números van como números: un cupo o un límite de palabras debe poder
   // sumarse en la hoja.
-  return typeof valor === 'string' && PELIGROSOS.test(valor) ? `'${valor}` : valor;
+  if (typeof valor !== 'string') return valor;
+  if (ENLACE_PROPIO.test(valor)) return valor;
+  return PELIGROSOS.test(valor) ? `'${valor}` : valor;
 }
 
 /** Añade un registro a todas las pestañas que le corresponden. */

@@ -78,6 +78,18 @@ update faqs
          to_jsonb(replace(respuesta->>'es', 'el CIESS y la CISS', 'el CIESS y la RIUSS')))
  where respuesta->>'es' like '%el CIESS y la CISS%';
 
+-- Campos que dejaron de pedirse. Se quitan de verdad, no se dejan vacíos: una
+-- columna que nadie llena y nadie mira se convierte en una trampa para quien
+-- lea la tabla dentro de un año. Lo que hubiera dentro se pierde, y por eso
+-- el despliegue respalda la base antes de tocar nada.
+alter table registros drop column if exists semblanza_palabras;
+alter table registros drop column if exists semblanza;
+alter table registros drop column if exists linea_investigacion;
+alter table registros drop column if exists nombre_personificador;
+alter table registros drop column if exists tipo_habitacion;
+alter table registros drop column if exists comparte_habitacion_con;
+alter table registros drop column if exists alergias;
+
 commit;
 
 select clave, valor from configuracion

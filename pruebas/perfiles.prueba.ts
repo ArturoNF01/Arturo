@@ -27,10 +27,35 @@ describe('pasos del formulario según el perfil', () => {
   });
 
   it('un ponente presencial recorre todas las secciones que le tocan', () => {
+    // Sin traslados: ese servicio es sólo para quien da una conferencia.
     expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).toEqual([
       'perfil', 'identificacion', 'ponencia', 'semblanza', 'documentacion',
-      'sala', 'alojamiento', 'traslados', 'cierre', 'privacidad',
+      'sala', 'alojamiento', 'estacionamiento', 'cierre', 'privacidad',
     ]);
+  });
+
+  it('el traslado lo recibe quien da una conferencia, nadie más', () => {
+    expect(pasosVisibles(perfilPorClave('conferencista'), 'presencial')).toContain('traslados');
+    for (const clave of ['ponente', 'coordinador', 'moderador', 'publico_general']) {
+      expect(pasosVisibles(perfilPorClave(clave), 'presencial'), clave).not.toContain('traslados');
+    }
+  });
+
+  it('quien viene en persona pasa por estacionamiento, exponga o no', () => {
+    for (const clave of ['ponente', 'conferencista', 'dictaminador', 'publico_general']) {
+      expect(pasosVisibles(perfilPorClave(clave), 'presencial'), clave).toContain('estacionamiento');
+    }
+  });
+
+  it('nada de la sede le aparece a quien participa en línea', () => {
+    // Sala, hotel, traslados, comida y estacionamiento sobran si no se viene.
+    for (const clave of ['ponente', 'conferencista', 'coordinador', 'moderador', 'dictaminador', 'publico_general']) {
+      const pasos = pasosVisibles(perfilPorClave(clave), 'en_linea');
+      for (const paso of ['sala', 'alojamiento', 'traslados', 'estacionamiento', 'documentacion']) {
+        expect(pasos, `${clave} · ${paso}`).not.toContain(paso);
+      }
+      expect(campoVisible('regimen_alimentario', perfilPorClave(clave), 'en_linea'), clave).toBe(false);
+    }
   });
 
   it('quien participa a distancia cambia la logística de sede por la de conexión', () => {
@@ -87,10 +112,12 @@ describe('pasos del formulario según el perfil', () => {
 });
 
 describe('visibilidad de campos', () => {
-  it('el personificador es el letrero de la mesa: sólo para quien se sienta en ella', () => {
-    expect(campoVisible('nombre_personificador', perfilPorClave('ponente'), 'presencial')).toBe(true);
-    expect(campoVisible('nombre_personificador', perfilPorClave('ponente'), 'en_linea')).toBe(false);
-    expect(campoVisible('nombre_personificador', perfilPorClave('publico_general'), 'presencial')).toBe(false);
+  it('la fotografía se le pide a quien preside o da una charla, a nadie más', () => {
+    expect(campoVisible('foto', perfilPorClave('conferencista'), 'presencial')).toBe(true);
+    expect(campoVisible('foto', perfilPorClave('moderador'), 'presencial')).toBe(true);
+    for (const clave of ['ponente', 'coordinador', 'dictaminador', 'publico_general']) {
+      expect(campoVisible('foto', perfilPorClave(clave), 'presencial'), clave).toBe(false);
+    }
   });
 
   it('el régimen alimentario sólo aplica a quien asiste en persona', () => {
@@ -116,10 +143,14 @@ describe('visibilidad de campos', () => {
     expect(campoVisible('prueba_conexion', perfilPorClave('publico_general'), 'en_linea')).toBe(false);
   });
 
-  it('los viáticos son sólo para invitados que viajan', () => {
-    expect(campoVisible('datos_viatico', perfilPorClave('conferencista'), 'presencial')).toBe(true);
-    expect(campoVisible('datos_viatico', perfilPorClave('dictaminador'), 'presencial')).toBe(false);
-    expect(campoVisible('datos_viatico', perfilPorClave('conferencista'), 'en_linea')).toBe(false);
+  it('el apoyo de traslado es para quien viene por su cuenta, no para los invitados', () => {
+    // A quien invita el CIESS ya le resuelve el viaje; el apoyo existe para
+    // quien paga el suyo.
+    expect(campoVisible('datos_viatico', perfilPorClave('publico_general'), 'presencial')).toBe(true);
+    expect(campoVisible('datos_viatico', perfilPorClave('publico_general'), 'en_linea')).toBe(false);
+    for (const clave of ['conferencista', 'ponente', 'dictaminador']) {
+      expect(campoVisible('datos_viatico', perfilPorClave(clave), 'presencial'), clave).toBe(false);
+    }
   });
 });
 

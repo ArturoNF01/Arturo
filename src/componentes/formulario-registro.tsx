@@ -8,7 +8,7 @@ import {
   CampoCasillas, CampoInterruptor, CampoOpcionUnica, CampoParrafo,
   CampoSeleccion, CampoTexto,
 } from './campos';
-import { SubidaFotografia } from './subida-fotografia';
+import { SubidaArchivo } from './subida-archivo';
 import {
   PERFILES, campoVisible, pasosVisibles, perfilPorClave,
   type ClavePerfil, type Modalidad, type PasoFormulario,
@@ -23,21 +23,23 @@ type Valores = Record<string, string | boolean | string[]>;
 
 const VALORES_INICIALES: Valores = {
   perfil: '', modalidad: 'presencial',
-  apellidos: '', nombres: '', nombre_personificador: '', nombre_constancia: '', genero: '',
+  apellidos: '', nombres: '', nombre_constancia: '', genero: '',
   correo: '', telefono_whatsapp: '', institucion: '', cargo: '', procedencia: '',
   pais_residencia: '', entidad_federativa: '', ciudad_residencia: '', nacionalidad: '', orcid: '',
-  modalidad_participacion: '', eje_tematico: '', titulo_ponencia: '', resumen_ponencia: '',
+  modalidad_participacion: '', titulo_ponencia: '', resumen_ponencia: '',
   palabras_clave: '', coautoria: '',
-  semblanza: '', linea_investigacion: '', foto_url: '', foto_drive_id: '',
-  documentacion_solicitada: [], nombre_pasaporte: '', destinatario_oficio: '', autorizaciones: [],
+  semblanza_url: '', semblanza_drive_id: '', foto_url: '', foto_drive_id: '',
+  documentacion_solicitada: [], nombre_pasaporte: '', destinatario_oficio: '',
+  documentacion_otra: '', boleto_url: '', boleto_drive_id: '', autorizaciones: [],
   requerimientos_tecnicos: [], requerimientos_accesibilidad: '',
+  placa_vehiculo: '', modelo_vehiculo: '', color_vehiculo: '',
   requiere_alojamiento: false, fecha_entrada_hotel: '', fecha_salida_hotel: '',
-  tipo_habitacion: '', comparte_habitacion_con: '',
   requiere_traslado: 'no', _alojamiento: '', medio_arribo: '', ciudad_origen: '', terminal_origen: '',
   fecha_llegada: '', hora_llegada: '', aerolinea_llegada: '', vuelo_llegada: '',
   fecha_salida: '', hora_salida: '', aerolinea_salida: '', vuelo_salida: '',
   observaciones_traslado: '',
-  regimen_alimentario: '', alergias: '', contacto_emergencia: '',
+  regimen_alimentario: '', condicion_alimentaria: false, condicion_alimentaria_detalle: '',
+  _condicion_alimentaria: '', contacto_emergencia: '',
   apoyo_traslado: false, datos_viatico: '', requiere_factura: false, datos_facturacion: '',
   comentarios: '',
   consentimiento_datos: false, consentimiento_comunicaciones: false,
@@ -106,6 +108,11 @@ export function FormularioRegistro({
   const lista = (clave: string) => (valores[clave] as string[]) ?? [];
   const visible = (clave: string) => campoVisible(clave, perfil, modalidad);
 
+  // Quien reside fuera de México necesita otra documentación. El dato se
+  // tomó en identificación; aquí sólo se lee.
+  const esExtranjero = texto('procedencia') === 'internacional';
+  const pidio = (opcion: string) => lista('documentacion_solicitada').includes(opcion);
+
   function validarPaso(paso: PasoFormulario): boolean {
     const nuevos: Record<string, string> = {};
     const obligatorio = (clave: string) => {
@@ -122,13 +129,12 @@ export function FormularioRegistro({
       if (texto('orcid') && !/^\d{4}-\d{4}-\d{4}-\d{3}[\dXx]$/.test(texto('orcid'))) {
         nuevos.orcid = t.formulario.validacion.orcid;
       }
-      if (perfil?.enPrograma && valores.modalidad === 'presencial') obligatorio('nombre_personificador');
     }
 
-    if (paso === 'semblanza' && texto('semblanza').length > congreso.limite_semblanza_caracteres) {
-      nuevos.semblanza = interpolar(t.formulario.validacion.semblanzaLarga, {
-        max: congreso.limite_semblanza_caracteres,
-      });
+    // El archivo se exige aquí y no al enviar: quien llega al final y se
+    // entera de que le falta un PDF tiene que volver siete pasos atrás.
+    if (paso === 'semblanza' && perfil?.enPrograma && !texto('semblanza_url')) {
+      nuevos.semblanza_url = t.formulario.validacion.requerido;
     }
     if (paso === 'ponencia' && texto('resumen_ponencia').length > congreso.limite_resumen_caracteres) {
       nuevos.resumen_ponencia = interpolar(t.formulario.validacion.resumenLargo, {
@@ -235,9 +241,6 @@ export function FormularioRegistro({
               <CampoTexto campo="apellidos" etiqueta={t.formulario.campos.apellidos} requerido valor={texto('apellidos')} onChange={(v) => fijar('apellidos', v)} error={errores.apellidos} />
               <CampoTexto campo="nombres" etiqueta={t.formulario.campos.nombres} requerido valor={texto('nombres')} onChange={(v) => fijar('nombres', v)} error={errores.nombres} />
             </div>
-            {visible('nombre_personificador') && (
-              <CampoTexto campo="nombre_personificador" etiqueta={t.formulario.campos.nombrePersonificador} ayuda={t.formulario.campos.nombrePersonificadorAyuda} requerido valor={texto('nombre_personificador')} onChange={(v) => fijar('nombre_personificador', v)} error={errores.nombre_personificador} />
-            )}
             {visible('nombre_constancia') && (
               <CampoTexto campo="nombre_constancia" etiqueta={t.formulario.campos.nombreConstancia} ayuda={t.formulario.campos.nombreConstanciaAyuda} valor={texto('nombre_constancia')} onChange={(v) => fijar('nombre_constancia', v)} />
             )}
@@ -274,11 +277,10 @@ export function FormularioRegistro({
             {/* La convocatoria ya cerró y el comité dictaminó: aquí no se
                 propone nada, se confirma cómo debe salir en el programa. */}
             <Cabecera titulo={t.formulario.secciones.ponencia} ayuda={t.formulario.secciones.ponenciaAyuda} />
-            <CampoSeleccion etiqueta={t.formulario.campos.ejeTematico} opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valor={texto('eje_tematico')} onChange={(v) => fijar('eje_tematico', v)} error={errores.eje_tematico} />
             <CampoTexto campo="titulo_ponencia" etiqueta={t.formulario.campos.tituloPonencia} ayuda={t.formulario.campos.tituloPonenciaAyuda} valor={texto('titulo_ponencia')} onChange={(v) => fijar('titulo_ponencia', v)} error={errores.titulo_ponencia} />
             <CampoOpcionUnica etiqueta={t.formulario.campos.idiomaPonencia} ayuda={t.formulario.campos.idiomaPonenciaAyuda} opciones={[{ valor: 'es', etiqueta: 'Español' }, { valor: 'pt', etiqueta: 'Português' }, { valor: 'en', etiqueta: 'English' }]} valor={texto('idioma_ponencia')} onChange={(v) => fijar('idioma_ponencia', v)} columnas={2} />
             <CampoParrafo campo="coautoria" etiqueta={t.formulario.campos.coautoria} ayuda={t.formulario.campos.coautoriaAyuda} filas={3} valor={texto('coautoria')} onChange={(v) => fijar('coautoria', v)} />
-            <CampoInterruptor etiqueta={t.formulario.campos.autorizaPublicacion} ayuda={t.formulario.campos.autorizaPublicacionAyuda} valor={Boolean(valores.autoriza_publicacion)} onChange={(v) => fijar('autoriza_publicacion', v)} />
+            <CampoInterruptor etiqueta={t.formulario.campos.autorizaPublicacion} valor={Boolean(valores.autoriza_publicacion)} onChange={(v) => fijar('autoriza_publicacion', v)} />
           </section>
         )}
 
@@ -318,32 +320,30 @@ export function FormularioRegistro({
         {pasoActual === 'semblanza' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.semblanza} ayuda={t.formulario.secciones.semblanzaAyuda} />
-            <CampoParrafo campo="semblanza"
-              etiqueta={t.formulario.campos.semblanza}
-              ayuda={interpolar(t.formulario.campos.semblanzaAyuda, {
-                palabras: congreso.limite_semblanza_palabras,
-                caracteres: congreso.limite_semblanza_caracteres,
-              })}
-              filas={6}
-              maximo={congreso.limite_semblanza_caracteres}
-              contador
-              textoContador={`${interpolar(t.formulario.validacion.semblanzaPalabras, {
-                n: texto('semblanza').trim() ? texto('semblanza').trim().split(/\s+/).length : 0,
-                max: congreso.limite_semblanza_palabras,
-              })} · ${interpolar(t.formulario.validacion.caracteres, {
-                n: texto('semblanza').length, max: congreso.limite_semblanza_caracteres,
-              })}`}
-              valor={texto('semblanza')}
-              onChange={(v) => fijar('semblanza', v)}
-              error={errores.semblanza}
-            />
-            <CampoTexto campo="linea_investigacion" etiqueta={t.formulario.campos.lineaInvestigacion} valor={texto('linea_investigacion')} onChange={(v) => fijar('linea_investigacion', v)} />
-            <SubidaFotografia
+            {/* La semblanza ya no se redacta aquí: se adjunta. Quien la
+                escribe suele tenerla hecha desde hace años, y un cuadro de
+                texto con límite de palabras obligaba a recortarla a mano. */}
+            <SubidaArchivo
+              destino="semblanza"
+              etiqueta={t.formulario.campos.semblanzaArchivo}
+              ayuda={interpolar(t.formulario.campos.semblanzaArchivoAyuda, { mb: congreso.foto_megabytes_maximo })}
               megabytesMaximo={congreso.foto_megabytes_maximo}
-              valorUrl={texto('foto_url')}
-              onSubida={(url, id) => { fijar('foto_url', url); fijar('foto_drive_id', id); }}
-              onQuitar={() => { fijar('foto_url', ''); fijar('foto_drive_id', ''); }}
+              valorUrl={texto('semblanza_url')}
+              error={errores.semblanza_url}
+              onSubida={(url, id) => { fijar('semblanza_url', url); fijar('semblanza_drive_id', id); }}
+              onQuitar={() => { fijar('semblanza_url', ''); fijar('semblanza_drive_id', ''); }}
             />
+            {visible('foto') && (
+              <SubidaArchivo
+                destino="fotografia"
+                etiqueta={t.formulario.campos.foto}
+                ayuda={interpolar(t.formulario.campos.fotoAyuda, { mb: congreso.foto_megabytes_maximo })}
+                megabytesMaximo={congreso.foto_megabytes_maximo}
+                valorUrl={texto('foto_url')}
+                onSubida={(url, id) => { fijar('foto_url', url); fijar('foto_drive_id', id); }}
+                onQuitar={() => { fijar('foto_url', ''); fijar('foto_drive_id', ''); }}
+              />
+            )}
             <CampoCasillas etiqueta={t.formulario.campos.autorizaciones} opciones={opciones('autorizaciones', t)} valores={lista('autorizaciones')} onChange={(v) => fijar('autorizaciones', v)} />
           </section>
         )}
@@ -351,15 +351,52 @@ export function FormularioRegistro({
         {pasoActual === 'documentacion' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.documentacion} ayuda={t.formulario.secciones.documentacionAyuda} />
-            <CampoCasillas etiqueta={t.formulario.campos.documentacionSolicitada} opciones={opciones('documentacion', t)} valores={lista('documentacion_solicitada')} onChange={(v) => fijar('documentacion_solicitada', v)} />
-            <CampoTexto campo="nombre_pasaporte" etiqueta={t.formulario.campos.nombrePasaporte} ayuda={t.formulario.campos.nombrePasaporteAyuda} valor={texto('nombre_pasaporte')} onChange={(v) => fijar('nombre_pasaporte', v)} />
-            <CampoParrafo campo="destinatario_oficio" etiqueta={t.formulario.campos.destinatarioOficio} ayuda={t.formulario.campos.destinatarioOficioAyuda} filas={3} valor={texto('destinatario_oficio')} onChange={(v) => fijar('destinatario_oficio', v)} />
+            {/* Lo que se puede pedir depende de dónde resida: una carta para
+                la visa mexicana no le sirve a quien ya vive en México. El
+                dato se tomó en la sección de identificación. */}
+            <CampoCasillas
+              etiqueta={t.formulario.campos.documentacionSolicitada}
+              opciones={opciones(esExtranjero ? 'documentacionExtranjero' : 'documentacionNacional', t)}
+              valores={lista('documentacion_solicitada')}
+              onChange={(v) => fijar('documentacion_solicitada', v)}
+            />
+
+            {pidio('carta_visa') && (
+              <CampoTexto campo="nombre_pasaporte" etiqueta={t.formulario.campos.nombrePasaporte} ayuda={t.formulario.campos.nombrePasaporteAyuda} valor={texto('nombre_pasaporte')} onChange={(v) => fijar('nombre_pasaporte', v)} />
+            )}
+
+            {pidio('boleto_vuelo') && (
+              <SubidaArchivo
+                destino="boleto"
+                etiqueta={t.formulario.campos.boletoVuelo}
+                ayuda={interpolar(t.formulario.campos.boletoVueloAyuda, { mb: congreso.foto_megabytes_maximo })}
+                megabytesMaximo={congreso.foto_megabytes_maximo}
+                valorUrl={texto('boleto_url')}
+                onSubida={(url, id) => { fijar('boleto_url', url); fijar('boleto_drive_id', id); }}
+                onQuitar={() => { fijar('boleto_url', ''); fijar('boleto_drive_id', ''); }}
+              />
+            )}
+
+            {pidio('oficio_institucion') && (
+              <CampoParrafo campo="destinatario_oficio" etiqueta={t.formulario.campos.destinatarioOficio} ayuda={t.formulario.campos.destinatarioOficioAyuda} filas={3} valor={texto('destinatario_oficio')} onChange={(v) => fijar('destinatario_oficio', v)} />
+            )}
+
+            {pidio('otra') && (
+              <CampoTexto campo="documentacion_otra" etiqueta={t.formulario.campos.documentacionOtra} valor={texto('documentacion_otra')} onChange={(v) => fijar('documentacion_otra', v)} />
+            )}
           </section>
         )}
 
         {pasoActual === 'sala' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.sala} />
+            {/* Quince minutos condicionan lo que cabe en una ponencia. Se dice
+                aquí, donde se piden los apoyos, y no en un correo posterior. */}
+            {perfil?.presentaPonencia && (
+              <p className="rounded-lg border-l-4 border-ciess-500 py-2 pl-4 text-sm font-medium">
+                {t.formulario.secciones.salaNotaPonente}
+              </p>
+            )}
             <CampoCasillas etiqueta={t.formulario.campos.requerimientosTecnicos} opciones={opciones('tecnicos', t)} valores={lista('requerimientos_tecnicos')} onChange={(v) => fijar('requerimientos_tecnicos', v)} />
           </section>
         )}
@@ -377,14 +414,10 @@ export function FormularioRegistro({
               }}
             />
             {valores.requiere_alojamiento && (
-              <>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <CampoTexto campo="fecha_entrada_hotel" etiqueta={t.formulario.campos.fechaEntradaHotel} tipo="date" valor={texto('fecha_entrada_hotel')} onChange={(v) => fijar('fecha_entrada_hotel', v)} />
-                  <CampoTexto campo="fecha_salida_hotel" etiqueta={t.formulario.campos.fechaSalidaHotel} tipo="date" valor={texto('fecha_salida_hotel')} onChange={(v) => fijar('fecha_salida_hotel', v)} error={errores.fecha_salida_hotel} />
-                </div>
-                <CampoSeleccion etiqueta={t.formulario.campos.tipoHabitacion} opciones={opciones('habitacion', t)} valor={texto('tipo_habitacion')} onChange={(v) => fijar('tipo_habitacion', v)} />
-                <CampoTexto campo="comparte_habitacion_con" etiqueta={t.formulario.campos.comparteCon} valor={texto('comparte_habitacion_con')} onChange={(v) => fijar('comparte_habitacion_con', v)} />
-              </>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <CampoTexto campo="fecha_entrada_hotel" etiqueta={t.formulario.campos.fechaEntradaHotel} tipo="date" valor={texto('fecha_entrada_hotel')} onChange={(v) => fijar('fecha_entrada_hotel', v)} />
+                <CampoTexto campo="fecha_salida_hotel" etiqueta={t.formulario.campos.fechaSalidaHotel} tipo="date" valor={texto('fecha_salida_hotel')} onChange={(v) => fijar('fecha_salida_hotel', v)} error={errores.fecha_salida_hotel} />
+              </div>
             )}
           </section>
         )}
@@ -418,14 +451,43 @@ export function FormularioRegistro({
           </section>
         )}
 
+        {pasoActual === 'estacionamiento' && (
+          <section className="space-y-5">
+            <Cabecera titulo={t.formulario.secciones.estacionamiento} ayuda={t.formulario.secciones.estacionamientoAyuda} />
+            <div className="grid gap-5 sm:grid-cols-3">
+              <CampoTexto campo="placa_vehiculo" etiqueta={t.formulario.campos.placa} valor={texto('placa_vehiculo')} onChange={(v) => fijar('placa_vehiculo', v)} />
+              <CampoTexto campo="modelo_vehiculo" etiqueta={t.formulario.campos.modeloAuto} valor={texto('modelo_vehiculo')} onChange={(v) => fijar('modelo_vehiculo', v)} />
+              <CampoTexto campo="color_vehiculo" etiqueta={t.formulario.campos.colorAuto} valor={texto('color_vehiculo')} onChange={(v) => fijar('color_vehiculo', v)} />
+            </div>
+            {/* La accesibilidad vive aquí porque es lo mismo que se resuelve
+                al llegar: el lugar donde se deja el coche y el camino desde
+                ahí hasta la sala. */}
+            <CampoParrafo campo="requerimientos_accesibilidad" etiqueta={t.formulario.campos.accesibilidad} ayuda={t.formulario.campos.accesibilidadAyuda} filas={3} valor={texto('requerimientos_accesibilidad')} onChange={(v) => fijar('requerimientos_accesibilidad', v)} />
+          </section>
+        )}
+
         {pasoActual === 'cierre' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.cierre} />
-            <CampoParrafo campo="requerimientos_accesibilidad" etiqueta={t.formulario.campos.accesibilidad} ayuda={t.formulario.campos.accesibilidadAyuda} filas={3} valor={texto('requerimientos_accesibilidad')} onChange={(v) => fijar('requerimientos_accesibilidad', v)} />
             {visible('regimen_alimentario') && (
               <>
-                <CampoOpcionUnica etiqueta={t.formulario.campos.regimenAlimentario} opciones={opciones('regimen', t)} valor={texto('regimen_alimentario')} onChange={(v) => fijar('regimen_alimentario', v)} columnas={2} />
-                <CampoParrafo campo="alergias" etiqueta={t.formulario.campos.alergias} ayuda={t.formulario.campos.alergiasAyuda} filas={2} valor={texto('alergias')} onChange={(v) => fijar('alergias', v)} />
+                {/* Sin lista cerrada: las dietas reales no caben en cinco
+                    casillas, y quien no tiene ninguna deja el campo vacío. */}
+                <CampoTexto campo="regimen_alimentario" etiqueta={t.formulario.campos.regimenAlimentario} ayuda={t.formulario.campos.regimenAlimentarioAyuda} valor={texto('regimen_alimentario')} onChange={(v) => fijar('regimen_alimentario', v)} />
+                <CampoOpcionUnica
+                  etiqueta={t.formulario.campos.condicionAlimentaria}
+                  opciones={opciones('condicionAlimentaria', t)}
+                  valor={texto('_condicion_alimentaria')}
+                  onChange={(v) => {
+                    fijar('_condicion_alimentaria', v);
+                    fijar('condicion_alimentaria', v === 'si');
+                    if (v !== 'si') fijar('condicion_alimentaria_detalle', '');
+                  }}
+                  columnas={2}
+                />
+                {Boolean(valores.condicion_alimentaria) && (
+                  <CampoParrafo campo="condicion_alimentaria_detalle" etiqueta={t.formulario.campos.condicionAlimentariaDetalle} ayuda={t.formulario.campos.condicionAlimentariaDetalleAyuda} filas={2} valor={texto('condicion_alimentaria_detalle')} onChange={(v) => fijar('condicion_alimentaria_detalle', v)} />
+                )}
               </>
             )}
             {visible('contacto_emergencia') && (

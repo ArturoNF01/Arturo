@@ -148,7 +148,6 @@ create table if not exists registros (
   -- 1. Identificación
   apellidos                   text not null,
   nombres                     text not null,
-  nombre_personificador       text,
   nombre_constancia           text,
   genero                      text,
   correo                      text not null,
@@ -170,13 +169,7 @@ create table if not exists registros (
   palabras_clave              text,
   coautoria                   text,
 
-  -- 3. Semblanza
-  semblanza                   text,
-  semblanza_palabras          int generated always as (
-                                case when semblanza is null or btrim(semblanza) = '' then 0
-                                     else array_length(regexp_split_to_array(btrim(regexp_replace(semblanza, '\s+', ' ', 'g')), ' '), 1)
-                                end) stored,
-  linea_investigacion         text,
+  -- 3. Semblanza y fotografía: los dos se adjuntan y viven en Drive.
   foto_url                    text,
   foto_drive_id               text,
 
@@ -194,8 +187,6 @@ create table if not exists registros (
   requiere_alojamiento        boolean not null default false,
   fecha_entrada_hotel         date,
   fecha_salida_hotel          date,
-  tipo_habitacion             text,
-  comparte_habitacion_con     text,
 
   -- 6. Traslados
   requiere_traslado           text default 'No',
@@ -216,7 +207,6 @@ create table if not exists registros (
 
   -- 7. Alimentación, facturación y cierre
   regimen_alimentario         text,
-  alergias                    text,
   contacto_emergencia         text,
   apoyo_traslado              boolean default false,
   datos_viatico               text,
@@ -250,6 +240,28 @@ alter table registros add column if not exists zona_horaria        text;
 -- Los correos institucionales rebotan o filtran; con el congreso encima, un
 -- correo que no llega es una baja.
 alter table registros add column if not exists correo_alterno      text;
+
+-- La semblanza pasó de redactarse en el formulario a adjuntarse en PDF, y la
+-- fotografía sólo se le pide a quien preside o da una charla. El boleto de
+-- vuelo lo suben quienes vienen del extranjero. Los tres viven en Drive; aquí
+-- sólo queda el enlace y el identificador con el que se puede volver a él.
+alter table registros add column if not exists semblanza_url      text;
+alter table registros add column if not exists semblanza_drive_id text;
+alter table registros add column if not exists boleto_url         text;
+alter table registros add column if not exists boleto_drive_id    text;
+
+-- Documentación: la opción «Otra» abre un campo libre.
+alter table registros add column if not exists documentacion_otra text;
+
+-- Estacionamiento, para quien llega en coche.
+alter table registros add column if not exists placa_vehiculo     text;
+alter table registros add column if not exists modelo_vehiculo    text;
+alter table registros add column if not exists color_vehiculo     text;
+
+-- El régimen alimentario dejó de ser una lista cerrada; las alergias y demás
+-- condiciones se recogen en un campo aparte, con su sí o no.
+alter table registros add column if not exists condicion_alimentaria         boolean not null default false;
+alter table registros add column if not exists condicion_alimentaria_detalle text;
 -- El congreso es trilingüe: hay que saber en qué idioma se presenta cada
 -- trabajo y si hace falta interpretación.
 alter table registros add column if not exists idioma_ponencia     text;
@@ -823,7 +835,7 @@ select
 -- ### Dictamen ponencias ########################################
 
 -- =====================================================================
--- Dictaminación de ponencias por el comité científico.
+-- Dictaminación de ponencias por el comité dictaminador.
 --
 -- El dictamen vive en el propio registro: una ponencia pertenece a quien
 -- se inscribió, y separarla en otra tabla obligaría a mantener dos
@@ -852,7 +864,7 @@ select
   r.id, r.folio, r.creado_en, r.nombres, r.apellidos, r.correo, r.institucion,
   r.pais_residencia, r.perfil, r.idioma, r.estado, r.modalidad_participacion,
   r.eje_tematico, r.titulo_ponencia, r.resumen_ponencia, r.palabras_clave,
-  r.coautoria, r.semblanza, r.semblanza_palabras,
+  r.coautoria, r.semblanza_url,
   r.estado_ponencia, r.dictamen_comentarios, r.dictamen_en,
   u.correo as dictamen_por_correo
 from registros r

@@ -10,7 +10,6 @@ import { aplicarFiltros, useRegistros, FILTROS_VACIOS, type Filtros, type Regist
 import { contarPor, regresionLineal } from '@/lib/graficas';
 import { codigoPais } from '@/lib/paises';
 import { traducir } from '@/lib/contenido';
-import { etiquetaDe } from '@/lib/opciones';
 import { useContenidoPanel } from './contexto-panel';
 import { nombrePerfil } from '@/lib/perfiles';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
@@ -71,13 +70,17 @@ export function Dashboard({
     () => contarPor(activos.filter((r) => r.eje_tematico), (r) => r.eje_tematico, nombreEje, { maximo: 8 }),
     [activos, nombreEje],
   );
+  // El régimen alimentario dejó de ser una lista cerrada: se agrupa por lo
+  // que cada quien escribió, normalizado en minúsculas para que «Vegano» y
+  // «vegano» no salgan como dos barras distintas.
   const porRegimen = useMemo(
     () => contarPor(
       activos.filter((r) => r.regimen_alimentario),
-      (r) => r.regimen_alimentario,
-      (v) => etiquetaDe('regimen', v, t),
+      (r) => String(r.regimen_alimentario).trim().toLowerCase(),
+      (v) => v.replace(/^./, (c) => c.toUpperCase()),
+      { maximo: 8 },
     ),
-    [activos, t],
+    [activos],
   );
 
   const conteoMapa = useMemo(() => {

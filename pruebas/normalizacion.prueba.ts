@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contarPalabras, filasDeRegistro, horaPresentacion } from '@/lib/normalizacion';
-import { HOJAS } from '@/lib/normalizacion';
+import { HOJAS, contarPalabras, filasDeRegistro, horaPresentacion } from '@/lib/normalizacion';
 
 /** Registro mínimo con los valores canónicos que guarda el formulario. */
 function registro(extra: Record<string, unknown> = {}) {
@@ -120,7 +119,7 @@ describe('filasDeRegistro', () => {
         fecha_salida_hotel: '2026-06-04',
       }),
     ).ALO_Alojamiento;
-    expect(fila[8]).toBe('3');
+    expect(fila[7]).toBe('3');
   });
 
   it('genera dos movimientos de traslado en llegada y salida', () => {
@@ -160,22 +159,50 @@ describe('filasDeRegistro', () => {
     expect(filas.PSE_Personificadores_Semblanzas).toBeUndefined();
   });
 
-  it('cuenta las palabras de la semblanza en la pestaña de personificadores', () => {
+  it('la semblanza y la foto llegan como enlace de descarga, no como dirección', () => {
     const [fila] = filasDeRegistro(
-      registro({ semblanza: 'Investigadora en seguridad social y políticas de cuidado.' }),
+      registro({
+        semblanza_url: 'https://drive.google.com/file/d/abc/view',
+        foto_url: 'https://drive.google.com/file/d/xyz/view',
+      }),
     ).PSE_Personificadores_Semblanzas;
-    expect(fila[11]).toBe(8);
-    expect(fila[12]).toBe(60);
+    expect(fila[7]).toBe('=HYPERLINK("https://drive.google.com/file/d/xyz/view";"Descargar")');
+    expect(fila[8]).toBe('=HYPERLINK("https://drive.google.com/file/d/abc/view";"Descargar")');
+  });
+
+  it('sin archivos, esas celdas quedan vacías en vez de con una fórmula rota', () => {
+    const [fila] = filasDeRegistro(registro({})).PSE_Personificadores_Semblanzas;
+    expect(fila[7]).toBe('');
+    expect(fila[8]).toBe('');
   });
 
   it('registra restricciones alimentarias sólo cuando existen', () => {
-    expect(filasDeRegistro(registro({ regimen_alimentario: 'sin_restriccion' })).ALI_Restricciones)
+    // El régimen es texto libre: no hay un «sin_restriccion» que descartar,
+    // hay un campo vacío.
+    expect(filasDeRegistro(registro({ regimen_alimentario: '' })).ALI_Restricciones)
       .toBeUndefined();
-    expect(filasDeRegistro(registro({ regimen_alimentario: 'vegano' })).ALI_Restricciones)
+    expect(filasDeRegistro(registro({ regimen_alimentario: 'Vegano' })).ALI_Restricciones)
       .toBeDefined();
     expect(
-      filasDeRegistro(registro({ regimen_alimentario: 'sin_restriccion', alergias: 'Mariscos' }))
+      filasDeRegistro(registro({ condicion_alimentaria_detalle: 'Alergia a mariscos' }))
         .ALI_Restricciones,
     ).toBeDefined();
+  });
+
+  it('cada fila cuadra con los encabezados de su pestaña', () => {
+    // Una columna de más o de menos corre todo lo demás y nadie lo nota
+    // hasta que alguien lee la hoja meses después.
+    const filas = filasDeRegistro(
+      registro({
+        requiere_alojamiento: true,
+        requiere_traslado: 'llegada_y_salida',
+        regimen_alimentario: 'Vegano',
+      }),
+    );
+    for (const [hoja, valores] of Object.entries(filas)) {
+      for (const fila of valores) {
+        expect(fila.length, hoja).toBe(HOJAS[hoja].length);
+      }
+    }
   });
 });

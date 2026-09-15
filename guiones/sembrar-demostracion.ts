@@ -109,7 +109,6 @@ function construir(indice: number) {
     idioma: azar(['es', 'es', 'es', 'en', 'pt']),
     apellidos,
     nombres,
-    nombre_personificador: perfil.enPrograma ? `Dr. ${nombres} ${apellidos}` : null,
     correo: `demo${indice}@ejemplo.org`,
     telefono_whatsapp: '+52 55 0000 0000',
     institucion: azar(INSTITUCIONES),
@@ -119,12 +118,16 @@ function construir(indice: number) {
     ciudad_residencia: ciudad,
     eje_tematico: perfil.presentaPonencia ? azar(EJES) : null,
     modalidad_participacion: perfil.presentaPonencia ? azar(OPCIONES.roles) : null,
-    semblanza: perfil.enPrograma
-      ? 'Persona investigadora especializada en seguridad social, con trabajo sobre cobertura y sostenibilidad de los sistemas de pensiones en América Latina.'
+    semblanza_url: perfil.enPrograma
+      ? `https://drive.google.com/file/d/demo-semblanza-${indice}/view`
       : null,
-    regimen_alimentario: modalidad === 'presencial' ? azar(OPCIONES.regimen) : null,
+    foto_url: perfil.llevaFotografia
+      ? `https://drive.google.com/file/d/demo-foto-${indice}/view`
+      : null,
+    regimen_alimentario:
+      modalidad === 'presencial' ? azar(['', '', 'Vegetariano', 'Vegano', 'Sin gluten']) : null,
     requiere_alojamiento: perfil.invitado && modalidad === 'presencial' && Math.random() < 0.5,
-    requiere_traslado: perfil.invitado && modalidad === 'presencial'
+    requiere_traslado: perfil.recibeTraslado && modalidad === 'presencial'
       ? azar(OPCIONES.traslado)
       : 'no',
     medio_arribo: azar(OPCIONES.medioArribo),

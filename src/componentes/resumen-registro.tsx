@@ -31,7 +31,6 @@ export function ResumenRegistro({
       filas: [
         { clave: 'apellidos', etiqueta: c.apellidos },
         { clave: 'nombres', etiqueta: c.nombres },
-        { clave: 'nombre_personificador', etiqueta: c.nombrePersonificador },
         { clave: 'nombre_constancia', etiqueta: c.nombreConstancia },
         { clave: 'genero', etiqueta: c.genero, grupo: 'genero' },
         { clave: 'correo', etiqueta: c.correo },
@@ -50,7 +49,6 @@ export function ResumenRegistro({
       titulo: t.formulario.secciones.academico,
       filas: [
         { clave: 'modalidad_participacion', etiqueta: c.modalidadParticipacion, grupo: 'roles' },
-        { clave: 'eje_tematico', etiqueta: c.ejeTematico },
         { clave: 'titulo_ponencia', etiqueta: c.tituloPonencia },
         { clave: 'resumen_ponencia', etiqueta: c.resumen },
         { clave: 'palabras_clave', etiqueta: c.palabrasClave },
@@ -60,8 +58,7 @@ export function ResumenRegistro({
     {
       titulo: t.formulario.secciones.semblanza,
       filas: [
-        { clave: 'semblanza', etiqueta: c.semblanza },
-        { clave: 'linea_investigacion', etiqueta: c.lineaInvestigacion },
+        { clave: 'semblanza_url', etiqueta: c.semblanzaArchivo },
         { clave: 'foto_url', etiqueta: c.foto },
         { clave: 'autorizaciones', etiqueta: c.autorizaciones, grupo: 'autorizaciones', lista: true },
       ],
@@ -69,15 +66,27 @@ export function ResumenRegistro({
     {
       titulo: t.formulario.secciones.documentacion,
       filas: [
-        { clave: 'documentacion_solicitada', etiqueta: c.documentacionSolicitada, grupo: 'documentacion', lista: true },
+        // Sin `grupo`: las dos listas de documentación tienen etiquetas
+        // distintas y aquí no se sabe cuál se usó. Se muestran los valores.
+        { clave: 'documentacion_solicitada', etiqueta: c.documentacionSolicitada, lista: true },
+        { clave: 'documentacion_otra', etiqueta: c.documentacionOtra },
         { clave: 'nombre_pasaporte', etiqueta: c.nombrePasaporte },
         { clave: 'destinatario_oficio', etiqueta: c.destinatarioOficio },
+        { clave: 'boleto_url', etiqueta: c.boletoVuelo },
       ],
     },
     {
       titulo: t.formulario.secciones.sala,
       filas: [
         { clave: 'requerimientos_tecnicos', etiqueta: c.requerimientosTecnicos, grupo: 'tecnicos', lista: true },
+      ],
+    },
+    {
+      titulo: t.formulario.secciones.estacionamiento,
+      filas: [
+        { clave: 'placa_vehiculo', etiqueta: c.placa },
+        { clave: 'modelo_vehiculo', etiqueta: c.modeloAuto },
+        { clave: 'color_vehiculo', etiqueta: c.colorAuto },
         { clave: 'requerimientos_accesibilidad', etiqueta: c.accesibilidad },
       ],
     },
@@ -86,8 +95,6 @@ export function ResumenRegistro({
       filas: [
         { clave: 'fecha_entrada_hotel', etiqueta: c.fechaEntradaHotel },
         { clave: 'fecha_salida_hotel', etiqueta: c.fechaSalidaHotel },
-        { clave: 'tipo_habitacion', etiqueta: c.tipoHabitacion, grupo: 'habitacion' },
-        { clave: 'comparte_habitacion_con', etiqueta: c.comparteCon },
       ],
     },
     {
@@ -111,8 +118,8 @@ export function ResumenRegistro({
     {
       titulo: t.formulario.secciones.cierre,
       filas: [
-        { clave: 'regimen_alimentario', etiqueta: c.regimenAlimentario, grupo: 'regimen' },
-        { clave: 'alergias', etiqueta: c.alergias },
+        { clave: 'regimen_alimentario', etiqueta: c.regimenAlimentario },
+        { clave: 'condicion_alimentaria_detalle', etiqueta: c.condicionAlimentariaDetalle },
         { clave: 'contacto_emergencia', etiqueta: c.contactoEmergencia },
         { clave: 'datos_viatico', etiqueta: c.datosViatico },
         { clave: 'datos_facturacion', etiqueta: c.datosFacturacion },

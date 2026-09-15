@@ -13,15 +13,18 @@ export const HOJAS: Record<string, string[]> = {
     'Folio', 'ID', 'Marca temporal', 'Perfil', 'Grupo', 'Modalidad', 'Idioma',
     'Apellidos', 'Nombre(s)', 'Correo', 'Teléfono', 'Institución', 'Cargo',
     'Procedencia', 'País', 'Entidad', 'Ciudad', 'Nacionalidad', 'ORCID',
-    'Modalidad de participación', 'Eje temático', 'Título', 'Resumen', 'Palabras clave',
-    'Coautoría', 'Semblanza', 'Línea de investigación', 'Fotografía',
-    'Documentación solicitada', 'Nombre en pasaporte', 'Destinatario del oficio',
+    'Modalidad de participación', 'Título', 'Resumen', 'Palabras clave',
+    'Coautoría', 'Semblanza', 'Fotografía',
+    'Documentación solicitada', 'Otra documentación', 'Nombre en pasaporte',
+    'Destinatario del oficio', 'Boleto de vuelo',
     'Autorizaciones', 'Requerimientos técnicos', 'Accesibilidad',
-    'Requiere alojamiento', 'Entrada hotel', 'Salida hotel', 'Tipo de habitación', 'Comparte con',
+    'Placa', 'Modelo del automóvil', 'Color del automóvil',
+    'Requiere alojamiento', 'Entrada hotel', 'Salida hotel',
     'Requiere traslado', 'Medio de arribo', 'Ciudad de origen', 'Terminal de origen',
     'Fecha de llegada', 'Hora de llegada', 'Aerolínea de llegada', 'Vuelo de llegada',
     'Fecha de salida', 'Hora de salida', 'Aerolínea de salida', 'Vuelo de salida',
-    'Observaciones de traslado', 'Régimen alimentario', 'Alergias', 'Contacto de emergencia',
+    'Observaciones de traslado', 'Régimen alimentario', 'Condición alimentaria',
+    'Contacto de emergencia',
     'Apoyo de traslado', 'Datos de viático', 'Requiere factura', 'Datos de facturación',
     'Comentarios', 'Consentimiento', 'Estado',
   ],
@@ -32,7 +35,7 @@ export const HOJAS: Record<string, string[]> = {
     'Restricción alimentaria', 'Estado confirmación',
   ],
   ALO_Alojamiento: [
-    'ID', 'Persona', 'Rol', 'Procedencia', 'Hotel', 'Tipo de habitación', 'Entrada',
+    'ID', 'Persona', 'Rol', 'Procedencia', 'Hotel', 'Entrada',
     'Salida', 'Noches', 'Tarifa por noche', 'Costo total', 'Estado reserva', 'Observaciones',
   ],
   TRA_Traslados: [
@@ -42,18 +45,33 @@ export const HOJAS: Record<string, string[]> = {
     'Vehículo / placas', 'Estado', 'Observaciones',
   ],
   PSE_Personificadores_Semblanzas: [
-    'ID', 'Día', 'Bloque', 'Apellidos y nombre', 'Nombre para personificador',
-    'Cargo o función', 'Institución', 'País', 'Fotografía (enlace)', 'Semblanza recibida',
-    'Texto de semblanza', 'Palabras', 'Límite (palabras)', 'Ajuste requerido',
-    'Semblanza editada', 'Personificador impreso', 'Responsable de edición',
-    'Responsable de impresión', 'Plazo recomendado',
+    'ID', 'Día', 'Bloque', 'Apellidos y nombre', 'Cargo o función', 'Institución', 'País',
+    'Fotografía', 'Semblanza', 'Semblanza recibida', 'Personificador impreso',
+    'Responsable de edición', 'Responsable de impresión', 'Plazo recomendado',
   ],
   ALI_Restricciones: [
-    'ID', 'Persona', 'Régimen alimentario', 'Alergias', 'Días de asistencia', 'Observaciones',
+    'ID', 'Persona', 'Régimen alimentario', 'Condición específica', 'Días de asistencia',
+    'Observaciones',
   ],
 };
 
 type Registro = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+/**
+ * Un enlace de Drive, como «Descargar» en azul y subrayado.
+ *
+ * Sheets pinta así cualquier HYPERLINK, sin que haya que dar formato a la
+ * columna. La celda queda legible: una dirección de Drive son setenta
+ * caracteres de ruido que además tapan la columna siguiente.
+ *
+ * Las comillas de la dirección se doblan porque van dentro de una fórmula;
+ * sin eso, una URL con comillas la partiría en dos.
+ */
+export function enlaceDescarga(url: unknown): string {
+  const direccion = String(url ?? '').trim();
+  if (!direccion.startsWith('https://')) return '';
+  return `=HYPERLINK("${direccion.replace(/"/g, '""')}";"Descargar")`;
+}
 
 /** Roles que ocupan lugar en mesa o presídium y requieren personificador. */
 const ROLES_CON_PERSONIFICADOR = [
@@ -118,6 +136,11 @@ function noches(entrada?: string | null, salida?: string | null): string {
   return Number.isFinite(dias) && dias > 0 ? String(Math.round(dias)) : '';
 }
 
+/** Qué lista de documentación se le mostró a esta persona. */
+function documentacionDe(r: Registro): 'documentacionExtranjero' | 'documentacionNacional' {
+  return r.procedencia === 'internacional' ? 'documentacionExtranjero' : 'documentacionNacional';
+}
+
 /** Filas normalizadas que corresponden a un registro. */
 export function filasDeRegistro(r: Registro): Record<string, (string | number)[][]> {
   const persona = `${r.apellidos ?? ''}, ${r.nombres ?? ''}`;
@@ -139,18 +162,20 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
     s(r.apellidos), s(r.nombres), s(r.correo), s(r.telefono_whatsapp), s(r.institucion), s(r.cargo),
     etiquetaEs('procedencia', r.procedencia), s(r.pais_residencia), s(r.entidad_federativa), s(r.ciudad_residencia),
     s(r.nacionalidad), s(r.orcid),
-    rol, s(r.eje_tematico), s(r.titulo_ponencia), s(r.resumen_ponencia),
-    s(r.palabras_clave), s(r.coautoria), s(r.semblanza), s(r.linea_investigacion), s(r.foto_url),
-    etiquetasEs('documentacion', r.documentacion_solicitada), s(r.nombre_pasaporte),
-    s(r.destinatario_oficio), etiquetasEs('autorizaciones', r.autorizaciones),
+    rol, s(r.titulo_ponencia), s(r.resumen_ponencia),
+    s(r.palabras_clave), s(r.coautoria),
+    enlaceDescarga(r.semblanza_url), enlaceDescarga(r.foto_url),
+    etiquetasEs(documentacionDe(r), r.documentacion_solicitada), s(r.documentacion_otra),
+    s(r.nombre_pasaporte), s(r.destinatario_oficio), enlaceDescarga(r.boleto_url),
+    etiquetasEs('autorizaciones', r.autorizaciones),
     etiquetasEs('tecnicos', r.requerimientos_tecnicos), s(r.requerimientos_accesibilidad),
+    s(r.placa_vehiculo), s(r.modelo_vehiculo), s(r.color_vehiculo),
     r.requiere_alojamiento ? 'Sí' : 'No', s(r.fecha_entrada_hotel), s(r.fecha_salida_hotel),
-    etiquetaEs('habitacion', r.tipo_habitacion), s(r.comparte_habitacion_con),
     etiquetaEs('traslado', traslado), etiquetaEs('medioArribo', r.medio_arribo),
     s(r.ciudad_origen), s(r.terminal_origen),
     s(r.fecha_llegada), s(r.hora_llegada), s(r.aerolinea_llegada), s(r.vuelo_llegada),
     s(r.fecha_salida), s(r.hora_salida), s(r.aerolinea_salida), s(r.vuelo_salida),
-    s(r.observaciones_traslado), etiquetaEs('regimen', r.regimen_alimentario), s(r.alergias),
+    s(r.observaciones_traslado), s(r.regimen_alimentario), s(r.condicion_alimentaria_detalle),
     s(r.contacto_emergencia),
     r.apoyo_traslado ? 'Sí' : 'No', s(r.datos_viatico), r.requiere_factura ? 'Sí' : 'No',
     s(r.datos_facturacion), s(r.comentarios), r.consentimiento_datos ? 'Sí' : 'No', s(r.estado),
@@ -160,15 +185,14 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
     s(r.folio), marca, persona, s(r.institucion), ambito, origen, rol, s(r.correo),
     s(r.telefono_whatsapp), r.requiere_alojamiento ? 'Sí' : 'No',
     traslado === 'no' ? 'No' : 'Sí', medio || 'No aplica',
-    etiquetaEs('regimen', r.regimen_alimentario), 'En proceso',
+    s(r.regimen_alimentario) || 'Sin restricción', 'En proceso',
   ]];
 
   if (r.requiere_alojamiento) {
     filas.ALO_Alojamiento = [[
-      s(r.folio), persona, rol, ambito, '', etiquetaEs('habitacion', r.tipo_habitacion),
+      s(r.folio), persona, rol, ambito, '',
       s(r.fecha_entrada_hotel), s(r.fecha_salida_hotel),
-      noches(r.fecha_entrada_hotel, r.fecha_salida_hotel), '', '', 'No iniciado',
-      s(r.comparte_habitacion_con),
+      noches(r.fecha_entrada_hotel, r.fecha_salida_hotel), '', '', 'No iniciado', '',
     ]];
   }
 
@@ -198,21 +222,22 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
     r.perfil === 'conferencista';
 
   if (requierePersonificador) {
-    const semblanza = s(r.semblanza);
+    // El personificador lleva el nombre tal como se registró: se dejó de
+    // preguntar aparte, porque en la práctica siempre era el mismo.
     filas.PSE_Personificadores_Semblanzas = [[
-      s(r.folio), '', '', persona, r.nombre_personificador || persona,
-      r.cargo || rol, s(r.institucion), s(r.pais_residencia), s(r.foto_url),
-      semblanza ? marca : '', semblanza, contarPalabras(semblanza),
-      Number(r.limite_semblanza_palabras ?? CONFIG.limiteSemblanzaPalabras), '',
-      'No iniciado', 'No iniciado', '', '',
-      'Semblanza recibida T-4 sem · editada T-2 sem · impresa T-1 sem',
+      s(r.folio), '', '', persona,
+      r.cargo || rol, s(r.institucion), s(r.pais_residencia),
+      enlaceDescarga(r.foto_url), enlaceDescarga(r.semblanza_url),
+      r.semblanza_url ? marca : '', 'No iniciado', '', '',
+      'Semblanza recibida T-4 sem · personificador impreso T-1 sem',
     ]];
   }
 
-  const alergias = s(r.alergias);
-  if ((r.regimen_alimentario && r.regimen_alimentario !== 'sin_restriccion') || alergias) {
+  const regimen = s(r.regimen_alimentario);
+  const condicion = s(r.condicion_alimentaria_detalle);
+  if (regimen || condicion) {
     filas.ALI_Restricciones = [[
-      s(r.folio), persona, etiquetaEs('regimen', r.regimen_alimentario), alergias, 'Días 1 a 3',
+      s(r.folio), persona, regimen, condicion, 'Días 1 a 3',
       s(r.requerimientos_accesibilidad),
     ]];
   }

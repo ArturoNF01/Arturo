@@ -24,8 +24,8 @@ describe('opciones canónicas', () => {
   });
 
   it('empareja cada valor con su etiqueta traducida', () => {
-    const pares = opciones('regimen', diccionarios.pt);
-    expect(pares[0]).toEqual({ valor: 'sin_restriccion', etiqueta: 'Sem restrição' });
+    const pares = opciones('alojamiento', diccionarios.pt);
+    expect(pares[0]).toEqual({ valor: 'si', etiqueta: 'Sim' });
   });
 
   it('traduce un valor canónico al idioma pedido', () => {

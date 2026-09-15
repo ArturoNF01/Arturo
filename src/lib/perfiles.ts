@@ -5,7 +5,7 @@ import type { Diccionario } from '@/i18n';
  *
  * La convocatoria ya cerró: esto no recoge propuestas, sino el registro de
  * quien asiste. Por eso a la persona ponente no se le pide su trabajo, que
- * el comité científico ya dictaminó, sino los datos con los que su ponencia
+ * el comité dictaminador ya revisó, sino los datos con los que su ponencia
  * aparecerá en el programa y saldrá bien el día del congreso.
  *
  * No hay grupos internos ni externos: lo que cambia el formulario es lo que
@@ -25,16 +25,20 @@ export type Modalidad = 'presencial' | 'en_linea';
 
 export interface DefinicionPerfil {
   clave: ClavePerfil;
-  /** Su nombre y su semblanza salen en el programa: hacen falta foto y reseña. */
+  /** Su nombre y su semblanza salen en el programa. */
   enPrograma: boolean;
-  /** Presenta una ponencia ya aceptada por el comité científico. */
+  /** Presenta una ponencia ya aceptada por el comité dictaminador. */
   presentaPonencia: boolean;
   /** Tiene a su cargo una mesa o un eje temático. */
   tieneSesion: boolean;
-  /** Dictamina trabajos para el comité científico. */
+  /** Dictamina trabajos para el comité dictaminador. */
   dictamina: boolean;
-  /** El CIESS lo invita: se le tramitan oficio, alojamiento y traslados. */
+  /** El CIESS lo invita: se le tramitan oficio y alojamiento. */
   invitado: boolean;
+  /** Su fotografía sale en el programa. Sólo a quien preside o da una charla. */
+  llevaFotografia: boolean;
+  /** El CIESS le paga los traslados. Es un servicio acotado, no un trámite. */
+  recibeTraslado: boolean;
 }
 
 /**
@@ -42,12 +46,12 @@ export interface DefinicionPerfil {
  * se transmite completo. Lo que cambia entre perfiles es qué se les pregunta.
  */
 export const PERFILES: DefinicionPerfil[] = [
-  { clave: 'ponente',         enPrograma: true,  presentaPonencia: true,  tieneSesion: false, dictamina: false, invitado: true  },
-  { clave: 'conferencista',   enPrograma: true,  presentaPonencia: false, tieneSesion: false, dictamina: false, invitado: true  },
-  { clave: 'coordinador',     enPrograma: true,  presentaPonencia: false, tieneSesion: true,  dictamina: false, invitado: true  },
-  { clave: 'moderador',       enPrograma: true,  presentaPonencia: false, tieneSesion: true,  dictamina: false, invitado: true  },
-  { clave: 'dictaminador',    enPrograma: true,  presentaPonencia: false, tieneSesion: false, dictamina: true,  invitado: false },
-  { clave: 'publico_general', enPrograma: false, presentaPonencia: false, tieneSesion: false, dictamina: false, invitado: false },
+  { clave: 'ponente',         enPrograma: true,  presentaPonencia: true,  tieneSesion: false, dictamina: false, invitado: true,  llevaFotografia: false, recibeTraslado: false },
+  { clave: 'conferencista',   enPrograma: true,  presentaPonencia: false, tieneSesion: false, dictamina: false, invitado: true,  llevaFotografia: true,  recibeTraslado: true  },
+  { clave: 'coordinador',     enPrograma: true,  presentaPonencia: false, tieneSesion: true,  dictamina: false, invitado: true,  llevaFotografia: false, recibeTraslado: false },
+  { clave: 'moderador',       enPrograma: true,  presentaPonencia: false, tieneSesion: true,  dictamina: false, invitado: true,  llevaFotografia: true,  recibeTraslado: false },
+  { clave: 'dictaminador',    enPrograma: true,  presentaPonencia: false, tieneSesion: false, dictamina: true,  invitado: false, llevaFotografia: false, recibeTraslado: false },
+  { clave: 'publico_general', enPrograma: false, presentaPonencia: false, tieneSesion: false, dictamina: false, invitado: false, llevaFotografia: false, recibeTraslado: false },
 ];
 
 export function perfilPorClave(clave: string | null | undefined): DefinicionPerfil | undefined {
@@ -67,7 +71,7 @@ export function nombrePerfil(clave: string, t: Diccionario): string {
 export type PasoFormulario =
   | 'perfil' | 'identificacion' | 'ponencia' | 'sesion' | 'dictamen' | 'semblanza'
   | 'conexion' | 'documentacion' | 'sala' | 'alojamiento' | 'traslados'
-  | 'cierre' | 'privacidad';
+  | 'estacionamiento' | 'cierre' | 'privacidad';
 
 export function pasosVisibles(
   perfil: DefinicionPerfil | undefined,
@@ -85,15 +89,22 @@ export function pasosVisibles(
   if (perfil.enPrograma) pasos.push('semblanza');
 
   // Quien participa a distancia necesita acordar huso horario y conexión;
-  // quien viene en persona, la logística de la sede.
+  // quien viene en persona, la logística de la sede. Nada de lo que hay
+  // debajo —sala, hotel, traslados, comida, estacionamiento— tiene sentido
+  // para quien sigue el congreso desde su casa.
   if (!presencial) pasos.push('conexion');
   if (presencial) {
     if (perfil.invitado) pasos.push('documentacion');
     // Los requerimientos de sala —proyector, micrófono— son de quien expone,
-    // no de quien viene a escuchar. La accesibilidad no está aquí: esa la
-    // puede necesitar cualquiera y va en el cierre, que todos ven.
+    // no de quien viene a escuchar.
     if (perfil.enPrograma) pasos.push('sala');
-    if (perfil.invitado) pasos.push('alojamiento', 'traslados');
+    if (perfil.invitado) pasos.push('alojamiento');
+    // El traslado es un servicio que el CIESS presta, no un trámite que
+    // cualquiera pueda pedir: sólo a quien da una conferencia magistral.
+    if (perfil.recibeTraslado) pasos.push('traslados');
+    // El estacionamiento sí es de todos los que vienen: quien llega en coche
+    // necesita el lugar, venga a exponer o a escuchar.
+    pasos.push('estacionamiento');
   }
 
   pasos.push('cierre', 'privacidad');
@@ -109,14 +120,14 @@ export function campoVisible(
   if (!perfil) return false;
   const presencial = modalidad === 'presencial';
   switch (campo) {
-    case 'nombre_personificador':
-      // El letrero de la mesa sólo existe para quien se sienta en ella.
-      return perfil.enPrograma && presencial;
     case 'nombre_constancia':
       return true;
     case 'orcid':
-    case 'linea_investigacion':
       return perfil.presentaPonencia || perfil.dictamina;
+    case 'foto':
+      // La fotografía sale en el programa junto a quien preside o da una
+      // charla; a nadie más se le pide su retrato.
+      return perfil.llevaFotografia;
     case 'autoriza_publicacion':
       return perfil.presentaPonencia;
     case 'autoriza_grabacion':
@@ -130,14 +141,16 @@ export function campoVisible(
     case 'entidad_federativa':
       return true;
     case 'regimen_alimentario':
-    case 'alergias':
+    case 'condicion_alimentaria':
     case 'contacto_emergencia':
       return presencial;
     case 'requerimientos_tecnicos':
       return perfil.enPrograma;
     case 'apoyo_traslado':
     case 'datos_viatico':
-      return perfil.invitado && presencial;
+      // Quien viene invitado ya tiene su viaje resuelto por el CIESS. El
+      // apoyo es para quien asiste por su cuenta y lo necesita.
+      return perfil.clave === 'publico_general' && presencial;
     default:
       return true;
   }

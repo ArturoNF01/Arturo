@@ -62,7 +62,6 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
     // 1. Identificación
     apellidos: z.string().trim().min(1).max(150),
     nombres: z.string().trim().min(1).max(150),
-    nombre_personificador: textoOpcional,
     nombre_constancia: textoOpcional,
     genero: textoOpcional,
     correo: z.string().trim().email().max(200),
@@ -86,7 +85,6 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
 
     // 2. La ponencia ya aceptada, tal como debe salir en el programa
     modalidad_participacion: textoOpcional,
-    eje_tematico: textoOpcional,
     titulo_ponencia: textoOpcional,
     // El congreso es trilingüe: hay que saber en qué idioma se presenta.
     idioma_ponencia: z.enum(['es', 'en', 'pt']).optional(),
@@ -112,14 +110,9 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
     // Sin declararlo, un dictamen es impugnable.
     conflicto_interes: parrafoOpcional,
 
-    // 3. Semblanza
-    semblanza: z
-      .string()
-      .trim()
-      .max(limites.semblanzaCaracteres, `La semblanza excede ${limites.semblanzaCaracteres} caracteres`)
-      .optional()
-      .or(z.literal('')),
-    linea_investigacion: textoOpcional,
+    // 3. Semblanza y fotografía: dos archivos en Drive.
+    semblanza_url: textoOpcional,
+    semblanza_drive_id: textoOpcional,
     foto_url: textoOpcional,
     foto_drive_id: textoOpcional,
 
@@ -127,6 +120,11 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
     documentacion_solicitada: z.array(z.string().max(200)).max(10).default([]),
     nombre_pasaporte: textoOpcional,
     destinatario_oficio: parrafoOpcional,
+    // La opción «Otra» abre un campo libre.
+    documentacion_otra: textoOpcional,
+    // El boleto de vuelo, para quien viene del extranjero.
+    boleto_url: textoOpcional,
+    boleto_drive_id: textoOpcional,
     autorizaciones: z.array(z.string().max(300)).max(10).default([]),
 
     // 3.2 Participación a distancia
@@ -142,12 +140,15 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
     requerimientos_tecnicos: z.array(z.string().max(200)).max(10).default([]),
     requerimientos_accesibilidad: parrafoOpcional,
 
+    // Estacionamiento, para quien llega en coche.
+    placa_vehiculo: textoOpcional,
+    modelo_vehiculo: textoOpcional,
+    color_vehiculo: textoOpcional,
+
     // 5. Alojamiento
     requiere_alojamiento: z.boolean().default(false),
     fecha_entrada_hotel: fechaOpcional,
     fecha_salida_hotel: fechaOpcional,
-    tipo_habitacion: textoOpcional,
-    comparte_habitacion_con: textoOpcional,
 
     // 6. Traslados
     requiere_traslado: textoOpcional,
@@ -166,7 +167,8 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
 
     // 7. Alimentación, facturación y cierre
     regimen_alimentario: textoOpcional,
-    alergias: parrafoOpcional,
+    condicion_alimentaria: z.boolean().default(false),
+    condicion_alimentaria_detalle: parrafoOpcional,
     contacto_emergencia: textoOpcional,
     apoyo_traslado: z.boolean().default(false),
     datos_viatico: parrafoOpcional,
@@ -196,13 +198,6 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
         message: 'Indique el título de su ponencia tal como debe aparecer en el programa',
       });
     }
-    if (perfil.presentaPonencia && !datos.eje_tematico) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['eje_tematico'],
-        message: 'Indique el eje temático en el que fue aceptado su trabajo',
-      });
-    }
     if (perfil.tieneSesion && !datos.sesion_asignada) {
       ctx.addIssue({
         code: 'custom',
@@ -226,12 +221,12 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
         message: 'Su participación se transmite y se graba: hace falta su autorización',
       });
     }
-    // El letrero de la mesa sólo existe para quien se sienta en ella.
-    if (perfil.enPrograma && datos.modalidad === 'presencial' && !datos.nombre_personificador) {
+    // Sin semblanza no se puede presentar a nadie ni armar el programa.
+    if (perfil.enPrograma && !datos.semblanza_url) {
       ctx.addIssue({
         code: 'custom',
-        path: ['nombre_personificador'],
-        message: 'El nombre para el personificador es obligatorio para este perfil',
+        path: ['semblanza_url'],
+        message: 'Adjunte su semblanza en PDF: se lee antes de su intervención',
       });
     }
     // Sin huso horario no se le puede avisar a qué hora conectarse.

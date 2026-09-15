@@ -45,8 +45,8 @@ describe('esquema de registro', () => {
                           'dictaminador', 'publico_general']) {
       const presencial = esquemaRegistro.safeParse(valido({
         perfil, modalidad: 'presencial',
-        nombre_personificador: 'Dra. Ana Ruiz', autoriza_grabacion: true,
-        titulo_ponencia: 'Título', eje_tematico: 'pensiones',
+        semblanza_url: 'https://drive.google.com/file/d/x/view', autoriza_grabacion: true,
+        titulo_ponencia: 'Título',
         sesion_asignada: 'pensiones', ejes_dictamen: ['pensiones'],
       }));
       expect(presencial.error?.issues.some((i) => i.path[0] === 'modalidad'), perfil).toBeFalsy();
@@ -75,12 +75,21 @@ describe('esquema de registro', () => {
     expect(resultado.error?.issues.some((i) => i.path[0] === 'ejes_dictamen')).toBe(true);
   });
 
-  it('exige nombre para el personificador a quien se sienta en la mesa', () => {
+  it('sin semblanza no pasa quien sale en el programa', () => {
+    // Es lo que se lee en voz alta antes de presentarle: sin ella no hay
+    // programa que armar.
     const resultado = esquemaRegistro.safeParse(
       valido({ perfil: 'conferencista', modalidad: 'presencial', autoriza_grabacion: true }),
     );
     expect(resultado.success).toBe(false);
-    expect(resultado.error?.issues.some((i) => i.path[0] === 'nombre_personificador')).toBe(true);
+    expect(resultado.error?.issues.some((i) => i.path[0] === 'semblanza_url')).toBe(true);
+  });
+
+  it('al público general no se le pide semblanza', () => {
+    const resultado = esquemaRegistro.safeParse(
+      valido({ perfil: 'publico_general', modalidad: 'presencial' }),
+    );
+    expect(resultado.error?.issues.some((i) => i.path[0] === 'semblanza_url')).toBeFalsy();
   });
 
   it('acepta ORCID vacío pero rechaza uno mal formado', () => {
@@ -90,13 +99,7 @@ describe('esquema de registro', () => {
     expect(esquemaRegistro.safeParse(valido({ orcid: '1234' })).success).toBe(false);
   });
 
-  it('respeta los límites de semblanza y resumen del formulario original', () => {
-    expect(
-      esquemaRegistro.safeParse(valido({ semblanza: 'a'.repeat(LIMITES_POR_DEFECTO.semblanzaCaracteres) })).success,
-    ).toBe(true);
-    expect(
-      esquemaRegistro.safeParse(valido({ semblanza: 'a'.repeat(LIMITES_POR_DEFECTO.semblanzaCaracteres + 1) })).success,
-    ).toBe(false);
+  it('respeta el límite de resumen del formulario original', () => {
     expect(
       esquemaRegistro.safeParse(valido({ resumen_ponencia: 'a'.repeat(LIMITES_POR_DEFECTO.resumenCaracteres + 1) })).success,
     ).toBe(false);
@@ -106,7 +109,7 @@ describe('esquema de registro', () => {
     const resultado = esquemaRegistro.safeParse(
       valido({
         perfil: 'conferencista', modalidad: 'presencial',
-        nombre_personificador: 'Dra. Ana Ruiz', autoriza_grabacion: true,
+        semblanza_url: 'https://drive.google.com/file/d/x/view', autoriza_grabacion: true,
         requiere_alojamiento: true,
         fecha_entrada_hotel: '2026-11-12',
         fecha_salida_hotel: '2026-11-10',
@@ -127,17 +130,17 @@ describe('esquema de registro', () => {
 describe('límites configurables desde el panel', () => {
   it('la validación del servidor sigue el límite que se le pase', () => {
     const estricto = crearEsquemaRegistro({ semblanzaCaracteres: 100, resumenCaracteres: 200 });
-    expect(estricto.safeParse(valido({ semblanza: 'a'.repeat(100) })).success).toBe(true);
-    expect(estricto.safeParse(valido({ semblanza: 'a'.repeat(101) })).success).toBe(false);
+    expect(estricto.safeParse(valido({ resumen_ponencia: 'a'.repeat(200) })).success).toBe(true);
+    expect(estricto.safeParse(valido({ resumen_ponencia: 'a'.repeat(201) })).success).toBe(false);
 
     const amplio = crearEsquemaRegistro({ semblanzaCaracteres: 900, resumenCaracteres: 5000 });
-    expect(amplio.safeParse(valido({ semblanza: 'a'.repeat(900) })).success).toBe(true);
+    expect(amplio.safeParse(valido({ resumen_ponencia: 'a'.repeat(5000) })).success).toBe(true);
   });
 
   it('el mensaje de error nombra el límite vigente', () => {
     const estricto = crearEsquemaRegistro({ semblanzaCaracteres: 100, resumenCaracteres: 200 });
-    const resultado = estricto.safeParse(valido({ semblanza: 'a'.repeat(101) }));
-    expect(resultado.error?.issues[0].message).toContain('100');
+    const resultado = estricto.safeParse(valido({ resumen_ponencia: 'a'.repeat(201) }));
+    expect(resultado.error?.issues[0].message).toContain('200');
   });
 });
 
