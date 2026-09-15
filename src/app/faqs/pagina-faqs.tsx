@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Encabezado, PieDePagina } from '@/componentes/controles';
 import { useApp } from '@/componentes/proveedores';
 import { traducir, type Faq } from '@/lib/contenido';
+import { LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from '@/lib/landing';
 
 export function PaginaFaqs({ urlAgenda, faqs }: { urlAgenda: string; faqs: Faq[] }) {
   const { idioma, t } = useApp();
@@ -91,6 +92,10 @@ export function PaginaFaqs({ urlAgenda, faqs }: { urlAgenda: string; faqs: Faq[]
                         {abierta === p.id && (
                           <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: 'var(--borde)' }}>
                             <p className="text-sm leading-relaxed tenue">{p.respuesta}</p>
+                            {/* «¿Dónde?» se responde mejor con un mapa que con
+                                una dirección. Sólo en esta pregunta: un mapa
+                                en cada respuesta sería ruido. */}
+                            {p.id === 'sede-fechas' && <MapaSede />}
                           </div>
                         )}
                       </article>
@@ -103,5 +108,38 @@ export function PaginaFaqs({ urlAgenda, faqs }: { urlAgenda: string; faqs: Faq[]
       </main>
       <PieDePagina />
     </>
+  );
+}
+
+/** El mapa de la sede, con salida a Google Maps en otra pestaña. */
+function MapaSede() {
+  const { idioma } = useApp();
+  const textos = LANDING[idioma];
+
+  return (
+    <div className="mt-4">
+      <div className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--borde)' }}>
+        <iframe
+          src={SEDE_MAPA_EMBED}
+          title={textos.sedeTitulo}
+          loading="lazy"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
+          className="block h-[260px] w-full border-0 sm:h-[320px]"
+        />
+      </div>
+      <a
+        href={SEDE_MAPA_ENLACE}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-ciess-600 underline underline-offset-4 hover:text-ciess-500 dark:text-ciess-300 dark:hover:text-ciess-200"
+      >
+        {textos.verEnMapa}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M7 17 17 7M9 7h8v8" />
+        </svg>
+      </a>
+    </div>
   );
 }

@@ -35,10 +35,10 @@ export function Proveedores({
   const respaldoIdioma = idiomaInicial ?? IDIOMA_POR_DEFECTO;
   const [idiomaGuardado, guardarIdioma] = useAlmacenLocal(CLAVE_IDIOMA, respaldoIdioma);
   // Modo claro por defecto; quien prefiera el oscuro lo elige y se recuerda.
-  const [temaGuardado, guardarTema] = useAlmacenLocal(CLAVE_TEMA, 'claro');
+  const [temaGuardado, guardarTema] = useAlmacenLocal(CLAVE_TEMA, 'oscuro');
 
   const idioma: Idioma = esIdiomaValido(idiomaGuardado) ? idiomaGuardado : respaldoIdioma;
-  const tema: Tema = temaGuardado === 'oscuro' ? 'oscuro' : 'claro';
+  const tema: Tema = temaGuardado === 'claro' ? 'claro' : 'oscuro';
 
   // Estos efectos sólo escriben en sistemas externos (documento y cookie),
   // que es justo para lo que sirven.

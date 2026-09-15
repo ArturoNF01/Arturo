@@ -421,7 +421,7 @@ create table if not exists configuracion (
   actualizado_por uuid references usuarios_panel(id)
 );
 insert into configuracion (clave, valor, descripcion) values
-  ('cupos_presenciales', '300'::jsonb, 'Lugares disponibles en modalidad presencial'),
+  ('cupos_presenciales', '60'::jsonb, 'Lugares disponibles en modalidad presencial'),
   ('cupos_en_linea',     'null'::jsonb, 'Lugares en línea;
 null = sin límite'),
   ('registro_abierto',   'true'::jsonb, 'Permite recibir nuevos registros'),

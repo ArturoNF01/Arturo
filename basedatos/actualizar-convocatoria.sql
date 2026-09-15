@@ -59,6 +59,25 @@ update aviso_privacidad
 -- como un borrador. La casilla sigue en el panel para cuando haga falta.
 update faqs set provisional = false where provisional;
 
+-- El aforo presencial baja de 300 a 60.
+update configuracion set valor = '60'::jsonb where clave = 'cupos_presenciales';
+
+-- La sede y las fechas ya están decididas. Las filas de la base no se tocan
+-- al desplegar —se insertan sólo si faltan— así que el texto nuevo se aplica
+-- aquí; debajo de la respuesta, la página pinta además el mapa.
+update faqs
+   set respuesta = jsonb_build_object(
+         'es', 'Del 11 al 13 de noviembre de 2026, en la sede del CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Ciudad de México. La agenda detallada se publicará antes del inicio del congreso.',
+         'en', '11-13 November 2026, at the CIESS headquarters: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Mexico City. The detailed programme will be published before the congress begins.',
+         'pt', 'De 11 a 13 de novembro de 2026, na sede do CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Cidade do México. A agenda detalhada será publicada antes do início do congresso.')
+ where clave = 'sede-fechas';
+
+-- Quien convoca es el CIESS con la RIUSS; la CISS ya no se nombra.
+update faqs
+   set respuesta = jsonb_set(respuesta, '{es}',
+         to_jsonb(replace(respuesta->>'es', 'el CIESS y la CISS', 'el CIESS y la RIUSS')))
+ where respuesta->>'es' like '%el CIESS y la CISS%';
+
 commit;
 
 select clave, valor from configuracion

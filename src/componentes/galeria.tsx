@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './proveedores';
-import { LANDING } from '@/lib/landing';
+import { LANDING, barajar } from '@/lib/landing';
 
 /**
  * Galería de las instalaciones.
@@ -16,7 +16,28 @@ import { LANDING } from '@/lib/landing';
  * Y no hay manera de saber desde aquí cuáles de las doscientas existen. En
  * vez de fiarlo a una lista que habría que mantener a mano, cada fotografía
  * que no cargue se retira sola: la galería se queda con las que hay.
+ *
+ * El mosaico es irregular y el orden se sortea en el navegador, como en la
+ * portada: doscientos cuadrados idénticos en el mismo orden de siempre se
+ * leen como un inventario, no como un lugar.
  */
+
+/**
+ * Cómo ocupa la rejilla cada pieza; el patrón se repite cada doce.
+ *
+ * Está escrito a mano y no sorteado: al azar salen huecos y torres de una
+ * columna, que no es vivo, es descuidado. Doce piezas cubren tres bloques de
+ * cuatro columnas sin dejar hueco, así que la tanda de veinticuatro cierra
+ * siempre en un borde recto.
+ */
+const FORMAS = [
+  'col-span-2 row-span-2', 'col-span-2 row-span-1',
+  'col-span-1 row-span-1', 'col-span-1 row-span-1',
+  'col-span-2 row-span-1', 'col-span-1 row-span-2',
+  'col-span-1 row-span-1', 'col-span-2 row-span-1',
+  'col-span-1 row-span-1', 'col-span-1 row-span-1',
+  'col-span-2 row-span-2', 'col-span-2 row-span-1',
+];
 export function Galeria({ fotos, porTanda = 24 }: { fotos: string[]; porTanda?: number }) {
   const { idioma } = useApp();
   const textos = LANDING[idioma];
@@ -26,7 +47,16 @@ export function Galeria({ fotos, porTanda = 24 }: { fotos: string[]; porTanda?: 
   const [rotas, setRotas] = useState<Set<string>>(new Set());
   const [abierta, setAbierta] = useState<number | null>(null);
 
-  const buenas = fotos.filter((url) => !rotas.has(url));
+  // Arranca con el orden que viene del servidor y se baraja después del
+  // primer pintado: así lo que llega y lo que React pinta coinciden, y el
+  // sorteo no encadena un repintado dentro del mismo fotograma.
+  const [orden, setOrden] = useState(fotos);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setOrden(barajar(fotos)));
+    return () => cancelAnimationFrame(id);
+  }, [fotos]);
+
+  const buenas = orden.filter((url) => !rotas.has(url));
   const mostradas = buenas.slice(0, visibles);
   const quedan = buenas.length - mostradas.length;
 
@@ -80,13 +110,13 @@ export function Galeria({ fotos, porTanda = 24 }: { fotos: string[]; porTanda?: 
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+      <ul className="grid auto-rows-[96px] grid-cols-4 gap-2 sm:auto-rows-[150px] sm:gap-3">
         {mostradas.map((url, i) => (
-          <li key={url}>
+          <li key={url} className={FORMAS[i % FORMAS.length]}>
             <button
               type="button"
               onClick={() => setAbierta(i)}
-              className="group block w-full overflow-hidden rounded-lg border"
+              className="group block h-full w-full overflow-hidden rounded-lg border"
               style={{ borderColor: 'var(--borde)' }}
             >
               <Miniatura
@@ -188,7 +218,7 @@ function Miniatura({
       loading="lazy"
       decoding="async"
       onError={alRomperse}
-      className="aspect-[4/3] w-full bg-black/5 object-cover transition duration-300 group-hover:scale-[1.03] dark:bg-white/5"
+      className="h-full w-full bg-black/5 object-cover transition duration-300 group-hover:scale-[1.03] dark:bg-white/5"
     />
   );
 }
