@@ -16,8 +16,19 @@ interface FilaRegistro extends Record<string, unknown> {
   token_edicion: string;
 }
 
-/** Devuelve el registro si el token de edición coincide o si hay sesión de panel. */
-async function autorizar(id: string, token: string | null) {
+/**
+ * Devuelve el registro si el token de edición coincide o si hay sesión de panel.
+ *
+ * `permiso` separa leer de escribir. Leer un registro pide lo mismo que ver la
+ * lista, que es donde ya salen el nombre, el correo y la institución: negarle
+ * el detalle a quien acaba de ver la fila no protegía nada y dejaba el panel
+ * de un lector cargando para siempre.
+ */
+async function autorizar(
+  id: string,
+  token: string | null,
+  permiso: 'verRegistros' | 'editarRegistros' = 'editarRegistros',
+) {
   if (!esUuid(id)) return { registro: null, autorizado: false as const, usuario: null };
 
   const registro = await unaFila<FilaRegistro>('select * from registros where id = $1', [id]);
@@ -30,7 +41,7 @@ async function autorizar(id: string, token: string | null) {
   const usuario = await usuarioActual();
   return {
     registro,
-    autorizado: Boolean(usuario && permisos(usuario.rol).editarRegistros),
+    autorizado: Boolean(usuario && permisos(usuario.rol)[permiso]),
     usuario,
   };
 }
@@ -38,7 +49,7 @@ async function autorizar(id: string, token: string | null) {
 export async function GET(peticion: NextRequest, contexto: { params: Promise<{ id: string }> }) {
   const { id } = await contexto.params;
   const token = peticion.nextUrl.searchParams.get('token');
-  const { registro, autorizado } = await autorizar(id, token);
+  const { registro, autorizado } = await autorizar(id, token, 'verRegistros');
 
   if (!registro) return NextResponse.json({ mensaje: 'Registro no encontrado.' }, { status: 404 });
   if (!autorizado) return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });

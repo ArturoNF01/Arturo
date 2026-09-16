@@ -226,24 +226,30 @@ export function CampoCasillas({
 }
 
 export function CampoInterruptor({
-  valor, onChange, etiqueta, ayuda,
+  valor, onChange, etiqueta, ayuda, error, campo,
 }: {
   valor: boolean;
   onChange: (v: boolean) => void;
   etiqueta: string;
   ayuda?: string;
+  error?: string;
+  /** El nombre con el que el formulario lo busca para llevar el cursor. */
+  campo?: string;
 }) {
   return (
     <label className="flex cursor-pointer items-start gap-3">
       <input
         type="checkbox"
+        name={campo}
         className="mt-1 h-4 w-4 accent-ciess-500"
         checked={valor}
         onChange={(e) => onChange(e.target.checked)}
+        aria-invalid={Boolean(error)}
       />
       <span className="text-sm">
         {etiqueta}
         {ayuda && <span className="ayuda block">{ayuda}</span>}
+        {error && <span className="error block">{error}</span>}
       </span>
     </label>
   );

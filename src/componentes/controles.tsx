@@ -107,11 +107,6 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
           <div className="hidden items-center gap-2 md:flex">
             <SelectorIdioma compacto />
             <BotonTema />
-            {variante === 'publico' && (
-              <Link href="/login" className="boton-secundario whitespace-nowrap">
-                {t.nav.login}
-              </Link>
-            )}
           </div>
 
           <button
@@ -146,16 +141,6 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
             </Link>
           ))}
 
-          {variante === 'publico' && (
-            <Link
-              href="/login"
-              onClick={() => setAbierto(false)}
-              className="block rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
-            >
-              {t.nav.login}
-            </Link>
-          )}
-
           <div
             className="mt-3 flex items-center justify-between gap-3 border-t pt-3"
             style={{ borderColor: 'var(--borde)' }}
@@ -171,30 +156,85 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
 
 export function PieDePagina() {
   const { t } = useApp();
+  const anio = new Date().getFullYear();
+
   return (
-    <footer className="mt-16 border-t sin-impresion" style={{ borderColor: 'var(--borde)' }}>
-      <div className="mx-auto max-w-3xl px-4 py-8 text-center text-xs tenue sm:px-6">
-        {/* Las dos instituciones que convocan, cada una a su sitio. */}
-        {/* Sin separador entre medias: cuando las dos líneas no caben, el
-            punto se quedaba colgando al final de la primera. */}
-        <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1">
-          <a
-            href={ENLACE_CIESS}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-4 hover:text-ciess-600 dark:hover:text-ciess-300"
+    <footer className="mt-20 border-t sin-impresion" style={{ borderColor: 'var(--borde)' }}>
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+        {/* Tres bloques en pantalla ancha, apilados en el teléfono: la marca
+            a la izquierda, lo que se puede consultar en medio, y a la derecha
+            quien convoca. El acceso al panel no está en ninguno: va abajo. */}
+        <div className="grid gap-8 sm:grid-cols-[auto,1fr,auto] sm:items-start sm:gap-12">
+          <div>
+            <LogoCiess className="h-9" />
+            <p className="mt-3 max-w-xs text-xs leading-relaxed tenue">{t.congreso.titulo}</p>
+          </div>
+
+          <nav className="text-xs leading-relaxed">
+            <ul className="space-y-1.5">
+              {[
+                { href: '/', texto: t.nav.inicio },
+                { href: '/registro', texto: t.nav.registro },
+                { href: '/instalaciones', texto: t.nav.instalaciones },
+                { href: '/faqs', texto: t.nav.faqs },
+                { href: '/aviso-privacidad', texto: t.nav.privacidad },
+              ].map((e) => (
+                <li key={e.href}>
+                  <Link href={e.href} className="tenue transition-colors hover:text-ciess-600 dark:hover:text-ciess-300">
+                    {e.texto}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div className="text-xs leading-relaxed">
+            <p className="font-semibold uppercase tracking-wide tenue">{t.congreso.convoca}</p>
+            <ul className="mt-2 space-y-1.5">
+              <li>
+                <a
+                  href={ENLACE_CIESS}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="tenue transition-colors hover:text-ciess-600 dark:hover:text-ciess-300"
+                >
+                  {t.congreso.organiza}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={ENLACE_RIUSS}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="tenue transition-colors hover:text-ciess-600 dark:hover:text-ciess-300"
+                >
+                  {t.congreso.riuss}
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* El acceso al panel, aquí abajo. Lo usan cinco personas del comité
+            organizador y lo buscan a propósito; no tiene por qué competir por
+            la atención de quien viene a registrarse. */}
+        <div
+          className="mt-8 flex flex-col items-center gap-2 border-t pt-5 text-xs tenue sm:flex-row sm:justify-between"
+          style={{ borderColor: 'var(--borde)' }}
+        >
+          <p>© {anio} CIESS</p>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-1.5 transition-colors hover:text-ciess-600 dark:hover:text-ciess-300"
           >
-            {t.congreso.organiza}
-          </a>
-          <a
-            href={ENLACE_RIUSS}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-4 hover:text-ciess-600 dark:hover:text-ciess-300"
-          >
-            {t.congreso.riuss}
-          </a>
-        </p>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            {t.nav.login}
+          </Link>
+        </div>
       </div>
     </footer>
   );

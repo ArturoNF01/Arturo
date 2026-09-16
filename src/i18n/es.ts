@@ -10,6 +10,7 @@ export const es = {
     tituloCorto: '1er Congreso de Estudios Interamericanos de Seguridad Social',
     organiza: 'CIESS · Centro Interamericano de Estudios de Seguridad Social',
     riuss: 'RIUSS · Red Interamericana de Universidades para la Seguridad Social',
+    convoca: 'Convoca',
   },
   nav: {
     registro: 'Registro',

@@ -29,6 +29,7 @@ export function TablaRegistros({ permisos }: { permisos: Permisos }) {
   const [detalle, setDetalle] = useState<RegistroPanel | null>(null);
   const [completo, setCompleto] = useState<Record<string, unknown> | null>(null);
   const [mensaje, setMensaje] = useState('');
+  const [errorDetalle, setErrorDetalle] = useState('');
 
   const filtrados = useMemo(() => aplicarFiltros(registros, filtros), [registros, filtros]);
   const paginados = useMemo(
@@ -40,8 +41,20 @@ export function TablaRegistros({ permisos }: { permisos: Permisos }) {
   async function abrirDetalle(registro: RegistroPanel) {
     setDetalle(registro);
     setCompleto(null);
-    const respuesta = await fetch(`/api/registros/${registro.id}`);
-    if (respuesta.ok) setCompleto(await respuesta.json());
+    setErrorDetalle('');
+    // Si no se dice nada cuando falla, la ventana se queda en «Cargando…»
+    // para siempre y quien la mira no sabe si tarda o si se rompió.
+    try {
+      const respuesta = await fetch(`/api/registros/${registro.id}`);
+      if (!respuesta.ok) {
+        const datos = await respuesta.json().catch(() => ({}));
+        setErrorDetalle(datos.mensaje ?? t.estados.error);
+        return;
+      }
+      setCompleto(await respuesta.json());
+    } catch {
+      setErrorDetalle(t.estados.error);
+    }
   }
 
   async function eliminar(registro: RegistroPanel) {
@@ -176,7 +189,11 @@ export function TablaRegistros({ permisos }: { permisos: Permisos }) {
               </div>
             )}
 
-            {completo ? (
+            {errorDetalle ? (
+              <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500" role="alert">
+                {errorDetalle}
+              </p>
+            ) : completo ? (
               <ResumenRegistro registro={completo} ejes={ejes} />
             ) : (
               <p className="py-8 text-center text-sm tenue">{t.estados.cargando}</p>

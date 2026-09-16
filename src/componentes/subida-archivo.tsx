@@ -23,11 +23,13 @@ const FORMATOS: Record<DestinoArchivo, string[]> = {
  * pantalla se encuentra la misma negativa del otro lado.
  */
 export function SubidaArchivo({
-  destino, etiqueta, ayuda, valorUrl, onSubida, onQuitar, megabytesMaximo, error: errorExterno,
+  destino, etiqueta, ayuda, valorUrl, onSubida, onQuitar, megabytesMaximo,
+  error: errorExterno, requerido,
 }: {
   destino: DestinoArchivo;
   etiqueta: string;
   ayuda?: string;
+  requerido?: boolean;
   valorUrl: string;
   onSubida: (url: string, driveId: string) => void;
   onQuitar: () => void;
@@ -81,7 +83,10 @@ export function SubidaArchivo({
 
   return (
     <div>
-      <span className="etiqueta">{etiqueta}</span>
+      <span className="etiqueta">
+        {etiqueta}
+        {requerido && <span className="ml-1 text-red-500" aria-hidden>*</span>}
+      </span>
       <div
         className="rounded-lg border border-dashed p-4"
         style={{ borderColor: 'var(--borde)' }}

@@ -10,7 +10,7 @@ import {
 } from './campos';
 import { SubidaArchivo } from './subida-archivo';
 import {
-  PERFILES, campoVisible, pasosVisibles, perfilPorClave,
+  PASO_DE_CAMPO, PERFILES, campoVisible, pasosVisibles, perfilPorClave,
   type ClavePerfil, type Modalidad, type PasoFormulario,
 } from '@/lib/perfiles';
 import { ZONAS_HORARIAS, diasDelCongreso } from '@/lib/husos';
@@ -141,12 +141,64 @@ export function FormularioRegistro({
         max: congreso.limite_resumen_caracteres,
       });
     }
+    // Estas tres las exigía sólo el servidor, y su aviso llegaba al final,
+    // cuando el campo ya no estaba en pantalla.
+    if (paso === 'ponencia') obligatorio('titulo_ponencia');
+    if (paso === 'sesion') obligatorio('sesion_asignada');
+    if (paso === 'dictamen' && !lista('ejes_dictamen').length) {
+      nuevos.ejes_dictamen = t.formulario.validacion.requerido;
+    }
+    if (paso === 'semblanza' && perfil?.enPrograma && !valores.autoriza_grabacion) {
+      nuevos.autoriza_grabacion = t.formulario.validacion.requerido;
+    }
+    if (paso === 'conexion') obligatorio('zona_horaria');
+
     if (paso === 'privacidad' && !valores.consentimiento_datos) {
       nuevos.consentimiento_datos = t.formulario.validacion.consentimiento;
     }
 
     setErrores((e) => ({ ...e, ...nuevos }));
+    if (Object.keys(nuevos).length > 0) enfocarPrimerError(nuevos);
     return Object.keys(nuevos).length === 0;
+  }
+
+  /** El rótulo con el que se le preguntó, para poder nombrarlo en el aviso. */
+  function nombreDeCampo(campo: string): string {
+    const campos = t.formulario.campos as unknown as Record<string, string>;
+    const enCamello = campo.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+    if (typeof campos[enCamello] === 'string') return campos[enCamello];
+    if (campo === 'consentimiento_datos') return t.privacidad.titulo;
+    if (campo === 'perfil') return t.formulario.pasos.perfil;
+    return campo.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  }
+
+  /** Lleva el cursor al primer campo con problema, para no tener que buscarlo. */
+  function enfocarPrimerError(fallos: Record<string, string>) {
+    const primero = Object.keys(fallos)[0];
+    requestAnimationFrame(() => {
+      const campo = document.querySelector<HTMLElement>(`[name="${primero}"], #${CSS.escape(primero)}`);
+      campo?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      campo?.focus?.();
+    });
+  }
+
+  /**
+   * Lleva al paso donde está el primer campo que el servidor rechazó.
+   *
+   * El aviso salía en el último paso y los campos marcados quedaban varias
+   * pantallas atrás: se leía «revise los campos marcados» sin ver ninguno.
+   */
+  function irAlPrimerFallo(fallos: Record<string, string>) {
+    for (const campo of Object.keys(fallos)) {
+      const paso = PASO_DE_CAMPO[campo];
+      const indice = paso ? pasos.indexOf(paso) : -1;
+      if (indice >= 0) {
+        setIndicePaso(indice);
+        enfocarPrimerError(fallos);
+        return true;
+      }
+    }
+    return false;
   }
 
   function avanzar() {
@@ -184,7 +236,10 @@ export function FormularioRegistro({
       const datos = await respuesta.json();
       if (!respuesta.ok) {
         setErrorGeneral(datos.mensaje ?? t.estados.error);
-        if (datos.errores) setErrores(datos.errores);
+        if (datos.errores) {
+          setErrores(datos.errores);
+          irAlPrimerFallo(datos.errores);
+        }
         return;
       }
       router.push(`/confirmacion/${datos.id}?token=${datos.token_edicion}`);
@@ -277,7 +332,7 @@ export function FormularioRegistro({
             {/* La convocatoria ya cerró y el comité dictaminó: aquí no se
                 propone nada, se confirma cómo debe salir en el programa. */}
             <Cabecera titulo={t.formulario.secciones.ponencia} ayuda={t.formulario.secciones.ponenciaAyuda} />
-            <CampoTexto campo="titulo_ponencia" etiqueta={t.formulario.campos.tituloPonencia} ayuda={t.formulario.campos.tituloPonenciaAyuda} valor={texto('titulo_ponencia')} onChange={(v) => fijar('titulo_ponencia', v)} error={errores.titulo_ponencia} />
+            <CampoTexto campo="titulo_ponencia" etiqueta={t.formulario.campos.tituloPonencia} ayuda={t.formulario.campos.tituloPonenciaAyuda} requerido valor={texto('titulo_ponencia')} onChange={(v) => fijar('titulo_ponencia', v)} error={errores.titulo_ponencia} />
             <CampoOpcionUnica etiqueta={t.formulario.campos.idiomaPonencia} ayuda={t.formulario.campos.idiomaPonenciaAyuda} opciones={[{ valor: 'es', etiqueta: 'Español' }, { valor: 'pt', etiqueta: 'Português' }, { valor: 'en', etiqueta: 'English' }]} valor={texto('idioma_ponencia')} onChange={(v) => fijar('idioma_ponencia', v)} columnas={2} />
             <CampoParrafo campo="coautoria" etiqueta={t.formulario.campos.coautoria} ayuda={t.formulario.campos.coautoriaAyuda} filas={3} valor={texto('coautoria')} onChange={(v) => fijar('coautoria', v)} />
             <CampoInterruptor etiqueta={t.formulario.campos.autorizaPublicacion} valor={Boolean(valores.autoriza_publicacion)} onChange={(v) => fijar('autoriza_publicacion', v)} />
@@ -287,7 +342,7 @@ export function FormularioRegistro({
         {pasoActual === 'sesion' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.sesion} ayuda={t.formulario.secciones.sesionAyuda} />
-            <CampoSeleccion etiqueta={t.formulario.campos.sesionAsignada} opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valor={texto('sesion_asignada')} onChange={(v) => fijar('sesion_asignada', v)} error={errores.sesion_asignada} />
+            <CampoSeleccion etiqueta={t.formulario.campos.sesionAsignada} requerido opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valor={texto('sesion_asignada')} onChange={(v) => fijar('sesion_asignada', v)} error={errores.sesion_asignada} />
             {/* Saber qué días puede cada quien antes de armar el programa
                 ahorra rehacerlo después. */}
             <CampoCasillas etiqueta={t.formulario.campos.disponibilidadDias} opciones={diasDelCongreso(t, congreso.fecha_inicio, congreso.fecha_fin)} valores={lista('disponibilidad_dias')} onChange={(v) => fijar('disponibilidad_dias', v)} />
@@ -297,7 +352,7 @@ export function FormularioRegistro({
         {pasoActual === 'dictamen' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.dictamen} ayuda={t.formulario.secciones.dictamenAyuda} />
-            <CampoCasillas etiqueta={t.formulario.campos.ejesDictamen} ayuda={t.formulario.campos.ejesDictamenAyuda} opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valores={lista('ejes_dictamen')} onChange={(v) => fijar('ejes_dictamen', v)} error={errores.ejes_dictamen} />
+            <CampoCasillas etiqueta={t.formulario.campos.ejesDictamen} ayuda={t.formulario.campos.ejesDictamenAyuda} requerido opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valores={lista('ejes_dictamen')} onChange={(v) => fijar('ejes_dictamen', v)} error={errores.ejes_dictamen} />
             <CampoTexto campo="ponencias_maximas" tipo="number" etiqueta={t.formulario.campos.ponenciasMaximas} ayuda={t.formulario.campos.ponenciasMaximasAyuda} valor={texto('ponencias_maximas')} onChange={(v) => fijar('ponencias_maximas', v)} />
             {/* Un dictamen sin conflictos declarados es impugnable. */}
             <CampoParrafo campo="conflicto_interes" etiqueta={t.formulario.campos.conflictoInteres} ayuda={t.formulario.campos.conflictoInteresAyuda} filas={3} valor={texto('conflicto_interes')} onChange={(v) => fijar('conflicto_interes', v)} />
@@ -309,7 +364,7 @@ export function FormularioRegistro({
             <Cabecera titulo={t.formulario.secciones.conexion} ayuda={t.formulario.secciones.conexionAyuda} />
             {/* Sin huso horario, un aviso «a las 9:00» llega mal a media
                 región: el congreso se sigue desde todo el continente. */}
-            <CampoSeleccion etiqueta={t.formulario.campos.zonaHoraria} ayuda={t.formulario.campos.zonaHorariaAyuda} opciones={ZONAS_HORARIAS} valor={texto('zona_horaria')} onChange={(v) => fijar('zona_horaria', v)} error={errores.zona_horaria} />
+            <CampoSeleccion etiqueta={t.formulario.campos.zonaHoraria} ayuda={t.formulario.campos.zonaHorariaAyuda} requerido opciones={ZONAS_HORARIAS} valor={texto('zona_horaria')} onChange={(v) => fijar('zona_horaria', v)} error={errores.zona_horaria} />
             <CampoCasillas etiqueta={t.formulario.campos.requerimientosTecnicos} opciones={opciones('tecnicos', t)} valores={lista('requerimientos_tecnicos')} onChange={(v) => fijar('requerimientos_tecnicos', v)} />
             {perfil?.enPrograma && (
               <CampoInterruptor etiqueta={t.formulario.campos.pruebaConexion} ayuda={t.formulario.campos.pruebaConexionAyuda} valor={Boolean(valores.prueba_conexion)} onChange={(v) => fijar('prueba_conexion', v)} />
@@ -326,6 +381,7 @@ export function FormularioRegistro({
             <SubidaArchivo
               destino="semblanza"
               etiqueta={t.formulario.campos.semblanzaArchivo}
+              requerido
               ayuda={interpolar(t.formulario.campos.semblanzaArchivoAyuda, { mb: congreso.foto_megabytes_maximo })}
               megabytesMaximo={congreso.foto_megabytes_maximo}
               valorUrl={texto('semblanza_url')}
@@ -342,6 +398,18 @@ export function FormularioRegistro({
                 valorUrl={texto('foto_url')}
                 onSubida={(url, id) => { fijar('foto_url', url); fijar('foto_drive_id', id); }}
                 onQuitar={() => { fijar('foto_url', ''); fijar('foto_drive_id', ''); }}
+              />
+            )}
+            {/* Sin esta autorización no se puede transmitir ni grabar a quien
+                sale en el programa, así que se pide aquí y no al final. */}
+            {perfil?.enPrograma && (
+              <CampoInterruptor
+                campo="autoriza_grabacion"
+                etiqueta={t.formulario.campos.autorizaGrabacion}
+                ayuda={t.formulario.campos.autorizaGrabacionAyuda}
+                valor={Boolean(valores.autoriza_grabacion)}
+                onChange={(v) => fijar('autoriza_grabacion', v)}
+                error={errores.autoriza_grabacion}
               />
             )}
             <CampoCasillas etiqueta={t.formulario.campos.autorizaciones} opciones={opciones('autorizaciones', t)} valores={lista('autorizaciones')} onChange={(v) => fijar('autorizaciones', v)} />
@@ -513,7 +581,7 @@ export function FormularioRegistro({
           <section className="space-y-5">
             <Cabecera titulo={t.privacidad.titulo} />
             <div className="rounded-lg border p-4 text-sm" style={{ borderColor: 'var(--borde)' }}>
-              <CampoInterruptor etiqueta={t.privacidad.aceptar} valor={valores.consentimiento_datos as boolean} onChange={(v) => fijar('consentimiento_datos', v)} />
+              <CampoInterruptor campo="consentimiento_datos" etiqueta={t.privacidad.aceptar} valor={valores.consentimiento_datos as boolean} onChange={(v) => fijar('consentimiento_datos', v)} />
               {errores.consentimiento_datos && <p className="error">{errores.consentimiento_datos}</p>}
               <div className="mt-4">
                 <CampoInterruptor etiqueta={t.privacidad.comunicaciones} valor={valores.consentimiento_comunicaciones as boolean} onChange={(v) => fijar('consentimiento_comunicaciones', v)} />
@@ -523,7 +591,26 @@ export function FormularioRegistro({
               </Link>
             </div>
             {errorGeneral && (
-              <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500" role="alert">{errorGeneral}</p>
+              <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500" role="alert">
+                <p className="font-semibold">{errorGeneral}</p>
+                {/* Con los nombres de los campos y un enlace a cada uno: el
+                    aviso a secas obligaba a recorrer diez pasos buscando. */}
+                {Object.keys(errores).length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {Object.entries(errores).map(([campo, mensaje]) => (
+                      <li key={campo}>
+                        <button
+                          type="button"
+                          className="text-left underline underline-offset-2"
+                          onClick={() => irAlPrimerFallo({ [campo]: mensaje })}
+                        >
+                          {nombreDeCampo(campo)}: {mensaje}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )}
           </section>
         )}

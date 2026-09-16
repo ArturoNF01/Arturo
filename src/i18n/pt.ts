@@ -8,6 +8,7 @@ export const pt: Diccionario = {
     tituloCorto: '1º Congresso de Estudos Interamericanos de Seguridade Social',
     organiza: 'CIESS · Centro Interamericano de Estudos de Seguridade Social',
     riuss: 'RIUSS · Rede Interamericana de Universidades para a Seguridade Social',
+    convoca: 'Convoca',
   },
   nav: {
     registro: 'Inscrição', instalaciones: 'Instalações', menu: 'Menu',

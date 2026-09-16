@@ -8,6 +8,7 @@ export const en: Diccionario = {
     tituloCorto: '1st Congress of Inter-American Social Security Studies',
     organiza: 'CIESS · Inter-American Center for Social Security Studies',
     riuss: 'RIUSS · Inter-American Network of Universities for Social Security',
+    convoca: 'Convened by',
   },
   nav: {
     registro: 'Registration', instalaciones: 'Facilities', faqs: 'FAQs', menu: 'Menu',

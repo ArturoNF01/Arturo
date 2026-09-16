@@ -155,3 +155,98 @@ export function campoVisible(
       return true;
   }
 }
+
+/**
+ * En qué paso vive cada campo.
+ *
+ * Sirve para lo mismo en los dos sentidos: al validar, para no dejar avanzar
+ * con un hueco; y cuando el servidor rechaza el envío, para llevar a quien se
+ * registra hasta el paso donde está el problema. Sin esto, el aviso «revise
+ * los campos marcados» aparecía en el último paso y los campos marcados
+ * estaban siete pantallas atrás, invisibles.
+ */
+export const PASO_DE_CAMPO: Record<string, PasoFormulario> = {
+  perfil: 'perfil',
+  modalidad: 'perfil',
+
+  apellidos: 'identificacion',
+  nombres: 'identificacion',
+  nombre_constancia: 'identificacion',
+  genero: 'identificacion',
+  correo: 'identificacion',
+  telefono_whatsapp: 'identificacion',
+  institucion: 'identificacion',
+  cargo: 'identificacion',
+  procedencia: 'identificacion',
+  pais_residencia: 'identificacion',
+  entidad_federativa: 'identificacion',
+  ciudad_residencia: 'identificacion',
+  nacionalidad: 'identificacion',
+  orcid: 'identificacion',
+
+  titulo_ponencia: 'ponencia',
+  resumen_ponencia: 'ponencia',
+  idioma_ponencia: 'ponencia',
+  palabras_clave: 'ponencia',
+  coautoria: 'ponencia',
+  autoriza_publicacion: 'ponencia',
+
+  sesion_asignada: 'sesion',
+  disponibilidad_dias: 'sesion',
+
+  ejes_dictamen: 'dictamen',
+  ponencias_maximas: 'dictamen',
+  conflicto_interes: 'dictamen',
+
+  semblanza_url: 'semblanza',
+  foto_url: 'semblanza',
+  autorizaciones: 'semblanza',
+  autoriza_grabacion: 'semblanza',
+
+  zona_horaria: 'conexion',
+  prueba_conexion: 'conexion',
+
+  documentacion_solicitada: 'documentacion',
+  documentacion_otra: 'documentacion',
+  nombre_pasaporte: 'documentacion',
+  destinatario_oficio: 'documentacion',
+  boleto_url: 'documentacion',
+
+  requerimientos_tecnicos: 'sala',
+
+  requiere_alojamiento: 'alojamiento',
+  fecha_entrada_hotel: 'alojamiento',
+  fecha_salida_hotel: 'alojamiento',
+
+  requiere_traslado: 'traslados',
+  medio_arribo: 'traslados',
+  ciudad_origen: 'traslados',
+  terminal_origen: 'traslados',
+  fecha_llegada: 'traslados',
+  hora_llegada: 'traslados',
+  aerolinea_llegada: 'traslados',
+  vuelo_llegada: 'traslados',
+  fecha_salida: 'traslados',
+  hora_salida: 'traslados',
+  aerolinea_salida: 'traslados',
+  vuelo_salida: 'traslados',
+  observaciones_traslado: 'traslados',
+
+  placa_vehiculo: 'estacionamiento',
+  modelo_vehiculo: 'estacionamiento',
+  color_vehiculo: 'estacionamiento',
+  requerimientos_accesibilidad: 'estacionamiento',
+
+  regimen_alimentario: 'cierre',
+  condicion_alimentaria: 'cierre',
+  condicion_alimentaria_detalle: 'cierre',
+  contacto_emergencia: 'cierre',
+  apoyo_traslado: 'cierre',
+  datos_viatico: 'cierre',
+  requiere_factura: 'cierre',
+  datos_facturacion: 'cierre',
+  comentarios: 'cierre',
+
+  consentimiento_datos: 'privacidad',
+  consentimiento_comunicaciones: 'privacidad',
+};
