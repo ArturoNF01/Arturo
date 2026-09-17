@@ -11,10 +11,21 @@
 #
 #   Domains → Add Domain → ciess.org
 #
-#   Resend devuelve tres registros DNS —uno MX y dos TXT, para SPF y
-#   DKIM— que hay que dar de alta donde viva el DNS de ciess.org. Eso
-#   suele ser cosa del área de sistemas. Después, Verify. Tarda de unos
-#   minutos a unas horas en propagarse.
+#   Resend devuelve tres registros que hay que dar de alta donde viva el
+#   DNS de ciess.org —en nuestro caso, DigitalOcean, la misma cuenta del
+#   droplet—:
+#
+#     TXT    resend._domainkey   p=MIGfMA…        (DKIM, la firma)
+#     CNAME  rsend               rsend.…mta.net   (SPF)
+#     CNAME  send                send.…mta.net    (SPF)
+#
+#   Se AÑADEN; no se sustituye ningún registro existente. Ninguno de los
+#   tres toca el MX del dominio, así que el correo que ya recibe ciess.org
+#   sigue igual. «Enable Receiving» se deja apagado: este sistema sólo
+#   envía.
+#
+#   Luego, «I've already added the records». Tarda de unos minutos a unas
+#   horas en propagarse, hasta que el dominio queda en «Verified».
 #
 #   Sin este paso los correos salen rechazados: es lo que impide que
 #   cualquiera escriba en nombre del dominio.
