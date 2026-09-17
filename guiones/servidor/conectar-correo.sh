@@ -5,11 +5,32 @@
 #   sudo bash /opt/congreso/guiones/servidor/conectar-correo.sh
 #
 # Antes de ejecutarlo hacen falta dos cosas, y las dos se hacen en
-# resend.com, que es gratis hasta 3.000 correos al mes:
+# resend.com, que es gratis hasta 3.000 correos al mes.
 #
-#   1. Verificar el dominio desde el que se escribirá —ciess.org— con
-#      los tres registros DNS que Resend indica.
-#   2. Crear una clave de API. Empieza por «re_».
+# --- 1. Verificar el dominio ------------------------------------------
+#
+#   Domains → Add Domain → ciess.org
+#
+#   Resend devuelve tres registros DNS —uno MX y dos TXT, para SPF y
+#   DKIM— que hay que dar de alta donde viva el DNS de ciess.org. Eso
+#   suele ser cosa del área de sistemas. Después, Verify. Tarda de unos
+#   minutos a unas horas en propagarse.
+#
+#   Sin este paso los correos salen rechazados: es lo que impide que
+#   cualquiera escriba en nombre del dominio.
+#
+# --- 2. Crear la clave ------------------------------------------------
+#
+#   API Keys → Create API Key
+#     Name       · algo que se reconozca, «congreso-dss»
+#     Permission · Sending access   (no hace falta Full access)
+#     Domain     · ciess.org, para que sólo sirva para este dominio
+#
+#   La clave se enseña UNA sola vez, al crearla. Si se cierra esa
+#   ventana sin copiarla, no se puede volver a ver: se crea otra.
+#
+#   Es una credencial: no se manda por WhatsApp ni por correo. Este
+#   guion la pide sin mostrarla en pantalla.
 #
 # El guion pide la clave sin mostrarla, la guarda en el .env, reinicia
 # el servicio y manda un correo de prueba para comprobar que sale.
