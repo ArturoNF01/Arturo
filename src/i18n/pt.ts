@@ -461,6 +461,8 @@ export const pt: Diccionario = {
         copiados: 'Copiadas: {n}.',
         sinAcuse: '{n} pessoa(s) não receberam o comprovante de inscrição.',
         correoSinConfigurar: 'O envio de e-mail ainda não está conectado.',
+        reenviarAcuses: 'Reenviar agora',
+        acusesEnviados: 'Comprovantes enviados: {n}.',
         cupoAgotado: 'As vagas presenciais esgotaram-se.',
         enListaEspera: '{n} pessoa(s) na lista de espera.',
         sinListaEspera: 'Quem se inscrever a partir de agora entra na lista de espera.'

@@ -460,6 +460,8 @@ export const en: Diccionario = {
         copiados: 'Copied: {n}.',
         sinAcuse: '{n} person(s) did not receive their registration acknowledgement.',
         correoSinConfigurar: 'Email sending is not connected yet.',
+        reenviarAcuses: 'Resend them now',
+        acusesEnviados: 'Acknowledgements sent: {n}.',
         cupoAgotado: 'In-person places are full.',
         enListaEspera: '{n} person(s) on the waiting list.',
         sinListaEspera: 'Anyone registering from now on joins the waiting list.',

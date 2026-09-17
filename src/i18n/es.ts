@@ -525,6 +525,8 @@ export const es = {
         copiados: 'Copiados: {n}.',
         sinAcuse: 'A {n} persona(s) no les llegó el acuse de registro.',
         correoSinConfigurar: 'El envío de correo todavía no está conectado.',
+        reenviarAcuses: 'Reenviarlos ahora',
+        acusesEnviados: 'Acuses enviados: {n}.',
         cupoAgotado: 'Los lugares presenciales se agotaron.',
         enListaEspera: '{n} persona(s) en lista de espera.',
         sinListaEspera: 'Quien se registre desde ahora entra en lista de espera.',

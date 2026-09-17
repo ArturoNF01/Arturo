@@ -25,6 +25,8 @@ export function AvisoHoja() {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [copiando, setCopiando] = useState(false);
   const [resultado, setResultado] = useState('');
+  const [reenviando, setReenviando] = useState(false);
+  const [resultadoAcuses, setResultadoAcuses] = useState('');
 
   async function revisar() {
     try {
@@ -74,6 +76,25 @@ export function AvisoHoja() {
     }
   }
 
+  async function reenviarAcuses() {
+    setReenviando(true);
+    setResultadoAcuses('');
+    try {
+      const respuesta = await fetch('/api/acuses', { method: 'POST' });
+      const datos = await respuesta.json();
+      if (!respuesta.ok) {
+        setResultadoAcuses(datos.mensaje ?? t.estados.error);
+        return;
+      }
+      setResultadoAcuses(interpolar(t.panel.hoja.acusesEnviados, { n: datos.enviados ?? 0 }));
+      await revisar();
+    } catch {
+      setResultadoAcuses(t.estados.error);
+    } finally {
+      setReenviando(false);
+    }
+  }
+
   return (
     <div className="border-b" style={{ borderColor: 'var(--borde)' }}>
       {/* El cupo va arriba: es el que cambia lo que el comité hace hoy. */}
@@ -111,7 +132,22 @@ export function AvisoHoja() {
           <p className="font-semibold">
             {interpolar(t.panel.hoja.sinAcuse, { n: sinAcuse.length })}
           </p>
-          {!estado.correoConfigurado && <span className="tenue">{t.panel.hoja.correoSinConfigurar}</span>}
+          {estado.correoConfigurado ? (
+            // El botón sólo aparece cuando hay con qué enviar: ofrecer
+            // reintentar sin clave configurada es prometer algo que no va a
+            // pasar, y el fallo se repetiría igual.
+            <button
+              type="button"
+              className="boton-secundario !py-1.5 !text-xs"
+              onClick={() => void reenviarAcuses()}
+              disabled={reenviando}
+            >
+              {reenviando ? t.estados.enviando : t.panel.hoja.reenviarAcuses}
+            </button>
+          ) : (
+            <span className="tenue">{t.panel.hoja.correoSinConfigurar}</span>
+          )}
+          {resultadoAcuses && <span className="tenue">{resultadoAcuses}</span>}
           <Motivo texto={sinAcuse.find((s) => s.correo_error)?.correo_error} />
         </Franja>
       )}

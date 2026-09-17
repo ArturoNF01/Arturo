@@ -34,9 +34,12 @@ export async function GET() {
         [LOTE_MAXIMO],
       ),
       consultar<Record<string, unknown>>(
+        // Todos los que no tienen acuse, con o sin motivo apuntado: lo que
+        // importa es que esa persona no recibió nada, y el botón de reenvío
+        // actúa sobre exactamente este mismo conjunto.
         `select folio, correo, correo_error
            from registros
-          where correo_enviado_en is null and correo_error is not null
+          where correo_enviado_en is null
           order by creado_en desc
           limit $1`,
         [LOTE_MAXIMO],
