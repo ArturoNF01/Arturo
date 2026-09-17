@@ -5,8 +5,10 @@ import {
 
 describe('pasos del formulario según el perfil', () => {
   it('el público general en línea sólo ve lo indispensable', () => {
+    // Quien sigue la transmisión no tiene hora asignada ni pisa la sede: ni
+    // huso horario, ni comida, ni facturación. Tres pantallas y fuera.
     const pasos = pasosVisibles(perfilPorClave('publico_general'), 'en_linea');
-    expect(pasos).toEqual(['perfil', 'identificacion', 'conexion', 'cierre', 'privacidad']);
+    expect(pasos).toEqual(['perfil', 'identificacion', 'privacidad']);
   });
 
   it('al público general no se le preguntan requerimientos de sala', () => {

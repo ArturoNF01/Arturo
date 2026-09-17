@@ -88,11 +88,12 @@ export function pasosVisibles(
   if (perfil.dictamina) pasos.push('dictamen');
   if (perfil.enPrograma) pasos.push('semblanza');
 
-  // Quien participa a distancia necesita acordar huso horario y conexión;
-  // quien viene en persona, la logística de la sede. Nada de lo que hay
-  // debajo —sala, hotel, traslados, comida, estacionamiento— tiene sentido
-  // para quien sigue el congreso desde su casa.
-  if (!presencial) pasos.push('conexion');
+  // Nada de lo que viene debajo —sala, hotel, traslados, comida,
+  // estacionamiento— tiene sentido para quien sigue el congreso desde su
+  // casa. Y el huso horario sólo se le pregunta a quien tiene una hora
+  // asignada en el programa: el público se conecta cuando quiere, al mismo
+  // enlace que todos.
+  if (!presencial && perfil.clave !== 'publico_general') pasos.push('conexion');
   if (presencial) {
     if (perfil.invitado) pasos.push('documentacion');
     // Los requerimientos de sala —proyector, micrófono— son de quien expone,
@@ -107,7 +108,11 @@ export function pasosVisibles(
     pasos.push('estacionamiento');
   }
 
-  pasos.push('cierre', 'privacidad');
+  // Comida, facturación y contacto de emergencia son de quien pisa la sede.
+  // A quien participa desde su casa no se le pregunta nada de eso.
+  if (presencial) pasos.push('cierre');
+
+  pasos.push('privacidad');
   return pasos;
 }
 

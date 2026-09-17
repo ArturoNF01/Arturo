@@ -2,7 +2,10 @@
 
 import { useApp } from './proveedores';
 import { etiquetaDe, type GrupoOpciones } from '@/lib/opciones';
-import { nombrePerfil } from '@/lib/perfiles';
+import {
+  nombrePerfil, pasosVisibles, perfilPorClave,
+  type Modalidad, type PasoFormulario,
+} from '@/lib/perfiles';
 import { traducir, type EjeTematico } from '@/lib/contenido';
 
 type Registro = Record<string, unknown>;
@@ -12,6 +15,13 @@ interface Fila {
   etiqueta: string;
   grupo?: GrupoOpciones;
   lista?: boolean;
+}
+
+interface Seccion {
+  /** El paso del formulario del que sale esta sección. */
+  paso: PasoFormulario;
+  titulo: string;
+  filas: Fila[];
 }
 
 export function ResumenRegistro({
@@ -25,8 +35,9 @@ export function ResumenRegistro({
   const { t, idioma } = useApp();
   const c = t.formulario.campos;
 
-  const secciones: { titulo: string; filas: Fila[] }[] = [
+  const secciones: Seccion[] = [
     {
+      paso: 'identificacion',
       titulo: t.formulario.secciones.identificacion,
       filas: [
         { clave: 'apellidos', etiqueta: c.apellidos },
@@ -46,6 +57,7 @@ export function ResumenRegistro({
       ],
     },
     {
+      paso: 'ponencia',
       titulo: t.formulario.secciones.academico,
       filas: [
         { clave: 'modalidad_participacion', etiqueta: c.modalidadParticipacion, grupo: 'roles' },
@@ -56,6 +68,7 @@ export function ResumenRegistro({
       ],
     },
     {
+      paso: 'semblanza',
       titulo: t.formulario.secciones.semblanza,
       filas: [
         { clave: 'semblanza_url', etiqueta: c.semblanzaArchivo },
@@ -64,6 +77,7 @@ export function ResumenRegistro({
       ],
     },
     {
+      paso: 'documentacion',
       titulo: t.formulario.secciones.documentacion,
       filas: [
         // Sin `grupo`: las dos listas de documentación tienen etiquetas
@@ -76,12 +90,14 @@ export function ResumenRegistro({
       ],
     },
     {
+      paso: 'sala',
       titulo: t.formulario.secciones.sala,
       filas: [
         { clave: 'requerimientos_tecnicos', etiqueta: c.requerimientosTecnicos, grupo: 'tecnicos', lista: true },
       ],
     },
     {
+      paso: 'estacionamiento',
       titulo: t.formulario.secciones.estacionamiento,
       filas: [
         { clave: 'placa_vehiculo', etiqueta: c.placa },
@@ -91,6 +107,7 @@ export function ResumenRegistro({
       ],
     },
     {
+      paso: 'alojamiento',
       titulo: t.formulario.secciones.alojamiento,
       filas: [
         { clave: 'fecha_entrada_hotel', etiqueta: c.fechaEntradaHotel },
@@ -98,6 +115,7 @@ export function ResumenRegistro({
       ],
     },
     {
+      paso: 'traslados',
       titulo: t.formulario.secciones.traslados,
       filas: [
         { clave: 'requiere_traslado', etiqueta: c.requiereTraslado, grupo: 'traslado' },
@@ -116,6 +134,7 @@ export function ResumenRegistro({
       ],
     },
     {
+      paso: 'cierre',
       titulo: t.formulario.secciones.cierre,
       filas: [
         { clave: 'regimen_alimentario', etiqueta: c.regimenAlimentario },
@@ -127,6 +146,13 @@ export function ResumenRegistro({
       ],
     },
   ];
+
+  const preguntados = new Set<PasoFormulario>(
+    pasosVisibles(
+      perfilPorClave(String(registro.perfil)),
+      registro.modalidad === 'en_linea' ? 'en_linea' : ('presencial' as Modalidad),
+    ),
+  );
 
   function valorDe(fila: Fila): string {
     const bruto = registro[fila.clave];
@@ -156,6 +182,11 @@ export function ResumenRegistro({
       </dl>
 
       {secciones.map((seccion) => {
+        // Ata el resumen a lo que a esa persona se le llegó a preguntar. Sin
+        // esto, a quien participa en línea le aparecía un apartado
+        // «Traslados» con un «No» que nunca respondió: el campo trae ese
+        // valor por defecto y el resumen sólo miraba si estaba vacío.
+        if (!preguntados.has(seccion.paso)) return null;
         const visibles = seccion.filas.filter((f) => valorDe(f) !== '');
         if (visibles.length === 0) return null;
         return (

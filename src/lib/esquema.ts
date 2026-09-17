@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { CONGRESO_POR_DEFECTO } from './contenido';
-import { CLAVES_PERFIL, perfilPorClave } from './perfiles';
+import { CLAVES_PERFIL, pasosVisibles, perfilPorClave } from './perfiles';
 
 /** Límites que el panel puede cambiar y que la validación debe respetar. */
 export interface LimitesFormulario {
@@ -229,8 +229,13 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
         message: 'Adjunte su semblanza en PDF: se lee antes de su intervención',
       });
     }
-    // Sin huso horario no se le puede avisar a qué hora conectarse.
-    if (datos.modalidad === 'en_linea' && !datos.zona_horaria) {
+    // Sin huso horario no se le puede avisar a qué hora conectarse —pero
+    // sólo se exige a quien llegó a verlo. La regla se ata a los pasos que
+    // el formulario enseña, y no a la modalidad suelta: si no, al quitar un
+    // paso el servidor rechaza el envío por un campo que nadie vio, y el
+    // aviso queda señalando una pantalla que no existe.
+    const pasos = pasosVisibles(perfil, datos.modalidad);
+    if (pasos.includes('conexion') && !datos.zona_horaria) {
       ctx.addIssue({
         code: 'custom',
         path: ['zona_horaria'],

@@ -62,9 +62,22 @@ describe('esquema de registro', () => {
   });
 
   it('en línea, sin zona horaria no se puede avisar a qué hora conectarse', () => {
-    const resultado = esquemaRegistro.safeParse(valido({ zona_horaria: '' }));
+    // A quien tiene una hora en el programa sí se le exige.
+    const resultado = esquemaRegistro.safeParse(valido({
+      perfil: 'ponente', modalidad: 'en_linea', zona_horaria: '',
+      titulo_ponencia: 'Título', autoriza_grabacion: true,
+      semblanza_url: 'https://drive.google.com/file/d/abc/view',
+    }));
     expect(resultado.success).toBe(false);
     expect(resultado.error?.issues.some((i) => i.path[0] === 'zona_horaria')).toBe(true);
+  });
+
+  it('al público en línea no se le exige un huso horario que nunca ve', () => {
+    // Su formulario ya no tiene el paso de conexión. Si la regla siguiera
+    // atada a la modalidad, el envío se rechazaría señalando una casilla
+    // que esa persona no llegó a ver nunca.
+    const resultado = esquemaRegistro.safeParse(valido({ zona_horaria: '' }));
+    expect(resultado.success).toBe(true);
   });
 
   it('un dictaminador sin ejes declarados no se puede repartir', () => {
