@@ -5,6 +5,7 @@
  *   npm run sincronizar -- 20       # sólo los primeros 20
  *   npm run sincronizar -- --callado  # sin ruido si no había nada (cron)
  *   npm run sincronizar -- --rehacer  # vacía la hoja y la escribe entera
+ *   npm run sincronizar -- --vaciar   # sólo la vacía, sin escribir nada
  *
  * Hace lo mismo que el botón del panel, pero desde el servidor. Esa es la
  * razón de que exista: si el panel no abre, o la sesión caducó, la hoja se
@@ -50,6 +51,14 @@ async function principal() {
 
   const numerico = process.argv.slice(2).find((a) => /^\d+$/.test(a));
   const tope = Math.min(Math.max(Number(numerico) || 500, 1), 5000);
+
+  // Dejar la hoja en blanco, con sus encabezados y nada más. Se usa al
+  // limpiar el congreso antes de abrir el registro de verdad.
+  if (process.argv.includes('--vaciar')) {
+    await vaciarHojas();
+    console.log('La hoja quedó vacía, sólo con sus encabezados.');
+    return;
+  }
 
   // Volver a escribirlo todo: se vacía la hoja y se marcan los registros como
   // no copiados. Sin vaciar antes, lo que saldría son las filas duplicadas.
