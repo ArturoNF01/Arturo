@@ -458,6 +458,11 @@ export const en: Diccionario = {
         pendientes: '{n} registration(s) have not reached the Google sheet.',
         copiarAhora: 'Copy them now',
         copiados: 'Copied: {n}.',
+        sinAcuse: '{n} person(s) did not receive their registration acknowledgement.',
+        correoSinConfigurar: 'Email sending is not connected yet.',
+        cupoAgotado: 'In-person places are full.',
+        enListaEspera: '{n} person(s) on the waiting list.',
+        sinListaEspera: 'Anyone registering from now on joins the waiting list.',
       },
     agenda: {
       titulo: 'Congress agenda',

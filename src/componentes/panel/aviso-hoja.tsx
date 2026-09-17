@@ -4,23 +4,25 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../proveedores';
 import { interpolar } from '@/i18n';
 
-interface Pendiente {
-  folio: string;
-  sheets_error: string | null;
+interface Estado {
+  pendientes: { folio: string; sheets_error: string | null }[];
+  sinAcuse: { folio: string; correo: string; correo_error: string | null }[];
+  correoConfigurado: boolean;
+  presencial: { libres: number | null; agotado: boolean; enListaEspera: number };
 }
 
 /**
- * Avisa, en todo el panel, cuando hay registros que no llegaron a la hoja.
+ * Lo que el comité tiene que saber al entrar al panel.
  *
- * Existe por un caso concreto: alguien se registró, el sitio le dio su folio,
- * y su fila nunca apareció en la hoja. El error quedaba guardado en una
- * columna de la base que nadie mira, así que el problema sólo se descubría
- * cuando otra área echaba en falta a una persona. Ahora se ve al entrar, con
- * el motivo delante: casi siempre dice exactamente qué hay que hacer.
+ * Tres avisos que antes no existían y que compartían el mismo defecto: la
+ * información estaba en la base y nadie la miraba. Alguien se registraba, su
+ * fila no llegaba a la hoja o su acuse no salía, y el problema se descubría
+ * cuando otra área echaba en falta a una persona. Y los lugares presenciales
+ * se agotaban sin que nadie se enterara hasta contar filas.
  */
 export function AvisoHoja() {
   const { t } = useApp();
-  const [pendientes, setPendientes] = useState<Pendiente[]>([]);
+  const [estado, setEstado] = useState<Estado | null>(null);
   const [copiando, setCopiando] = useState(false);
   const [resultado, setResultado] = useState('');
 
@@ -28,8 +30,7 @@ export function AvisoHoja() {
     try {
       const respuesta = await fetch('/api/sincronizar');
       if (!respuesta.ok) return;
-      const datos = await respuesta.json();
-      setPendientes(datos.pendientes ?? []);
+      setEstado(await respuesta.json());
     } catch {
       // Sin red no hay nada que avisar; el propio panel ya lo dirá.
     }
@@ -48,10 +49,11 @@ export function AvisoHoja() {
     };
   }, []);
 
-  if (pendientes.length === 0) return null;
+  if (!estado) return null;
 
-  // El motivo del primero basta: cuando falla, falla igual para todos.
-  const motivo = pendientes.find((p) => p.sheets_error)?.sheets_error ?? '';
+  const { pendientes = [], sinAcuse = [], presencial } = estado;
+  const hayAvisos = pendientes.length > 0 || sinAcuse.length > 0 || presencial?.agotado;
+  if (!hayAvisos) return null;
 
   async function copiarAhora() {
     setCopiando(true);
@@ -63,9 +65,7 @@ export function AvisoHoja() {
         setResultado(datos.mensaje ?? t.estados.error);
         return;
       }
-      setResultado(
-        interpolar(t.panel.hoja.copiados, { n: datos.sincronizados ?? 0 }),
-      );
+      setResultado(interpolar(t.panel.hoja.copiados, { n: datos.sincronizados ?? 0 }));
       await revisar();
     } catch {
       setResultado(t.estados.error);
@@ -75,29 +75,64 @@ export function AvisoHoja() {
   }
 
   return (
-    <div
-      className="border-b px-6 py-3 text-sm"
-      style={{
-        borderColor: 'var(--borde)',
-        backgroundColor: 'color-mix(in srgb, #f59e0b 12%, transparent)',
-      }}
-      role="status"
-    >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <p className="font-semibold">
-          {interpolar(t.panel.hoja.pendientes, { n: pendientes.length })}
-        </p>
-        <button
-          type="button"
-          className="boton-secundario !py-1.5 !text-xs"
-          onClick={() => void copiarAhora()}
-          disabled={copiando}
-        >
-          {copiando ? t.estados.enviando : t.panel.hoja.copiarAhora}
-        </button>
-        {resultado && <span className="tenue">{resultado}</span>}
-      </div>
-      {motivo && <p className="ayuda mt-1.5">{motivo}</p>}
+    <div className="border-b" style={{ borderColor: 'var(--borde)' }}>
+      {/* El cupo va arriba: es el que cambia lo que el comité hace hoy. */}
+      {presencial?.agotado && (
+        <Franja tono="#3b82f6">
+          <p className="font-semibold">{t.panel.hoja.cupoAgotado}</p>
+          <span className="tenue">
+            {presencial.enListaEspera > 0
+              ? interpolar(t.panel.hoja.enListaEspera, { n: presencial.enListaEspera })
+              : t.panel.hoja.sinListaEspera}
+          </span>
+        </Franja>
+      )}
+
+      {pendientes.length > 0 && (
+        <Franja tono="#f59e0b">
+          <p className="font-semibold">
+            {interpolar(t.panel.hoja.pendientes, { n: pendientes.length })}
+          </p>
+          <button
+            type="button"
+            className="boton-secundario !py-1.5 !text-xs"
+            onClick={() => void copiarAhora()}
+            disabled={copiando}
+          >
+            {copiando ? t.estados.enviando : t.panel.hoja.copiarAhora}
+          </button>
+          {resultado && <span className="tenue">{resultado}</span>}
+          <Motivo texto={pendientes.find((p) => p.sheets_error)?.sheets_error} />
+        </Franja>
+      )}
+
+      {sinAcuse.length > 0 && (
+        <Franja tono="#ef4444">
+          <p className="font-semibold">
+            {interpolar(t.panel.hoja.sinAcuse, { n: sinAcuse.length })}
+          </p>
+          {!estado.correoConfigurado && <span className="tenue">{t.panel.hoja.correoSinConfigurar}</span>}
+          <Motivo texto={sinAcuse.find((s) => s.correo_error)?.correo_error} />
+        </Franja>
+      )}
     </div>
   );
+}
+
+function Franja({ tono, children }: { tono: string; children: React.ReactNode }) {
+  return (
+    <div
+      className="px-6 py-3 text-sm"
+      style={{ backgroundColor: `color-mix(in srgb, ${tono} 12%, transparent)` }}
+      role="status"
+    >
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">{children}</div>
+    </div>
+  );
+}
+
+/** El motivo del primero basta: cuando falla, suele fallar igual para todos. */
+function Motivo({ texto }: { texto?: string | null }) {
+  if (!texto) return null;
+  return <span className="ayuda w-full">{texto}</span>;
 }

@@ -18,14 +18,23 @@
   --oro-sua:  #a98f58;
 }
 
-@page { size: A4; margin: 0; }
-
 * { box-sizing: border-box; }
 
-html, body { margin: 0; padding: 0; }
+html {
+  margin: 0;
+  padding: 0;
+  /* El fondo va aquí y no en el cuerpo: sólo el de la raíz se propaga al
+     lienzo de la página impresa. Puesto en el cuerpo, la zona de márgenes
+     —arriba y abajo de cada hoja— se quedaba en blanco. */
+  background: var(--fondo);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
 
 body {
-  background: var(--fondo);
+  margin: 0;
+  padding: 0;
+  background: transparent;
   color: var(--texto);
   font-family: 'Source Serif 4', Georgia, serif;
   font-size: 10.2pt;
@@ -34,21 +43,25 @@ body {
   print-color-adjust: exact;
 }
 
-/* El contenido fluye entre páginas; sólo se fuerza el corte donde tiene
-   sentido —portada, cambios de bloque grande—. Forzar una página por bloque
-   dejaba medias hojas en blanco. */
+/* La página no lleva margen: así el fondo oscuro cubre la hoja entera y no
+   quedan franjas blancas arriba y abajo. El aire de cada página lo pone el
+   relleno del bloque, y `box-decoration-break: clone` hace que ese relleno
+   —y el fondo— se repitan en cada trozo cuando el bloque se parte entre
+   páginas. Sin eso, sólo la primera página tendría margen superior. */
+@page { size: A4; margin: 0; }
+
 .hoja {
   width: 210mm;
-  padding: 0 16mm;
+  padding: 16mm;
+  background: var(--fondo);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
   position: relative;
 }
 .hoja.corte { page-break-before: always; }
 
-/* El margen superior e inferior de cada página impresa. */
-@page { size: A4; margin: 16mm 0 14mm; }
-
 /* ---- Portada -------------------------------------------------------- */
-.portada { padding-top: 8mm; min-height: 250mm; }
+.portada { padding-top: 24mm; min-height: 240mm; }
 
 .marca { display: flex; align-items: center; gap: 7mm; margin-bottom: 13mm; }
 .marca-sep { width: 1px; align-self: stretch; background: var(--borde); }

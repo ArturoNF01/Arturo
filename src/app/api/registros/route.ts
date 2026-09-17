@@ -180,10 +180,17 @@ export async function POST(peticion: NextRequest) {
     parcheo.sheets_error = String(sheets.reason?.message ?? sheets.reason);
     console.error('Sincronización con Sheets fallida:', sheets.reason);
   }
+  // El motivo se guarda, no sólo se escribe en el registro del servidor: un
+  // acuse que no llega tiene que poder verse desde el panel, con su causa.
   if (correo.status === 'fulfilled' && correo.value.enviado) {
     parcheo.correo_enviado_en = new Date().toISOString();
-  } else if (correo.status === 'fulfilled') {
-    console.error('Envío de acuse fallido:', correo.value.error);
+    parcheo.correo_error = null;
+  } else {
+    const motivo = correo.status === 'fulfilled'
+      ? correo.value.error ?? 'Error de envío.'
+      : String((correo.reason as Error)?.message ?? correo.reason);
+    parcheo.correo_error = motivo;
+    console.error('Envío de acuse fallido:', motivo);
   }
 
   if (Object.keys(parcheo).length > 0) {

@@ -9,32 +9,65 @@ export const maxDuration = 300;
 
 const LOTE_MAXIMO = 100;
 
-/** Registros cuya réplica en Google Sheets quedó pendiente o falló. */
+/**
+ * Lo que el comité debe saber al entrar, en una sola consulta: los registros
+ * que no llegaron a la hoja, los acuses que no salieron, y si los lugares
+ * presenciales se agotaron.
+ *
+ * Van juntos porque se avisan en el mismo sitio y porque los tres comparten
+ * el mismo defecto de origen: eran cosas que sólo se sabían mirando la base.
+ */
 export async function GET() {
   const usuario = await usuarioActual();
   if (!usuario || !permisos(usuario.rol).editarConfiguracion) {
     return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
   }
 
-  let pendientes: Record<string, unknown>[];
   try {
-    pendientes = await consultar(
-      `select id, folio, creado_en, sheets_error, sheets_sincronizado_en
-         from registros
-        where sheets_sincronizado_en is null
-        order by creado_en
-        limit $1`,
-      [LOTE_MAXIMO],
-    );
+    const [pendientes, sinAcuse, cupos] = await Promise.all([
+      consultar<Record<string, unknown>>(
+        `select id, folio, creado_en, sheets_error, sheets_sincronizado_en
+           from registros
+          where sheets_sincronizado_en is null
+          order by creado_en
+          limit $1`,
+        [LOTE_MAXIMO],
+      ),
+      consultar<Record<string, unknown>>(
+        `select folio, correo, correo_error
+           from registros
+          where correo_enviado_en is null and correo_error is not null
+          order by creado_en desc
+          limit $1`,
+        [LOTE_MAXIMO],
+      ),
+      consultar<{
+        cupo_presencial: number | null;
+        ocupado_presencial: number;
+        en_lista_espera: number;
+      }>('select cupo_presencial, ocupado_presencial, en_lista_espera from cupos_estado'),
+    ]);
+
+    const c = cupos[0];
+    const libres = c?.cupo_presencial === null || c?.cupo_presencial === undefined
+      ? null
+      : Number(c.cupo_presencial) - Number(c.ocupado_presencial);
+
+    return NextResponse.json({
+      configurado: googleConfigurado() && Boolean(process.env.GOOGLE_SHEETS_ID),
+      pendientes,
+      sinAcuse,
+      correoConfigurado: Boolean(process.env.RESEND_API_KEY && process.env.CORREO_REMITENTE),
+      presencial: {
+        libres,
+        agotado: libres !== null && libres <= 0,
+        enListaEspera: Number(c?.en_lista_espera ?? 0),
+      },
+    });
   } catch (error) {
-    console.error('No se pudo leer el estado de la réplica:', error);
+    console.error('No se pudo leer el estado del registro:', error);
     return NextResponse.json({ mensaje: 'No fue posible leer el estado.' }, { status: 500 });
   }
-
-  return NextResponse.json({
-    configurado: googleConfigurado() && Boolean(process.env.GOOGLE_SHEETS_ID),
-    pendientes,
-  });
 }
 
 /**

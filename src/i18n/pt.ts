@@ -459,6 +459,11 @@ export const pt: Diccionario = {
         pendientes: '{n} inscrição(ões) não chegaram à planilha do Google.',
         copiarAhora: 'Copiar agora',
         copiados: 'Copiadas: {n}.',
+        sinAcuse: '{n} pessoa(s) não receberam o comprovante de inscrição.',
+        correoSinConfigurar: 'O envio de e-mail ainda não está conectado.',
+        cupoAgotado: 'As vagas presenciais esgotaram-se.',
+        enListaEspera: '{n} pessoa(s) na lista de espera.',
+        sinListaEspera: 'Quem se inscrever a partir de agora entra na lista de espera.'
       },
     agenda: {
       titulo: 'Agenda do congresso',

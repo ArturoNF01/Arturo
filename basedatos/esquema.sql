@@ -262,6 +262,11 @@ alter table registros add column if not exists color_vehiculo     text;
 -- condiciones se recogen en un campo aparte, con su sí o no.
 alter table registros add column if not exists condicion_alimentaria         boolean not null default false;
 alter table registros add column if not exists condicion_alimentaria_detalle text;
+
+-- Por qué no salió el acuse. Sin esto, un correo que no llega no deja rastro
+-- en ninguna parte: la columna de enviado se queda vacía y nadie sabe si fue
+-- una dirección mal escrita, una configuración a medias o una caída.
+alter table registros add column if not exists correo_error text;
 -- El congreso es trilingüe: hay que saber en qué idioma se presenta cada
 -- trabajo y si hace falta interpretación.
 alter table registros add column if not exists idioma_ponencia     text;
