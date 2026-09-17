@@ -75,18 +75,53 @@ morir() { printf '\n\033[31mAlto: %s\033[0m\n' "$1" >&2; exit 1; }
 [ "$(id -u)" -eq 0 ] || morir "ejecute con sudo: sudo bash $0"
 cd /
 
+# Lo que se pega en una consola web no llega limpio: el terminal envuelve
+# el texto en marcas de «bracketed paste» —ESC[200~ delante, ESC[201~
+# detrás— y `read` las guarda como si fueran parte de la clave. La clave
+# entra entera, pero con basura pegada, y la comprobación la rechazaba sin
+# decir por qué. Se quitan esas marcas, los retornos de carro y los
+# espacios antes de mirar nada.
+limpiar() {
+  printf '%s' "$1" \
+    | sed -e $'s/\033\\[20[01]~//g' -e 's/\[20[01]~//g' \
+    | tr -d '[:space:]'
+}
+
 # ---------------------------------------------------------------------
 paso "La clave de Resend"
-aviso "Se pega y no se ve en pantalla. Empieza por «re_»."
-printf '   Clave: '
-read -rs CLAVE
-printf '\n'
+aviso "Se pega y no se ve en pantalla: es normal que no aparezca nada."
+aviso "Empieza por «re_». Al pegarla, pulse Enter."
 
-[ -n "$CLAVE" ] || morir "no se escribió ninguna clave"
-case "$CLAVE" in
-  re_*) ;;
-  *) morir "eso no parece una clave de Resend: debe empezar por «re_»" ;;
-esac
+intento=0
+while :; do
+  intento=$((intento + 1))
+  printf '   Clave: '
+  read -rs CLAVE
+  printf '\n'
+  CLAVE=$(limpiar "${CLAVE:-}")
+
+  case "$CLAVE" in
+    re_*)
+      # Se confirma que llegó algo, sin enseñarla: a ciegas no hay manera
+      # de saber si el pegado funcionó o si se pulsa Enter sobre nada.
+      bien "Recibida: empieza por re_ y tiene $(printf '%s' "$CLAVE" | wc -c | tr -d ' ') caracteres."
+      break
+      ;;
+    '')
+      mal "No llegó nada."
+      aviso "En la consola del navegador, pegar con Cmd+V a veces no entra."
+      aviso "Pruebe con el menú del navegador, o con clic derecho → Pegar."
+      ;;
+    *)
+      mal "Eso no es una clave de Resend: no empieza por «re_»."
+      aviso "Llegaron $(printf '%s' "$CLAVE" | wc -c | tr -d ' ') caracteres, y el primero es «$(printf '%.1s' "$CLAVE")»."
+      aviso "Suele ser que se copió de más, o que se pegó otra cosa."
+      ;;
+  esac
+
+  [ "$intento" -lt 3 ] || morir "tres intentos sin una clave válida"
+  aviso "Inténtelo otra vez."
+done
 
 # ---------------------------------------------------------------------
 paso "La dirección del remitente"

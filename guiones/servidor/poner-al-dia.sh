@@ -68,7 +68,14 @@ fi
 # ---------------------------------------------------------------------
 paso "2 de 5 · Datos y contenido acordados"
 set -a; . "$RAIZ/.env"; set +a
-sudo -u "$USUARIO" psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q \
+# Va como «postgres», no como el usuario de la aplicación: este archivo no
+# sólo actualiza filas, también quita columnas que dejaron de pedirse, y un
+# «alter table» exige ser dueño de la tabla. Las tablas las crea «postgres»
+# al instalar, así que es quien puede. Y está bien que sea así: la
+# aplicación escribe y lee, pero no cambia la forma de su propia base.
+BASE=$(printf '%s' "$DATABASE_URL" | sed -E 's#.*/([^/?]+)(\?.*)?$#\1#')
+[ -n "$BASE" ] || BASE=congreso
+sudo -u postgres psql -v ON_ERROR_STOP=1 -q -d "$BASE" \
   -f "$RAIZ/basedatos/actualizar-convocatoria.sql" > /dev/null || morir "aplicar los datos"
 aviso "Fechas, sede, correos y aviso de privacidad al día."
 
