@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Anteproyecto · Sistema de registro del 1er Congreso de Estudios Interamericanos de Seguridad Social</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<!-- =============================== PORTADA =============================== -->
+<div class="hoja portada">
+  <!-- Logotipo. Sustituir por el archivo institucional cuando se entregue:
+       basta cambiar este bloque por <img src="logo.png" height="46">. -->
+  <div class="marca">
+    <span class="marca-texto">
+      <b>CIESS</b>
+      <span>Centro Interamericano<br>de Estudios de Seguridad Social</span>
+    </span>
+    <span class="marca-sep"></span>
+    <span class="marca-texto">
+      <b>RIUSS</b>
+      <span>Red Interamericana de Universidades<br>para la Seguridad Social</span>
+    </span>
+  </div>
+
+  <h1>Sistema de registro<br>del 1er Congreso de Estudios<br>Interamericanos<br>de Seguridad Social</h1>
+
+  <p class="entradilla">
+    Anteproyecto de un sitio trilingüe que sustituye el formulario genérico y la
+    captura manual por un registro que se adapta al perfil de cada participante,
+    escribe en una base propia, replica cada alta en una hoja de cálculo
+    compartida y entrega al comité un panel con lo que está pasando.
+  </p>
+
+  <div class="ficha">
+    <div><span class="rotulo">Documento</span><span class="valor">Anteproyecto técnico</span></div>
+    <div><span class="rotulo">Versión</span><span class="valor">1.0 — 17 de septiembre de 2026</span></div>
+    <div><span class="rotulo">Estado</span><span class="valor">En producción, registro por abrir</span></div>
+    <div><span class="rotulo">Dirección</span><span class="valor mono">congreso-dss.ciess.org</span></div>
+    <div><span class="rotulo">Congreso</span><span class="valor">11, 12 y 13 de noviembre de 2026</span></div>
+    <div><span class="rotulo">Costo de operación</span><span class="valor">$24 USD al mes</span></div>
+  </div>
+
+  <div class="contenido-portada">
+    <span class="rotulo">Contenido</span>
+    <div class="indice">
+      <span><i>01</i>Antecedentes</span>
+      <span><i>08</i>Etapas ejecutadas</span>
+      <span><i>02</i>Necesidad</span>
+      <span><i>09</i>Resultados</span>
+      <span><i>03</i>Justificación</span>
+      <span><i>10</i>Riesgos y mitigación</span>
+      <span><i>04</i>Objetivos</span>
+      <span><i>11</i>Recursos y costos</span>
+      <span><i>05</i>Alcance</span>
+      <span><i>12</i>Trabajo pendiente</span>
+      <span><i>06</i>Arquitectura de la solución</span>
+      <span><i>13</i>Guía de uso</span>
+      <span><i>07</i>Decisiones de diseño</span>
+      <span><i>14</i>Anexos</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== 01 / 02 ================================ -->
+<div class="hoja">
+  <section>
+    <h2><span class="num">01</span>Antecedentes</h2>
+    <p class="sub">Cómo se registraba a los participantes de un congreso antes de este desarrollo.</p>
+    <hr class="regla">
+
+    <p>
+      El CIESS convoca, junto con la RIUSS, el <b>1er Congreso de Estudios Interamericanos de
+      Seguridad Social</b>, que reúne en la Ciudad de México a personas investigadoras,
+      funcionarias y especialistas de todo el continente durante tres días. La convocatoria
+      cerró: los trabajos ya fueron dictaminados. Lo que queda por resolver es el registro de
+      quienes asisten, y con él toda la logística que ese registro alimenta.
+    </p>
+    <p>
+      Hasta este desarrollo, un congreso del CIESS se registraba con un formulario genérico
+      —Google Forms o equivalente— y una hoja de cálculo que recibía las respuestas. El
+      procedimiento, repetido en cada edición, constaba de estos pasos:
+    </p>
+
+    <ol class="pasos">
+      <li>Se publica <b>un solo formulario</b> con todas las preguntas posibles, y cada
+        persona decide cuáles le aplican.</li>
+      <li>Las respuestas caen en una hoja con <b>una columna por pregunta</b>, la mayoría
+        vacías para la mayoría de la gente.</li>
+      <li>Alguien <b>depura a mano</b>: corrige nombres, normaliza países, detecta duplicados
+        y persigue por correo lo que falta.</li>
+      <li>Se <b>reparte la información</b> a cada área: alojamiento a una, traslados a otra,
+        semblanzas a quien arma el programa, alimentación a proveeduría.</li>
+      <li>Cada área <b>copia lo suyo</b> a su propia hoja, y desde ese momento existen varias
+        versiones de la misma verdad.</li>
+      <li>El conteo de lugares presenciales se lleva <b>contando filas</b>, con el retraso
+        que eso implica.</li>
+    </ol>
+
+    <p>
+      El procedimiento funciona. Su límite no está en el resultado sino en lo que exige:
+      una persona dedicada a depurar durante las semanas de mayor carga, y la aceptación de
+      que la información esté siempre un poco desactualizada.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">02</span>Necesidad</h2>
+    <p class="sub">Lo que un formulario genérico, por su propia naturaleza, no puede ofrecer.</p>
+    <hr class="regla">
+
+    <h3>No distingue a quién le pregunta qué</h3>
+    <p>
+      A una persona que da una conferencia magistral hay que pedirle semblanza, fotografía,
+      requerimientos de sala y datos de vuelo. A quien asiste como público general, nada de
+      eso. Un formulario único obliga a todo el mundo a atravesar preguntas que no le
+      corresponden, y el efecto medible es el abandono: cada pregunta de más es gente que
+      no termina.
+    </p>
+
+    <h3>No controla el aforo</h3>
+    <p>
+      La sede tiene <b>60 lugares presenciales</b>. Un formulario abierto los rebasa sin
+      avisar, y la lista de espera se arma después, a mano, sobre un orden que ya se perdió.
+    </p>
+
+    <h3>No es trilingüe de verdad</h3>
+    <p>
+      El congreso es continental. Publicar tres formularios distintos —español, inglés,
+      portugués— produce tres hojas distintas que después hay que unir, con las categorías
+      escritas en tres idiomas y sin manera de compararlas.
+    </p>
+
+    <h3>No deja rastro</h3>
+    <p>
+      Cuando un dato cambia, nadie sabe quién lo cambió ni cuándo. Para un padrón que
+      sustenta constancias, reservas de hotel y boletos de avión, eso no es un detalle
+      administrativo.
+    </p>
+
+    <div class="nota">
+      <b>Sobre los datos personales.</b> El registro recoge nombre, correo, teléfono,
+      nacionalidad, número de pasaporte, régimen alimentario y condiciones de salud
+      alimentaria. Es tratamiento de datos personales bajo la LFPDPPP mexicana, y de
+      participantes de Brasil y de la Unión Europea bajo la LGPD y el RGPD. Una hoja de
+      cálculo compartida por enlace no es un lugar adecuado para eso, y esa consideración
+      condiciona el diseño entero del sistema.
+    </div>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Sistema de registro del congreso</span></div>
+</div>
+<!-- ============================== 03 / 04 / 05 =========================== -->
+<div class="hoja corte">
+  <section>
+    <h2><span class="num">03</span>Justificación</h2>
+    <p class="sub">Por qué un sistema propio, y por qué sobre infraestructura del CIESS.</p>
+    <hr class="regla">
+
+    <p>
+      El registro de un congreso no es un trámite: es el origen de todo lo demás. De él salen
+      el programa impreso, las constancias, las reservas de hotel, los boletos de avión, las
+      cartas de invitación para visa y el conteo de comidas. Un error en el registro se
+      multiplica por todas esas salidas, y se descubre tarde.
+    </p>
+    <p>
+      Tres razones sostienen la decisión de construirlo en vez de contratarlo:
+    </p>
+    <ul>
+      <li><b>Los datos se quedan en el CIESS.</b> La base corre en un servidor del propio
+        centro, no en la cuenta de un tercero. Quien responde por esos datos ante la ley es
+        quien los custodia.</li>
+      <li><b>El formulario es específico de este congreso.</b> Seis perfiles, dos
+        modalidades, una lógica de invitación que ninguna plataforma genérica modela. Lo que
+        se compraría habría que doblarlo igual.</li>
+      <li><b>Sirve para el siguiente.</b> Lo construido queda: el mismo sistema, con otra
+        convocatoria y otras fechas, atiende la edición que venga.</li>
+    </ul>
+
+    <p>
+      Y una cuarta, práctica: la hoja de cálculo no desaparece. Las áreas del CIESS trabajan
+      con hojas, y obligarlas a cambiar de herramienta habría sido cambiar un problema por
+      otro. El sistema <b>escribe en la hoja</b>, y la hoja sigue siendo donde cada área mira.
+      Lo que cambia es que ya nadie la teclea.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">04</span>Objetivos</h2>
+    <p class="sub">Qué debía lograr el desarrollo, en términos verificables.</p>
+    <hr class="regla">
+
+    <table>
+      <tr><th style="width:38%">Objetivo</th><th>Cómo se comprueba</th></tr>
+      <tr>
+        <td><b>Preguntar sólo lo que aplica</b></td>
+        <td>Un ponente en línea no ve las preguntas de sala, hotel, traslados,
+            alimentación ni estacionamiento. Público general recorre tres pasos, no diez.</td>
+      </tr>
+      <tr>
+        <td><b>Registrar en los tres idiomas</b></td>
+        <td>Español, inglés y portugués en el mismo formulario, con las categorías guardadas
+            en un valor único comparable entre idiomas.</td>
+      </tr>
+      <tr>
+        <td><b>Respetar el aforo</b></td>
+        <td>El formulario muestra los lugares presenciales disponibles y, al agotarse,
+            ofrece la modalidad en línea o deja el registro en lista de espera.</td>
+      </tr>
+      <tr>
+        <td><b>Llegar solo a la hoja</b></td>
+        <td>Cada alta escribe su fila en el momento; lo que falle se recoge solo minutos
+            después, y si algo queda pendiente el panel lo avisa con el motivo.</td>
+      </tr>
+      <tr>
+        <td><b>Custodiar los datos</b></td>
+        <td>Base en servidor propio, cifrado en tránsito, aviso de privacidad con
+            consentimiento explícito y registro de auditoría de toda modificación.</td>
+      </tr>
+      <tr>
+        <td><b>Entregar el estado sin pedirlo</b></td>
+        <td>Panel con el conteo por perfil, modalidad, país e institución, actualizado al
+            momento y exportable.</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2><span class="num">05</span>Alcance</h2>
+    <p class="sub">Lo que el sistema resuelve y lo que deliberadamente queda fuera.</p>
+    <hr class="regla">
+
+    <h4>Incluye</h4>
+    <ul>
+      <li>Sitio público trilingüe: portada, registro, instalaciones, preguntas frecuentes y
+        aviso de privacidad.</li>
+      <li>Formulario de hasta diez pasos que se arma según el perfil y la modalidad elegidos.</li>
+      <li>Carga de semblanza, fotografía y boleto de vuelo a carpetas de Google&nbsp;Drive.</li>
+      <li>Réplica de cada registro en la hoja de cálculo del comité, en seis pestañas.</li>
+      <li>Panel de administración con cinco niveles de permiso, gráficas, exportación,
+        consulta SQL de sólo lectura y auditoría.</li>
+      <li>Respaldo automático de la base cada noche, con treinta días de historial.</li>
+    </ul>
+
+    <h4>No incluye</h4>
+    <ul>
+      <li><b>Cobro de inscripción.</b> El congreso es gratuito; no hay pasarela de pago.</li>
+      <li><b>Emisión de constancias.</b> La resuelve el sistema de constancias del CIESS, que
+        es otro desarrollo. Este entrega el padrón.</li>
+      <li><b>Transmisión del congreso.</b> Se hace por Zoom; el sistema recoge el huso horario
+        y reparte el enlace.</li>
+      <li><b>Dictaminación de trabajos.</b> La convocatoria cerró antes de este desarrollo.
+        El panel tiene la pantalla, pero el proceso ya ocurrió fuera.</li>
+    </ul>
+
+    <div class="nota">
+      <b>Restricción de integración.</b> La hoja de cálculo la usan varias áreas del CIESS
+      con sus propias fórmulas y filtros. El sistema no podía apropiarse de ella: escribe sus
+      filas y comprueba que las columnas sean las que espera, pero no reordena ni da formato.
+      Si alguien cambia los encabezados, el sistema <b>se detiene y lo dice</b> en lugar de
+      escribir filas desplazadas.
+    </div>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Sistema de registro del congreso</span></div>
+</div>
+
+<!-- ============================== 06 / 07 ================================ -->
+<div class="hoja corte">
+  <section>
+    <h2><span class="num">06</span>Arquitectura de la solución</h2>
+    <p class="sub">Cinco piezas sobre un solo servidor que el CIESS administra.</p>
+    <hr class="regla">
+
+    <table>
+      <tr><th style="width:26%">Pieza</th><th style="width:26%">Qué es</th><th>Qué resuelve</th></tr>
+      <tr>
+        <td><b>Sitio</b></td>
+        <td><span class="mono-en">Next.js 16</span> · React 19 · TypeScript</td>
+        <td>El sitio público y el panel. Se dibuja en el servidor, así que abre rápido y lo
+            lee un buscador.</td>
+      </tr>
+      <tr>
+        <td><b>Base de datos</b></td>
+        <td><span class="mono-en">PostgreSQL 16</span></td>
+        <td>La fuente única de verdad. Vive en el mismo servidor; no sale de ahí.</td>
+      </tr>
+      <tr>
+        <td><b>Servidor</b></td>
+        <td>Droplet de DigitalOcean · Ubuntu 24.04</td>
+        <td>2 núcleos, 4&nbsp;GB, 80&nbsp;GB. Alojaría otros desarrollos del CIESS sin
+            ampliarse.</td>
+      </tr>
+      <tr>
+        <td><b>Entrada</b></td>
+        <td><span class="mono-en">Caddy</span></td>
+        <td>Atiende el dominio y renueva solo el certificado. Sin configuración de TLS a
+            mano.</td>
+      </tr>
+      <tr>
+        <td><b>Réplica</b></td>
+        <td>Google Sheets · Google Drive</td>
+        <td>La hoja que ya usan las áreas y las carpetas donde caen los archivos.</td>
+      </tr>
+    </table>
+
+    <h3>El camino de un registro</h3>
+    <ol class="pasos">
+      <li>La persona <b>elige perfil y modalidad</b>; el formulario se arma con los pasos que
+        le tocan.</li>
+      <li>Al enviar, el servidor <b>valida de nuevo</b> todo lo que el navegador ya había
+        validado, porque lo que llega por la red no es de fiar.</li>
+      <li>Se <b>guarda en PostgreSQL</b> y se genera el folio.</li>
+      <li>En la misma petición se <b>escribe la fila en la hoja</b> y se envía el acuse por
+        correo. Ninguna de las dos cosas retrasa la respuesta.</li>
+      <li>Si la hoja falla, <b>queda anotado el motivo</b>. Una tarea recoge los rezagados
+        cada diez minutos y el panel avisa mientras quede alguno.</li>
+      <li>Cada noche, a las 03:15, la base <b>se respalda entera</b>.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="num">07</span>Decisiones de diseño</h2>
+    <p class="sub">Las que condicionaron el resto, y por qué se tomaron así.</p>
+    <hr class="regla">
+
+    <h4>El formulario se arma, no se oculta</h4>
+    <p>
+      Los pasos que no aplican no se envían al navegador desactivados: <b>no existen</b>. La
+      lógica vive en un solo archivo que decide, a partir del perfil y la modalidad, qué pasos
+      y qué campos se pintan. Eso permite probar la decisión entera sin abrir el navegador, y
+      es lo que garantiza que un ponente en línea no vea nunca una pregunta sobre el hotel.
+    </p>
+
+    <h4>Las categorías se guardan en un valor, no en una palabra</h4>
+    <p>
+      «Presencial», «In person» y «Presencial» son la misma cosa. La base guarda
+      <span class="mono-en">presencial</span> y cada idioma pone su etiqueta encima. Sin eso,
+      un registro hecho en portugués no se podría comparar con uno hecho en español.
+    </p>
+
+    <h4>La hoja es una copia, no el original</h4>
+    <p>
+      Si Google no responde, el registro <b>se guarda igual</b> y la persona recibe su folio.
+      La hoja se pone al día después. Al revés —depender de un servicio externo para poder
+      registrar a alguien— habría sido cambiar un problema por otro más difícil de explicar.
+    </p>
+
+    <h4>Los archivos van a Drive, no al servidor</h4>
+    <p>
+      Semblanzas, fotografías y boletos caen en tres carpetas distintas de Drive, compartidas
+      con las áreas que las necesitan. En la hoja aparece un enlace <em>Descargar</em>. El
+      servidor no guarda documentos con datos personales.
+    </p>
+
+    <div class="nota">
+      <b>Sobre los teléfonos y las fórmulas.</b> Una hoja de cálculo interpreta como fórmula
+      todo lo que empieza por <span class="mono-en">=</span>, <span class="mono-en">+</span>,
+      <span class="mono-en">-</span> o <span class="mono-en">@</span>. Un teléfono
+      «+52 55…» entraba como error. El sistema antepone un apóstrofo —que la hoja no guarda ni
+      muestra— a esos cuatro signos. No es cosmético: son datos que escribe cualquiera desde
+      un formulario público, y una celda que empieza por <span class="mono-en">=</span> se
+      ejecuta al abrir la hoja.
+    </div>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Sistema de registro del congreso</span></div>
+</div>
+<!-- ============================== 08 / 09 ================================ -->
+<div class="hoja corte">
+  <section>
+    <h2><span class="num">08</span>Etapas ejecutadas</h2>
+    <p class="sub">El orden en que se construyó, y qué quedó resuelto en cada tramo.</p>
+    <hr class="regla">
+
+    <table>
+      <tr><th style="width:7%"></th><th style="width:32%">Etapa</th><th>Resultado</th></tr>
+      <tr><td><b>01</b></td><td>Base del proyecto</td>
+        <td>Sitio trilingüe, tema claro y oscuro, esquema de la base.</td></tr>
+      <tr><td><b>02</b></td><td>Formulario dinámico</td>
+        <td>Seis perfiles, dos modalidades, pasos que se arman según la elección.</td></tr>
+      <tr><td><b>03</b></td><td>Réplica y correo</td>
+        <td>Escritura en Sheets, carga a Drive, acuse automático.</td></tr>
+      <tr><td><b>04</b></td><td>Acceso y roles</td>
+        <td>Cinco niveles de permiso: lector, científico de datos, organizador,
+            administrador y superadministrador.</td></tr>
+      <tr><td><b>05</b></td><td>Panel de control</td>
+        <td>Gráficas al momento, filtros, mapa de procedencias.</td></tr>
+      <tr><td><b>06</b></td><td>Operación</td>
+        <td>Exportación, cupos, plantillas de correo, preguntas frecuentes, auditoría.</td></tr>
+      <tr><td><b>07</b></td><td>Endurecimiento</td>
+        <td>Pruebas automáticas, reintentos, señuelo contra registros automatizados,
+            control de duplicados.</td></tr>
+      <tr><td><b>08</b></td><td>Contenido editable</td>
+        <td>Fechas, sede, ejes, aviso de privacidad y preguntas se editan desde el panel,
+            sin desplegar.</td></tr>
+      <tr><td><b>09</b></td><td>Infraestructura propia</td>
+        <td>Migración a PostgreSQL en droplet del CIESS, con respaldo nocturno y despliegue
+            que se revierte solo si algo sale mal.</td></tr>
+      <tr><td><b>10</b></td><td>Ajuste al congreso real</td>
+        <td>Formulario rehecho con lo que el comité pidió: campos fuera, secciones nuevas,
+            aforo de 60.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2><span class="num">09</span>Resultados</h2>
+    <p class="sub">Lo que hay construido, en cifras comprobables.</p>
+    <hr class="regla">
+
+    <div class="ficha" style="margin-bottom:5mm">
+      <div><span class="rotulo">Pruebas automáticas</span><span class="valor mono">192</span></div>
+      <div><span class="rotulo">Idiomas</span><span class="valor mono">3</span></div>
+      <div><span class="rotulo">Perfiles de participación</span><span class="valor mono">6</span></div>
+      <div><span class="rotulo">Campos del registro</span><span class="valor mono">95</span></div>
+      <div><span class="rotulo">Pestañas en la hoja</span><span class="valor mono">6</span></div>
+      <div><span class="rotulo">Roles del panel</span><span class="valor mono">5</span></div>
+    </div>
+
+    <h3>Lo que cambia respecto al procedimiento anterior</h3>
+    <table>
+      <tr><th style="width:34%"></th><th style="width:33%">Antes</th><th>Ahora</th></tr>
+      <tr><td><b>Preguntas por persona</b></td>
+        <td>Todas, para todos</td>
+        <td>Entre 3 y 10 pasos, según el perfil</td></tr>
+      <tr><td><b>Depuración</b></td>
+        <td>Manual, por correo</td>
+        <td>Validada al capturar, en el navegador y otra vez en el servidor</td></tr>
+      <tr><td><b>Llegada a la hoja</b></td>
+        <td>Copiada a mano</td>
+        <td>En el momento del alta; los rezagos se recogen solos</td></tr>
+      <tr><td><b>Control de aforo</b></td>
+        <td>Contando filas</td>
+        <td>En pantalla, con lista de espera automática</td></tr>
+      <tr><td><b>Rastro de cambios</b></td>
+        <td>Ninguno</td>
+        <td>Auditoría de cada alta, cambio y baja, con autor y fecha</td></tr>
+      <tr><td><b>Custodia de los datos</b></td>
+        <td>Cuenta de terceros</td>
+        <td>Servidor del CIESS, con respaldo nocturno</td></tr>
+    </table>
+
+    <div class="nota">
+      <b>Sobre las pruebas.</b> Las 192 pruebas no son una cifra de adorno: cubren la
+      decisión de qué se le pregunta a cada perfil, la conversión de un registro a filas de
+      la hoja, el blindaje de las celdas, los límites del formulario y el comportamiento de
+      los guiones del servidor. Cada una se escribió después de un fallo real, y por eso el
+      sistema no vuelve a caer en el mismo.
+    </div>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Sistema de registro del congreso</span></div>
+</div>
+
+<!-- ============================== 10 / 11 / 12 =========================== -->
+<div class="hoja corte">
+  <section>
+    <h2><span class="num">10</span>Riesgos y mitigación</h2>
+    <p class="sub">Lo que puede salir mal, y qué hace el sistema cuando pasa.</p>
+    <hr class="regla">
+
+    <table>
+      <tr><th style="width:30%">Riesgo</th><th>Mitigación</th></tr>
+      <tr><td><b>Google deja de responder</b></td>
+        <td>El registro se guarda igual y la persona recibe su folio. Una tarea recoge los
+            rezagados cada diez minutos y el panel avisa mientras quede alguno.</td></tr>
+      <tr><td><b>Alguien cambia las columnas de la hoja</b></td>
+        <td>El sistema lo detecta antes de escribir, se detiene y dice qué ejecutar. Una
+            fila que no llega se recupera; cien filas descolocadas, no.</td></tr>
+      <tr><td><b>Una actualización rompe el sitio</b></td>
+        <td>Se compila aparte y sólo se cambia por la nueva cuando sale entera. Si el sitio
+            no responde después de reiniciar, vuelve solo a la versión anterior.</td></tr>
+      <tr><td><b>Se pierde la base</b></td>
+        <td>Respaldo completo cada noche a las 03:15, con treinta días de historial, y otro
+            antes de cada despliegue.</td></tr>
+      <tr><td><b>Registros automatizados</b></td>
+        <td>Señuelo invisible, medición del tiempo de llenado y control de duplicados por
+            correo.</td></tr>
+      <tr><td><b>Se llenan los lugares presenciales</b></td>
+        <td>El formulario lo dice antes de empezar y ofrece la modalidad en línea; quien
+            insiste queda en lista de espera, en orden.</td></tr>
+      <tr><td><b>Fuga de datos personales</b></td>
+        <td>Base sin acceso desde fuera del servidor, cifrado en tránsito, contraseñas
+            derivadas con <span class="mono-en">scrypt</span>, sesiones con huella y
+            caducidad, y permisos por rol.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2><span class="num">11</span>Recursos y costos</h2>
+    <p class="sub">Lo que cuesta operar esto al mes.</p>
+    <hr class="regla">
+
+    <table>
+      <tr><th style="width:42%">Concepto</th><th style="width:22%">Costo</th><th>Nota</th></tr>
+      <tr><td><b>Droplet DigitalOcean</b></td><td class="mono-en">$24 USD / mes</td>
+        <td>2 vCPU · 4 GB · 80 GB. Alojaría otros desarrollos del CIESS sin ampliarse.</td></tr>
+      <tr><td><b>Dominio</b></td><td class="mono-en">$0</td>
+        <td>Subdominio de <span class="mono-en">ciess.org</span>, ya existente.</td></tr>
+      <tr><td><b>Certificado TLS</b></td><td class="mono-en">$0</td>
+        <td>Let's Encrypt, renovado automáticamente.</td></tr>
+      <tr><td><b>Google Sheets y Drive</b></td><td class="mono-en">$0</td>
+        <td>Cuenta institucional existente.</td></tr>
+      <tr><td><b>Base de datos</b></td><td class="mono-en">$0</td>
+        <td>PostgreSQL en el mismo servidor.</td></tr>
+      <tr><td><b>Correo transaccional</b></td><td class="mono-en">$0</td>
+        <td>Nivel gratuito suficiente para el volumen del congreso.</td></tr>
+    </table>
+    <p style="margin-top:4mm">
+      <b>Total: $24 USD al mes</b>, y ese servidor está pensado para alojar también los
+      próximos desarrollos del centro.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">12</span>Trabajo pendiente</h2>
+    <p class="sub">Lo que falta antes de abrir el registro al público.</p>
+    <hr class="regla">
+    <ul>
+      <li><b>Correo saliente.</b> Falta dar de alta el dominio en el servicio de envío para
+        que salgan los acuses y los recordatorios.</li>
+      <li><b>Enlace de Zoom.</b> Se carga desde el panel cuando el comité lo tenga; el sistema
+        ya lo reparte según el huso horario de cada quien.</li>
+      <li><b>Limpieza previa a la apertura.</b> Borrar los registros de prueba y vaciar la
+        hoja. Hay un guion que respalda antes y pide confirmación escrita.</li>
+      <li><b>Agenda definitiva.</b> Sustituir la convocatoria por el programa cuando esté
+        cerrado; se cambia desde el panel, sin desplegar.</li>
+      <li><b>Fotografías de la sede.</b> La galería construye las direcciones de las 200
+        imágenes; conviene confirmarlas todas antes de abrir.</li>
+    </ul>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Sistema de registro del congreso</span></div>
+</div>
+<!-- ================================ 13 ================================== -->
+<div class="hoja corte">
+  <section>
+    <h2><span class="num">13</span>Guía de uso</h2>
+    <p class="sub">Paso a paso, con lo que se ve en pantalla. Primero el sitio público;
+      después el panel del comité.</p>
+    <hr class="regla">
+
+    <h3>A · La portada</h3>
+    <p>
+      Se entra por <span class="mono-en">congreso-dss.ciess.org</span>. La portada dice qué
+      congreso es, cuándo y dónde, y lleva a registrarse. El sitio abre en modo oscuro; con
+      el botón de sol de la esquina se cambia a fondo claro, y la elección se recuerda.
+    </p>
+    <figure>
+      <img src="capturas/01-portada.png" alt="Portada del sitio">
+      <figcaption><b>Fig. 1</b> Portada. El título, las fechas, la sede y las dos modalidades.
+        La sede es un enlace: abre el mapa en otra pestaña.</figcaption>
+    </figure>
+    <figure>
+      <img src="capturas/02-ejes.png" alt="Los nueve ejes temáticos">
+      <figcaption><b>Fig. 2</b> Los nueve ejes temáticos del congreso. Se editan desde el
+        panel, sin tocar el código.</figcaption>
+    </figure>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+
+<div class="hoja">
+  <figure>
+    <img src="capturas/03-sede-mapa.png" alt="La sede con el mapa">
+    <figcaption><b>Fig. 3</b> Cómo llegar. La dirección, el mapa incrustado y un enlace que
+      abre Google Maps en otra pestaña.</figcaption>
+  </figure>
+  <figure>
+    <img src="capturas/04-mosaico.png" alt="Mosaico de instalaciones">
+    <figcaption><b>Fig. 4</b> Adelanto de las instalaciones. Nueve fotografías de tamaños
+      distintos, sorteadas en cada visita; al pulsar una se abre a pantalla completa y se
+      recorren las doscientas con las flechas.</figcaption>
+  </figure>
+  <figure>
+    <img src="capturas/06-faqs.png" alt="Preguntas frecuentes">
+    <figcaption><b>Fig. 5</b> Preguntas frecuentes, con buscador. La pregunta sobre la sede
+      trae el mapa debajo.</figcaption>
+  </figure>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+
+<div class="hoja">
+  <section>
+    <h3>B · Registrarse</h3>
+    <p>
+      El registro empieza eligiendo <b>perfil</b> y <b>modalidad</b>. Esa elección decide todo
+      lo demás: los pasos que aparecen y las preguntas de cada uno. Arriba se ve siempre en
+      qué paso se va y cuántos faltan.
+    </p>
+    <ol class="pasos">
+      <li><b>Elija su perfil.</b> Ponente, conferencista, coordinación, moderación,
+        dictaminación o público general. Cada tarjeta dice qué significa.</li>
+      <li><b>Elija la modalidad.</b> Presencial o en línea. Si los lugares presenciales se
+        agotaron, el formulario lo dice antes de que llene nada.</li>
+      <li><b>Avance.</b> Los campos obligatorios llevan un asterisco rojo. Si falta alguno,
+        el formulario lo marca y lleva el cursor hasta él: no deja pasar al siguiente paso
+        con un hueco.</li>
+    </ol>
+    <figure>
+      <img src="capturas/08-registro-perfil.png" alt="Elección de perfil">
+      <figcaption><b>Fig. 6</b> Paso 1. Los seis perfiles y las dos modalidades. Debajo, los
+        lugares presenciales que quedan.</figcaption>
+    </figure>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+
+<div class="hoja">
+  <figure>
+    <img src="capturas/09-registro-identificacion.png" alt="Identificación">
+    <figcaption><b>Fig. 7</b> Paso 2. Identificación. El nombre que se capture aquí es el que
+      saldrá en la constancia.</figcaption>
+  </figure>
+  <figure>
+    <img src="capturas/10-registro-errores.png" alt="Campos marcados">
+    <figcaption><b>Fig. 8</b> Si falta algo, se marca campo por campo y el cursor salta al
+      primero. Nunca se dice «revise los campos» sin señalar cuáles.</figcaption>
+  </figure>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+
+<div class="hoja">
+  <p>
+    Los pasos siguientes dependen del perfil. Quien sale en el programa adjunta su
+    <b>semblanza en PDF</b> y, si da una conferencia o modera, también su fotografía. Quien
+    viene del extranjero ve la documentación de invitación —carta para la visa, oficio a su
+    institución, boleto de vuelo—; quien reside en México ve sólo lo que le aplica.
+  </p>
+  <figure>
+    <img src="capturas/11-registro-semblanza.png" alt="Semblanza y fotografía">
+    <figcaption><b>Fig. 9</b> Semblanza y fotografía. Se adjuntan; van a carpetas distintas de
+      Drive y en la hoja aparecen como un enlace <em>Descargar</em>.</figcaption>
+  </figure>
+  <figure>
+    <img src="capturas/12-registro-documentacion.png" alt="Documentación de invitación">
+    <figcaption><b>Fig. 10</b> Documentación de invitación. Las opciones cambian según dónde
+      resida cada quien; marcar una abre el campo que le corresponde.</figcaption>
+  </figure>
+  <div class="nota">
+    <b>Qué pasa al enviar.</b> La persona recibe su <b>folio</b> y un enlace de edición con el
+    que puede volver a corregir sus datos sin escribir a nadie. En el mismo momento, su fila
+    aparece en la hoja del comité.
+  </div>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+
+<div class="hoja">
+  <section>
+    <h3>C · Entrar al panel</h3>
+    <p>
+      El acceso está al pie del sitio, discreto: lo usan las personas del comité, que lo
+      buscan a propósito. Se entra con correo y contraseña, o pidiendo un enlace de un solo
+      uso al correo.
+    </p>
+    <figure>
+      <img src="capturas/13-login.png" alt="Acceso al panel">
+      <figcaption><b>Fig. 11</b> Acceso. La sesión dura doce horas.</figcaption>
+    </figure>
+
+    <h3>D · Ver cómo va el registro</h3>
+    <p>
+      El tablero abre con lo que importa: cuántos van, cuántos presenciales y en línea,
+      cuántos hoy, de qué países y de qué instituciones. Todo se filtra por fecha, país,
+      perfil, modalidad, estado o institución, y las gráficas se rehacen al filtrar.
+    </p>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+
+<div class="hoja">
+  <figure>
+    <img src="capturas/14-panel-dashboard.png" alt="Tablero">
+    <figcaption><b>Fig. 12</b> Tablero. Los indicadores, los filtros y la evolución diaria.
+      Arriba, el aviso de los registros que aún no llegaron a la hoja, con el motivo y un
+      botón para copiarlos.</figcaption>
+  </figure>
+  <figure>
+    <img src="capturas/15-panel-graficas.png" alt="Gráficas del tablero">
+    <figcaption><b>Fig. 13</b> Reparto por perfil, por modalidad y por procedencia.</figcaption>
+  </figure>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+
+<div class="hoja">
+  <section>
+    <h3>E · Buscar una persona</h3>
+    <p>
+      En <em>Registros</em> está el padrón completo, con filtros y buscador. Basta teclear
+      parte del apellido, el correo o el folio. El botón <em>Ver</em> abre la ficha con todo
+      lo que esa persona respondió.
+    </p>
+    <figure>
+      <img src="capturas/16-panel-registros.png" alt="Lista de registros">
+      <figcaption><b>Fig. 14</b> El padrón. Folio, nombre, perfil, modalidad, estado,
+        institución y país.</figcaption>
+    </figure>
+    <figure>
+      <img src="capturas/17-panel-detalle.png" alt="Ficha de un registro">
+      <figcaption><b>Fig. 15</b> Ficha completa, ordenada por las mismas secciones del
+        formulario.</figcaption>
+    </figure>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+
+<div class="hoja">
+  <section>
+    <h3>F · Analizar el padrón</h3>
+    <p>
+      <em>Analítica avanzada</em> cruza los datos: procedencia contra perfil, evolución por
+      semana, concentración por institución. Sirve para decidir con tiempo cuántas salas
+      hacen falta o de dónde viene la gente.
+    </p>
+    <figure>
+      <img src="capturas/18-panel-analitica.png" alt="Analítica avanzada">
+      <figcaption><b>Fig. 16</b> Analítica avanzada.</figcaption>
+    </figure>
+
+    <h3>G · Cupos, contenido y estado de la hoja</h3>
+    <p>
+      En <em>Cupos y configuración</em> se cambian el aforo, las fechas límite, los correos de
+      contacto y el enlace de la agenda, y se ve el estado de la réplica en Sheets. Nada de
+      eso necesita desplegar.
+    </p>
+    <figure>
+      <img src="capturas/19-panel-cupos.png" alt="Cupos y configuración">
+      <figcaption><b>Fig. 17</b> Cupos y configuración, con el estado de la sincronización al
+        final.</figcaption>
+    </figure>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+
+<div class="hoja">
+  <section>
+    <h3>H · Llevarse los datos y consultarlos</h3>
+    <p>
+      El botón <em>Exportar · CSV</em> del tablero descarga el padrón con los filtros que
+      estén puestos, para trabajarlo aparte o entregarlo a un área que no usa el panel. Quien
+      necesita más precisión tiene <em>Consultas SQL</em>: una ventana para preguntar a la
+      base directamente, en <b>modo lectura</b>, sin poder modificar nada.
+    </p>
+    <figure>
+      <img src="capturas/20-panel-sql.png" alt="Consultas SQL">
+      <figcaption><b>Fig. 18</b> Consulta SQL de sólo lectura, con un límite de filas para
+        que una consulta descuidada no tumbe el sitio.</figcaption>
+    </figure>
+
+    <h3>I · Cambiar los textos y los correos</h3>
+    <p>
+      <em>Contenido del sitio</em> edita las fechas, la sede, los ejes temáticos, las
+      preguntas frecuentes y el aviso de privacidad. <em>Plantillas de correo</em> cambia lo
+      que reciben los participantes, en los tres idiomas. Ninguna de las dos cosas necesita
+      volver a publicar el sitio.
+    </p>
+    <figure>
+      <img src="capturas/24-panel-contenido.png" alt="Contenido del sitio">
+      <figcaption><b>Fig. 19</b> Contenido del sitio. Lo que se cambia aquí aparece de
+        inmediato en las páginas públicas.</figcaption>
+    </figure>
+    <figure>
+      <img src="capturas/23-panel-plantillas.png" alt="Plantillas de correo">
+      <figcaption><b>Fig. 20</b> Plantillas de correo, con las variables disponibles y una
+        vista previa.</figcaption>
+    </figure>
+
+    <h3>J · Quién puede ver qué</h3>
+    <p>
+      <em>Usuarios del panel</em> da de alta a las personas del comité con uno de cinco
+      niveles. Un <b>lector</b> consulta y no modifica; un <b>científico de datos</b> exporta
+      y consulta la base en modo lectura; un <b>organizador</b> edita registros, plantillas y
+      configuración; el <b>superadministrador</b> además elimina registros y gestiona
+      cuentas.
+    </p>
+    <figure>
+      <img src="capturas/21-panel-usuarios.png" alt="Usuarios del panel">
+      <figcaption><b>Fig. 21</b> Cuentas del comité y su nivel de acceso.</figcaption>
+    </figure>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+
+<div class="hoja">
+  <section>
+    <h3>K · Saber quién cambió qué</h3>
+    <p>
+      <em>Auditoría</em> guarda cada alta, cada modificación y cada baja, con quién la hizo y
+      cuándo. Para un padrón que sustenta constancias y boletos de avión, es lo que permite
+      explicar después por qué un dato es el que es.
+    </p>
+    <figure>
+      <img src="capturas/22-panel-auditoria.png" alt="Auditoría">
+      <figcaption><b>Fig. 22</b> Registro de auditoría.</figcaption>
+    </figure>
+
+    <h3>L · Aviso de privacidad</h3>
+    <p>
+      El aviso está publicado y se acepta explícitamente antes de enviar el registro. Su texto
+      se edita desde el panel, apartado por apartado.
+    </p>
+    <figure>
+      <img src="capturas/07-privacidad.png" alt="Aviso de privacidad">
+      <figcaption><b>Fig. 23</b> Aviso de privacidad.</figcaption>
+    </figure>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+<!-- ================================ 14 ================================== -->
+<div class="hoja corte">
+  <section>
+    <h2><span class="num">14</span>Anexos</h2>
+    <p class="sub">Referencia rápida para quien opere el sistema.</p>
+    <hr class="regla">
+
+    <h3>A · Qué se le pregunta a cada perfil</h3>
+    <table>
+      <tr><th style="width:24%">Perfil</th><th style="width:38%">Presencial</th><th>En línea</th></tr>
+      <tr><td><b>Ponente</b></td>
+        <td>Ponencia · Semblanza · Documentación · Sala · Alojamiento · Estacionamiento · Cierre</td>
+        <td>Ponencia · Semblanza · Conexión · Cierre</td></tr>
+      <tr><td><b>Conferencista</b></td>
+        <td>Semblanza y foto · Documentación · Sala · Alojamiento · <b>Traslados</b> ·
+            Estacionamiento · Cierre</td>
+        <td>Semblanza y foto · Conexión · Cierre</td></tr>
+      <tr><td><b>Coordinación</b></td>
+        <td>Sesión · Semblanza · Documentación · Sala · Alojamiento · Estacionamiento · Cierre</td>
+        <td>Sesión · Semblanza · Conexión · Cierre</td></tr>
+      <tr><td><b>Moderación</b></td>
+        <td>Sesión · Semblanza y foto · Documentación · Sala · Alojamiento ·
+            Estacionamiento · Cierre</td>
+        <td>Sesión · Semblanza y foto · Conexión · Cierre</td></tr>
+      <tr><td><b>Dictaminación</b></td>
+        <td>Dictamen · Semblanza · Sala · Estacionamiento · Cierre</td>
+        <td>Dictamen · Semblanza · Conexión · Cierre</td></tr>
+      <tr><td><b>Público general</b></td>
+        <td>Estacionamiento · Cierre</td>
+        <td>Conexión · Cierre</td></tr>
+    </table>
+    <p style="font-size:9pt;color:#8b95a5">
+      Todos pasan además por <em>Perfil</em>, <em>Identificación</em> y
+      <em>Protección de datos</em>. Nadie que participe en línea ve sala, alojamiento,
+      traslados, alimentación ni estacionamiento.
+    </p>
+
+    <h3>B · Las tres carpetas de Drive</h3>
+    <table>
+      <tr><th style="width:26%">Carpeta</th><th style="width:22%">Formato</th><th>Quién la llena</th></tr>
+      <tr><td><b>Semblanzas</b></td><td>PDF</td>
+        <td>Todo el que sale en el programa.</td></tr>
+      <tr><td><b>Fotografías</b></td><td>JPG o PNG</td>
+        <td>Sólo conferencistas y quien modera.</td></tr>
+      <tr><td><b>Boletos</b></td><td>PDF o JPG</td>
+        <td>Quien viene del extranjero y lo marca en documentación.</td></tr>
+    </table>
+    <p style="font-size:9pt;color:#8b95a5">
+      Las tres están compartidas con la cuenta de servicio del sistema. En la hoja, cada
+      archivo aparece como un enlace <em>Descargar</em>.
+    </p>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Anexos</span></div>
+</div>
+
+<div class="hoja">
+  <section>
+    <h3>C · Operación del servidor</h3>
+    <p>Todo se hace con una sola orden, desde la consola del droplet.</p>
+    <table>
+      <tr><th style="width:46%">Para</th><th>Orden</th></tr>
+      <tr><td><b>Poner el sitio al día</b><br>
+        <span style="font-size:8.6pt;color:#8b95a5">Trae los cambios, aplica los datos
+        acordados, copia lo pendiente a la hoja.</span></td>
+        <td><span class="mono-en">sudo bash /opt/congreso/guiones/servidor/poner-al-dia.sh</span></td></tr>
+      <tr><td><b>Cuando el sitio no responde</b><br>
+        <span style="font-size:8.6pt;color:#8b95a5">Diagnostica y, si puede, lo levanta.
+        No toca la base ni revierte nada.</span></td>
+        <td><span class="mono-en">sudo bash /opt/congreso/guiones/servidor/auxilio.sh</span></td></tr>
+      <tr><td><b>Reescribir la hoja entera</b><br>
+        <span style="font-size:8.6pt;color:#8b95a5">Cuando cambian las columnas.</span></td>
+        <td><span class="mono-en">npm run sincronizar -- --rehacer</span></td></tr>
+      <tr><td><b>Dejar el congreso sin registros</b><br>
+        <span style="font-size:8.6pt;color:#8b95a5">Respalda, enseña qué se pierde y pide
+        confirmación escrita.</span></td>
+        <td><span class="mono-en">sudo bash /opt/congreso/guiones/servidor/limpiar-registros.sh</span></td></tr>
+      <tr><td><b>Respaldar ahora</b></td>
+        <td><span class="mono-en">sudo /usr/local/bin/respaldar-congreso</span></td></tr>
+    </table>
+
+    <h3>D · Tareas automáticas</h3>
+    <table>
+      <tr><th style="width:30%">Cuándo</th><th>Qué hace</th></tr>
+      <tr><td><b>Cada noche, 03:15</b></td>
+        <td>Respalda la base entera. Treinta días de historial en
+            <span class="mono-en">/var/respaldos/congreso</span>.</td></tr>
+      <tr><td><b>Cada diez minutos</b></td>
+        <td>Recoge los registros que no llegaron a la hoja. Sólo escribe en el registro
+            cuando algo falla.</td></tr>
+      <tr><td><b>Antes de cada despliegue</b></td>
+        <td>Respalda, compila aparte y sólo cambia el sitio cuando la versión nueva salió
+            entera.</td></tr>
+    </table>
+
+    <h3>E · Marco legal aplicable</h3>
+    <p>
+      El tratamiento de los datos recogidos se rige por la <b>LFPDPPP</b> (México), la
+      <b>LGPD</b> (Brasil) y el <b>RGPD</b> (Unión Europea), según la residencia de cada
+      participante. El aviso de privacidad publicado en el sitio detalla la finalidad, el
+      responsable, la conservación y el ejercicio de derechos.
+    </p>
+
+    <div class="nota" style="margin-top:8mm">
+      <b>Qué se entrega.</b> El sistema funcionando en
+      <span class="mono-en">congreso-dss.ciess.org</span>, el código completo con su
+      historial, los guiones de operación del servidor, la documentación de despliegue y las
+      192 pruebas automáticas que lo respaldan. El servidor queda a nombre del CIESS y los
+      datos no salen de él.
+    </div>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Anexos</span></div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,271 @@
+/* =====================================================================
+   Línea gráfica del anteproyecto. Fondo oscuro, texto crema, acento
+   dorado: la misma del anteproyecto de constancias, para que los dos
+   documentos se lean como una serie.
+   ===================================================================== */
+/* Las tipografías van incrustadas: el documento debe verse igual
+   dentro de diez años, sin depender de que un servidor siga en pie. */
+@import url('fuentes.css');
+
+:root {
+  --fondo:    #0f1620;
+  --fondo-2:  #151d29;
+  --borde:    #26303f;
+  --crema:    #eae5da;
+  --texto:    #c3cad6;
+  --tenue:    #8b95a5;
+  --oro:      #c9a86a;
+  --oro-sua:  #a98f58;
+}
+
+@page { size: A4; margin: 0; }
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 10.2pt;
+  line-height: 1.62;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* El contenido fluye entre páginas; sólo se fuerza el corte donde tiene
+   sentido —portada, cambios de bloque grande—. Forzar una página por bloque
+   dejaba medias hojas en blanco. */
+.hoja {
+  width: 210mm;
+  padding: 0 16mm;
+  position: relative;
+}
+.hoja.corte { page-break-before: always; }
+
+/* El margen superior e inferior de cada página impresa. */
+@page { size: A4; margin: 16mm 0 14mm; }
+
+/* ---- Portada -------------------------------------------------------- */
+.portada { padding-top: 8mm; min-height: 250mm; }
+
+.marca { display: flex; align-items: center; gap: 7mm; margin-bottom: 13mm; }
+.marca-sep { width: 1px; align-self: stretch; background: var(--borde); }
+.marca-texto { font-family: 'Archivo', sans-serif; }
+.marca-texto b {
+  display: block; font-size: 17pt; font-weight: 700; color: var(--crema);
+  letter-spacing: .01em; line-height: 1;
+}
+.marca-texto span {
+  display: block; font-size: 6.3pt; color: var(--tenue); line-height: 1.35;
+  margin-top: 3px; font-family: 'Archivo', sans-serif; font-weight: 600;
+}
+
+h1 {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  font-size: 27pt;
+  line-height: 1.08;
+  color: var(--crema);
+  margin: 0 0 7mm;
+  letter-spacing: -0.015em;
+}
+
+.entradilla {
+  font-size: 11.4pt;
+  color: var(--tenue);
+  line-height: 1.55;
+  max-width: 155mm;
+  margin: 0 0 11mm;
+}
+
+.ficha {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--borde);
+  margin-bottom: 11mm;
+}
+.ficha > div {
+  padding: 4.5mm 5mm;
+  border-right: 1px solid var(--borde);
+  border-bottom: 1px solid var(--borde);
+}
+.ficha > div:nth-child(3n) { border-right: 0; }
+.ficha > div:nth-child(n+4) { border-bottom: 0; }
+
+.rotulo {
+  font-family: 'Archivo', sans-serif;
+  font-size: 6.6pt;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--oro);
+  display: block;
+  margin-bottom: 2.5mm;
+}
+.ficha .valor { color: var(--crema); font-size: 9.6pt; line-height: 1.4; }
+.ficha .mono { font-family: 'JetBrains Mono', monospace; font-size: 9pt; letter-spacing: -.01em; }
+
+.contenido-portada { border-top: 1px solid var(--borde); padding-top: 7mm; }
+.indice { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12mm; margin-top: 5mm; }
+.indice a, .indice span {
+  display: block; padding: 1.5mm 0; color: var(--texto); text-decoration: none;
+  font-size: 9.6pt;
+}
+.indice i {
+  font-family: 'JetBrains Mono', monospace; font-style: normal; color: var(--oro);
+  font-size: 8.4pt; font-weight: 500; margin-right: 3.5mm;
+}
+
+/* ---- Secciones ------------------------------------------------------ */
+h2 {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  font-size: 16.5pt;
+  color: var(--crema);
+  margin: 0 0 1.5mm;
+  letter-spacing: -.01em;
+  display: flex;
+  align-items: baseline;
+  gap: 4mm;
+}
+h2 .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.6pt;
+  font-weight: 500;
+  color: var(--oro);
+  letter-spacing: 0;
+}
+h2 + .sub {
+  color: var(--tenue);
+  font-size: 10pt;
+  max-width: 128mm;
+  margin: 0 0 4mm;
+  line-height: 1.45;
+}
+.regla { border: 0; border-top: 1px solid var(--borde); width: 62%; margin: 0 0 6mm; }
+
+section { margin-bottom: 9mm; }
+h2 { break-after: avoid; }
+h3, h4 { break-after: avoid; }
+p, li { orphans: 2; widows: 2; }
+
+h3 {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 600;
+  font-size: 11pt;
+  color: var(--crema);
+  margin: 6mm 0 2.5mm;
+}
+h4 {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 600;
+  font-size: 9.6pt;
+  color: var(--oro);
+  margin: 5mm 0 2mm;
+  letter-spacing: .01em;
+}
+
+p { margin: 0 0 3.2mm; }
+b, strong { color: var(--crema); font-weight: 600; }
+em { color: var(--oro-sua); font-style: italic; }
+
+ul { margin: 0 0 3.5mm; padding-left: 5mm; list-style: none; }
+ul li { position: relative; margin-bottom: 1.8mm; }
+ul li::before {
+  content: '';
+  position: absolute; left: -4mm; top: 2.1mm;
+  width: 3px; height: 3px; border-radius: 50%; background: var(--oro-sua);
+}
+
+code, .mono-en {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.4pt;
+  background: var(--fondo-2);
+  border: 1px solid var(--borde);
+  border-radius: 3px;
+  padding: .4mm 1.4mm;
+  color: var(--crema);
+}
+
+/* ---- Pasos numerados ------------------------------------------------ */
+.pasos { counter-reset: paso; list-style: none; padding: 0; margin: 3mm 0 4mm; }
+.pasos li {
+  counter-increment: paso;
+  position: relative;
+  padding-left: 9mm;
+  margin-bottom: 3mm;
+}
+.pasos li::before {
+  content: counter(paso);
+  position: absolute; left: 0; top: .2mm;
+  width: 5.4mm; height: 5.4mm;
+  border-radius: 50%;
+  background: var(--fondo-2);
+  border: 1px solid var(--borde);
+  color: var(--oro);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7pt;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ---- Figuras -------------------------------------------------------- */
+figure { margin: 4mm 0 5mm; break-inside: avoid; }
+figure img {
+  /* Con tope de altura: una captura muy alta se comía la página entera y
+     obligaba a pasar la siguiente, dejando media hoja en blanco. */
+  max-width: 100%;
+  max-height: 112mm;
+  width: auto;
+  display: block;
+  margin: 0 auto;
+  border: 1px solid var(--borde);
+  border-radius: 4px;
+}
+figcaption {
+  margin-top: 2.2mm;
+  font-size: 8.2pt;
+  color: var(--tenue);
+  line-height: 1.4;
+}
+figcaption b {
+  font-family: 'Archivo', sans-serif;
+  font-size: 6.6pt;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--oro);
+  margin-right: 2.5mm;
+}
+
+/* ---- Notas y tablas ------------------------------------------------- */
+.nota {
+  background: var(--fondo-2);
+  border-left: 2px solid var(--oro);
+  padding: 4mm 5mm;
+  margin: 4mm 0;
+  font-size: 9.6pt;
+  break-inside: avoid;
+}
+.nota b { color: var(--crema); }
+
+table { width: 100%; border-collapse: collapse; margin: 3mm 0 4mm; font-size: 9pt; }
+th {
+  font-family: 'Archivo', sans-serif;
+  font-size: 6.6pt; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--oro); text-align: left;
+  padding: 2mm 3mm 2mm 0;
+  border-bottom: 1px solid var(--borde);
+}
+td { padding: 2.2mm 3mm 2.2mm 0; border-bottom: 1px solid var(--borde); vertical-align: top; }
+td:last-child, th:last-child { padding-right: 0; }
+tr:last-child td { border-bottom: 0; }
+td b { color: var(--crema); }
+
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 0 9mm; }
+
+/* ---- Pie ------------------------------------------------------------ */
+/* Sin pie por página: con el contenido fluyendo, un pie absoluto acabaría
+   en mitad de una hoja. La identidad la lleva la portada. */
+.pie { display: none; }
