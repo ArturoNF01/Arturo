@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './proveedores';
 import { LANDING, barajar } from '@/lib/landing';
+import { VisorFotos } from './visor-fotos';
 
 /**
  * El adelanto de la galería en la portada: un mosaico irregular que cambia
@@ -45,26 +46,29 @@ export function Collage({ fotos }: { fotos: string[] }) {
   // Arranca con las primeras, que es lo que se pinta en el servidor, y se
   // baraja ya en el navegador: así lo que llega y lo que React pinta después
   // coinciden y no hay parpadeo de hidratación.
-  const [elegidas, setElegidas] = useState(() => fotos.slice(0, PIEZAS.length));
+  // Se guarda la baraja entera, no sólo las nueve que se pintan: al abrir una
+  // pieza se puede seguir con las flechas hasta la última de las doscientas
+  // sin tener que entrar a la galería.
+  const [baraja, setBaraja] = useState<string[]>(fotos);
   const [rotas, setRotas] = useState<Set<string>>(new Set());
+  const [abierta, setAbierta] = useState<number | null>(null);
 
   useEffect(() => {
     // Se baraja después del primer pintado, no durante: así el navegador
     // dibuja antes lo que ya venía del servidor y el sorteo no encadena un
     // repintado dentro del mismo fotograma.
-    const id = requestAnimationFrame(() => setElegidas(barajar(fotos).slice(0, PIEZAS.length)));
+    const id = requestAnimationFrame(() => setBaraja(barajar(fotos)));
     return () => cancelAnimationFrame(id);
   }, [fotos]);
 
-  // Las que no cargan se reemplazan por otras en lugar de dejar el hueco: el
-  // mosaico depende de que las nueve piezas estén.
-  const buenas = elegidas.filter((url) => !rotas.has(url));
-  const repuestos = fotos.filter((url) => !rotas.has(url) && !buenas.includes(url));
-  const piezas = [...buenas, ...repuestos].slice(0, PIEZAS.length);
+  // Las que no cargan se caen de la lista: el mosaico se rellena solo con las
+  // siguientes, porque depende de que las nueve piezas estén.
+  const buenas = useMemo(() => baraja.filter((url) => !rotas.has(url)), [baraja, rotas]);
+  const piezas = buenas.slice(0, PIEZAS.length);
 
   return (
     <>
-      <ul className="grid auto-rows-[88px] grid-cols-4 gap-2 sm:auto-rows-[120px] sm:gap-3">
+      <ul className="grid grid-flow-row-dense auto-rows-[88px] grid-cols-4 gap-2 sm:auto-rows-[120px] sm:gap-3">
         {piezas.map((url, i) => (
           <li
             key={url}
@@ -74,6 +78,12 @@ export function Collage({ fotos }: { fotos: string[] }) {
               animationDelay: `${i * 70}ms`,
             }}
           >
+            <button
+              type="button"
+              onClick={() => setAbierta(i)}
+              className="group block h-full w-full"
+              aria-label={textos.galeriaFoto(i + 1)}
+            >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={(img) => {
@@ -89,8 +99,9 @@ export function Collage({ fotos }: { fotos: string[] }) {
               loading="lazy"
               decoding="async"
               onError={() => setRotas((s) => new Set(s).add(url))}
-              className="h-full w-full bg-black/5 object-cover transition-transform duration-500 hover:scale-105 dark:bg-white/5"
+              className="h-full w-full bg-black/5 object-cover transition-transform duration-500 group-hover:scale-105 dark:bg-white/5"
             />
+            </button>
           </li>
         ))}
       </ul>
@@ -100,6 +111,15 @@ export function Collage({ fotos }: { fotos: string[] }) {
           {textos.galeriaVerTodas}
         </Link>
       </div>
+
+      {abierta !== null && (
+        <VisorFotos
+          fotos={buenas}
+          indice={abierta}
+          onCambiar={setAbierta}
+          onCerrar={() => setAbierta(null)}
+        />
+      )}
     </>
   );
 }

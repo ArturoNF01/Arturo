@@ -455,6 +455,11 @@ export const pt: Diccionario = {
       confirmarEnvio: 'Enviar agora o lembrete \u201c{clave}\u201d a quem ainda não o recebeu?',
       sinCron: 'Falta configurar CRON_SECRET no deploy para que o envio automático funcione.',
     },
+      hoja: {
+        pendientes: '{n} inscrição(ões) não chegaram à planilha do Google.',
+        copiarAhora: 'Copiar agora',
+        copiados: 'Copiadas: {n}.',
+      },
     agenda: {
       titulo: 'Agenda do congresso',
       descargar: 'Baixar agenda (PDF)',

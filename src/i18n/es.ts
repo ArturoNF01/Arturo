@@ -519,6 +519,11 @@ export const es = {
       confirmarEnvio: '¿Enviar ahora el recordatorio «{clave}» a quien todavía no lo ha recibido?',
       sinCron: 'Falta configurar CRON_SECRET en el despliegue para que el envío automático funcione.',
     },
+      hoja: {
+        pendientes: '{n} registro(s) no han llegado a la hoja de Google.',
+        copiarAhora: 'Copiarlos ahora',
+        copiados: 'Copiados: {n}.',
+      },
     agenda: { titulo: 'Agenda del congreso', descargar: 'Descargar agenda (PDF)', provisional: 'Documento provisional: convocatoria oficial. Se sustituirá por la agenda definitiva.' },
   },
 };

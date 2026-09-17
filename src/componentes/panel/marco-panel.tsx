@@ -9,6 +9,7 @@ import { useApp } from '@/componentes/proveedores';
 import { ProveedorRegistros } from './proveedor-registros';
 import type { Permisos, UsuarioPanel } from '@/lib/servidor/sesion';
 import { AvisosRegistros } from './avisos-registros';
+import { AvisoHoja } from './aviso-hoja';
 import { ProveedorContenidoPanel } from './contexto-panel';
 import type { DatosCongreso, EjeTematico } from '@/lib/contenido';
 
@@ -113,6 +114,7 @@ export function MarcoPanel({
       </aside>
 
       <main className="min-w-0 flex-1">
+        <AvisoHoja />
         <AvisosRegistros />
         {children}
 

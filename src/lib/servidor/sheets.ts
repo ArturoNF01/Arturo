@@ -21,6 +21,45 @@ async function prepararParaHoja(registro: Registro): Promise<Registro> {
   };
 }
 
+/**
+ * Comprueba que la hoja tenga las columnas que este código escribe.
+ *
+ * Cuando el formulario cambia, cambian las columnas. Si la hoja se quedó con
+ * las de antes, cada fila nueva entra desplazada: el teléfono debajo de
+ * «Cargo», la institución debajo de «Correo». Nadie lo nota hasta que alguien
+ * lee la hoja meses después y los datos no significan nada.
+ *
+ * Así que no se sigue adelante: se para con un aviso que dice qué hacer. Una
+ * fila que no llega se recupera; cien filas descolocadas, no.
+ */
+async function comprobarEncabezados(idLibro: string) {
+  const sheets = clienteSheets();
+  const nombres = Object.keys(HOJAS);
+  const leidos = await sheets.spreadsheets.values.batchGet({
+    spreadsheetId: idLibro,
+    ranges: nombres.map((n) => `${n}!1:1`),
+  });
+
+  const desfasadas: string[] = [];
+  for (const [i, nombre] of nombres.entries()) {
+    const fila = (leidos.data.valueRanges?.[i]?.values?.[0] ?? []) as string[];
+    // Una pestaña recién creada no tiene encabezados todavía; los escribe
+    // `asegurarHojas`. Sólo se compara lo que ya tiene algo.
+    if (fila.length === 0) continue;
+    const esperados = HOJAS[nombre];
+    if (fila.length !== esperados.length || esperados.some((e, j) => fila[j] !== e)) {
+      desfasadas.push(nombre);
+    }
+  }
+
+  if (desfasadas.length > 0) {
+    throw new Error(
+      `La hoja tiene las columnas anteriores en ${desfasadas.join(', ')}. ` +
+        'Reescríbala con: npm run sincronizar -- --rehacer',
+    );
+  }
+}
+
 /** Crea las pestañas que falten y escribe sus encabezados. */
 async function asegurarHojas(idLibro: string) {
   const sheets = clienteSheets();
@@ -30,7 +69,10 @@ async function asegurarHojas(idLibro: string) {
   );
 
   const faltantes = Object.keys(HOJAS).filter((nombre) => !existentes.has(nombre));
-  if (faltantes.length === 0) return;
+  if (faltantes.length === 0) {
+    await comprobarEncabezados(idLibro);
+    return;
+  }
 
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId: idLibro,
@@ -49,6 +91,8 @@ async function asegurarHojas(idLibro: string) {
       })),
     },
   });
+
+  await comprobarEncabezados(idLibro);
 }
 
 /**
@@ -111,12 +155,23 @@ export async function vaciarHojas(): Promise<void> {
   const idLibro = process.env.GOOGLE_SHEETS_ID;
   if (!googleConfigurado() || !idLibro) throw new Error('Google Sheets no está configurado.');
 
-  await asegurarHojas(idLibro);
   const sheets = clienteSheets();
+  // Sin `asegurarHojas`: eso comprueba los encabezados y aquí venimos
+  // justamente a arreglarlos. Se vacía todo, encabezados incluidos, y se
+  // vuelven a escribir los de ahora.
   await sheets.spreadsheets.values.batchClear({
     spreadsheetId: idLibro,
-    // Desde la fila 2: la 1 lleva los encabezados y se queda.
-    requestBody: { ranges: Object.keys(HOJAS).map((hoja) => `${hoja}!A2:ZZ`) },
+    requestBody: { ranges: Object.keys(HOJAS).map((hoja) => `${hoja}!A:ZZ`) },
+  });
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: idLibro,
+    requestBody: {
+      valueInputOption: 'RAW',
+      data: Object.entries(HOJAS).map(([nombre, encabezados]) => ({
+        range: `${nombre}!A1`,
+        values: [encabezados],
+      })),
+    },
   });
 }
 

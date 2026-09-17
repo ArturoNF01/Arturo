@@ -454,6 +454,11 @@ export const en: Diccionario = {
       confirmarEnvio: 'Send the \u201c{clave}\u201d reminder now to everyone who has not received it yet?',
       sinCron: 'CRON_SECRET is not configured in the deployment, so automatic sending will not run.',
     },
+      hoja: {
+        pendientes: '{n} registration(s) have not reached the Google sheet.',
+        copiarAhora: 'Copy them now',
+        copiados: 'Copied: {n}.',
+      },
     agenda: {
       titulo: 'Congress agenda',
       descargar: 'Download agenda (PDF)',

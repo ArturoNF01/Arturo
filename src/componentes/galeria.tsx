@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './proveedores';
 import { LANDING, barajar } from '@/lib/landing';
+import { VisorFotos } from './visor-fotos';
 
 /**
  * Galería de las instalaciones.
@@ -60,13 +61,6 @@ export function Galeria({ fotos, porTanda = 24 }: { fotos: string[]; porTanda?: 
   const mostradas = buenas.slice(0, visibles);
   const quedan = buenas.length - mostradas.length;
 
-  // La ampliación recorre las fotografías buenas, todas, sin depender de
-  // cuántas se hayan pintado en la rejilla: quien entre por la primera puede
-  // llegar a la última con las flechas.
-  const total = buenas.length;
-  const mover = (paso: number) =>
-    setAbierta((a) => (a === null ? null : Math.min(Math.max(a + paso, 0), total - 1)));
-
   // Trae la siguiente tanda cuando el pie de la lista se acerca a la
   // pantalla. El margen de 600 píxeles hace que las fotografías empiecen a
   // pedirse antes de llegar abajo, y así el desplazamiento no se detiene.
@@ -84,33 +78,13 @@ export function Galeria({ fotos, porTanda = 24 }: { fotos: string[]; porTanda?: 
     return () => observador.disconnect();
   }, [visibles, porTanda]);
 
-  useEffect(() => {
-    if (abierta === null) return;
-
-    const teclado = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setAbierta(null);
-      if (e.key === 'ArrowRight') setAbierta((a) => (a === null ? null : Math.min(a + 1, total - 1)));
-      if (e.key === 'ArrowLeft') setAbierta((a) => (a === null ? null : Math.max(a - 1, 0)));
-    };
-    window.addEventListener('keydown', teclado);
-
-    // Con la ampliación abierta, el fondo no debe moverse detrás.
-    const desbordeAnterior = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      window.removeEventListener('keydown', teclado);
-      document.body.style.overflow = desbordeAnterior;
-    };
-  }, [abierta, total]);
-
   if (buenas.length === 0) {
     return <p className="tenue text-sm">{textos.galeriaVacia}</p>;
   }
 
   return (
     <>
-      <ul className="grid auto-rows-[96px] grid-cols-4 gap-2 sm:auto-rows-[150px] sm:gap-3">
+      <ul className="grid grid-flow-row-dense auto-rows-[96px] grid-cols-4 gap-2 sm:auto-rows-[150px] sm:gap-3">
         {mostradas.map((url, i) => (
           <li key={url} className={FORMAS[i % FORMAS.length]}>
             <button
@@ -141,50 +115,12 @@ export function Galeria({ fotos, porTanda = 24 }: { fotos: string[]; porTanda?: 
       )}
 
       {abierta !== null && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={textos.galeriaFoto(abierta + 1)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setAbierta(null)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={buenas[abierta]}
-            alt={textos.galeriaFoto(abierta + 1)}
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-full max-w-full rounded-lg object-contain"
-          />
-
-          <BotonVisor
-            posicion="left-3"
-            etiqueta={textos.galeriaAnterior}
-            oculto={abierta === 0}
-            onClick={() => mover(-1)}
-            trazo="M15 18l-6-6 6-6"
-          />
-          <BotonVisor
-            posicion="right-3"
-            etiqueta={textos.galeriaSiguiente}
-            oculto={abierta === total - 1}
-            onClick={() => mover(1)}
-            trazo="M9 6l6 6-6 6"
-          />
-          <button
-            type="button"
-            aria-label={textos.galeriaCerrar}
-            onClick={() => setAbierta(null)}
-            className="absolute right-3 top-3 rounded-full bg-white/10 p-2.5 text-white transition hover:bg-white/25"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-
-          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/70">
-            {abierta + 1} / {total}
-          </p>
-        </div>
+        <VisorFotos
+          fotos={buenas}
+          indice={abierta}
+          onCambiar={setAbierta}
+          onCerrar={() => setAbierta(null)}
+        />
       )}
     </>
   );
@@ -220,32 +156,5 @@ function Miniatura({
       onError={alRomperse}
       className="h-full w-full bg-black/5 object-cover transition duration-300 group-hover:scale-[1.03] dark:bg-white/5"
     />
-  );
-}
-
-function BotonVisor({
-  posicion, etiqueta, oculto, onClick, trazo,
-}: {
-  posicion: string;
-  etiqueta: string;
-  oculto: boolean;
-  onClick: () => void;
-  trazo: string;
-}) {
-  if (oculto) return null;
-  return (
-    <button
-      type="button"
-      aria-label={etiqueta}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      className={`absolute ${posicion} top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/25`}
-    >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d={trazo} />
-      </svg>
-    </button>
   );
 }
