@@ -81,10 +81,21 @@ cd /
 # entra entera, pero con basura pegada, y la comprobación la rechazaba sin
 # decir por qué. Se quitan esas marcas, los retornos de carro y los
 # espacios antes de mirar nada.
-limpiar() {
-  printf '%s' "$1" \
-    | sed -e $'s/\033\\[20[01]~//g' -e 's/\[20[01]~//g' \
-    | tr -d '[:space:]'
+# Quita sólo el envoltorio del pegado; los espacios se conservan, que es lo
+# que separa una cosa de otra dentro del texto.
+desenvolver() {
+  printf '%s' "$1" | sed -e $'s/\033\\[20[01]~//g' -e 's/\[20[01]~//g' -e 's/\r//g'
+}
+
+limpiar() { printf '%s' "$1" | tr -d '[:space:]'; }
+
+# Resend enseña la clave junto a un ejemplo de `curl` que la lleva dentro,
+# y el botón de copiar de ese ejemplo está al lado del de la clave. Quien
+# se equivoca de botón pega trescientos caracteres que empiezan por «curl»
+# —con la clave buena dentro— y el guion los rechazaba enteros. Si dentro
+# de lo pegado hay una sola cosa con forma de clave, se usa esa y se dice.
+rescatar() {
+  printf '%s' "$1" | grep -oE 're_[A-Za-z0-9_-]{16,}' | sort -u
 }
 
 # ---------------------------------------------------------------------
@@ -98,7 +109,8 @@ while :; do
   printf '   Clave: '
   read -rs CLAVE
   printf '\n'
-  CLAVE=$(limpiar "${CLAVE:-}")
+  PEGADO=$(desenvolver "${CLAVE:-}")
+  CLAVE=$(limpiar "$PEGADO")
 
   case "$CLAVE" in
     re_*)
@@ -113,9 +125,22 @@ while :; do
       aviso "Pruebe con el menú del navegador, o con clic derecho → Pegar."
       ;;
     *)
+      # Se busca sobre el pegado con sus espacios: sin ellos, dos claves
+      # seguidas se leen como una sola, larga y falsa.
+      dentro=$(rescatar "$PEGADO")
+      if [ "$(printf '%s\n' "$dentro" | grep -c .)" = "1" ]; then
+        CLAVE="$dentro"
+        bien "Dentro de lo que pegó había una clave: se usa esa."
+        aviso "Empieza por re_ y tiene $(printf '%s' "$CLAVE" | wc -c | tr -d ' ') caracteres."
+        break
+      fi
       mal "Eso no es una clave de Resend: no empieza por «re_»."
       aviso "Llegaron $(printf '%s' "$CLAVE" | wc -c | tr -d ' ') caracteres, y el primero es «$(printf '%.1s' "$CLAVE")»."
-      aviso "Suele ser que se copió de más, o que se pegó otra cosa."
+      if [ -n "$dentro" ]; then
+        aviso "Y dentro hay más de una cosa con forma de clave: copíela sola."
+      else
+        aviso "En Resend, el botón de copiar de la clave, no el del ejemplo de curl."
+      fi
       ;;
   esac
 

@@ -99,7 +99,9 @@ if [ "$demostracion" = "sí" ]; then
   cd "$RAIZ"
   entorno npm run sembrar || morir "sembrar los registros"
 else
-  aviso "No se pidieron. Para añadirlos: sudo bash $0 --demostracion"
+  # $0 es la copia de /tmp desde la que esto corre, y ese nombre se pierde
+  # en cuanto termina. Se nombra el guion de verdad, que sigue ahí mañana.
+  aviso "No se pidieron. Para añadirlos: sudo bash ${ORIGEN:-$RAIZ/guiones/servidor/poner-al-dia.sh} --demostracion"
 fi
 
 # ---------------------------------------------------------------------
