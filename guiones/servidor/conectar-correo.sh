@@ -45,6 +45,13 @@
 #
 # El guion pide la clave sin mostrarla, la guarda en el .env, reinicia
 # el servicio y manda un correo de prueba para comprobar que sale.
+#
+# Si después de todo esto los acuses siguen sin llegar:
+#
+#   cd /opt/congreso && sudo -u congreso npm run revisar-correo
+#
+# recorre los cinco eslabones —clave, dominio verificado, remitente,
+# plantillas y envío— y dice en cuál se rompe.
 # =====================================================================
 set -Eeuo pipefail
 
