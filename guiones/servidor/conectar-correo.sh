@@ -182,6 +182,7 @@ paso "Correo de prueba"
 printf '   ¿A qué dirección lo mandamos? '
 read -r DESTINO
 
+salio=sin_probar
 if [ -z "$DESTINO" ]; then
   aviso "Sin dirección: se salta la prueba."
 else
@@ -192,13 +193,38 @@ else
   sudo -u "$USUARIO" env \
     $(grep -E '^(RESEND_API_KEY|CORREO_REMITENTE|DATABASE_URL)=' "$RAIZ/.env" | tr '\n' ' ') \
     npx tsx --conditions=react-server guiones/probar-correo.ts "$DESTINO" \
-    && bien "Enviado. Revise la bandeja —y la carpeta de no deseados." \
-    || mal "No salió. El motivo está arriba."
+    && { salio=sí; bien "Enviado. Revise la bandeja —y la carpeta de no deseados."; } \
+    || { salio=no; mal "No salió. El motivo está arriba."; }
   cd /
 fi
 
 # ---------------------------------------------------------------------
-printf '\n\033[1m══ Listo\033[0m\n'
-aviso "Los acuses de registro salen desde ahora."
-aviso "Si alguno falla, el panel lo avisa con el motivo."
+# El final se escribe según lo que pasó, no según lo que se esperaba. Daba
+# por hecho que los acuses ya salían aunque la prueba acabara de fallar
+# delante, y quien lo lee se va convencido de que terminó y vuelve dos días
+# después a preguntar por qué nadie recibe nada.
+case "$salio" in
+  sí)
+    printf '\n\033[1m══ Listo\033[0m\n'
+    aviso "Los acuses de registro salen desde ahora."
+    aviso "Si alguno falla, el panel lo avisa con el motivo."
+    aviso "Los registros que ya estaban sin acuse: púlselos en el panel,"
+    aviso "en el aviso rojo, con el botón «Reenviarlos ahora»."
+    ;;
+  no)
+    printf '\n\033[1;31m══ Falta algo\033[0m\n'
+    aviso "La clave quedó guardada, pero el envío no funciona todavía."
+    aviso "El motivo está unas líneas más arriba, con las palabras de Resend."
+    aviso "Lo más común: el dominio sin verificar. En resend.com → Domains,"
+    aviso "tiene que decir «Verified»; si dice otra cosa, pulse Verify."
+    aviso "Cuando lo arregle, para volver a probar sin repetir todo esto:"
+    aviso "  cd $RAIZ && sudo -u $USUARIO npm run revisar-correo -- $DESTINO"
+    ;;
+  *)
+    printf '\n\033[1;33m══ A medias\033[0m\n'
+    aviso "La clave quedó guardada, pero no se probó ningún envío."
+    aviso "Para comprobarlo de verdad:"
+    aviso "  cd $RAIZ && sudo -u $USUARIO npm run revisar-correo -- alguien@ejemplo.org"
+    ;;
+esac
 printf '\n'
