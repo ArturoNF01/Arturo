@@ -19,3 +19,8 @@ CLAUDE.md
 # Vistas previas generadas
 vista-previa-formulario.html
 vista-previa-congreso.html
+
+# Los correos compuestos son un paso intermedio de las capturas: se rehacen
+# con `npm run vista-correos` y quedarían desfasados en cuanto cambie una
+# plantilla del panel.
+documentos/anteproyecto/correos/

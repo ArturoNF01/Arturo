@@ -282,7 +282,7 @@ alter table registros add column if not exists prueba_conexion     boolean;
 -- Mesa o eje a cargo de quien coordina o modera, y qué días puede.
 alter table registros add column if not exists sesion_asignada     text;
 alter table registros add column if not exists disponibilidad_dias text[];
--- Del comité científico: qué ejes puede dictaminar, cuántos trabajos acepta
+-- Del comité dictaminador: qué ejes puede dictaminar, cuántos trabajos acepta
 -- y con quién no debe evaluar. Sin lo último, el dictamen es impugnable.
 alter table registros add column if not exists ejes_dictamen       text[];
 alter table registros add column if not exists ponencias_maximas   int;
@@ -515,7 +515,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 <p>Puede consultar o modificar sus datos hasta el {{fecha_limite}} en el siguiente enlace: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>La convocatoria y la agenda están disponibles en <a href="{{url_agenda}}">este documento</a>.</p>
 <p>Cualquier corrección posterior debe solicitarse a {{correo_contacto}}.</p>
-<p>Comité organizador<br/>CIESS · CISS</p>$html$),
+<p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
 
 ('confirmacion_registro', 'en',
  'Registration received · 1st Congress of Inter-American Social Security Studies',
@@ -530,7 +530,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 <p>You may review or edit your details until {{fecha_limite}} at the following link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>The call for papers and the agenda are available in <a href="{{url_agenda}}">this document</a>.</p>
 <p>Any later correction must be requested at {{correo_contacto}}.</p>
-<p>Organizing committee<br/>CIESS · CISS</p>$html$),
+<p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
 
 ('confirmacion_registro', 'pt',
  'Inscrição recebida · 1º Congresso de Estudos Interamericanos de Seguridade Social',
@@ -545,7 +545,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 <p>Você pode consultar ou alterar seus dados até {{fecha_limite}} no seguinte link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>A convocatória e a agenda estão disponíveis <a href="{{url_agenda}}">neste documento</a>.</p>
 <p>Qualquer correção posterior deve ser solicitada a {{correo_contacto}}.</p>
-<p>Comitê organizador<br/>CIESS · CISS</p>$html$),
+<p>Comitê organizador<br/>CIESS · RIUSS</p>$html$),
 
 ('edicion_registro', 'es', 'Registro actualizado · 1er Congreso',
  $html$<p>Estimada persona participante:</p><p>Sus datos de registro (folio {{folio}}) fueron actualizados correctamente el {{fecha}}.</p><p>Si usted no realizó este cambio, escriba a {{correo_contacto}}.</p><p>Comité organizador</p>$html$),
@@ -776,7 +776,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 <p>Puede consultar o corregir sus datos hasta el {{fecha_limite}} en <a href="{{url_edicion}}">este enlace</a>. La información logística y el programa se enviarán por esta misma vía.</p>
 <p>Cualquier duda, escriba a {{correo_contacto}}.</p>
-<p>Comité organizador<br/>CIESS · CISS</p>$html$),
+<p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
 
 ('registro_confirmado', 'en',
  'Registration confirmed · 1st Congress of Inter-American Social Security Studies',
@@ -789,7 +789,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 <p>You may review or correct your details until {{fecha_limite}} at <a href="{{url_edicion}}">this link</a>. Logistical information and the programme will be sent through this same channel.</p>
 <p>For any questions, write to {{correo_contacto}}.</p>
-<p>Organizing committee<br/>CIESS · CISS</p>$html$),
+<p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
 
 ('registro_confirmado', 'pt',
  'Inscrição confirmada · 1º Congresso de Estudos Interamericanos de Seguridade Social',
@@ -802,7 +802,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 <p>Você pode consultar ou corrigir seus dados até {{fecha_limite}} <a href="{{url_edicion}}">neste link</a>. As informações logísticas e a programação serão enviadas por esta mesma via.</p>
 <p>Em caso de dúvida, escreva para {{correo_contacto}}.</p>
-<p>Comitê organizador<br/>CIESS · CISS</p>$html$),
+<p>Comitê organizador<br/>CIESS · RIUSS</p>$html$),
 
 ('registro_cancelado', 'es', 'Registro cancelado · 1er Congreso',
  $html$<p>Estimada persona participante:</p><p>Su registro con folio {{folio}} fue <strong>cancelado</strong>. Si se trata de un error, escriba a {{correo_contacto}} lo antes posible.</p><p>Comité organizador</p>$html$),
@@ -884,69 +884,69 @@ order by r.creado_en;
 insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 ('ponencia_aceptada', 'es', 'Ponencia aceptada · 1er Congreso',
  $html$<p>Estimada persona participante:</p>
-<p>Nos complace informarle que el comité científico <strong>aceptó</strong> su propuesta para el 1er Congreso.</p>
-<ul><li><strong>Folio:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li><li><strong>Eje temático:</strong> {{eje_tematico}}</li></ul>
+<p>Nos complace informarle que el comité dictaminador <strong>aceptó</strong> su propuesta para el 1er Congreso.</p>
+<ul><li><strong>Folio:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>El día, la hora y la mesa asignada se comunicarán con el programa definitivo. Cualquier duda, escriba a {{correo_contacto}}.</p>
-<p>Comité científico<br/>CIESS · CISS</p>$html$),
+<p>Comité dictaminador<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_aceptada', 'en', 'Paper accepted · 1st Congress',
  $html$<p>Dear participant,</p>
-<p>We are pleased to inform you that the scientific committee has <strong>accepted</strong> your proposal for the 1st Congress.</p>
-<ul><li><strong>Reference:</strong> {{folio}}</li><li><strong>Title:</strong> {{titulo_ponencia}}</li><li><strong>Thematic axis:</strong> {{eje_tematico}}</li></ul>
+<p>We are pleased to inform you that the review committee has <strong>accepted</strong> your proposal for the 1st Congress.</p>
+<ul><li><strong>Reference:</strong> {{folio}}</li><li><strong>Title:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>The date, time and panel will be announced with the final programme. For any questions, write to {{correo_contacto}}.</p>
-<p>Scientific committee<br/>CIESS · CISS</p>$html$),
+<p>Review committee<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_aceptada', 'pt', 'Trabalho aceito · 1º Congresso',
  $html$<p>Prezada pessoa participante,</p>
-<p>Temos o prazer de informar que o comitê científico <strong>aceitou</strong> sua proposta para o 1º Congresso.</p>
-<ul><li><strong>Protocolo:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li><li><strong>Eixo temático:</strong> {{eje_tematico}}</li></ul>
+<p>Temos o prazer de informar que o comitê avaliador <strong>aceitou</strong> sua proposta para o 1º Congresso.</p>
+<ul><li><strong>Protocolo:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>A data, o horário e a mesa serão comunicados com a programação definitiva. Em caso de dúvida, escreva para {{correo_contacto}}.</p>
-<p>Comitê científico<br/>CIESS · CISS</p>$html$),
+<p>Comitê avaliador<br/>CIESS · RIUSS</p>$html$),
 
 ('ponencia_aceptada_con_cambios', 'es', 'Ponencia aceptada con cambios · 1er Congreso',
  $html$<p>Estimada persona participante:</p>
-<p>El comité científico <strong>aceptó su propuesta con cambios</strong>. Le pedimos atender las observaciones y reenviar la versión corregida antes del {{fecha_limite}}.</p>
+<p>El comité dictaminador <strong>aceptó su propuesta con cambios</strong>. Le pedimos atender las observaciones y reenviar la versión corregida antes del {{fecha_limite}}.</p>
 <ul><li><strong>Folio:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>Puede actualizar su resumen en <a href="{{url_edicion}}">este enlace</a>.</p>
-<p>Comité científico<br/>CIESS · CISS</p>$html$),
+<p>Comité dictaminador<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_aceptada_con_cambios', 'en', 'Paper accepted with changes · 1st Congress',
  $html$<p>Dear participant,</p>
-<p>The scientific committee has <strong>accepted your proposal with changes</strong>. Please address the comments and resubmit the corrected version before {{fecha_limite}}.</p>
+<p>The review committee has <strong>accepted your proposal with changes</strong>. Please address the comments and resubmit the corrected version before {{fecha_limite}}.</p>
 <ul><li><strong>Reference:</strong> {{folio}}</li><li><strong>Title:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>You can update your abstract at <a href="{{url_edicion}}">this link</a>.</p>
-<p>Scientific committee<br/>CIESS · CISS</p>$html$),
+<p>Review committee<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_aceptada_con_cambios', 'pt', 'Trabalho aceito com alterações · 1º Congresso',
  $html$<p>Prezada pessoa participante,</p>
-<p>O comitê científico <strong>aceitou sua proposta com alterações</strong>. Pedimos que atenda às observações e reenvie a versão corrigida até {{fecha_limite}}.</p>
+<p>O comitê avaliador <strong>aceitou sua proposta com alterações</strong>. Pedimos que atenda às observações e reenvie a versão corrigida até {{fecha_limite}}.</p>
 <ul><li><strong>Protocolo:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>Você pode atualizar seu resumo <a href="{{url_edicion}}">neste link</a>.</p>
-<p>Comitê científico<br/>CIESS · CISS</p>$html$),
+<p>Comitê avaliador<br/>CIESS · RIUSS</p>$html$),
 
 ('ponencia_rechazada', 'es', 'Resultado del dictamen · 1er Congreso',
  $html$<p>Estimada persona participante:</p>
-<p>Agradecemos el envío de su propuesta al 1er Congreso. Tras la revisión, el comité científico <strong>no pudo incluirla</strong> en el programa de esta edición.</p>
+<p>Agradecemos el envío de su propuesta al 1er Congreso. Tras la revisión, el comité dictaminador <strong>no pudo incluirla</strong> en el programa de esta edición.</p>
 <ul><li><strong>Folio:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>Su registro sigue vigente y puede participar como asistente. Agradecemos su interés y esperamos contar con usted.</p>
-<p>Comité científico<br/>CIESS · CISS</p>$html$),
+<p>Comité dictaminador<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_rechazada', 'en', 'Review outcome · 1st Congress',
  $html$<p>Dear participant,</p>
-<p>Thank you for submitting your proposal to the 1st Congress. After review, the scientific committee <strong>was unable to include it</strong> in the programme for this edition.</p>
+<p>Thank you for submitting your proposal to the 1st Congress. After review, the review committee <strong>was unable to include it</strong> in the programme for this edition.</p>
 <ul><li><strong>Reference:</strong> {{folio}}</li><li><strong>Title:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>Your registration remains valid and you are welcome to attend. We appreciate your interest and hope to see you there.</p>
-<p>Scientific committee<br/>CIESS · CISS</p>$html$),
+<p>Review committee<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_rechazada', 'pt', 'Resultado da avaliação · 1º Congresso',
  $html$<p>Prezada pessoa participante,</p>
-<p>Agradecemos o envio da sua proposta ao 1º Congresso. Após a avaliação, o comitê científico <strong>não pôde incluí-la</strong> na programação desta edição.</p>
+<p>Agradecemos o envio da sua proposta ao 1º Congresso. Após a avaliação, o comitê avaliador <strong>não pôde incluí-la</strong> na programação desta edição.</p>
 <ul><li><strong>Protocolo:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>Sua inscrição continua válida e você pode participar como ouvinte. Agradecemos seu interesse e esperamos contar com você.</p>
-<p>Comitê científico<br/>CIESS · CISS</p>$html$)
+<p>Comitê avaliador<br/>CIESS · RIUSS</p>$html$)
 on conflict (clave, idioma) do nothing;
 
 -- ### Recordatorios ########################################
@@ -995,7 +995,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 <p>Puede revisar sus datos en <a href="{{url_edicion}}">este enlace</a> y consultar la agenda <a href="{{url_agenda}}">aquí</a>.</p>
 <p>Cualquier duda, escriba a {{correo_contacto}}.</p>
-<p>Comité organizador<br/>CIESS · CISS</p>$html$),
+<p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
 
 ('recordatorio', 'en', '{{dias_faltantes}} days to go · 1st Congress',
  $html$<p>Dear participant,</p>
@@ -1007,7 +1007,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 <p>You can review your details at <a href="{{url_edicion}}">this link</a> and see the agenda <a href="{{url_agenda}}">here</a>.</p>
 <p>For any questions, write to {{correo_contacto}}.</p>
-<p>Organizing committee<br/>CIESS · CISS</p>$html$),
+<p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
 
 ('recordatorio', 'pt', 'Faltam {{dias_faltantes}} dias · 1º Congresso',
  $html$<p>Prezada pessoa participante,</p>
@@ -1019,7 +1019,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 <p>Você pode revisar seus dados <a href="{{url_edicion}}">neste link</a> e consultar a programação <a href="{{url_agenda}}">aqui</a>.</p>
 <p>Em caso de dúvida, escreva para {{correo_contacto}}.</p>
-<p>Comitê organizador<br/>CIESS · CISS</p>$html$)
+<p>Comitê organizador<br/>CIESS · RIUSS</p>$html$)
 on conflict (clave, idioma) do nothing;
 -- ---------------------------------------------------------------------
 -- Avance de los envíos, para el panel

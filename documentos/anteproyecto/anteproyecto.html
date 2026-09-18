@@ -392,12 +392,13 @@
     <hr class="regla">
 
     <div class="ficha" style="margin-bottom:5mm">
-      <div><span class="rotulo">Pruebas automáticas</span><span class="valor mono">192</span></div>
+      <div><span class="rotulo">Pruebas automáticas</span><span class="valor mono">214</span></div>
       <div><span class="rotulo">Idiomas</span><span class="valor mono">3</span></div>
       <div><span class="rotulo">Perfiles de participación</span><span class="valor mono">6</span></div>
       <div><span class="rotulo">Campos del registro</span><span class="valor mono">95</span></div>
       <div><span class="rotulo">Pestañas en la hoja</span><span class="valor mono">6</span></div>
       <div><span class="rotulo">Roles del panel</span><span class="valor mono">5</span></div>
+      <div><span class="rotulo">Plantillas de correo</span><span class="valor mono">27</span></div>
     </div>
 
     <h3>Lo que aporta esta etapa</h3>
@@ -413,12 +414,15 @@
         <td>En pantalla, con lista de espera en el orden de llegada.</td></tr>
       <tr><td><b>Rastro de cambios</b></td>
         <td>Auditoría de cada alta, cambio y baja, con autor y fecha.</td></tr>
+      <tr><td><b>Acuse a quien se registra</b></td>
+        <td>Sale en el momento del alta, en su idioma; si falla, el panel lo avisa y
+            lo reenvía.</td></tr>
       <tr><td><b>Custodia de los datos</b></td>
         <td>Servidor del propio CIESS, con respaldo nocturno.</td></tr>
     </table>
 
     <div class="nota">
-      <b>Sobre las pruebas.</b> Las 192 pruebas no son una cifra de adorno: fijan la decisión
+      <b>Sobre las pruebas.</b> Las 214 pruebas no son una cifra de adorno: fijan la decisión
       de qué se le pregunta a cada perfil, la conversión de un registro a filas de la hoja, el
       blindaje de las celdas, los límites del formulario y el comportamiento de los guiones
       del servidor. Cada una deja por escrito un comportamiento que debe seguir cumpliéndose,
@@ -493,17 +497,22 @@
     <p class="sub">Lo que falta antes de abrir el registro al público.</p>
     <hr class="regla">
     <ul>
-      <li><b>Correo saliente.</b> Falta dar de alta el dominio en el servicio de envío para
-        que salgan los acuses y los recordatorios.</li>
       <li><b>Enlace de Zoom.</b> Se carga desde el panel cuando el comité lo tenga; el sistema
         ya lo reparte según el huso horario de cada quien.</li>
-      <li><b>Limpieza previa a la apertura.</b> Borrar los registros de prueba y vaciar la
-        hoja. Hay un guion que respalda antes y pide confirmación escrita.</li>
       <li><b>Agenda definitiva.</b> Sustituir la convocatoria por el programa cuando esté
         cerrado; se cambia desde el panel, sin desplegar.</li>
       <li><b>Fotografías de la sede.</b> La galería construye las direcciones de las 200
         imágenes; conviene confirmarlas todas antes de abrir.</li>
+      <li><b>Limpieza del día de apertura.</b> Los registros de prueba ya se borraron; si se
+        hacen más ensayos, el guion vuelve a dejarlo en cero, respaldando antes y pidiendo
+        confirmación escrita.</li>
     </ul>
+
+    <div class="nota">
+      <b>El correo ya no está aquí.</b> El dominio quedó verificado y los acuses salen desde
+      el servidor. Lo que queda en esta lista no impide abrir el registro: son cosas que se
+      cargan desde el panel cuando el comité las tenga, sin volver a desplegar.
+    </div>
   </section>
   <div class="pie"><span>CIESS · Anteproyecto</span><span>Sistema de registro del congreso</span></div>
 </div>
@@ -781,6 +790,59 @@
   </section>
   <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
 </div>
+<!-- ======================= 13 · M · los correos ========================= -->
+<div class="hoja corte">
+  <section>
+    <h3 style="margin-top:0">M · Los correos que salen solos</h3>
+    <p>
+      Nadie del comité los escribe. Los manda el sistema cuando pasa algo que la persona
+      registrada tiene que saber, y en el idioma en que se registró. Son veintisiete
+      plantillas —nueve situaciones por tres idiomas— y todas se editan desde el panel,
+      igual que los textos del sitio: quien las cambia no necesita tocar el código ni pedir
+      un despliegue.
+    </p>
+    <figure class="correo">
+      <img src="capturas/25-correo-acuse.png" alt="Acuse de registro">
+      <figcaption><b>Fig. 24</b> El acuse que llega al registrarse, en el instante del alta.
+        Lleva el folio y lo que la persona declaró; el enlace de la mitad es personal y le
+        permite volver a su registro y corregirlo hasta la fecha límite, sin escribirle a
+        nadie.</figcaption>
+    </figure>
+    <figure class="correo">
+      <img src="capturas/26-correo-lista-espera.png" alt="Aviso de lista de espera">
+      <figcaption><b>Fig. 25</b> Cuando los lugares presenciales se agotan, quien se registra
+        entra en lista de espera y su acuse lo dice con esas palabras —mismo folio, distinta
+        expectativa— en vez de darle por confirmado y desdecirse después.</figcaption>
+    </figure>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
+<div class="hoja corte">
+  <section>
+    <figure class="correo" style="margin-top:0">
+      <img src="capturas/27-correo-recordatorio.png" alt="Recordatorio previo al congreso">
+      <figcaption><b>Fig. 26</b> Los recordatorios salen solos en los días previos, según lo
+        que el comité haya programado. Cada quien recibe el suyo con su modalidad y sus
+        enlaces; la cuenta de días se calcula sola.</figcaption>
+    </figure>
+    <figure class="correo">
+      <img src="capturas/28-correo-dictamen.png" alt="Dictamen de una ponencia">
+      <figcaption><b>Fig. 27</b> El dictamen de las ponencias se comunica desde el panel: el
+        comité resuelve, y el correo sale con la resolución redactada de antemano, igual para
+        todo el mundo.</figcaption>
+    </figure>
+
+    <div class="nota">
+      <b>Un correo que no sale no se pierde de vista.</b> El envío se intenta al registrarse;
+      si falla —el servicio caído, un buzón que rebota— el motivo queda guardado en esa
+      ficha y el panel lo avisa en cuanto alguien entra, con el número de personas afectadas
+      y la causa. Desde ese mismo aviso se reintenta: un botón, y salen todos los acuses
+      pendientes. Sin eso, la única manera de enterarse sería que alguien escribiera
+      preguntando por qué no recibió nada.
+    </div>
+  </section>
+  <div class="pie"><span>CIESS · Anteproyecto</span><span>Guía de uso</span></div>
+</div>
 <!-- ================================ 14 ================================== -->
 <div class="hoja corte">
   <section>
@@ -899,6 +961,11 @@
         <span style="font-size:8.6pt;color:#8b95a5">Pide la clave sin mostrarla y manda un
         correo de prueba.</span></td>
         <td><span class="mono-en">sudo bash /opt/congreso/guiones/servidor/conectar-correo.sh</span></td></tr>
+      <tr><td><b>Saber por qué no sale un correo</b><br>
+        <span style="font-size:8.6pt;color:#8b95a5">Recorre los cinco eslabones —clave,
+        dominio verificado, remitente, plantillas y envío— y se detiene en el que
+        falla.</span></td>
+        <td><span class="mono-en">npm run revisar-correo -- alguien@ejemplo.org</span></td></tr>
       <tr><td><b>Respaldar ahora</b></td>
         <td><span class="mono-en">sudo /usr/local/bin/respaldar-congreso</span></td></tr>
     </table>
@@ -916,6 +983,11 @@
         <td>Respalda, compila aparte y sólo cambia el sitio cuando la versión nueva salió
             entera.</td></tr>
     </table>
+    <p style="font-size:9pt;color:#8b95a5">
+      Los acuses que no salieron no se reintentan solos: el panel los avisa y se reenvían
+      con un botón. Es deliberado —un correo que rebota no mejora por insistir cada diez
+      minutos, y quien lo reenvía debe saber que lo está haciendo.
+    </p>
 
     <h3>F · Marco legal aplicable</h3>
     <p>

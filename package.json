@@ -14,6 +14,7 @@
     "sincronizar": "tsx --conditions=react-server guiones/sincronizar-hoja.ts",
     "probar-correo": "tsx --conditions=react-server guiones/probar-correo.ts",
     "revisar-correo": "tsx --conditions=react-server guiones/revisar-correo.ts",
+    "vista-correos": "tsx --conditions=react-server guiones/vista-previa-correos.ts",
     "crear-usuario": "tsx --conditions=react-server guiones/crear-usuario.ts",
     "esquema": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f basedatos/esquema.sql",
     "prueba-bd": "tsx --conditions=react-server pruebas/integracion/base-de-datos.ts"

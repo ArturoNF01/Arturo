@@ -236,6 +236,11 @@ figure img {
   border: 1px solid var(--borde);
   border-radius: 4px;
 }
+/* Las capturas de correo van por pares en la misma hoja: con el tope general
+   de 112 mm, la segunda no cabía y saltaba de página dejando un tercio de
+   hoja en blanco detrás. Son imágenes estrechas, así que pierden poco. */
+figure.correo img { max-height: 92mm; }
+
 figcaption {
   margin-top: 2.2mm;
   font-size: 8.2pt;

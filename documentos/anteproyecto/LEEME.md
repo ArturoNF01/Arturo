@@ -9,7 +9,8 @@ Esto es lo que hace falta para volver a generarlo.
 |---|---|
 | `anteproyecto.html` | El documento entero, en una sola página. |
 | `estilo.css` | La línea gráfica: fondo oscuro, texto crema, acento dorado. |
-| `capturas/` | Las 24 capturas del sistema, en modo oscuro y a doble resolución. |
+| `capturas/` | Las 28 capturas: 24 del sistema y 4 de los correos, a doble resolución. |
+| `correos/` | Los correos compuestos en HTML, paso previo a capturarlos. No se versiona: se rehace. |
 
 Las tipografías van incrustadas en `fuentes.css` como base64. Es deliberado: el
 documento debe verse igual dentro de diez años, sin depender de que un servidor
@@ -27,11 +28,29 @@ las pruebas de navegador. El resultado queda en `documentos/`.
 
 ## Volver a tomar las capturas
 
-Hacen falta el sitio corriendo y una base con datos. Con el sistema en
-`localhost:3000` y una cuenta de panel:
+### Las del sistema
+
+Se toman a mano, con el sitio corriendo en `localhost:3000`, una base con datos
+y una cuenta de panel: son 24 pantallas que dependen de en qué estado esté cada
+una, y automatizarlas costaba más que rehacerlas cuando cambian.
+
+### Las de los correos
+
+Estas sí salen solas, y no hace falta ni servidor ni clave de Resend —sólo la
+base, de donde salen las plantillas:
 
 ```bash
-node guiones/capturar-pantallas.mjs
+npm run vista-correos            # compone los correos en correos/*.html
+node guiones/capturar-correos.mjs # y los convierte en imágenes
+```
+
+El primero usa las mismas funciones que el envío real y se detiene justo antes
+de entregarle el correo a Resend: lo que se ve en la captura es lo que llega al
+buzón, no una maqueta parecida. Para que los enlaces salgan con el dominio de
+verdad y no con `localhost`:
+
+```bash
+NEXT_PUBLIC_URL_SITIO=https://congreso-dss.ciess.org npm run vista-correos
 ```
 
 ## El logotipo

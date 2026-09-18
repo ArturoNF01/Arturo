@@ -72,7 +72,34 @@ update faqs
          'pt', 'De 11 a 13 de novembro de 2026, na sede do CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Cidade do México. A agenda detalhada será publicada antes do início do congresso.')
  where clave = 'sede-fechas';
 
--- Quien convoca es el CIESS con la RIUSS; la CISS ya no se nombra.
+-- Quien convoca es el CIESS con la RIUSS; la CISS ya no se nombra. Iba sólo
+-- en las preguntas frecuentes, y la firma de los dieciocho correos se quedó
+-- atrás: cada acuse salía firmado por una institución que no convoca.
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html, 'CIESS · CISS', 'CIESS · RIUSS')
+ where cuerpo_html like '%CIESS · CISS%';
+
+-- El comité pasó a llamarse dictaminador en el formulario y en el panel; los
+-- correos del dictamen eran lo único que seguía firmando como científico.
+update plantillas_correo
+   set cuerpo_html = replace(replace(replace(replace(replace(replace(cuerpo_html,
+         'comité científico',   'comité dictaminador'),
+         'Comité científico',   'Comité dictaminador'),
+         'scientific committee', 'review committee'),
+         'Scientific committee', 'Review committee'),
+         'comitê científico',   'comitê avaliador'),
+         'Comitê científico',   'Comitê avaliador')
+ where cuerpo_html ilike '%científic%' or cuerpo_html ilike '%scientific%';
+
+-- Y el eje temático dejó de pedirse: la variable llega vacía, así que el
+-- correo de dictamen salía con un «Eje temático:» seguido de nada.
+update plantillas_correo
+   set cuerpo_html = replace(replace(replace(cuerpo_html,
+         '<li><strong>Eje temático:</strong> {{eje_tematico}}</li>', ''),
+         '<li><strong>Thematic axis:</strong> {{eje_tematico}}</li>', ''),
+         '<li><strong>Eixo temático:</strong> {{eje_tematico}}</li>', '')
+ where cuerpo_html like '%{{eje_tematico}}%';
+
 update faqs
    set respuesta = jsonb_set(respuesta, '{es}',
          to_jsonb(replace(respuesta->>'es', 'el CIESS y la CISS', 'el CIESS y la RIUSS')))
