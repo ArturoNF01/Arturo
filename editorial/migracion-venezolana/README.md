@@ -48,7 +48,7 @@ plantilla/        libro.css: toda la línea gráfica
 figuras/          Generador de figuras (Node + D3): graficas.mjs, mapas.mjs, portada.mjs
 datos/            capitulo-1.json (datos de cuadros y gráficas) y geo/ (Natural Earth)
 fuentes/          Tipografías OFL
-logos/            CISS, CIESS (vector) y CODESS (imagen: falta el original vectorial)
+logos/            CISS y CIESS en vector (del .ai oficial) y CODESS (imagen: falta el original vectorial)
 guiones/          Extracción, construcción y herramientas de revisión
 insumos/          Archivos originales del capítulo (no se versionan)
 ```
@@ -65,6 +65,9 @@ python guiones/cuadros_cap1.py                # datos -> contenido/cuadros/*.htm
 npm run figuras                               # datos -> figuras/svg/*.svg
 python guiones/construir.py --figuras         # -> salida/
 ```
+
+Logotipos: `python guiones/extraer_logos.py` convierte `insumos/Logos CISS - CIESS.ai`
+en `logos/{ciss,ciess}-{color,sobre-oscuro,blanco,gris}.svg`.
 
 ### Paginación (colocación de figuras)
 

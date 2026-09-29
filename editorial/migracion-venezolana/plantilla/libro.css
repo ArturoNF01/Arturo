@@ -397,8 +397,8 @@ section.creditos::before {
   height: 510.2pt;
   border-left: 1pt solid #fff;
 }
-.logos-creditos { height: 28.35pt; margin-bottom: 26pt; }
-.logos-creditos img { height: 28.35pt; width: auto; vertical-align: middle; margin-right: 24pt; }
+.logos-creditos { height: 32pt; margin-bottom: 26pt; }
+.logos-creditos img { height: 32pt; width: auto; vertical-align: middle; margin-right: 24pt; }
 .logos-creditos img.logo-codess { height: 28.35pt; margin-right: 0; }
 .texto-creditos p { margin: 0 0 11pt 0; text-indent: 0; text-align: left; hyphens: manual; }
 .texto-creditos b { font-weight: 700; }
@@ -423,8 +423,9 @@ section.portada-interior hr {
   align-items: center;
   justify-content: space-between;
 }
-.logos img { height: 28.35pt; width: auto; }
-.logos .sep { display: block; width: 0; height: 41.6pt; border-left: 0.25pt solid var(--azul); }
+.logos img { height: 32pt; width: auto; }
+.logos img.logo-codess { height: 28.35pt; }
+.logos .sep { display: block; width: 0; height: 41.6pt; border-left: 0.25pt solid #878787; }
 
 /* Página de edición (p. 4) */
 section.edicion {
@@ -499,7 +500,8 @@ h1.portada-titulo {
   position: absolute; left: 36.9pt; right: 36.9pt; top: 526pt; height: 44pt;
   display: flex; align-items: center; justify-content: space-between;
 }
-.portada-logos img { height: 28.35pt; width: auto; }
+.portada-logos img { height: 32pt; width: auto; }
+.portada-logos img.logo-codess { height: 28.35pt; }
 .portada-logos .sep { display: block; width: 0; height: 41.7pt; border-left: 0.25pt solid #878787; }
 
 /* Párrafo partido por una figura (formación): la primera parte justifica su
