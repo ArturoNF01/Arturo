@@ -310,6 +310,10 @@ export const es = {
     imprimir: 'Imprimir o guardar en PDF',
     correoNoRecibido: '¿No recibió el correo? Revise su bandeja de no deseados o escriba a {contacto}.',
     listaEspera: 'Su registro quedó en lista de espera para la modalidad presencial.',
+    zoomTitulo: 'Falta un paso: regístrese en Zoom',
+    zoomTexto: 'El enlace para conectarse se lo envía Zoom, no nosotros. Regístrese ahí y recibirá su enlace personal por correo.',
+    zoomBoton: 'Registrarme en Zoom',
+    zoomNota: 'También le mandamos este enlace en el correo de confirmación, por si prefiere hacerlo después.',
   },
   faq: {
     titulo: 'Preguntas frecuentes',

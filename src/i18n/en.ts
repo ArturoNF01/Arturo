@@ -272,6 +272,10 @@ export const en: Diccionario = {
     imprimir: 'Print or save as PDF',
     correoNoRecibido: 'Did not receive the e-mail? Check your spam folder or write to {contacto}.',
     listaEspera: 'Your registration is on the waiting list for on-site attendance.',
+    zoomTitulo: 'One step left: register on Zoom',
+    zoomTexto: 'Zoom sends the joining link, not us. Register there and you will receive your personal link by email.',
+    zoomBoton: 'Register on Zoom',
+    zoomNota: 'We also include this link in your confirmation email, in case you prefer to do it later.',
   },
   faq: {
     titulo: 'Frequently asked questions',

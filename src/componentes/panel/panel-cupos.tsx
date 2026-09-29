@@ -87,6 +87,7 @@ export function PanelCupos({
     fecha_limite_registro: configuracion.fecha_limite_registro,
     url_agenda: configuracion.url_agenda,
     url_video_login: configuracion.url_video_login,
+    url_registro_zoom: configuracion.url_registro_zoom,
     correo_contacto: configuracion.correo_contacto,
     limite_registros_por_huella: limiteHuella.toString(),
   });
@@ -115,6 +116,7 @@ export function PanelCupos({
         fecha_limite_registro: valores.fecha_limite_registro,
         url_agenda: valores.url_agenda,
         url_video_login: valores.url_video_login,
+        url_registro_zoom: valores.url_registro_zoom,
         correo_contacto: valores.correo_contacto,
         limite_registros_por_huella: Number(valores.limite_registros_por_huella),
         congreso_nombre: datos.nombre,
@@ -288,6 +290,20 @@ export function PanelCupos({
               value={valores.url_agenda}
               onChange={(e) => setValores({ ...valores, url_agenda: e.target.value })}
             />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="etiqueta">Registro en Zoom (público en línea)</span>
+            <input
+              type="url" className="campo"
+              value={valores.url_registro_zoom}
+              onChange={(e) => setValores({ ...valores, url_registro_zoom: e.target.value })}
+            />
+            <span className="ayuda">
+              A quien se registra como público general en línea se le manda aquí en cuanto
+              termina, y el enlace va también en su acuse. Zoom le devuelve un enlace
+              personal; nosotros no lo generamos ni lo guardamos. Si se deja vacío, no se
+              muestra el aviso y esas personas se quedan sin saber cómo conectarse.
+            </span>
           </label>
           <label className="block sm:col-span-2">
             <span className="etiqueta">Video de fondo (login y formulario)</span>

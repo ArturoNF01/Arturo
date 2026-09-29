@@ -158,7 +158,7 @@ describe('a quien participa en línea no se le pregunta por la sede', () => {
   });
 
   it('a quien sí tiene hora en el programa se le sigue preguntando', () => {
-    for (const clave of ['ponente', 'conferencista', 'moderador'] as const) {
+    for (const clave of ['ponente'] as const) {
       const pasos = pasosVisibles(PERFILES.find((p) => p.clave === clave), 'en_linea');
       expect(pasos, clave).toContain('conexion');
     }

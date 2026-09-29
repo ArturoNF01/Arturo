@@ -4,7 +4,7 @@ import { unaFila } from '@/lib/bd/conexion';
 import { CONFIG, urlSitio } from '@/lib/config';
 import { etiquetaDe } from '@/lib/opciones';
 import { obtenerDiccionario } from '@/i18n';
-import { nombrePerfil } from '@/lib/perfiles';
+import { nombrePerfil, perfilPorClave, registroMinimo, type Modalidad } from '@/lib/perfiles';
 import { leerEjes } from './contenido';
 import { traducir } from '@/lib/contenido';
 import { aplicarPlantilla, envolverHtml } from '@/lib/plantillas';
@@ -26,6 +26,8 @@ export interface DatosCorreo {
   correoContacto: string;
   fechaLimite: string;
   urlAgenda: string;
+  /** Registro del seminario web. De ahí sale el enlace de quien sigue la transmisión. */
+  urlRegistroZoom?: string;
 }
 
 export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> {
@@ -59,6 +61,24 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
     fechas: String(r.fechas ?? ''),
     fecha_limite: datos.fechaLimite,
     url_edicion: `${urlSitio()}/confirmacion/${r.id}?token=${r.token_edicion}`,
+    url_zoom: datos.urlRegistroZoom ?? '',
+    // El enlace de conexión no lo damos nosotros: lo manda Zoom cuando la
+    // persona se registra en el seminario web. Quien sigue la transmisión
+    // tiene que saberlo o se queda con un folio y sin manera de entrar. Va
+    // como bloque ya formateado, no como variable suelta, porque sólo debe
+    // aparecer en el acuse de esas personas y no en el de todo el mundo.
+    zoom_bloque:
+      datos.urlRegistroZoom &&
+      registroMinimo(
+        perfilPorClave(String(r.perfil ?? '')),
+        r.modalidad === 'en_linea' ? 'en_linea' : ('presencial' as Modalidad),
+      )
+        ? `<div style="margin:20px 0;padding:16px;border-radius:8px;background:#eef3f9;border:1px solid #cfdcea;">
+<p style="margin:0 0 8px;font-weight:bold;color:#16283d;">${t.confirmacion.zoomTitulo}</p>
+<p style="margin:0 0 12px;">${t.confirmacion.zoomTexto}</p>
+<p style="margin:0;"><a href="${datos.urlRegistroZoom}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#2e5c8a;color:#ffffff;text-decoration:none;font-weight:bold;">${t.confirmacion.zoomBoton}</a></p>
+</div>`
+        : '',
     url_agenda: datos.urlAgenda,
     correo_contacto: datos.correoContacto,
   };

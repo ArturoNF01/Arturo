@@ -9,6 +9,7 @@ export interface ConfiguracionPublica {
   fecha_limite_registro: string;
   url_agenda: string;
   url_video_login: string;
+  url_registro_zoom: string;
   correo_contacto: string;
   ocupado_presencial: number;
   ocupado_en_linea: number;
@@ -21,6 +22,7 @@ const RESPALDO: ConfiguracionPublica = {
   fecha_limite_registro: CONFIG.fechaLimiteRegistro,
   url_agenda: CONFIG.urlConvocatoria,
   url_video_login: CONFIG.urlVideoLogin,
+  url_registro_zoom: 'https://us02web.zoom.us/webinar/register/WN_LMCy6fENTOiR2dSOvb_jDg',
   correo_contacto: process.env.CORREO_CONTACTO ?? 'congreso@ciess.org',
   ocupado_presencial: 0,
   ocupado_en_linea: 0,
@@ -53,6 +55,7 @@ export async function leerConfiguracion(): Promise<ConfiguracionPublica> {
       fecha_limite_registro: leer<string>('fecha_limite_registro', RESPALDO.fecha_limite_registro),
       url_agenda: leer<string>('url_agenda', RESPALDO.url_agenda),
       url_video_login: leer<string>('url_video_login', RESPALDO.url_video_login),
+      url_registro_zoom: leer<string>('url_registro_zoom', RESPALDO.url_registro_zoom),
       correo_contacto: leer<string>('correo_contacto', RESPALDO.correo_contacto),
       ocupado_presencial: Number(cupos?.ocupado_presencial ?? 0),
       ocupado_en_linea: Number(cupos?.ocupado_en_linea ?? 0),

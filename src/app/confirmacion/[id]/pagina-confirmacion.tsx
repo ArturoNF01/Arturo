@@ -8,6 +8,7 @@ import { ResumenRegistro } from '@/componentes/resumen-registro';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import type { DatosCongreso, EjeTematico } from '@/lib/contenido';
 import { interpolar } from '@/i18n';
+import { perfilPorClave, registroMinimo, type Modalidad } from '@/lib/perfiles';
 
 export function PaginaConfirmacion({
   registro,
@@ -28,6 +29,15 @@ export function PaginaConfirmacion({
   const { t } = useApp();
   const [editando, setEditando] = useState(false);
 
+  // A quien sigue la transmisión le falta el paso que no depende de nosotros:
+  // el enlace se lo da Zoom al registrarse ahí. Si no se le dice aquí —y en
+  // el acuse— se queda con un folio y sin manera de conectarse.
+  const vaAZoom =
+    registroMinimo(
+      perfilPorClave(String(registro.perfil)),
+      registro.modalidad === 'en_linea' ? 'en_linea' : ('presencial' as Modalidad),
+    ) && Boolean(configuracion.url_registro_zoom);
+
   if (editando) {
     return (
       <>
@@ -36,7 +46,6 @@ export function PaginaConfirmacion({
           <FormularioRegistro
             configuracion={configuracion}
             congreso={congreso}
-            ejes={ejes}
             registroExistente={registro}
             token={token}
           />
@@ -67,6 +76,25 @@ export function PaginaConfirmacion({
             <p className="text-xs uppercase tracking-wide tenue">{t.confirmacion.folio}</p>
             <p className="mt-1 font-mono text-lg font-bold tracking-tight">{String(registro.folio)}</p>
           </div>
+
+          {vaAZoom && (
+            <div
+              className="mt-6 rounded-lg border p-4"
+              style={{ borderColor: 'var(--acento, #2e5c8a)', background: 'color-mix(in srgb, #2e5c8a 12%, transparent)' }}
+            >
+              <p className="font-semibold">{t.confirmacion.zoomTitulo}</p>
+              <p className="mt-1 text-sm">{t.confirmacion.zoomTexto}</p>
+              <a
+                href={configuracion.url_registro_zoom}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="boton-primario mt-4 inline-flex"
+              >
+                {t.confirmacion.zoomBoton}
+              </a>
+              <p className="ayuda mt-3">{t.confirmacion.zoomNota}</p>
+            </div>
+          )}
 
           {registro.estado === 'lista_espera' && (
             <p className="mt-4 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-500">

@@ -273,6 +273,10 @@ export const pt: Diccionario = {
     imprimir: 'Imprimir ou salvar em PDF',
     correoNoRecibido: 'Não recebeu o e-mail? Verifique a caixa de spam ou escreva para {contacto}.',
     listaEspera: 'Sua inscrição ficou na lista de espera para a modalidade presencial.',
+    zoomTitulo: 'Falta um passo: inscreva-se no Zoom',
+    zoomTexto: 'O link de acesso é enviado pelo Zoom, não por nós. Inscreva-se lá e receberá o seu link pessoal por e-mail.',
+    zoomBoton: 'Inscrever-me no Zoom',
+    zoomNota: 'Também enviamos este link no e-mail de confirmação, caso prefira fazê-lo depois.',
   },
   faq: {
     titulo: 'Perguntas frequentes',

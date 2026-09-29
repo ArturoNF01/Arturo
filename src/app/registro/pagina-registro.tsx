@@ -4,17 +4,15 @@ import { Encabezado, PieDePagina } from '@/componentes/controles';
 import { FormularioRegistro } from '@/componentes/formulario-registro';
 import { useApp } from '@/componentes/proveedores';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
-import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
+import { traducir, type DatosCongreso } from '@/lib/contenido';
 import { VideoFondo } from '@/componentes/video-fondo';
 
 export function PaginaRegistro({
   configuracion,
   congreso,
-  ejes,
 }: {
   configuracion: ConfiguracionPublica;
   congreso: DatosCongreso;
-  ejes: EjeTematico[];
 }) {
   const { t, idioma } = useApp();
   const limite = fechaLegible(configuracion.fecha_limite_registro, idioma);
@@ -63,7 +61,7 @@ export function PaginaRegistro({
             )}
           </div>
         </section>
-        <FormularioRegistro configuracion={configuracion} congreso={congreso} ejes={ejes} />
+        <FormularioRegistro configuracion={configuracion} congreso={congreso} />
       </main>
       <PieDePagina />
     </>

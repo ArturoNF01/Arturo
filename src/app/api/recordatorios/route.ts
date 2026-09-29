@@ -81,6 +81,9 @@ async function ejecutar(forzarClave?: string) {
       correoContacto: configuracion.correo_contacto,
       fechaLimite: configuracion.fecha_limite_registro,
       urlAgenda: configuracion.url_agenda,
+      // Quien se registró hace medio año ya perdió su acuse: el recordatorio
+      // vuelve a llevarle el registro de Zoom, que es de donde sale su enlace.
+      urlRegistroZoom: configuracion.url_registro_zoom,
     });
 
     // El envío se asienta pase lo que pase: así un fallo puntual queda

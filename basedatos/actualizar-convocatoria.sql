@@ -72,6 +72,36 @@ update faqs
          'pt', 'De 11 a 13 de novembro de 2026, na sede do CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Cidade do México. A agenda detalhada será publicada antes do início do congresso.')
  where clave = 'sede-fechas';
 
+-- El público que sigue la transmisión recibe su enlace de Zoom, no nuestro:
+-- el registro del congreso sólo recoge su nombre y su correo, y de ahí se le
+-- manda al formulario del seminario web. Se guarda en la configuración para
+-- que el comité pueda cambiarlo desde el panel si Zoom le da otro.
+insert into configuracion (clave, valor, descripcion) values
+  ('url_registro_zoom', '"https://us02web.zoom.us/webinar/register/WN_LMCy6fENTOiR2dSOvb_jDg"'::jsonb,
+   'Registro en Zoom para quien sigue la transmisión; de ahí sale el enlace personal')
+on conflict (clave) do nothing;
+
+-- Los perfiles bajaron de seis a dos. Los otros cuatro son por invitación del
+-- comité y se resuelven por correo; dejarlos elegibles obligaba a sostener
+-- cuatro ramas de formulario para un puñado de personas. No se borran: hay
+-- registros hechos que apuntan a ellos y el panel los sigue mostrando.
+update perfiles set activo = false
+ where clave in ('conferencista', 'coordinador', 'moderador', 'dictaminador');
+
+-- Y el ponente pasa a recibir lo que recibía el conferencista —fotografía en
+-- el programa y traslado—, que era el perfil que ahora absorbe.
+update perfiles set en_programa = true, presenta_ponencia = true, invitado = true
+ where clave = 'ponente';
+
+-- El acuse del público en línea tiene que llevar el registro de Zoom: sin él
+-- esa persona se queda con un folio y sin manera de conectarse. El bloque se
+-- rellena solo, y en los demás acuses sale vacío.
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html,
+         '</ul>' || chr(10) || '<p>', '</ul>' || chr(10) || '{{zoom_bloque}}' || chr(10) || '<p>')
+ where clave in ('confirmacion_registro', 'recordatorio')
+   and cuerpo_html not like '%{{zoom_bloque}}%';
+
 -- Quien convoca es el CIESS con la RIUSS; la CISS ya no se nombra. Iba sólo
 -- en las preguntas frecuentes, y la firma de los dieciocho correos se quedó
 -- atrás: cada acuse salía firmado por una institución que no convoca.
@@ -116,6 +146,111 @@ alter table registros drop column if exists nombre_personificador;
 alter table registros drop column if exists tipo_habitacion;
 alter table registros drop column if exists comparte_habitacion_con;
 alter table registros drop column if exists alergias;
+
+-- ---------------------------------------------------------------------
+-- Borrar una cuenta del panel sin perder lo que esa persona hizo
+-- ---------------------------------------------------------------------
+-- Tres tablas apuntan a usuarios_panel para decir quién tocó cada cosa. Sin
+-- decir qué pasa al borrar, PostgreSQL se niega: la cuenta no se puede
+-- eliminar mientras haya una plantilla, una clave de configuración o un
+-- dictamen firmados por ella, y el panel devolvía un error que no explicaba
+-- nada. Con SET NULL la fila sobrevive y sólo pierde el puntero.
+--
+-- La auditoría no entra aquí y es deliberado: guarda el correo y el rol como
+-- texto, no como referencia, así que el rastro de quién hizo qué sigue legible
+-- después de borrar la cuenta. Es lo que permite explicar un cambio de hace
+-- seis meses hecho por alguien que ya no está.
+do $$
+declare
+  v record;
+begin
+  for v in
+    select c.conname, c.conrelid::regclass as tabla
+      from pg_constraint c
+      join pg_class t on t.oid = c.confrelid
+     where c.contype = 'f'
+       and t.relname = 'usuarios_panel'
+       -- Todas menos las que ya cascadean: 'a' es la NO ACTION que estorba y
+       -- 'n' es la que este mismo bloque pudo dejar en una corrida anterior.
+       -- Si sólo se quitara la 'a', la segunda pasada chocaría al volver a
+       -- crearlas —y este archivo se ejecuta en cada despliegue.
+       and c.confdeltype <> 'c'
+  loop
+    execute format('alter table %s drop constraint %I', v.tabla, v.conname);
+  end loop;
+end $$;
+
+alter table plantillas_correo
+  add constraint plantillas_correo_actualizado_por_fkey
+  foreign key (actualizado_por) references usuarios_panel(id) on delete set null;
+alter table configuracion
+  add constraint configuracion_actualizado_por_fkey
+  foreign key (actualizado_por) references usuarios_panel(id) on delete set null;
+alter table registros
+  add constraint registros_dictamen_por_fkey
+  foreign key (dictamen_por) references usuarios_panel(id) on delete set null;
+
+-- ---------------------------------------------------------------------
+-- Auditoría de las cuentas del panel
+-- ---------------------------------------------------------------------
+-- Faltaba, y es de las que más falta hacen: dar de alta una cuenta, subirle
+-- el rol, desactivarla o borrarla no dejaba ningún rastro. Con varias
+-- personas administrando, «quién hizo superadministrador a esta cuenta» es
+-- una pregunta que hay que poder responder.
+--
+-- Va con su propia función porque la general guarda la fila entera, y la fila
+-- entera incluye `clave_hash`. Un histórico de hashes de contraseña, legible
+-- por cualquiera con acceso a la auditoría, es exactamente lo que no se debe
+-- construir: se quita antes de guardar nada.
+create or replace function registrar_auditoria_usuarios() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  v_previos jsonb;
+  v_nuevos  jsonb;
+  v_campos  text[];
+  v_correo  text;
+  v_fila    jsonb;
+begin
+  select correo into v_correo from usuarios_panel where id = usuario_actual_id();
+
+  if tg_op <> 'INSERT' then v_previos := to_jsonb(old) - 'clave_hash'; end if;
+  if tg_op <> 'DELETE' then v_nuevos  := to_jsonb(new) - 'clave_hash'; end if;
+
+  if tg_op = 'UPDATE' then
+    select array_agg(clave) into v_campos
+      from jsonb_each(v_nuevos) as n(clave, valor)
+      where n.valor is distinct from v_previos -> n.clave;
+    -- El cambio de contraseña sí se anota, aunque su valor no se guarde:
+    -- interesa saber que ocurrió y cuándo.
+    if old.clave_hash is distinct from new.clave_hash then
+      -- Con los tipos escritos: sin ellos PostgreSQL no sabe que '{}' es un
+      -- array de texto y revienta el `update` entero con «malformed array
+      -- literal», que es lo último que uno espera al cambiarse la contraseña.
+      v_campos := coalesce(v_campos, array[]::text[]) || 'clave_hash'::text;
+    end if;
+    -- Un `update` que no cambia nada —la marca de último acceso al entrar—
+    -- no merece una fila de auditoría por sesión abierta.
+    if v_campos is null or v_campos = '{}' or v_campos = array['ultimo_acceso'] then
+      return new;
+    end if;
+  end if;
+
+  v_fila := case when tg_op = 'DELETE' then v_previos else v_nuevos end;
+
+  insert into auditoria (tabla, registro_id, accion, actor_id, actor_correo, actor_rol,
+                         origen, datos_previos, datos_nuevos, campos)
+  values ('usuarios_panel', coalesce(v_fila ->> 'id', ''), tg_op,
+          usuario_actual_id(), v_correo, rol_actual()::text,
+          case when usuario_actual_id() is null then 'sistema' else 'panel' end,
+          v_previos, v_nuevos, v_campos);
+
+  return case when tg_op = 'DELETE' then old else new end;
+end $$;
+
+drop trigger if exists trg_auditoria_usuarios on usuarios_panel;
+create trigger trg_auditoria_usuarios
+  after insert or update or delete on usuarios_panel
+  for each row execute function registrar_auditoria_usuarios();
 
 commit;
 

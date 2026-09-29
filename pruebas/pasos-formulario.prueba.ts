@@ -25,7 +25,7 @@ describe('botón principal del formulario', () => {
   });
 
   it('el último paso siempre es el de protección de datos', () => {
-    for (const clave of ['publico_general', 'dictaminador', 'conferencista'] as const) {
+    for (const clave of ['publico_general', 'ponente'] as const) {
       const pasos = pasosVisibles(perfilPorClave(clave), 'presencial');
       expect(pasos.at(-1), clave).toBe('privacidad');
     }

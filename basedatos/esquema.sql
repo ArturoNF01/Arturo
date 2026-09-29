@@ -445,7 +445,8 @@ null = sin límite'),
   ('fecha_limite_registro', '"2026-10-30"'::jsonb, 'Fecha límite de registro y de edición'),
   ('url_agenda',  '"https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf"'::jsonb, 'PDF de agenda/convocatoria'),
   ('url_video_login', '"https://home.ciess.org/wp-content/uploads/2026/03/1er-Congreso-de-Estudios-Interamericanos-de-Seguridad-Social-B.mp4"'::jsonb, 'Video de fondo del login'),
-  ('correo_contacto', '"teresa.davila@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador')
+  ('correo_contacto', '"teresa.davila@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador'),
+  ('url_registro_zoom', '"https://us02web.zoom.us/webinar/register/WN_LMCy6fENTOiR2dSOvb_jDg"'::jsonb, 'Registro en Zoom para quien sigue la transmisión; de ahí sale el enlace personal')
 on conflict (clave) do nothing;
 drop trigger if exists trg_config_actualizado on configuracion;
 create trigger trg_config_actualizado before update on configuracion
@@ -512,6 +513,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Perfil de participación:</strong> {{perfil}}</li>
   <li><strong>Modalidad:</strong> {{modalidad}}</li>
 </ul>
+{{zoom_bloque}}
 <p>Puede consultar o modificar sus datos hasta el {{fecha_limite}} en el siguiente enlace: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>La convocatoria y la agenda están disponibles en <a href="{{url_agenda}}">este documento</a>.</p>
 <p>Cualquier corrección posterior debe solicitarse a {{correo_contacto}}.</p>
@@ -527,6 +529,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Participation profile:</strong> {{perfil}}</li>
   <li><strong>Format:</strong> {{modalidad}}</li>
 </ul>
+{{zoom_bloque}}
 <p>You may review or edit your details until {{fecha_limite}} at the following link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>The call for papers and the agenda are available in <a href="{{url_agenda}}">this document</a>.</p>
 <p>Any later correction must be requested at {{correo_contacto}}.</p>
@@ -542,6 +545,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Perfil de participação:</strong> {{perfil}}</li>
   <li><strong>Modalidade:</strong> {{modalidad}}</li>
 </ul>
+{{zoom_bloque}}
 <p>Você pode consultar ou alterar seus dados até {{fecha_limite}} no seguinte link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>A convocatória e a agenda estão disponíveis <a href="{{url_agenda}}">neste documento</a>.</p>
 <p>Qualquer correção posterior deve ser solicitada a {{correo_contacto}}.</p>
@@ -993,6 +997,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Modalidad:</strong> {{modalidad}}</li>
   <li><strong>Sede y fechas:</strong> {{sede}} · {{fechas}}</li>
 </ul>
+{{zoom_bloque}}
 <p>Puede revisar sus datos en <a href="{{url_edicion}}">este enlace</a> y consultar la agenda <a href="{{url_agenda}}">aquí</a>.</p>
 <p>Cualquier duda, escriba a {{correo_contacto}}.</p>
 <p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
@@ -1005,6 +1010,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Format:</strong> {{modalidad}}</li>
   <li><strong>Venue and dates:</strong> {{sede}} · {{fechas}}</li>
 </ul>
+{{zoom_bloque}}
 <p>You can review your details at <a href="{{url_edicion}}">this link</a> and see the agenda <a href="{{url_agenda}}">here</a>.</p>
 <p>For any questions, write to {{correo_contacto}}.</p>
 <p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
@@ -1017,6 +1023,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Modalidade:</strong> {{modalidad}}</li>
   <li><strong>Sede e datas:</strong> {{sede}} · {{fechas}}</li>
 </ul>
+{{zoom_bloque}}
 <p>Você pode revisar seus dados <a href="{{url_edicion}}">neste link</a> e consultar a programação <a href="{{url_agenda}}">aqui</a>.</p>
 <p>Em caso de dúvida, escreva para {{correo_contacto}}.</p>
 <p>Comitê organizador<br/>CIESS · RIUSS</p>$html$)
@@ -1152,3 +1159,108 @@ end $$;
 -- garantía del motor y no un filtro de palabras: ninguna escritura pasa,
 -- aunque la consulta la esconda en una función o en un CTE.
 drop function if exists ejecutar_sql_lectura(text, integer);
+
+-- ---------------------------------------------------------------------
+-- Borrar una cuenta del panel sin perder lo que esa persona hizo
+-- ---------------------------------------------------------------------
+-- Tres tablas apuntan a usuarios_panel para decir quién tocó cada cosa. Sin
+-- decir qué pasa al borrar, PostgreSQL se niega: la cuenta no se puede
+-- eliminar mientras haya una plantilla, una clave de configuración o un
+-- dictamen firmados por ella, y el panel devolvía un error que no explicaba
+-- nada. Con SET NULL la fila sobrevive y sólo pierde el puntero.
+--
+-- La auditoría no entra aquí y es deliberado: guarda el correo y el rol como
+-- texto, no como referencia, así que el rastro de quién hizo qué sigue legible
+-- después de borrar la cuenta. Es lo que permite explicar un cambio de hace
+-- seis meses hecho por alguien que ya no está.
+do $$
+declare
+  v record;
+begin
+  for v in
+    select c.conname, c.conrelid::regclass as tabla
+      from pg_constraint c
+      join pg_class t on t.oid = c.confrelid
+     where c.contype = 'f'
+       and t.relname = 'usuarios_panel'
+       -- Todas menos las que ya cascadean: 'a' es la NO ACTION que estorba y
+       -- 'n' es la que este mismo bloque pudo dejar en una corrida anterior.
+       -- Si sólo se quitara la 'a', la segunda pasada chocaría al volver a
+       -- crearlas —y este archivo se ejecuta en cada despliegue.
+       and c.confdeltype <> 'c'
+  loop
+    execute format('alter table %s drop constraint %I', v.tabla, v.conname);
+  end loop;
+end $$;
+
+alter table plantillas_correo
+  add constraint plantillas_correo_actualizado_por_fkey
+  foreign key (actualizado_por) references usuarios_panel(id) on delete set null;
+alter table configuracion
+  add constraint configuracion_actualizado_por_fkey
+  foreign key (actualizado_por) references usuarios_panel(id) on delete set null;
+alter table registros
+  add constraint registros_dictamen_por_fkey
+  foreign key (dictamen_por) references usuarios_panel(id) on delete set null;
+
+-- ---------------------------------------------------------------------
+-- Auditoría de las cuentas del panel
+-- ---------------------------------------------------------------------
+-- Faltaba, y es de las que más falta hacen: dar de alta una cuenta, subirle
+-- el rol, desactivarla o borrarla no dejaba ningún rastro. Con varias
+-- personas administrando, «quién hizo superadministrador a esta cuenta» es
+-- una pregunta que hay que poder responder.
+--
+-- Va con su propia función porque la general guarda la fila entera, y la fila
+-- entera incluye `clave_hash`. Un histórico de hashes de contraseña, legible
+-- por cualquiera con acceso a la auditoría, es exactamente lo que no se debe
+-- construir: se quita antes de guardar nada.
+create or replace function registrar_auditoria_usuarios() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  v_previos jsonb;
+  v_nuevos  jsonb;
+  v_campos  text[];
+  v_correo  text;
+  v_fila    jsonb;
+begin
+  select correo into v_correo from usuarios_panel where id = usuario_actual_id();
+
+  if tg_op <> 'INSERT' then v_previos := to_jsonb(old) - 'clave_hash'; end if;
+  if tg_op <> 'DELETE' then v_nuevos  := to_jsonb(new) - 'clave_hash'; end if;
+
+  if tg_op = 'UPDATE' then
+    select array_agg(clave) into v_campos
+      from jsonb_each(v_nuevos) as n(clave, valor)
+      where n.valor is distinct from v_previos -> n.clave;
+    -- El cambio de contraseña sí se anota, aunque su valor no se guarde:
+    -- interesa saber que ocurrió y cuándo.
+    if old.clave_hash is distinct from new.clave_hash then
+      -- Con los tipos escritos: sin ellos PostgreSQL no sabe que '{}' es un
+      -- array de texto y revienta el `update` entero con «malformed array
+      -- literal», que es lo último que uno espera al cambiarse la contraseña.
+      v_campos := coalesce(v_campos, array[]::text[]) || 'clave_hash'::text;
+    end if;
+    -- Un `update` que no cambia nada —la marca de último acceso al entrar—
+    -- no merece una fila de auditoría por sesión abierta.
+    if v_campos is null or v_campos = '{}' or v_campos = array['ultimo_acceso'] then
+      return new;
+    end if;
+  end if;
+
+  v_fila := case when tg_op = 'DELETE' then v_previos else v_nuevos end;
+
+  insert into auditoria (tabla, registro_id, accion, actor_id, actor_correo, actor_rol,
+                         origen, datos_previos, datos_nuevos, campos)
+  values ('usuarios_panel', coalesce(v_fila ->> 'id', ''), tg_op,
+          usuario_actual_id(), v_correo, rol_actual()::text,
+          case when usuario_actual_id() is null then 'sistema' else 'panel' end,
+          v_previos, v_nuevos, v_campos);
+
+  return case when tg_op = 'DELETE' then old else new end;
+end $$;
+
+drop trigger if exists trg_auditoria_usuarios on usuarios_panel;
+create trigger trg_auditoria_usuarios
+  after insert or update or delete on usuarios_panel
+  for each row execute function registrar_auditoria_usuarios();

@@ -15,6 +15,14 @@ describe('a qué paso pertenece cada campo', () => {
     'idioma', 'token', 'sitio_web', 'abierto_en', 'estado', 'grupo',
     'modalidad_participacion', 'semblanza_drive_id', 'foto_drive_id',
     'boleto_drive_id', 'correo_alterno', 'disponibilidad_dias',
+
+    // De cuando había seis perfiles: los preguntaban las secciones de
+    // «Sesión a su cargo» y «Dictamen», que se fueron con los perfiles de
+    // coordinador, moderador y dictaminador. El esquema los sigue aceptando
+    // —hay registros hechos que los traen y el panel los muestra— pero
+    // ningún formulario los pide ya, así que no hay paso al que llevar a
+    // nadie.
+    'sesion_asignada', 'ejes_dictamen', 'ponencias_maximas', 'conflicto_interes',
   ]);
 
   it('todo campo que el servidor puede rechazar sabe en qué paso está', () => {

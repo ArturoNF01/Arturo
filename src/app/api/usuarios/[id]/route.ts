@@ -76,3 +76,69 @@ export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{
 
   return NextResponse.json({ guardado: true });
 }
+
+/**
+ * Elimina una cuenta del panel.
+ *
+ * Es distinto de desactivarla: desactivar deja la fila y con ella el nombre
+ * en los cambios que hizo; eliminar la quita de la base. Se guarda lo que
+ * importó —la auditoría anota el correo y el rol como texto, no como
+ * referencia, así que el rastro de quién hizo qué se sigue leyendo después—
+ * y las plantillas, la configuración y los dictámenes que firmó sobreviven
+ * sin su puntero.
+ *
+ * Dos cosas no se permiten, y las dos por lo mismo: dejan el panel sin
+ * gobierno y no se arreglan desde el propio panel.
+ */
+export async function DELETE(_peticion: NextRequest, contexto: { params: Promise<{ id: string }> }) {
+  const { id } = await contexto.params;
+  if (!esUuid(id)) {
+    return NextResponse.json({ mensaje: 'Cuenta no encontrada.' }, { status: 404 });
+  }
+
+  const usuario = await usuarioActual();
+  if (!usuario || !permisos(usuario.rol).gestionarUsuarios) {
+    return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
+  }
+
+  // Borrarse a sí mismo cierra la sesión en el acto y deja a la persona fuera
+  // sin manera de volver a entrar. Para irse está desactivar la cuenta, que lo
+  // puede deshacer otro superadministrador.
+  if (id === usuario.id) {
+    return NextResponse.json(
+      { mensaje: 'No puede eliminar su propia cuenta. Pídaselo a otro superadministrador.' },
+      { status: 409 },
+    );
+  }
+
+  const otros = await contar(
+    'usuarios_panel',
+    `where rol = 'superadmin' and activo and id <> $1`,
+    [id],
+  );
+  if (otros === 0) {
+    return NextResponse.json(
+      {
+        mensaje:
+          'Es la última cuenta de superadministrador activa. Dé de alta otra antes de eliminar ésta.',
+      },
+      { status: 409 },
+    );
+  }
+
+  try {
+    const borradas = await conActor(
+      usuario.id,
+      'delete from usuarios_panel where id = $1 returning id',
+      [id],
+    );
+    if (borradas.length === 0) {
+      return NextResponse.json({ mensaje: 'Cuenta no encontrada.' }, { status: 404 });
+    }
+  } catch (error) {
+    console.error('No se pudo eliminar la cuenta:', error);
+    return NextResponse.json({ mensaje: 'No fue posible eliminar la cuenta.' }, { status: 500 });
+  }
+
+  return NextResponse.json({ eliminado: true });
+}

@@ -19,7 +19,14 @@ export interface UsuarioFila {
 
 const ROLES: RolPanel[] = ['superadmin', 'organizador', 'cientifico_datos', 'lector'];
 
-export function GestionUsuarios({ usuarios }: { usuarios: UsuarioFila[] }) {
+export function GestionUsuarios({
+  usuarios,
+  miId,
+}: {
+  usuarios: UsuarioFila[];
+  /** Para no ofrecerle a nadie el botón de borrarse a sí mismo. */
+  miId: string;
+}) {
   const { t, idioma } = useApp();
   const router = useRouter();
   const [mensaje, setMensaje] = useState('');
@@ -36,6 +43,29 @@ export function GestionUsuarios({ usuarios }: { usuarios: UsuarioFila[] }) {
     const error = respuesta.ok ? null : await respuesta.json().catch(() => ({ mensaje: '' }));
     setMensaje(error ? error.mensaje || t.estados.error : t.estados.guardado);
     if (!error) router.refresh();
+    setOcupado(false);
+  }
+
+  async function eliminar(u: UsuarioFila) {
+    // Una cuenta borrada no se recupera, y el nombre de quien la borró queda
+    // en la auditoría. Escribir el correo entero, y no pulsar «aceptar», es
+    // lo que separa el descuido de la decisión.
+    const escrito = window.prompt(
+      `Esto elimina la cuenta de ${u.correo}. No se puede deshacer.\n\n` +
+        'Para confirmarlo, escriba el correo completo:',
+    );
+    if (escrito === null) return;
+    if (escrito.trim().toLowerCase() !== u.correo.toLowerCase()) {
+      setMensaje('El correo no coincide: no se eliminó nada.');
+      return;
+    }
+
+    setOcupado(true);
+    setMensaje('');
+    const respuesta = await fetch(`/api/usuarios/${u.id}`, { method: 'DELETE' });
+    const datos = await respuesta.json().catch(() => ({ mensaje: '' }));
+    setMensaje(respuesta.ok ? `Cuenta de ${u.correo} eliminada.` : datos.mensaje || t.estados.error);
+    if (respuesta.ok) router.refresh();
     setOcupado(false);
   }
 
@@ -62,8 +92,8 @@ export function GestionUsuarios({ usuarios }: { usuarios: UsuarioFila[] }) {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-b" style={{ borderColor: 'var(--borde)' }}>
-              {['Correo', 'Nombre', t.panel.auditoria.columnas.rol, 'Activo', 'Último acceso'].map((c) => (
-                <th key={c} className="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide tenue">
+              {['Correo', 'Nombre', t.panel.auditoria.columnas.rol, 'Activo', 'Último acceso', ''].map((c, i) => (
+                <th key={c || i} className="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide tenue">
                   {c}
                 </th>
               ))}
@@ -98,6 +128,20 @@ export function GestionUsuarios({ usuarios }: { usuarios: UsuarioFila[] }) {
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 tabular-nums tenue">
                   {u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleString(idioma) : '—'}
+                </td>
+                <td className="px-3 py-2.5 text-right">
+                  {u.id === miId ? (
+                    <span className="ayuda">Su cuenta</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-red-500 underline underline-offset-2 disabled:opacity-40"
+                      disabled={ocupado}
+                      onClick={() => void eliminar(u)}
+                    >
+                      Eliminar
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

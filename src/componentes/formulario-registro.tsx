@@ -13,10 +13,10 @@ import {
   PASO_DE_CAMPO, PERFILES, campoVisible, pasosVisibles, perfilPorClave,
   type ClavePerfil, type Modalidad, type PasoFormulario,
 } from '@/lib/perfiles';
-import { ZONAS_HORARIAS, diasDelCongreso } from '@/lib/husos';
+import { ZONAS_HORARIAS } from '@/lib/husos';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import { opciones } from '@/lib/opciones';
-import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
+import { type DatosCongreso } from '@/lib/contenido';
 import { interpolar } from '@/i18n';
 
 type Valores = Record<string, string | boolean | string[]>;
@@ -48,13 +48,11 @@ const VALORES_INICIALES: Valores = {
 export function FormularioRegistro({
   configuracion,
   congreso,
-  ejes,
   registroExistente,
   token,
 }: {
   configuracion: ConfiguracionPublica;
   congreso: DatosCongreso;
-  ejes: EjeTematico[];
   registroExistente?: Record<string, unknown>;
   token?: string;
 }) {
@@ -122,7 +120,12 @@ export function FormularioRegistro({
     if (paso === 'perfil' && !valores.perfil) nuevos.perfil = t.formulario.validacion.requerido;
 
     if (paso === 'identificacion') {
-      ['apellidos', 'nombres', 'correo', 'institucion', 'pais_residencia'].forEach(obligatorio);
+      // Se exige lo que se enseña. Al público en línea no se le pide ni
+      // institución ni país, y sin este filtro el botón de seguir no
+      // avanzaba: marcaba como vacíos dos campos que no están en pantalla.
+      ['apellidos', 'nombres', 'correo', 'institucion', 'pais_residencia']
+        .filter((c) => visible(c))
+        .forEach(obligatorio);
       if (texto('correo') && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(texto('correo'))) {
         nuevos.correo = t.formulario.validacion.correo;
       }
@@ -144,10 +147,6 @@ export function FormularioRegistro({
     // Estas tres las exigía sólo el servidor, y su aviso llegaba al final,
     // cuando el campo ya no estaba en pantalla.
     if (paso === 'ponencia') obligatorio('titulo_ponencia');
-    if (paso === 'sesion') obligatorio('sesion_asignada');
-    if (paso === 'dictamen' && !lista('ejes_dictamen').length) {
-      nuevos.ejes_dictamen = t.formulario.validacion.requerido;
-    }
     if (paso === 'semblanza' && perfil?.enPrograma && !valores.autoriza_grabacion) {
       nuevos.autoriza_grabacion = t.formulario.validacion.requerido;
     }
@@ -299,23 +298,31 @@ export function FormularioRegistro({
             {visible('nombre_constancia') && (
               <CampoTexto campo="nombre_constancia" etiqueta={t.formulario.campos.nombreConstancia} ayuda={t.formulario.campos.nombreConstanciaAyuda} valor={texto('nombre_constancia')} onChange={(v) => fijar('nombre_constancia', v)} />
             )}
-            <CampoSeleccion etiqueta={t.formulario.campos.genero} opciones={opciones('genero', t)} valor={texto('genero')} onChange={(v) => fijar('genero', v)} />
+            {visible('genero') && (
+              <CampoSeleccion etiqueta={t.formulario.campos.genero} opciones={opciones('genero', t)} valor={texto('genero')} onChange={(v) => fijar('genero', v)} />
+            )}
             <div className="grid gap-5 sm:grid-cols-2">
               <CampoTexto campo="correo" etiqueta={t.formulario.campos.correo} tipo="email" requerido valor={texto('correo')} onChange={(v) => fijar('correo', v)} error={errores.correo} />
-              <CampoTexto campo="telefono_whatsapp" etiqueta={t.formulario.campos.telefono} ayuda={t.formulario.campos.telefonoAyuda} tipo="tel" valor={texto('telefono_whatsapp')} onChange={(v) => fijar('telefono_whatsapp', v)} />
+              {visible('telefono_whatsapp') && (
+                <CampoTexto campo="telefono_whatsapp" etiqueta={t.formulario.campos.telefono} ayuda={t.formulario.campos.telefonoAyuda} tipo="tel" valor={texto('telefono_whatsapp')} onChange={(v) => fijar('telefono_whatsapp', v)} />
+              )}
             </div>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <CampoTexto campo="institucion" etiqueta={t.formulario.campos.institucion} requerido valor={texto('institucion')} onChange={(v) => fijar('institucion', v)} error={errores.institucion} />
-              <CampoTexto campo="cargo" etiqueta={t.formulario.campos.cargo} valor={texto('cargo')} onChange={(v) => fijar('cargo', v)} />
-            </div>
+            {visible('institucion') && (
+              <div className="grid gap-5 sm:grid-cols-2">
+                <CampoTexto campo="institucion" etiqueta={t.formulario.campos.institucion} requerido valor={texto('institucion')} onChange={(v) => fijar('institucion', v)} error={errores.institucion} />
+                <CampoTexto campo="cargo" etiqueta={t.formulario.campos.cargo} valor={texto('cargo')} onChange={(v) => fijar('cargo', v)} />
+              </div>
+            )}
             {visible('procedencia') && (
               <CampoOpcionUnica etiqueta={t.formulario.campos.procedencia} ayuda={t.formulario.campos.procedenciaAyuda} opciones={opciones('procedencia', t)} valor={texto('procedencia')} onChange={(v) => fijar('procedencia', v)} />
             )}
-            <div className="grid gap-5 sm:grid-cols-3">
-              <CampoTexto campo="pais_residencia" etiqueta={t.formulario.campos.pais} requerido valor={texto('pais_residencia')} onChange={(v) => fijar('pais_residencia', v)} error={errores.pais_residencia} />
-              <CampoTexto campo="entidad_federativa" etiqueta={t.formulario.campos.entidad} ayuda={t.formulario.campos.entidadAyuda} valor={texto('entidad_federativa')} onChange={(v) => fijar('entidad_federativa', v)} />
-              <CampoTexto campo="ciudad_residencia" etiqueta={t.formulario.campos.ciudad} valor={texto('ciudad_residencia')} onChange={(v) => fijar('ciudad_residencia', v)} />
-            </div>
+            {visible('pais_residencia') && (
+              <div className="grid gap-5 sm:grid-cols-3">
+                <CampoTexto campo="pais_residencia" etiqueta={t.formulario.campos.pais} requerido valor={texto('pais_residencia')} onChange={(v) => fijar('pais_residencia', v)} error={errores.pais_residencia} />
+                <CampoTexto campo="entidad_federativa" etiqueta={t.formulario.campos.entidad} ayuda={t.formulario.campos.entidadAyuda} valor={texto('entidad_federativa')} onChange={(v) => fijar('entidad_federativa', v)} />
+                <CampoTexto campo="ciudad_residencia" etiqueta={t.formulario.campos.ciudad} valor={texto('ciudad_residencia')} onChange={(v) => fijar('ciudad_residencia', v)} />
+              </div>
+            )}
             <div className="grid gap-5 sm:grid-cols-2">
               {visible('nacionalidad') && (
                 <CampoTexto campo="nacionalidad" etiqueta={t.formulario.campos.nacionalidad} ayuda={t.formulario.campos.nacionalidadAyuda} valor={texto('nacionalidad')} onChange={(v) => fijar('nacionalidad', v)} />
@@ -336,26 +343,6 @@ export function FormularioRegistro({
             <CampoOpcionUnica etiqueta={t.formulario.campos.idiomaPonencia} ayuda={t.formulario.campos.idiomaPonenciaAyuda} opciones={[{ valor: 'es', etiqueta: 'Español' }, { valor: 'pt', etiqueta: 'Português' }, { valor: 'en', etiqueta: 'English' }]} valor={texto('idioma_ponencia')} onChange={(v) => fijar('idioma_ponencia', v)} columnas={2} />
             <CampoParrafo campo="coautoria" etiqueta={t.formulario.campos.coautoria} ayuda={t.formulario.campos.coautoriaAyuda} filas={3} valor={texto('coautoria')} onChange={(v) => fijar('coautoria', v)} />
             <CampoInterruptor etiqueta={t.formulario.campos.autorizaPublicacion} valor={Boolean(valores.autoriza_publicacion)} onChange={(v) => fijar('autoriza_publicacion', v)} />
-          </section>
-        )}
-
-        {pasoActual === 'sesion' && (
-          <section className="space-y-5">
-            <Cabecera titulo={t.formulario.secciones.sesion} ayuda={t.formulario.secciones.sesionAyuda} />
-            <CampoSeleccion etiqueta={t.formulario.campos.sesionAsignada} requerido opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valor={texto('sesion_asignada')} onChange={(v) => fijar('sesion_asignada', v)} error={errores.sesion_asignada} />
-            {/* Saber qué días puede cada quien antes de armar el programa
-                ahorra rehacerlo después. */}
-            <CampoCasillas etiqueta={t.formulario.campos.disponibilidadDias} opciones={diasDelCongreso(t, congreso.fecha_inicio, congreso.fecha_fin)} valores={lista('disponibilidad_dias')} onChange={(v) => fijar('disponibilidad_dias', v)} />
-          </section>
-        )}
-
-        {pasoActual === 'dictamen' && (
-          <section className="space-y-5">
-            <Cabecera titulo={t.formulario.secciones.dictamen} ayuda={t.formulario.secciones.dictamenAyuda} />
-            <CampoCasillas etiqueta={t.formulario.campos.ejesDictamen} ayuda={t.formulario.campos.ejesDictamenAyuda} requerido opciones={ejes.map((e) => ({ valor: e.clave, etiqueta: traducir(e.nombre, idioma) }))} valores={lista('ejes_dictamen')} onChange={(v) => fijar('ejes_dictamen', v)} error={errores.ejes_dictamen} />
-            <CampoTexto campo="ponencias_maximas" tipo="number" etiqueta={t.formulario.campos.ponenciasMaximas} ayuda={t.formulario.campos.ponenciasMaximasAyuda} valor={texto('ponencias_maximas')} onChange={(v) => fijar('ponencias_maximas', v)} />
-            {/* Un dictamen sin conflictos declarados es impugnable. */}
-            <CampoParrafo campo="conflicto_interes" etiqueta={t.formulario.campos.conflictoInteres} ayuda={t.formulario.campos.conflictoInteresAyuda} filas={3} valor={texto('conflicto_interes')} onChange={(v) => fijar('conflicto_interes', v)} />
           </section>
         )}
 

@@ -1,23 +1,41 @@
 import type { Diccionario } from '@/i18n';
 
 /**
- * Los seis perfiles con los que se participa en el congreso.
+ * Los dos perfiles con los que se participa en el congreso.
+ *
+ * Fueron seis. Se redujeron a dos al preparar la apertura al público: la
+ * diferencia que de verdad cambia lo que hay que preguntar es si la persona
+ * sube al programa o viene a escuchar. Conferencistas, coordinadores,
+ * moderadores y dictaminadores son invitación del comité, se resuelven por
+ * correo entre pocas personas, y sostener cuatro ramas de formulario para
+ * ellas costaba más de lo que ahorraba.
+ *
+ * Las claves viejas siguen existiendo en la base y en los registros ya
+ * hechos: `nombrePerfil` las sabe leer, y el panel las sigue mostrando.
+ * Lo que desaparece es la posibilidad de elegirlas al registrarse.
  *
  * La convocatoria ya cerró: esto no recoge propuestas, sino el registro de
  * quien asiste. Por eso a la persona ponente no se le pide su trabajo, que
  * el comité dictaminador ya revisó, sino los datos con los que su ponencia
  * aparecerá en el programa y saldrá bien el día del congreso.
- *
- * No hay grupos internos ni externos: lo que cambia el formulario es lo que
- * cada quien viene a hacer, no de dónde viene.
  */
-export const CLAVES_PERFIL = [
-  'ponente',
+export const CLAVES_PERFIL = ['ponente', 'publico_general'] as const;
+
+/**
+ * Las que hubo alguna vez, para lo que ya está guardado.
+ *
+ * El formulario sólo ofrece las dos de arriba, pero un registro hecho antes
+ * del recorte trae una de éstas, y su dueño puede volver a su ficha a
+ * corregir un teléfono. Si la validación sólo aceptara las dos nuevas, ese
+ * registro quedaría congelado: cualquier cambio lo rechazaría el servidor por
+ * un campo que la persona no eligió ni puede cambiar.
+ */
+export const CLAVES_PERFIL_HISTORICAS = [
+  ...CLAVES_PERFIL,
   'conferencista',
   'coordinador',
   'moderador',
   'dictaminador',
-  'publico_general',
 ] as const;
 
 export type ClavePerfil = (typeof CLAVES_PERFIL)[number];
@@ -29,10 +47,6 @@ export interface DefinicionPerfil {
   enPrograma: boolean;
   /** Presenta una ponencia ya aceptada por el comité dictaminador. */
   presentaPonencia: boolean;
-  /** Tiene a su cargo una mesa o un eje temático. */
-  tieneSesion: boolean;
-  /** Dictamina trabajos para el comité dictaminador. */
-  dictamina: boolean;
   /** El CIESS lo invita: se le tramitan oficio y alojamiento. */
   invitado: boolean;
   /** Su fotografía sale en el programa. Sólo a quien preside o da una charla. */
@@ -46,12 +60,8 @@ export interface DefinicionPerfil {
  * se transmite completo. Lo que cambia entre perfiles es qué se les pregunta.
  */
 export const PERFILES: DefinicionPerfil[] = [
-  { clave: 'ponente',         enPrograma: true,  presentaPonencia: true,  tieneSesion: false, dictamina: false, invitado: true,  llevaFotografia: false, recibeTraslado: false },
-  { clave: 'conferencista',   enPrograma: true,  presentaPonencia: false, tieneSesion: false, dictamina: false, invitado: true,  llevaFotografia: true,  recibeTraslado: true  },
-  { clave: 'coordinador',     enPrograma: true,  presentaPonencia: false, tieneSesion: true,  dictamina: false, invitado: true,  llevaFotografia: false, recibeTraslado: false },
-  { clave: 'moderador',       enPrograma: true,  presentaPonencia: false, tieneSesion: true,  dictamina: false, invitado: true,  llevaFotografia: true,  recibeTraslado: false },
-  { clave: 'dictaminador',    enPrograma: true,  presentaPonencia: false, tieneSesion: false, dictamina: true,  invitado: false, llevaFotografia: false, recibeTraslado: false },
-  { clave: 'publico_general', enPrograma: false, presentaPonencia: false, tieneSesion: false, dictamina: false, invitado: false, llevaFotografia: false, recibeTraslado: false },
+  { clave: 'ponente',         enPrograma: true,  presentaPonencia: true,  invitado: true,  llevaFotografia: true,  recibeTraslado: true  },
+  { clave: 'publico_general', enPrograma: false, presentaPonencia: false, invitado: false, llevaFotografia: false, recibeTraslado: false },
 ];
 
 export function perfilPorClave(clave: string | null | undefined): DefinicionPerfil | undefined {
@@ -69,9 +79,24 @@ export function nombrePerfil(clave: string, t: Diccionario): string {
 
 /** Pasos visibles del formulario según el perfil y la modalidad elegidos. */
 export type PasoFormulario =
-  | 'perfil' | 'identificacion' | 'ponencia' | 'sesion' | 'dictamen' | 'semblanza'
+  | 'perfil' | 'identificacion' | 'ponencia' | 'semblanza'
   | 'conexion' | 'documentacion' | 'sala' | 'alojamiento' | 'traslados'
   | 'estacionamiento' | 'cierre' | 'privacidad';
+
+/**
+ * ¿A esta persona sólo se le pide el nombre y el correo?
+ *
+ * Es el caso del público que sigue la transmisión: no pisa la sede, no sale
+ * en el programa y el enlace se lo da Zoom, no nosotros. Pedirle institución,
+ * cargo, país y teléfono era cobrarle diez campos por ver un video, y cada
+ * campo de más es gente que abandona el formulario a medias.
+ */
+export function registroMinimo(
+  perfil: DefinicionPerfil | undefined,
+  modalidad: Modalidad,
+): boolean {
+  return perfil?.clave === 'publico_general' && modalidad === 'en_linea';
+}
 
 export function pasosVisibles(
   perfil: DefinicionPerfil | undefined,
@@ -84,8 +109,6 @@ export function pasosVisibles(
   pasos.push('identificacion');
 
   if (perfil.presentaPonencia) pasos.push('ponencia');
-  if (perfil.tieneSesion) pasos.push('sesion');
-  if (perfil.dictamina) pasos.push('dictamen');
   if (perfil.enPrograma) pasos.push('semblanza');
 
   // Nada de lo que viene debajo —sala, hotel, traslados, comida,
@@ -124,11 +147,19 @@ export function campoVisible(
 ): boolean {
   if (!perfil) return false;
   const presencial = modalidad === 'presencial';
+
+  // Tres campos y ya —pero sólo dentro de la identificación. El recorte no
+  // puede alcanzar al consentimiento de datos, que vive en otro paso y es lo
+  // único sin lo cual no se puede guardar a nadie.
+  if (registroMinimo(perfil, modalidad) && PASO_DE_CAMPO[campo] === 'identificacion') {
+    return campo === 'apellidos' || campo === 'nombres' || campo === 'correo';
+  }
+
   switch (campo) {
     case 'nombre_constancia':
       return true;
     case 'orcid':
-      return perfil.presentaPonencia || perfil.dictamina;
+      return perfil.presentaPonencia;
     case 'foto':
       // La fotografía sale en el programa junto a quien preside o da una
       // charla; a nadie más se le pide su retrato.
@@ -195,13 +226,6 @@ export const PASO_DE_CAMPO: Record<string, PasoFormulario> = {
   palabras_clave: 'ponencia',
   coautoria: 'ponencia',
   autoriza_publicacion: 'ponencia',
-
-  sesion_asignada: 'sesion',
-  disponibilidad_dias: 'sesion',
-
-  ejes_dictamen: 'dictamen',
-  ponencias_maximas: 'dictamen',
-  conflicto_interes: 'dictamen',
 
   semblanza_url: 'semblanza',
   foto_url: 'semblanza',

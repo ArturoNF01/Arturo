@@ -41,8 +41,7 @@ describe('esquema de registro', () => {
   });
 
   it('todos los perfiles admiten ambas modalidades: el congreso se transmite entero', () => {
-    for (const perfil of ['ponente', 'conferencista', 'coordinador', 'moderador',
-                          'dictaminador', 'publico_general']) {
+    for (const perfil of ['ponente', 'publico_general']) {
       const presencial = esquemaRegistro.safeParse(valido({
         perfil, modalidad: 'presencial',
         semblanza_url: 'https://drive.google.com/file/d/x/view', autoriza_grabacion: true,
@@ -55,7 +54,7 @@ describe('esquema de registro', () => {
 
   it('sin autorizar la grabación no pasa quien sale en el programa', () => {
     const resultado = esquemaRegistro.safeParse(valido({
-      perfil: 'conferencista', modalidad: 'en_linea', autoriza_grabacion: false,
+      perfil: 'ponente', modalidad: 'en_linea', autoriza_grabacion: false,
     }));
     expect(resultado.success).toBe(false);
     expect(resultado.error?.issues.some((i) => i.path[0] === 'autoriza_grabacion')).toBe(true);
@@ -80,19 +79,11 @@ describe('esquema de registro', () => {
     expect(resultado.success).toBe(true);
   });
 
-  it('un dictaminador sin ejes declarados no se puede repartir', () => {
-    const resultado = esquemaRegistro.safeParse(valido({
-      perfil: 'dictaminador', autoriza_grabacion: true, ejes_dictamen: [],
-    }));
-    expect(resultado.success).toBe(false);
-    expect(resultado.error?.issues.some((i) => i.path[0] === 'ejes_dictamen')).toBe(true);
-  });
-
   it('sin semblanza no pasa quien sale en el programa', () => {
     // Es lo que se lee en voz alta antes de presentarle: sin ella no hay
     // programa que armar.
     const resultado = esquemaRegistro.safeParse(
-      valido({ perfil: 'conferencista', modalidad: 'presencial', autoriza_grabacion: true }),
+      valido({ perfil: 'ponente', modalidad: 'presencial', autoriza_grabacion: true }),
     );
     expect(resultado.success).toBe(false);
     expect(resultado.error?.issues.some((i) => i.path[0] === 'semblanza_url')).toBe(true);
@@ -121,7 +112,7 @@ describe('esquema de registro', () => {
   it('rechaza una salida de hotel anterior a la entrada', () => {
     const resultado = esquemaRegistro.safeParse(
       valido({
-        perfil: 'conferencista', modalidad: 'presencial',
+        perfil: 'ponente', modalidad: 'presencial',
         semblanza_url: 'https://drive.google.com/file/d/x/view', autoriza_grabacion: true,
         requiere_alojamiento: true,
         fecha_entrada_hotel: '2026-11-12',

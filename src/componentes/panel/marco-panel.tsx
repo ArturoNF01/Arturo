@@ -39,6 +39,9 @@ export function MarcoPanel({
     { href: '/panel/contenido', texto: t.panel.secciones.contenido, visible: permisos.editarConfiguracion, icono: 'texto' },
     { href: '/panel/auditoria', texto: t.panel.secciones.auditoria, visible: permisos.verAuditoria, icono: 'escudo' },
     { href: '/panel/usuarios', texto: t.panel.secciones.usuarios, visible: permisos.gestionarUsuarios, icono: 'personas' },
+    // Sin condición: es la propia cuenta, y cambiarse la contraseña no puede
+    // depender del rol que se tenga.
+    { href: '/panel/cuenta', texto: 'Mi cuenta', visible: true, icono: 'personas' },
     { href: '/diagnostico', texto: 'Diagnóstico', visible: usuario.rol === 'superadmin', icono: 'pulso' },
   ].filter((s) => s.visible);
 

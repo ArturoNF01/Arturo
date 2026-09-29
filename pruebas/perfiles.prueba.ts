@@ -23,35 +23,31 @@ describe('pasos del formulario según el perfil', () => {
   });
 
   it('quien sale en el programa sí los ve, si asiste en persona', () => {
-    for (const clave of ['ponente', 'conferencista', 'coordinador', 'moderador', 'dictaminador'] as const) {
-      expect(pasosVisibles(perfilPorClave(clave), 'presencial'), clave).toContain('sala');
-    }
+    expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).toContain('sala');
   });
 
   it('un ponente presencial recorre todas las secciones que le tocan', () => {
     // Sin traslados: ese servicio es sólo para quien da una conferencia.
     expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).toEqual([
       'perfil', 'identificacion', 'ponencia', 'semblanza', 'documentacion',
-      'sala', 'alojamiento', 'estacionamiento', 'cierre', 'privacidad',
+      'sala', 'alojamiento', 'traslados', 'estacionamiento', 'cierre', 'privacidad',
     ]);
   });
 
-  it('el traslado lo recibe quien da una conferencia, nadie más', () => {
-    expect(pasosVisibles(perfilPorClave('conferencista'), 'presencial')).toContain('traslados');
-    for (const clave of ['ponente', 'coordinador', 'moderador', 'publico_general']) {
-      expect(pasosVisibles(perfilPorClave(clave), 'presencial'), clave).not.toContain('traslados');
-    }
+  it('el traslado es para quien sube al programa, no para el público', () => {
+    expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).toContain('traslados');
+    expect(pasosVisibles(perfilPorClave('publico_general'), 'presencial')).not.toContain('traslados');
   });
 
   it('quien viene en persona pasa por estacionamiento, exponga o no', () => {
-    for (const clave of ['ponente', 'conferencista', 'dictaminador', 'publico_general']) {
+    for (const clave of CLAVES_PERFIL) {
       expect(pasosVisibles(perfilPorClave(clave), 'presencial'), clave).toContain('estacionamiento');
     }
   });
 
   it('nada de la sede le aparece a quien participa en línea', () => {
     // Sala, hotel, traslados, comida y estacionamiento sobran si no se viene.
-    for (const clave of ['ponente', 'conferencista', 'coordinador', 'moderador', 'dictaminador', 'publico_general']) {
+    for (const clave of CLAVES_PERFIL) {
       const pasos = pasosVisibles(perfilPorClave(clave), 'en_linea');
       for (const paso of ['sala', 'alojamiento', 'traslados', 'estacionamiento', 'documentacion']) {
         expect(pasos, `${clave} · ${paso}`).not.toContain(paso);
@@ -70,16 +66,14 @@ describe('pasos del formulario según el perfil', () => {
     expect(enLinea).toContain('semblanza');
   });
 
-  it('coordinar y moderar pide la sesión a cargo; ponerse a dictaminar, no', () => {
-    expect(pasosVisibles(perfilPorClave('coordinador'), 'presencial')).toContain('sesion');
-    expect(pasosVisibles(perfilPorClave('moderador'), 'presencial')).toContain('sesion');
-    expect(pasosVisibles(perfilPorClave('dictaminador'), 'presencial')).not.toContain('sesion');
-  });
-
-  it('sólo al comité científico se le pregunta por el dictamen', () => {
-    expect(pasosVisibles(perfilPorClave('dictaminador'), 'presencial')).toContain('dictamen');
-    for (const clave of CLAVES_PERFIL.filter((c) => c !== 'dictaminador')) {
-      expect(pasosVisibles(perfilPorClave(clave), 'presencial'), clave).not.toContain('dictamen');
+  it('sólo hay dos perfiles con los que registrarse', () => {
+    // Fueron seis. Las cuatro claves que se fueron —conferencista,
+    // coordinador, moderador, dictaminador— se resuelven por invitación y
+    // no deben poder elegirse: son las que abrían ramas enteras del
+    // formulario que ya nadie mantiene.
+    expect([...CLAVES_PERFIL]).toEqual(['ponente', 'publico_general']);
+    for (const vieja of ['conferencista', 'coordinador', 'moderador', 'dictaminador']) {
+      expect(perfilPorClave(vieja), vieja).toBeUndefined();
     }
   });
 
@@ -114,12 +108,9 @@ describe('pasos del formulario según el perfil', () => {
 });
 
 describe('visibilidad de campos', () => {
-  it('la fotografía se le pide a quien preside o da una charla, a nadie más', () => {
-    expect(campoVisible('foto', perfilPorClave('conferencista'), 'presencial')).toBe(true);
-    expect(campoVisible('foto', perfilPorClave('moderador'), 'presencial')).toBe(true);
-    for (const clave of ['ponente', 'coordinador', 'dictaminador', 'publico_general']) {
-      expect(campoVisible('foto', perfilPorClave(clave), 'presencial'), clave).toBe(false);
-    }
+  it('la fotografía se le pide a quien sale en el programa, no al público', () => {
+    expect(campoVisible('foto', perfilPorClave('ponente'), 'presencial')).toBe(true);
+    expect(campoVisible('foto', perfilPorClave('publico_general'), 'presencial')).toBe(false);
   });
 
   it('el régimen alimentario sólo aplica a quien asiste en persona', () => {
@@ -127,9 +118,8 @@ describe('visibilidad de campos', () => {
     expect(campoVisible('regimen_alimentario', perfilPorClave('ponente'), 'en_linea')).toBe(false);
   });
 
-  it('el ORCID se pide a quien presenta y a quien dictamina, no al público', () => {
+  it('el ORCID se pide a quien presenta, no al público', () => {
     expect(campoVisible('orcid', perfilPorClave('ponente'), 'presencial')).toBe(true);
-    expect(campoVisible('orcid', perfilPorClave('dictaminador'), 'presencial')).toBe(true);
     expect(campoVisible('orcid', perfilPorClave('publico_general'), 'presencial')).toBe(false);
   });
 
@@ -140,8 +130,8 @@ describe('visibilidad de campos', () => {
   });
 
   it('la prueba de conexión es para quien expone a distancia, no para quien va a la sede', () => {
-    expect(campoVisible('prueba_conexion', perfilPorClave('conferencista'), 'en_linea')).toBe(true);
-    expect(campoVisible('prueba_conexion', perfilPorClave('conferencista'), 'presencial')).toBe(false);
+    expect(campoVisible('prueba_conexion', perfilPorClave('ponente'), 'en_linea')).toBe(true);
+    expect(campoVisible('prueba_conexion', perfilPorClave('ponente'), 'presencial')).toBe(false);
     expect(campoVisible('prueba_conexion', perfilPorClave('publico_general'), 'en_linea')).toBe(false);
   });
 
@@ -150,9 +140,7 @@ describe('visibilidad de campos', () => {
     // quien paga el suyo.
     expect(campoVisible('datos_viatico', perfilPorClave('publico_general'), 'presencial')).toBe(true);
     expect(campoVisible('datos_viatico', perfilPorClave('publico_general'), 'en_linea')).toBe(false);
-    for (const clave of ['conferencista', 'ponente', 'dictaminador']) {
-      expect(campoVisible('datos_viatico', perfilPorClave(clave), 'presencial'), clave).toBe(false);
-    }
+    expect(campoVisible('datos_viatico', perfilPorClave('ponente'), 'presencial')).toBe(false);
   });
 });
 

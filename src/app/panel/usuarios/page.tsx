@@ -5,7 +5,7 @@ import { GestionUsuarios, type UsuarioFila } from '@/componentes/panel/gestion-u
 export const dynamic = 'force-dynamic';
 
 export default async function PaginaUsuarios() {
-  await exigirUsuario('superadmin');
+  const yo = await exigirUsuario('superadmin');
 
   const usuarios = await consultar<UsuarioFila>(
     `select id, correo, nombre, rol, activo, creado_en, ultimo_acceso,
@@ -14,5 +14,5 @@ export default async function PaginaUsuarios() {
       order by creado_en`,
   ).catch(() => []);
 
-  return <GestionUsuarios usuarios={usuarios} />;
+  return <GestionUsuarios usuarios={usuarios} miId={yo.id} />;
 }

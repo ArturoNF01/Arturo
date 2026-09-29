@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { CONGRESO_POR_DEFECTO } from './contenido';
-import { CLAVES_PERFIL, pasosVisibles, perfilPorClave } from './perfiles';
+import { CLAVES_PERFIL_HISTORICAS, campoVisible, pasosVisibles, perfilPorClave } from './perfiles';
 
 /** Límites que el panel puede cambiar y que la validación debe respetar. */
 export interface LimitesFormulario {
@@ -55,7 +55,10 @@ const horaOpcional = z
 export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DEFECTO) {
   return z
   .object({
-    perfil: z.enum(CLAVES_PERFIL),
+    // Acepta también las claves retiradas: el formulario no las ofrece, pero
+    // un registro viejo que se edite las sigue trayendo, y rechazarlo lo
+    // dejaría sin poder corregir ni un teléfono.
+    perfil: z.enum(CLAVES_PERFIL_HISTORICAS),
     modalidad: z.enum(['presencial', 'en_linea']),
     idioma: z.enum(['es', 'en', 'pt']).default('es'),
 
@@ -69,10 +72,12 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
     // correo que no llega es una baja.
     correo_alterno: z.string().trim().email('Correo no válido').optional().or(z.literal('')),
     telefono_whatsapp: z.string().trim().max(60).optional().or(z.literal('')),
-    institucion: z.string().trim().min(1).max(250),
+    // Sin mínimo aquí: a quien sigue la transmisión no se le pregunta, y la
+    // obligatoriedad se exige más abajo, sólo a quien sí ve el campo.
+    institucion: z.string().trim().max(250).optional().or(z.literal('')),
     cargo: z.string().trim().max(250).optional().or(z.literal('')),
     procedencia: textoOpcional,
-    pais_residencia: z.string().trim().min(1).max(100),
+    pais_residencia: z.string().trim().max(100).optional().or(z.literal('')),
     entidad_federativa: textoOpcional,
     ciudad_residencia: z.string().trim().max(120).optional().or(z.literal('')),
     nacionalidad: textoOpcional,
@@ -198,21 +203,6 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
         message: 'Indique el título de su ponencia tal como debe aparecer en el programa',
       });
     }
-    if (perfil.tieneSesion && !datos.sesion_asignada) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['sesion_asignada'],
-        message: 'Indique la mesa o el eje que tiene a su cargo',
-      });
-    }
-    // Un dictamen sin ejes declarados no se puede repartir.
-    if (perfil.dictamina && !(datos.ejes_dictamen && datos.ejes_dictamen.length)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['ejes_dictamen'],
-        message: 'Indique al menos un eje temático que pueda dictaminar',
-      });
-    }
     // Quien sale en la transmisión tiene que autorizarlo por escrito.
     if (perfil.enPrograma && datos.autoriza_grabacion !== true) {
       ctx.addIssue({
@@ -234,6 +224,20 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
     // el formulario enseña, y no a la modalidad suelta: si no, al quitar un
     // paso el servidor rechaza el envío por un campo que nadie vio, y el
     // aviso queda señalando una pantalla que no existe.
+    // Lo que el formulario enseña y deja en blanco, se exige; lo que no
+    // enseña, no. Atarlo a `campoVisible` es lo que evita que al recortar el
+    // formulario el servidor siga pidiendo un dato que ya nadie ve —y que el
+    // aviso señale una casilla inexistente.
+    for (const campo of ['institucion', 'pais_residencia'] as const) {
+      if (campoVisible(campo, perfil, datos.modalidad) && !datos[campo]) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [campo],
+          message: 'Este campo es obligatorio',
+        });
+      }
+    }
+
     const pasos = pasosVisibles(perfil, datos.modalidad);
     if (pasos.includes('conexion') && !datos.zona_horaria) {
       ctx.addIssue({
@@ -279,6 +283,7 @@ export const esquemaConfiguracion = z.object({
   fecha_limite_registro: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   url_agenda: z.string().url().optional(),
   url_video_login: z.string().url().optional().or(z.literal('')),
+  url_registro_zoom: z.string().url().optional().or(z.literal('')),
   correo_contacto: z.string().email().optional(),
 
   // Datos del congreso
