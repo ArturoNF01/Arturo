@@ -1,40 +1,43 @@
-"""Compone la tira fotográfica de la portada con el virado del libro de referencia.
+"""Prepara la fotografía de la portada: recorte y virado en los azules del libro.
 
-Lee figuras/fotos-portada.json; cada foto de insumos/fotos/ se recorta al módulo,
-se pasa a escala de grises y se vira al sepia suave de la portada de «De un
-sistema de pensiones…» (curva medida sobre su tira de retratos). Si falta una
-foto, se dibuja un marcador con su número y tema para revisar la retícula.
+Lee figuras/foto-portada.json. La foto se recorta a la caja de la portada, se pasa
+a escala de grises y se vira en tres tintas (azul noche, azul oscuro, azul medio)
+hacia un blanco azulado. Si todavía no hay foto, se genera un fondo provisional
+con la misma paleta y una nota con la foto que falta.
 
 Uso: python guiones/fotos_portada.py   (construir.py lo llama solo)
 """
 import json
+import math
 import pathlib
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
-CONFIG = RAIZ / "figuras" / "fotos-portada.json"
-DESTINO = RAIZ / "fotos" / "portada-tira.jpg"
+CONFIG = RAIZ / "figuras" / "foto-portada.json"
+DESTINO = RAIZ / "fotos" / "portada-foto.jpg"
 
-# Gris medio -> RGB medidos en la tira de la portada de referencia (tramos de 24 niveles)
-CURVA = [(0, 8, 5, 4), (16, 20, 15, 12), (37, 42, 37, 33), (60, 66, 59, 56), (85, 91, 84, 79),
-         (108, 115, 108, 102), (132, 139, 131, 125), (155, 164, 155, 148), (180, 189, 179, 172),
-         (203, 212, 202, 194), (225, 237, 223, 215), (248, 254, 248, 242), (255, 255, 251, 246)]
+# Tintas del virado (de sombras a luces), tomadas de la paleta del libro
+TINTAS = [(0.0, "#0b1a42"), (0.38, "#00427a"), (0.7, "#5082b5"), (1.0, "#e6ecf5")]
 
 
-def tabla(canal):
-    """Tabla de 256 valores para un canal, interpolando la curva medida."""
+def _rgb(h):
+    return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def _tabla(canal):
     salida = []
     for g in range(256):
-        for (g0, *c0), (g1, *c1) in zip(CURVA, CURVA[1:]):
-            if g0 <= g <= g1:
-                t = (g - g0) / (g1 - g0)
-                salida.append(round(c0[canal] + t * (c1[canal] - c0[canal])))
+        t = g / 255
+        for (t0, c0), (t1, c1) in zip(TINTAS, TINTAS[1:]):
+            if t0 <= t <= t1:
+                a, b = _rgb(c0)[canal], _rgb(c1)[canal]
+                salida.append(round(a + (t - t0) / (t1 - t0) * (b - a)))
                 break
     return salida
 
 
-TABLAS = [tabla(i) for i in range(3)]
+TABLAS = [_tabla(i) for i in range(3)]
 
 
 def virar(gris):
@@ -42,7 +45,7 @@ def virar(gris):
 
 
 def recortar(foto, ancho, alto, foco, zoom):
-    """Recorta la foto a la proporción del módulo, centrada en `foco`."""
+    """Recorta la foto a la proporción de la caja, centrada en `foco`."""
     w, h = foto.size
     proporcion = ancho / alto
     cw, ch = (h * proporcion, h) if w / h > proporcion else (w, w / proporcion)
@@ -53,55 +56,39 @@ def recortar(foto, ancho, alto, foco, zoom):
     return foto.crop(caja).resize((ancho, alto), Image.LANCZOS)
 
 
-def marcador(ancho, alto, numero, tema, escala):
-    """Módulo provisional: fondo sepia medio con número y tema."""
-    img = virar(Image.new("L", (ancho, alto), 150))
+def provisional(ancho, alto, escala, tema):
+    """Fondo de relevo: luz suave desde arriba a la derecha, en las mismas tintas."""
+    chico = Image.new("L", (ancho // 8, alto // 8))
+    px = chico.load()
+    for y in range(chico.height):
+        for x in range(chico.width):
+            d = math.hypot(x / chico.width - 0.85, y / chico.height - 0.1)
+            px[x, y] = round(max(0, min(255, 150 - 120 * d)))
+    img = virar(chico.resize((ancho, alto), Image.BICUBIC))
     d = ImageDraw.Draw(img)
-    grande = ImageFont.truetype(str(RAIZ / "fuentes/SourceSans3-SemiBold.ttf"), round(16 * escala))
-    chica = ImageFont.truetype(str(RAIZ / "fuentes/SourceSans3-Regular.ttf"), round(5.5 * escala))
-    d.text((ancho / 2, alto * 0.42), str(numero), font=grande, fill="white", anchor="mm")
-    lineas, actual = [], ""
-    for palabra in tema.split():
-        prueba = (actual + " " + palabra).strip()
-        if d.textlength(prueba, font=chica) > ancho * 0.86 and actual:
-            lineas.append(actual)
-            actual = palabra
-        else:
-            actual = prueba
-    lineas.append(actual)
-    for k, linea in enumerate(lineas):
-        d.text((ancho / 2, alto * 0.68 + k * 6.6 * escala), linea, font=chica, fill="white", anchor="mm")
+    fuente = ImageFont.truetype(str(RAIZ / "fuentes/SourceSans3-Regular.ttf"), round(5.5 * escala))
+    d.text((round(10 * escala), round(14 * escala)), f"FOTO PROVISIONAL · {tema}",
+           font=fuente, fill="#9fb4d3", anchor="ls")
     return img
 
 
 def componer():
+    """Escribe fotos/portada-foto.jpg. Devuelve la ruta de la foto que falta, si falta."""
     cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
-    tira, fotos = cfg["tira"], cfg["fotos"]
-    escala = tira["dpi"] / 72
-    unidades = sum(f["unidades"] for f in fotos)
-    modulo = (tira["ancho"] - (unidades - 1) * tira["separacion"]) / unidades
-    lienzo = Image.new("RGB", (round(tira["ancho"] * escala), round(tira["alto"] * escala)), "white")
-    x, faltan = 0.0, []
-    for n, f in enumerate(fotos, 1):
-        ancho_pt = f["unidades"] * modulo + (f["unidades"] - 1) * tira["separacion"]
-        ancho, alto = round(ancho_pt * escala), lienzo.height
-        ruta = RAIZ / f["archivo"]
-        if ruta.exists():
-            foto = ImageOps.exif_transpose(Image.open(ruta)).convert("L")
-            foto = ImageOps.autocontrast(foto, cutoff=0.5)
-            modulo_img = virar(recortar(foto, ancho, alto, f["foco"], f.get("zoom", 1.0)))
-        else:
-            modulo_img = marcador(ancho, alto, n, f["tema"], escala)
-            faltan.append(f["archivo"])
-        lienzo.paste(modulo_img, (round(x * escala), 0))
-        x += ancho_pt + tira["separacion"]
+    escala = cfg["dpi"] / 72
+    ancho, alto = round(cfg["ancho"] * escala), round(cfg["alto"] * escala)
+    ruta = RAIZ / cfg["archivo"]
+    if ruta.exists():
+        foto = ImageOps.exif_transpose(Image.open(ruta)).convert("L")
+        foto = ImageOps.autocontrast(foto, cutoff=0.5)
+        img, falta = virar(recortar(foto, ancho, alto, cfg["foco"], cfg.get("zoom", 1.0))), None
+    else:
+        img, falta = provisional(ancho, alto, escala, cfg["tema"].split(";")[0]), cfg["archivo"]
     DESTINO.parent.mkdir(exist_ok=True)
-    lienzo.save(DESTINO, quality=92, dpi=(tira["dpi"], tira["dpi"]))
-    return faltan
+    img.save(DESTINO, quality=92, dpi=(cfg["dpi"], cfg["dpi"]))
+    return falta
 
 
 if __name__ == "__main__":
-    faltan = componer()
-    print(f"tira -> {DESTINO.relative_to(RAIZ)}")
-    for f in faltan:
-        print(f"  falta {f} (se dejó un marcador)")
+    falta = componer()
+    print(f"foto -> {DESTINO.relative_to(RAIZ)}" + (f"  (falta {falta}: fondo provisional)" if falta else ""))

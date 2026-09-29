@@ -45,7 +45,7 @@ folios y portada. Por ahora contiene la portada, los preliminares, el índice y 
 contenido/        HTML por pieza: 00-portada, 01-preliminares, 02-indice, 10-capitulo-1
 contenido/cuadros Cuadros 1-9 generados desde los datos
 plantilla/        libro.css: toda la línea gráfica
-figuras/          Generador de figuras (Node + D3): graficas.mjs, mapas.mjs, portada.mjs (ilustración alternativa)
+figuras/          Generador de figuras (Node + D3): graficas.mjs, mapas.mjs, portada.mjs (mapa de la portada)
 datos/            capitulo-1.json (datos de cuadros y gráficas) y geo/ (Natural Earth)
 fuentes/          Tipografías OFL
 logos/            CISS y CIESS en vector (del .ai oficial) y CODESS (imagen: falta el original vectorial)
@@ -66,11 +66,11 @@ npm run figuras                               # datos -> figuras/svg/*.svg
 python guiones/construir.py --figuras         # -> salida/
 ```
 
-Portada: la tira de fotos se compone sola al construir (`guiones/fotos_portada.py`).
-Las fotos van en `insumos/fotos/portada-1.jpg` … `portada-5.jpg` (licencias de
-Adobe Stock: no se versionan); recorte, foco y tema de cada una en
-`figuras/fotos-portada.json`. Se viran al sepia medido en la portada de referencia.
-Mientras falte una foto, se deja un marcador numerado.
+Portada: fotografía a sangre virada en los azules del libro, con el mapa de las
+rutas de Venezuela a las principales ciudades de Colombia encima (`figuras/portada.mjs`).
+La foto va en `insumos/fotos/portada.jpg` (licencia de Adobe Stock: no se versiona);
+recorte, foco y tema en `figuras/foto-portada.json`. `construir.py` la prepara sola
+(`guiones/fotos_portada.py`); mientras falte, deja un fondo provisional.
 
 Logotipos: `python guiones/extraer_logos.py` convierte `insumos/Logos CISS - CIESS.ai`
 en `logos/{ciss,ciess}-{color,sobre-oscuro,blanco,gris}.svg`.

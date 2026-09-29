@@ -482,22 +482,35 @@ ol.toc .n { font-weight: 700; }
    Portada
    ========================================================================== */
 section.portada { page: portada; height: 595.28pt; position: relative; overflow: hidden; background: #fff; }
-/* Tira de fotos: mismas medidas que la del libro de referencia */
-.portada-tira { position: absolute; left: 9.84pt; top: 99.16pt; width: 348.82pt; height: 71pt; }
+/* Foto a sangre (virada en azules) y, encima, el mapa en línea blanca */
+.portada-foto { position: absolute; left: 0; top: 0; width: 368.5pt; height: 352pt; }
+.portada-mapa { position: absolute; left: 0; top: 0; width: 368.5pt; height: 352pt; }
+.portada-mapa svg { display: block; width: 368.5pt; height: 352pt; }
+.portada-foto + .portada-mapa::after {
+  /* filete azul al pie de la foto */
+  content: ""; position: absolute; left: 0; right: 0; bottom: -4pt; height: 4pt; background: var(--azul);
+}
 h1.portada-titulo {
   position: absolute;
-  left: 20pt; right: 20pt; top: 217pt;
+  left: 36.9pt; right: 30pt; top: 384pt;
   margin: 0;
-  font: 500 20pt/32pt "Cinzel", serif;
-  color: var(--azul-titulo);
-  text-transform: uppercase;
-  text-align: center;
+  font: 700 21pt/24.5pt var(--sans);
+  color: var(--azul-noche);
+  text-align: left;
   hyphens: manual;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.005em;
 }
-.portada-franja { position: absolute; left: 0; right: 0; top: 473.39pt; height: 5.7pt; background: var(--azul-noche); }
+/* media luna de los títulos interiores, a mayor escala */
+h1.portada-titulo::before {
+  content: "";
+  position: absolute;
+  left: -14pt; top: 5pt;
+  width: 7pt; height: 14pt;
+  border-radius: 7pt 0 0 7pt;
+  background: var(--azul);
+}
 .portada-logos {
-  position: absolute; left: 36.9pt; right: 36.9pt; top: 530.9pt; height: 41.7pt;
+  position: absolute; left: 36.9pt; right: 36.9pt; top: 522pt; height: 41.7pt;
   display: flex; align-items: center; justify-content: space-between;
 }
 .portada-logos img { height: 32pt; width: auto; }

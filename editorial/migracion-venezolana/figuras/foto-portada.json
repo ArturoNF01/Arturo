@@ -1,0 +1,11 @@
+{
+  "_nota": "Fotografía de la portada. Va en insumos/ (licencia de Adobe Stock: no se versiona). 'foco' = punto [x, y] de la foto (0-1) que queda al centro del recorte; 'zoom' > 1 acerca. Se vira en los azules del libro y encima va el mapa de figuras/portada.mjs.",
+  "archivo": "insumos/fotos/portada.jpg",
+  "foco": [0.5, 0.5],
+  "zoom": 1.0,
+  "ancho": 368.5,
+  "alto": 352,
+  "dpi": 300,
+  "tema": "Personas migrantes con equipaje en carretera o cruzando el Puente Internacional Simón Bolívar (Cúcuta); de preferencia con una persona mayor",
+  "busqueda": "migrantes venezolanos caminando con maletas / puente Simón Bolívar Cúcuta migrantes / Venezuelan migrants walking Colombia"
+}

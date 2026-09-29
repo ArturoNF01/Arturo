@@ -18,7 +18,7 @@ const FIGURAS = {
   "grafica-7": G.grafica7,
   "grafica-8": G.grafica8,
   "grafica-9": G.grafica9,
-  "portada-ilustracion": portada,
+  "portada-mapa": portada,
 };
 
 const D = datos();

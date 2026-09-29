@@ -97,8 +97,9 @@ def construir_libro():
     from pypdf import PdfWriter
 
     SALIDA.mkdir(exist_ok=True)
-    for falta in fotos_portada.componer():
-        print(f"  portada: falta {falta} (marcador en su lugar)", file=sys.stderr)
+    falta = fotos_portada.componer()
+    if falta:
+        print(f"  portada: falta {falta} (fondo provisional)", file=sys.stderr)
     portada = renderizar([PORTADA], "portada")
     interiores = renderizar(PIEZAS, "interiores")
     union = PdfWriter()
