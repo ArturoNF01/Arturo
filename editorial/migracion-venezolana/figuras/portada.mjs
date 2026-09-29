@@ -97,10 +97,9 @@ export function portada() {
   }
   p.push(`<circle cx="${r2(ox)}" cy="${r2(oy)}" r="2.4" fill="none" stroke="${B}" stroke-width="1"/>`);
   p.push(texto(ox + 5, oy - 4, "CARACAS", { tam: 6, peso: 600, color: B, espaciado: 0.7 }));
-  const [vx, vy] = proy([-65.2, 7.2]);
-  p.push(texto(vx, vy, "VENEZUELA", { tam: 7.5, peso: 600, color: "#d6e0ee", ancla: "middle", espaciado: 2.2 }));
-  const [kx, ky] = proy([-72.4, 1.0]);
-  p.push(texto(kx, ky, "COLOMBIA", { tam: 7.5, peso: 600, color: "#d6e0ee", ancla: "middle", espaciado: 2.2 }));
+  // Nombres de país: posición y cuerpo acordados con diseño (revisión de portada)
+  p.push(texto(219.9, 121, "VENEZUELA", { tam: 15, peso: 700, color: B, espaciado: 3.2 }));
+  p.push(texto(106.3, 229.5, "COLOMBIA", { tam: 15, peso: 700, color: B, espaciado: 3.2 }));
 
   return documento(W, H, p.join("\n"), { titulo: "Mapa de la portada" });
 }

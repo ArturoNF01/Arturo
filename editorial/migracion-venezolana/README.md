@@ -66,11 +66,12 @@ npm run figuras                               # datos -> figuras/svg/*.svg
 python guiones/construir.py --figuras         # -> salida/
 ```
 
-Portada: fotografía a sangre virada en los azules del libro, con el mapa de las
-rutas de Venezuela a las principales ciudades de Colombia encima (`figuras/portada.mjs`).
-La foto va en `insumos/fotos/portada.jpg` (licencia de Adobe Stock: no se versiona);
-recorte, foco y tema en `figuras/foto-portada.json`. `construir.py` la prepara sola
-(`guiones/fotos_portada.py`); mientras falte, deja un fondo provisional.
+Portada: fotografía a sangre en grises con el mapa de las rutas de Venezuela a las
+principales ciudades de Colombia encima (`figuras/portada.mjs`). La foto va en
+`insumos/fotos/portada.png` (no se versiona); recorte, foco y tratamiento (`gris` o
+`azul`) en `figuras/foto-portada.json`. `construir.py` la prepara sola
+(`guiones/fotos_portada.py`); mientras falte, deja un fondo provisional. Si la foto
+no llega a 300 ppp, `guiones/ampliar_foto.py` la amplía ×4 con Real-ESRGAN.
 
 Logotipos: `python guiones/extraer_logos.py` convierte `insumos/Logos CISS - CIESS.ai`
 en `logos/{ciss,ciess}-{color,sobre-oscuro,blanco,gris}.svg`.

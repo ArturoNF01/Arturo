@@ -1,9 +1,10 @@
 """Prepara la fotografía de la portada: recorte y virado en los azules del libro.
 
-Lee figuras/foto-portada.json. La foto se recorta a la caja de la portada, se pasa
-a escala de grises y se vira en tres tintas (azul noche, azul oscuro, azul medio)
-hacia un blanco azulado. Si todavía no hay foto, se genera un fondo provisional
-con la misma paleta y una nota con la foto que falta.
+Lee figuras/foto-portada.json. La foto se recorta a la caja de la portada y se pasa
+a escala de grises. Tratamiento "gris": grises oscurecidos, con una sombra más
+densa arriba para que se lean el mapa y los nombres. Tratamiento "azul": virado
+en tres tintas del libro. Si todavía no hay foto, se genera un fondo provisional
+con una nota con la foto que falta.
 
 Uso: python guiones/fotos_portada.py   (construir.py lo llama solo)
 """
@@ -11,7 +12,7 @@ import json
 import math
 import pathlib
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageOps
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 CONFIG = RAIZ / "figuras" / "foto-portada.json"
@@ -42,6 +43,20 @@ TABLAS = [_tabla(i) for i in range(3)]
 
 def virar(gris):
     return Image.merge("RGB", [gris.point(t) for t in TABLAS])
+
+
+def gris(img, cfg):
+    """Grises comprimidos entre `negro` y `blanco`, con sombra superior en degradado."""
+    negro, blanco = cfg.get("negro", 14), cfg.get("blanco", 180)
+    img = img.point(lambda v: round(negro + v * (blanco - negro) / 255))
+    sombra, alto_sombra = cfg.get("sombra_superior", 0.7), cfg.get("alto_sombra", 0.45)
+    capa = Image.new("L", (1, img.height))
+    for y in range(img.height):
+        t = min(1.0, y / (alto_sombra * img.height))
+        t = t * t * (3 - 2 * t)  # suavizado
+        capa.putpixel((0, y), round(255 * (sombra + (1 - sombra) * t)))
+    img = ImageChops.multiply(img, capa.resize(img.size))
+    return Image.merge("RGB", [img, img, img])
 
 
 def recortar(foto, ancho, alto, foco, zoom):
@@ -81,7 +96,9 @@ def componer():
     if ruta.exists():
         foto = ImageOps.exif_transpose(Image.open(ruta)).convert("L")
         foto = ImageOps.autocontrast(foto, cutoff=0.5)
-        img, falta = virar(recortar(foto, ancho, alto, cfg["foco"], cfg.get("zoom", 1.0))), None
+        foto = recortar(foto, ancho, alto, cfg["foco"], cfg.get("zoom", 1.0))
+        img = gris(foto, cfg) if cfg.get("tratamiento") == "gris" else virar(foto)
+        falta = None
     else:
         img, falta = provisional(ancho, alto, escala, cfg["tema"].split(";")[0]), cfg["archivo"]
     DESTINO.parent.mkdir(exist_ok=True)
