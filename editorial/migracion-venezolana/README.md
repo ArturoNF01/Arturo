@@ -45,7 +45,7 @@ folios y portada. Por ahora contiene la portada, los preliminares, el índice y 
 contenido/        HTML por pieza: 00-portada, 01-preliminares, 02-indice, 10-capitulo-1
 contenido/cuadros Cuadros 1-9 generados desde los datos
 plantilla/        libro.css: toda la línea gráfica
-figuras/          Generador de figuras (Node + D3): graficas.mjs, mapas.mjs, portada.mjs
+figuras/          Generador de figuras (Node + D3): graficas.mjs, mapas.mjs, portada.mjs (ilustración alternativa)
 datos/            capitulo-1.json (datos de cuadros y gráficas) y geo/ (Natural Earth)
 fuentes/          Tipografías OFL
 logos/            CISS y CIESS en vector (del .ai oficial) y CODESS (imagen: falta el original vectorial)
@@ -65,6 +65,12 @@ python guiones/cuadros_cap1.py                # datos -> contenido/cuadros/*.htm
 npm run figuras                               # datos -> figuras/svg/*.svg
 python guiones/construir.py --figuras         # -> salida/
 ```
+
+Portada: la tira de fotos se compone sola al construir (`guiones/fotos_portada.py`).
+Las fotos van en `insumos/fotos/portada-1.jpg` … `portada-5.jpg` (licencias de
+Adobe Stock: no se versionan); recorte, foco y tema de cada una en
+`figuras/fotos-portada.json`. Se viran al sepia medido en la portada de referencia.
+Mientras falte una foto, se deja un marcador numerado.
 
 Logotipos: `python guiones/extraer_logos.py` convierte `insumos/Logos CISS - CIESS.ai`
 en `logos/{ciss,ciess}-{color,sobre-oscuro,blanco,gris}.svg`.

@@ -15,6 +15,9 @@ import sys
 
 import weasyprint
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import fotos_portada  # noqa: E402
+
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 SALIDA = RAIZ / "salida"
 
@@ -94,6 +97,8 @@ def construir_libro():
     from pypdf import PdfWriter
 
     SALIDA.mkdir(exist_ok=True)
+    for falta in fotos_portada.componer():
+        print(f"  portada: falta {falta} (marcador en su lugar)", file=sys.stderr)
     portada = renderizar([PORTADA], "portada")
     interiores = renderizar(PIEZAS, "interiores")
     union = PdfWriter()
