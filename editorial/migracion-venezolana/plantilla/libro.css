@@ -1,0 +1,508 @@
+/* ==========================================================================
+   Línea gráfica heredada de «De un sistema de pensiones a un sistema integral
+   de protección a la población mayor» (CISS-CIESS-CODESS, 2025).
+
+   Formato: 130 × 210 mm · caja de 100 mm · márgenes laterales de 15 mm.
+   Tipografías originales → sustitutos libres (OFL) con métricas equivalentes:
+     Adobe Caslon Pro   → Crimson Pro      (texto, notas, bibliografía)
+     Rotis II Sans Pro  → Source Sans 3    (títulos, cornisas, tablas, gráficas)
+     Cinzel             → Cinzel           (título de portada, igual que el original)
+   Si se cuenta con las licencias originales basta con cambiar las variables
+   --texto y --sans.
+   ========================================================================== */
+
+@font-face { font-family: "Crimson Pro"; src: url(../fuentes/CrimsonPro-Regular.ttf); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Crimson Pro"; src: url(../fuentes/CrimsonPro-Italic.ttf); font-weight: 400; font-style: italic; }
+@font-face { font-family: "Crimson Pro"; src: url(../fuentes/CrimsonPro-SemiBold.ttf); font-weight: 600; font-style: normal; }
+@font-face { font-family: "Crimson Pro"; src: url(../fuentes/CrimsonPro-Bold.ttf); font-weight: 700; font-style: normal; }
+@font-face { font-family: "Crimson Pro"; src: url(../fuentes/CrimsonPro-BoldItalic.ttf); font-weight: 700; font-style: italic; }
+@font-face { font-family: "Source Sans 3"; src: url(../fuentes/SourceSans3-Regular.ttf); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Source Sans 3"; src: url(../fuentes/SourceSans3-Italic.ttf); font-weight: 400; font-style: italic; }
+@font-face { font-family: "Source Sans 3"; src: url(../fuentes/SourceSans3-SemiBold.ttf); font-weight: 600; font-style: normal; }
+@font-face { font-family: "Source Sans 3"; src: url(../fuentes/SourceSans3-SemiBoldItalic.ttf); font-weight: 600; font-style: italic; }
+@font-face { font-family: "Source Sans 3"; src: url(../fuentes/SourceSans3-Bold.ttf); font-weight: 700; font-style: normal; }
+@font-face { font-family: "Source Sans 3"; src: url(../fuentes/SourceSans3-BoldItalic.ttf); font-weight: 700; font-style: italic; }
+@font-face { font-family: "Cinzel"; src: url(../fuentes/Cinzel-Medium.ttf); font-weight: 500; }
+@font-face { font-family: "Cinzel"; src: url(../fuentes/Cinzel-SemiBold.ttf); font-weight: 600; }
+
+:root {
+  /* Paleta del libro de referencia */
+  --azul: #1e6ea6;          /* color institucional: folios, cornisas, encabezados de tabla */
+  --azul-oscuro: #00427a;
+  --azul-noche: #0e2050;    /* franja de portada */
+  --azul-titulo: #004177;   /* título de portada */
+  --azul-medio: #5082b5;
+  --azul-claro: #89a6cc;
+  --azul-palido: #b2c3de;   /* fila par de tabla */
+  --azul-bruma: #e0e5f1;    /* fila impar de tabla */
+  --gris-titulo: #6d6e71;   /* títulos de capítulo */
+  --gris-tabla: #58595b;    /* texto de tabla */
+  --texto: "Crimson Pro", "Adobe Caslon Pro", serif;
+  --sans: "Source Sans 3", "Rotis II Sans Pro", sans-serif;
+}
+
+/* ---------- Página ---------- */
+@page {
+  size: 130mm 210mm;
+  margin: 67pt 42.52pt 45pt 42.52pt;
+
+  @footnote {
+    margin-top: 14pt;
+    border-left: 1.2pt solid var(--azul);
+    padding-left: 13.2pt;
+    margin-left: 0.5pt;
+  }
+}
+
+/* Folio en caja azul (10 × 12 mm) pegada al corte superior, 5 mm del borde exterior */
+@page :left {
+  @top-left-corner {
+    content: counter(page);
+    margin: 0 0 33pt 14.17pt;
+    background: var(--azul);
+    color: #fff;
+    font: 700 10pt/1 var(--sans);
+    text-align: center;
+    vertical-align: middle;
+    padding-top: 2pt;
+  }
+  @top-left {
+    content: "Acceso a seguridad social de la población\A migrante venezolana en Colombia";
+    white-space: pre;
+    font: 700 9pt/10.8pt var(--sans);
+    color: var(--azul);
+    text-align: left;
+    vertical-align: top;
+    padding: 13.6pt 0 0 5.7pt;
+  }
+}
+@page :right {
+  @top-right-corner {
+    content: counter(page);
+    margin: 0 14.17pt 33pt 0;
+    background: var(--azul);
+    color: #fff;
+    font: 700 10pt/1 var(--sans);
+    text-align: center;
+    vertical-align: middle;
+    padding-top: 2pt;
+  }
+  @top-right {
+    content: string(cornisa, first-except);
+    white-space: pre;
+    font: 700 9pt/10.8pt var(--sans);
+    color: var(--azul);
+    text-align: right;
+    vertical-align: top;
+    padding: 13.6pt 3.6pt 0 0;
+  }
+}
+/* Páginas en blanco, apertura de capítulo y preliminares: sin cornisa */
+@page :blank {
+  @top-left-corner { content: none; background: none; }
+  @top-right-corner { content: none; background: none; }
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+@page preliminar {
+  margin: 67pt 42.52pt 45pt 42.52pt;
+  @top-left-corner { content: none; background: none; }
+  @top-right-corner { content: none; background: none; }
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+@page indice:left { @top-left { content: none; } }
+@page indice:right { @top-right { content: none; } }
+@page portada {
+  margin: 0;
+  @top-left-corner { content: none; background: none; }
+  @top-right-corner { content: none; background: none; }
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+@page creditos {
+  margin: 0;
+  background: var(--azul-medio);
+  @top-left-corner { content: none; background: none; }
+  @top-right-corner { content: none; background: none; }
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+html { font-size: 12pt; }
+body {
+  margin: 0;
+  font-family: var(--texto);
+  font-size: 12pt;
+  line-height: 14pt;
+  color: #000;
+  font-variant-numeric: oldstyle-nums proportional-nums;
+  hyphens: auto;
+  -weasy-hyphenate-character: "-";
+}
+
+/* ---------- Texto corrido ---------- */
+p {
+  margin: 0;
+  text-align: justify;
+  text-indent: 14.17pt;
+  orphans: 2;
+  widows: 2;
+}
+/* Sin sangría tras títulos, figuras y al inicio de bloque */
+h1 + p, h2 + p, h3 + p, figure + p, .apertura + p, p.sin-sangria { text-indent: 0; }
+em { font-style: italic; }
+.versalita { font-variant: small-caps; letter-spacing: 0.02em; }
+.num { font-variant-numeric: lining-nums; }
+.nobr { white-space: nowrap; }
+
+/* ---------- Capítulo ---------- */
+section.capitulo { break-before: right; }
+
+.apertura {
+  padding-top: 52pt;
+  margin-bottom: 44pt;
+  text-align: center;
+}
+.apertura .etiqueta {
+  display: block;
+  font: 700 13pt/16pt var(--sans);
+  color: var(--azul);
+  letter-spacing: 0.01em;
+  margin-bottom: 9pt;
+}
+.apertura h1 {
+  margin: 0 auto;
+  max-width: 250pt;
+  font: 700 17pt/20.4pt var(--sans);
+  color: var(--gris-titulo);
+  hyphens: manual;
+  string-set: cornisa attr(data-cornisa);
+}
+
+/* Capitular levantada (70 pt, azul) como en el original */
+p.capitular { text-indent: 0; }
+p.capitular::first-letter {
+  font-size: 70pt;
+  line-height: 58pt;
+  color: var(--azul);
+  font-weight: 400;
+  font-variant-numeric: normal;
+}
+
+/* Títulos de sección: viñeta de medio círculo azul + seminegra 13 pt */
+h2 {
+  font: 600 13pt/15.6pt var(--sans);
+  color: #000;
+  margin: 24pt 0 14pt 0;
+  padding-left: 14pt;
+  position: relative;
+  break-after: avoid;
+  hyphens: manual;
+  text-align: left;
+}
+h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3.6pt;
+  width: 4.4pt;
+  height: 8.8pt;
+  border-radius: 4.4pt 0 0 4.4pt;
+  background: var(--azul);
+}
+h2 .n { display: inline; }
+
+/* Subtítulos sin numerar dentro de una sección */
+h3 {
+  font: 600 11pt/13.2pt var(--sans);
+  color: var(--azul);
+  margin: 18pt 0 8pt 0;
+  break-after: avoid;
+  hyphens: manual;
+  text-align: left;
+}
+
+/* ---------- Notas al pie ---------- */
+.nota {
+  float: footnote;
+  font-family: var(--texto);
+  font-size: 8pt;
+  line-height: 10pt;
+  font-style: normal;
+  font-weight: 400;
+  color: #000;
+  text-align: justify;
+  text-indent: 0;
+  hyphens: auto;
+  font-variant-numeric: lining-nums;
+}
+.nota::footnote-marker {
+  content: counter(footnote);
+  font-size: 5pt;
+  vertical-align: 2.6pt;
+  line-height: 0;
+  padding-right: 1.5pt;
+}
+::footnote-call {
+  content: counter(footnote);
+  font-family: var(--texto);
+  font-size: 7.5pt;
+  vertical-align: 4pt;
+  line-height: 0;
+  font-variant-numeric: lining-nums;
+  font-weight: 400;
+  padding-left: 0.4pt;
+}
+h3::footnote-call { color: var(--azul); font-size: 7pt; }
+.url { hyphens: none; overflow-wrap: anywhere; }
+
+/* ---------- Figuras (cuadros, gráficas, mapas y diagramas) ---------- */
+figure {
+  margin: 14pt 0 16pt 0;
+  break-inside: avoid;
+  text-indent: 0;
+}
+figure.inicio-pagina { margin-top: 0; }
+figure .titulo {
+  font: 400 9pt/10.9pt var(--sans);
+  text-align: left;
+  margin: 0 0 9pt 0;
+  hyphens: manual;
+  font-variant-numeric: lining-nums;
+}
+figure .titulo b { font-weight: 700; }
+figure .titulo .nota { font-family: var(--texto); }
+figure .grafico { display: block; }
+figure .grafico img, figure .grafico svg { display: block; width: 100%; height: auto; }
+figure .pie {
+  font: 400 8pt/9.8pt var(--sans);
+  margin: 7pt 0 0 0;
+  text-align: left;
+  hyphens: manual;
+  font-variant-numeric: lining-nums;
+}
+figure .pie + .pie { margin-top: 2pt; }
+figure .pie b { font-weight: 700; }
+
+/* ---------- Cuadros ---------- */
+table.cuadro {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font: 400 7.5pt/9pt var(--sans);
+  color: var(--gris-tabla);
+  font-variant-numeric: lining-nums tabular-nums;
+  hyphens: manual;
+}
+table.cuadro th, table.cuadro td {
+  border: 0.25pt solid var(--azul);
+  padding: 4pt 3pt 3.6pt 3pt;
+  vertical-align: middle;
+}
+table.cuadro thead th {
+  background: var(--azul);
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+  border-left-color: var(--azul-claro);
+  border-right-color: var(--azul-claro);
+  border-top-color: var(--azul);
+  border-bottom-color: var(--azul-claro);
+}
+table.cuadro thead th:first-child { border-left-color: var(--azul); }
+table.cuadro thead th:last-child { border-right-color: var(--azul); }
+table.cuadro tbody tr:nth-child(odd) td { background: var(--azul-bruma); }
+table.cuadro tbody tr:nth-child(even) td { background: var(--azul-palido); }
+table.cuadro td { text-align: center; }
+table.cuadro td:first-child { text-align: left; }
+table.cuadro tr.grupo td {
+  background: var(--azul-oscuro) !important;
+  color: #fff;
+  font-weight: 700;
+  text-align: left;
+}
+table.cuadro tr.total td { font-weight: 700; color: #3a3b3d; }
+table.cuadro td.sub { padding-left: 9pt; }
+table.cuadro.compacto { font-size: 7pt; line-height: 8.4pt; }
+table.cuadro.compacto th, table.cuadro.compacto td { padding: var(--aire, 2.6pt) 2.6pt var(--aire, 2.3pt) 2.6pt; }
+table.cuadro:not(.compacto) th, table.cuadro:not(.compacto) td { padding-top: var(--aire, 4pt); padding-bottom: var(--aire, 3.6pt); }
+
+/* ---------- Bibliografía ---------- */
+.bibliografia h2 { margin-top: 30pt; }
+p.bib {
+  text-indent: -14.17pt;
+  padding-left: 14.17pt;
+  margin-bottom: 7pt;
+  text-align: left;
+  hyphens: manual;
+  font-size: 11pt;
+  line-height: 13pt;
+}
+
+/* Ajustes de figuras */
+figure p { text-indent: 0; }
+table.cuadro tr.grupo td { background: var(--azul-medio) !important; color: #fff; font-weight: 700; text-align: left; }
+table.cuadro td { white-space: nowrap; }
+table.cuadro td:first-child { white-space: normal; }
+table.cuadro thead th { white-space: normal; line-height: 1.15; }
+table.cuadro.c1 { font-size: 6.5pt; line-height: 7.8pt; }
+table.cuadro.c1 td:not(:first-child) { padding-left: 1.2pt; padding-right: 1.2pt; }
+.llamada { white-space: nowrap; }
+.llamada .nota { white-space: normal; }
+
+/* ==========================================================================
+   Preliminares
+   ========================================================================== */
+.pendiente { color: inherit; opacity: 0.7; font-style: italic; }
+
+/* Portadilla (p. 1): título en versales de texto, azul, como el original */
+section.portadilla {
+  page: preliminar;
+  break-before: page;
+  padding-top: 118pt;
+}
+.titulo-libro {
+  font-family: var(--texto);
+  font-size: 19pt;
+  line-height: 27pt;
+  text-transform: uppercase;
+  color: var(--azul);
+  text-align: center;
+  text-indent: 0;
+  hyphens: manual;
+  letter-spacing: 0.015em;
+  font-variant-numeric: lining-nums;
+  margin: 0 auto;
+  max-width: 282pt;
+}
+
+/* Créditos (p. 2): página azul con filete blanco y textos en blanco */
+section.creditos {
+  page: creditos;
+  break-before: page;
+  height: 595.28pt;
+  box-sizing: border-box;
+  padding: 56.7pt 30pt 20pt 42.5pt;
+  color: #fff;
+  position: relative;
+  font: 400 8pt/11pt var(--sans);
+  font-variant-numeric: lining-nums;
+}
+section.creditos::before {
+  content: "";
+  position: absolute;
+  left: 28.3pt;
+  top: 56.7pt;
+  height: 510.2pt;
+  border-left: 1pt solid #fff;
+}
+.logos-creditos { height: 28.35pt; margin-bottom: 26pt; }
+.logos-creditos img { height: 28.35pt; width: auto; vertical-align: middle; margin-right: 24pt; }
+.logos-creditos img.logo-codess { height: 28.35pt; margin-right: 0; }
+.texto-creditos p { margin: 0 0 11pt 0; text-indent: 0; text-align: left; hyphens: manual; }
+.texto-creditos b { font-weight: 700; }
+
+/* Portada interior (p. 3) */
+section.portada-interior {
+  page: preliminar;
+  break-before: page;
+  height: 483pt;
+  position: relative;
+}
+section.portada-interior .titulo-libro { font-size: 18pt; line-height: 26pt; margin-top: 0; }
+section.portada-interior hr {
+  border: 0;
+  border-top: 0.5pt solid var(--azul-oscuro);
+  margin: 26pt 0 0 0;
+}
+.logos {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logos img { height: 28.35pt; width: auto; }
+.logos .sep { display: block; width: 0; height: 41.6pt; border-left: 0.25pt solid var(--azul); }
+
+/* Página de edición (p. 4) */
+section.edicion {
+  page: portada;
+  break-before: page;
+  height: 595.28pt;
+  position: relative;
+}
+section.edicion .banda {
+  position: absolute; left: 0; top: 0; width: 368.5pt; height: 218.3pt;
+  border-bottom: 7pt solid var(--azul-oscuro);
+}
+section.edicion .col-a {
+  position: absolute; left: 0; top: 0; width: 141.7pt; height: 218.3pt; background: #d4dcec;
+}
+section.edicion .col-a img { position: absolute; left: 36.9pt; top: 170.1pt; height: 34pt; width: auto; }
+section.edicion .col-b {
+  position: absolute; left: 141.7pt; top: 0; width: 226.8pt; height: 218.3pt; background: #edf0f7;
+  font: 700 10pt/12pt var(--sans); color: var(--azul);
+}
+section.edicion .col-b b { position: absolute; left: 14.5pt; top: 192pt; }
+
+/* ==========================================================================
+   Índice
+   ========================================================================== */
+section.indice { page: indice; break-before: right; }
+h1.titulo-indice {
+  font: 700 13pt/16pt var(--sans);
+  color: #000;
+  text-align: center;
+  margin: 0 0 20pt 0;
+}
+ol.toc, ol.toc ol { list-style: none; margin: 0; padding: 0; }
+ol.toc { font: 700 11pt/13.2pt var(--sans); font-variant-numeric: lining-nums; }
+ol.toc li.cap { color: #638dbc; margin: 0 0 13pt 0; }
+ol.toc li.cap > ol { margin-top: 7pt; }
+ol.toc li li { color: var(--gris-tabla); margin: 0; padding-left: 11.4pt; font-size: 10pt; line-height: 12pt; }
+ol.toc a { color: inherit; text-decoration: none; display: block; position: relative; padding: 0 30pt 0 11.4pt; text-indent: -11.4pt; }
+ol.toc li li a { padding-left: 17pt; text-indent: -17pt; }
+ol.toc .t { display: inline; hyphens: manual; }
+ol.toc li > .t { display: block; padding: 0 30pt 0 11.4pt; text-indent: -11.4pt; }
+/* Folio alineado a la derecha en la última línea de la entrada
+   (target-counter no se resuelve dentro de flexbox en WeasyPrint) */
+ol.toc a::after {
+  content: target-counter(attr(href), page);
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  text-indent: 0;
+}
+ol.toc .n { font-weight: 700; }
+
+/* ==========================================================================
+   Portada
+   ========================================================================== */
+section.portada { page: portada; height: 595.28pt; position: relative; overflow: hidden; background: #fff; }
+.portada-ilustracion { position: absolute; left: 0; top: 0; width: 368.5pt; }
+.portada-ilustracion svg { display: block; width: 368.5pt; height: auto; }
+h1.portada-titulo {
+  position: absolute;
+  left: 30pt; right: 30pt; top: 340pt;
+  margin: 0;
+  font: 500 16.5pt/24pt "Cinzel", serif;
+  color: var(--azul-titulo);
+  text-transform: uppercase;
+  text-align: center;
+  hyphens: manual;
+  letter-spacing: 0.01em;
+}
+.portada-franja { position: absolute; left: 0; right: 0; top: 503pt; height: 5.7pt; background: var(--azul-noche); }
+.portada-logos {
+  position: absolute; left: 36.9pt; right: 36.9pt; top: 526pt; height: 44pt;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.portada-logos img { height: 28.35pt; width: auto; }
+.portada-logos .sep { display: block; width: 0; height: 41.7pt; border-left: 0.25pt solid #878787; }
+
+/* Párrafo partido por una figura (formación): la primera parte justifica su
+   última línea y la segunda continúa sin sangría tras la figura. */
+p.corte { text-align-last: justify; }
+p.continua { text-indent: 0; }

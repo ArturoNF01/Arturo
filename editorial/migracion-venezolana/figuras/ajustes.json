@@ -1,0 +1,15 @@
+{
+  "_nota": "Ajustes de formación: alto de fila (pt) de algunas gráficas para que llenen la página. Se afinan tras componer.",
+  "grafica-5": {
+    "fila": 17
+  },
+  "grafica-7": {
+    "fila": 17.8
+  },
+  "grafica-8": {
+    "fila": 14.6
+  },
+  "grafica-9": {
+    "panel": 110.0
+  }
+}
