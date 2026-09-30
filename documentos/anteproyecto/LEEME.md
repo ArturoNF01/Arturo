@@ -9,7 +9,7 @@ Esto es lo que hace falta para volver a generarlo.
 |---|---|
 | `anteproyecto.html` | El documento entero, en una sola página. |
 | `estilo.css` | La línea gráfica: fondo oscuro, texto crema, acento dorado. |
-| `capturas/` | Las 28 capturas: 24 del sistema y 4 de los correos, a doble resolución. |
+| `capturas/` | Las 33 capturas: 29 del sistema y 4 de los correos, a doble resolución. |
 | `correos/` | Los correos compuestos en HTML, paso previo a capturarlos. No se versiona: se rehace. |
 
 Las tipografías van incrustadas en `fuentes.css` como base64. Es deliberado: el
@@ -30,9 +30,28 @@ las pruebas de navegador. El resultado queda en `documentos/`.
 
 ### Las del sistema
 
-Se toman a mano, con el sitio corriendo en `localhost:3000`, una base con datos
-y una cuenta de panel: son 24 pantallas que dependen de en qué estado esté cada
-una, y automatizarlas costaba más que rehacerlas cuando cambian.
+También salen solas. Se tomaban a mano, y por eso el documento envejecía cada
+vez que cambiaba el formulario: rehacer veintinueve pantallas a mano no lo hace
+nadie por gusto, y así acaba entregándose un manual que enseña una versión que
+ya no existe.
+
+Hace falta el sitio corriendo, una base con registros y una cuenta de
+superadministración:
+
+```bash
+npm run sembrar                     # 100 registros de demostración
+SITIO=http://localhost:3000 \
+  CUENTA=comite@ciess.org CLAVE=... \
+  node guiones/capturar-pantallas.mjs
+```
+
+Conviene que la base no tenga avisos pendientes —registros sin copiar a la hoja,
+acuses sin salir— o las franjas rojas del panel salen en todas las capturas y el
+documento parece entregar un sistema averiado:
+
+```sql
+update registros set sheets_sincronizado_en = now(), correo_enviado_en = now();
+```
 
 ### Las de los correos
 

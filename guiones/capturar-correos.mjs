@@ -16,11 +16,12 @@ const ORIGEN = resolve(RAIZ, 'documentos/anteproyecto/correos');
 const DESTINO = resolve(RAIZ, 'documentos/anteproyecto/capturas');
 
 // El orden es el de la guía: primero el acuse, que es el que todos reciben.
+// Van detrás de las del sistema, que las toma `capturar-pantallas.mjs`.
 const NUMEROS = {
-  'confirmacion_registro': '25-correo-acuse',
-  'lista_espera': '26-correo-lista-espera',
-  'recordatorio': '27-correo-recordatorio',
-  'ponencia_aceptada': '28-correo-dictamen',
+  'confirmacion_registro': '30-correo-acuse',
+  'lista_espera': '31-correo-lista-espera',
+  'recordatorio': '32-correo-recordatorio',
+  'ponencia_aceptada': '33-correo-dictamen',
 };
 
 async function main() {
