@@ -494,9 +494,14 @@ export function FormularioRegistro({
         {pasoActual === 'traslados' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.traslados} ayuda={t.formulario.secciones.trasladosAyuda} />
-            <CampoOpcionUnica etiqueta={t.formulario.campos.requiereTraslado} opciones={opciones('traslado', t)} valor={texto('requiere_traslado')} onChange={(v) => fijar('requiere_traslado', v)} columnas={2} />
-            {texto('requiere_traslado') && texto('requiere_traslado') !== 'no' && (
-              <>
+            {/* La recepción en el aeropuerto es un servicio acotado; los datos
+                del viaje se le piden a todo el que viene. Antes estaban
+                escondidos detrás de esta pregunta, así que quien contestaba
+                «no» no dejaba ni la fecha de llegada. */}
+            {visible('requiere_traslado') && (
+              <CampoOpcionUnica etiqueta={t.formulario.campos.requiereTraslado} opciones={opciones('traslado', t)} valor={texto('requiere_traslado')} onChange={(v) => fijar('requiere_traslado', v)} columnas={2} />
+            )}
+            <>
                 <CampoOpcionUnica etiqueta={t.formulario.campos.medioArribo} ayuda={t.formulario.campos.medioArriboAyuda} opciones={opciones('medioArribo', t)} valor={texto('medio_arribo')} onChange={(v) => fijar('medio_arribo', v)} />
                 <div className="grid gap-5 sm:grid-cols-2">
                   <CampoTexto campo="ciudad_origen" etiqueta={t.formulario.campos.ciudadOrigen} valor={texto('ciudad_origen')} onChange={(v) => fijar('ciudad_origen', v)} />
@@ -515,66 +520,7 @@ export function FormularioRegistro({
                   <CampoTexto campo="vuelo_salida" etiqueta={t.formulario.campos.vueloSalida} valor={texto('vuelo_salida')} onChange={(v) => fijar('vuelo_salida', v)} />
                 </div>
                 <CampoParrafo campo="observaciones_traslado" etiqueta={t.formulario.campos.observacionesTraslado} ayuda={t.formulario.campos.observacionesTrasladoAyuda} filas={3} valor={texto('observaciones_traslado')} onChange={(v) => fijar('observaciones_traslado', v)} />
-              </>
-            )}
-          </section>
-        )}
-
-        {pasoActual === 'estacionamiento' && (
-          <section className="space-y-5">
-            <Cabecera titulo={t.formulario.secciones.estacionamiento} ayuda={t.formulario.secciones.estacionamientoAyuda} />
-            <div className="grid gap-5 sm:grid-cols-3">
-              <CampoTexto campo="placa_vehiculo" etiqueta={t.formulario.campos.placa} valor={texto('placa_vehiculo')} onChange={(v) => fijar('placa_vehiculo', v)} />
-              <CampoTexto campo="modelo_vehiculo" etiqueta={t.formulario.campos.modeloAuto} valor={texto('modelo_vehiculo')} onChange={(v) => fijar('modelo_vehiculo', v)} />
-              <CampoTexto campo="color_vehiculo" etiqueta={t.formulario.campos.colorAuto} valor={texto('color_vehiculo')} onChange={(v) => fijar('color_vehiculo', v)} />
-            </div>
-            {/* La accesibilidad vive aquí porque es lo mismo que se resuelve
-                al llegar: el lugar donde se deja el coche y el camino desde
-                ahí hasta la sala. */}
-            <CampoParrafo campo="requerimientos_accesibilidad" etiqueta={t.formulario.campos.accesibilidad} ayuda={t.formulario.campos.accesibilidadAyuda} filas={3} valor={texto('requerimientos_accesibilidad')} onChange={(v) => fijar('requerimientos_accesibilidad', v)} />
-          </section>
-        )}
-
-        {pasoActual === 'cierre' && (
-          <section className="space-y-5">
-            <Cabecera titulo={t.formulario.secciones.cierre} />
-            {visible('regimen_alimentario') && (
-              <>
-                {/* Sin lista cerrada: las dietas reales no caben en cinco
-                    casillas, y quien no tiene ninguna deja el campo vacío. */}
-                <CampoTexto campo="regimen_alimentario" etiqueta={t.formulario.campos.regimenAlimentario} ayuda={t.formulario.campos.regimenAlimentarioAyuda} valor={texto('regimen_alimentario')} onChange={(v) => fijar('regimen_alimentario', v)} />
-                <CampoOpcionUnica
-                  etiqueta={t.formulario.campos.condicionAlimentaria}
-                  opciones={opciones('condicionAlimentaria', t)}
-                  valor={texto('_condicion_alimentaria')}
-                  onChange={(v) => {
-                    fijar('_condicion_alimentaria', v);
-                    fijar('condicion_alimentaria', v === 'si');
-                    if (v !== 'si') fijar('condicion_alimentaria_detalle', '');
-                  }}
-                  columnas={2}
-                />
-                {Boolean(valores.condicion_alimentaria) && (
-                  <CampoParrafo campo="condicion_alimentaria_detalle" etiqueta={t.formulario.campos.condicionAlimentariaDetalle} ayuda={t.formulario.campos.condicionAlimentariaDetalleAyuda} filas={2} valor={texto('condicion_alimentaria_detalle')} onChange={(v) => fijar('condicion_alimentaria_detalle', v)} />
-                )}
-              </>
-            )}
-            {visible('contacto_emergencia') && (
-              <CampoTexto campo="contacto_emergencia" etiqueta={t.formulario.campos.contactoEmergencia} valor={texto('contacto_emergencia')} onChange={(v) => fijar('contacto_emergencia', v)} />
-            )}
-            {visible('apoyo_traslado') && (
-              <>
-                <CampoInterruptor etiqueta={t.formulario.campos.apoyoTraslado} ayuda={t.formulario.campos.apoyoTrasladoAyuda} valor={valores.apoyo_traslado as boolean} onChange={(v) => fijar('apoyo_traslado', v)} />
-                {(valores.apoyo_traslado as boolean) && (
-                  <CampoParrafo campo="datos_viatico" etiqueta={t.formulario.campos.datosViatico} ayuda={t.formulario.campos.datosViaticoAyuda} filas={3} valor={texto('datos_viatico')} onChange={(v) => fijar('datos_viatico', v)} />
-                )}
-              </>
-            )}
-            <CampoInterruptor etiqueta={t.formulario.campos.requiereFactura} valor={valores.requiere_factura as boolean} onChange={(v) => fijar('requiere_factura', v)} />
-            {(valores.requiere_factura as boolean) && (
-              <CampoParrafo campo="datos_facturacion" etiqueta={t.formulario.campos.datosFacturacion} filas={3} valor={texto('datos_facturacion')} onChange={(v) => fijar('datos_facturacion', v)} />
-            )}
-            <CampoParrafo campo="comentarios" etiqueta={t.formulario.campos.comentarios} filas={3} valor={texto('comentarios')} onChange={(v) => fijar('comentarios', v)} />
+            </>
           </section>
         )}
 

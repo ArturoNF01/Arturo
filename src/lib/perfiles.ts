@@ -81,7 +81,7 @@ export function nombrePerfil(clave: string, t: Diccionario): string {
 export type PasoFormulario =
   | 'perfil' | 'identificacion' | 'ponencia' | 'semblanza'
   | 'conexion' | 'documentacion' | 'sala' | 'alojamiento' | 'traslados'
-  | 'estacionamiento' | 'cierre' | 'privacidad';
+  | 'privacidad';
 
 /**
  * ¿A esta persona sólo se le pide el nombre y el correo?
@@ -122,18 +122,12 @@ export function pasosVisibles(
     // Los requerimientos de sala —proyector, micrófono— son de quien expone,
     // no de quien viene a escuchar.
     if (perfil.enPrograma) pasos.push('sala');
-    if (perfil.invitado) pasos.push('alojamiento');
-    // El traslado es un servicio que el CIESS presta, no un trámite que
-    // cualquiera pueda pedir: sólo a quien da una conferencia magistral.
-    if (perfil.recibeTraslado) pasos.push('traslados');
-    // El estacionamiento sí es de todos los que vienen: quien llega en coche
-    // necesita el lugar, venga a exponer o a escuchar.
-    pasos.push('estacionamiento');
+    // Hospedaje y viaje se le preguntan a todo el que pisa la sede, no sólo a
+    // quien viene invitado: el comité necesita saber cuánta gente llega, de
+    // dónde y qué días, y eso no depende de quién pague el vuelo.
+    pasos.push('alojamiento');
+    pasos.push('traslados');
   }
-
-  // Comida, facturación y contacto de emergencia son de quien pisa la sede.
-  // A quien participa desde su casa no se le pregunta nada de eso.
-  if (presencial) pasos.push('cierre');
 
   pasos.push('privacidad');
   return pasos;
@@ -176,17 +170,13 @@ export function campoVisible(
       return perfil.invitado || presencial;
     case 'entidad_federativa':
       return true;
-    case 'regimen_alimentario':
-    case 'condicion_alimentaria':
-    case 'contacto_emergencia':
-      return presencial;
     case 'requerimientos_tecnicos':
       return perfil.enPrograma;
-    case 'apoyo_traslado':
-    case 'datos_viatico':
-      // Quien viene invitado ya tiene su viaje resuelto por el CIESS. El
-      // apoyo es para quien asiste por su cuenta y lo necesita.
-      return perfil.clave === 'publico_general' && presencial;
+    case 'requiere_traslado':
+      // Los datos del vuelo se le piden a todo el que viene; la recepción en
+      // el aeropuerto es un servicio que el CIESS presta sólo a quien sube al
+      // programa. Preguntarle a los demás si la quieren sería ofrecerla.
+      return perfil.recibeTraslado && presencial;
     default:
       return true;
   }
@@ -260,21 +250,6 @@ export const PASO_DE_CAMPO: Record<string, PasoFormulario> = {
   aerolinea_salida: 'traslados',
   vuelo_salida: 'traslados',
   observaciones_traslado: 'traslados',
-
-  placa_vehiculo: 'estacionamiento',
-  modelo_vehiculo: 'estacionamiento',
-  color_vehiculo: 'estacionamiento',
-  requerimientos_accesibilidad: 'estacionamiento',
-
-  regimen_alimentario: 'cierre',
-  condicion_alimentaria: 'cierre',
-  condicion_alimentaria_detalle: 'cierre',
-  contacto_emergencia: 'cierre',
-  apoyo_traslado: 'cierre',
-  datos_viatico: 'cierre',
-  requiere_factura: 'cierre',
-  datos_facturacion: 'cierre',
-  comentarios: 'cierre',
 
   consentimiento_datos: 'privacidad',
   consentimiento_comunicaciones: 'privacidad',

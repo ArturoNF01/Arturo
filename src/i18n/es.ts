@@ -98,9 +98,7 @@ export const es = {
       documentacion: 'Documentación',
       sala: 'Requerimientos en sala',
       alojamiento: 'Alojamiento',
-      traslados: 'Traslados',
-      estacionamiento: 'Estacionamiento',
-      cierre: 'Alimentación y cierre',
+      traslados: 'Llegada y salida',
       privacidad: 'Protección de datos',
     },
     secciones: {
@@ -124,9 +122,9 @@ export const es = {
       estacionamiento: 'Estacionamiento y accesibilidad',
       estacionamientoAyuda: 'Si llega en automóvil, necesitamos los datos para reservarle lugar. Deje los campos en blanco si no lo usará.',
       alojamiento: 'Alojamiento',
-      alojamientoAyuda: 'Responder solo lo aplicable. Las fechas se confirman contra la disponibilidad del bloqueo hotelero.',
-      traslados: 'Traslados',
-      trasladosAyuda: 'La recepción se organiza con la hora programada más el margen definido por la organización.',
+      alojamientoAyuda: 'Si necesita hospedaje, indíquelo aquí con las fechas. Se confirman después contra la disponibilidad del bloqueo hotelero.',
+      traslados: 'Llegada y salida',
+      trasladosAyuda: 'Con estos datos el comité sabe cuánta gente llega cada día y a qué hora. Deje en blanco lo que no aplique; si viene por su cuenta o vive en la ciudad, basta con las fechas.',
       cierre: 'Alimentación, facturación y cierre',
     },
     campos: {

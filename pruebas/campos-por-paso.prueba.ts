@@ -23,6 +23,16 @@ describe('a qué paso pertenece cada campo', () => {
     // ningún formulario los pide ya, así que no hay paso al que llevar a
     // nadie.
     'sesion_asignada', 'ejes_dictamen', 'ponencias_maximas', 'conflicto_interes',
+
+    // Y de cuando el formulario preguntaba por el coche y por la comida. Las
+    // secciones «Estacionamiento» y «Alimentación y cierre» se quitaron al
+    // simplificar el registro; las columnas siguen en la base porque hay
+    // fichas que las traen y el panel las sigue mostrando, pero ningún
+    // formulario las pide, así que no hay paso al que llevar a nadie.
+    'placa_vehiculo', 'modelo_vehiculo', 'color_vehiculo',
+    'requerimientos_accesibilidad', 'regimen_alimentario', 'condicion_alimentaria',
+    'condicion_alimentaria_detalle', 'contacto_emergencia', 'apoyo_traslado',
+    'datos_viatico', 'requiere_factura', 'datos_facturacion', 'comentarios',
   ]);
 
   it('todo campo que el servidor puede rechazar sabe en qué paso está', () => {

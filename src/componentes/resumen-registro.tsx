@@ -18,8 +18,14 @@ interface Fila {
 }
 
 interface Seccion {
-  /** El paso del formulario del que sale esta sección. */
-  paso: PasoFormulario;
+  /**
+   * El paso del formulario del que sale esta sección.
+   *
+   * Sin paso quiere decir que la sección ya no se pregunta. No se borra: hay
+   * registros hechos que traen esos datos y el comité los sigue consultando.
+   * Se enseñan sólo si la ficha tiene algo que enseñar.
+   */
+  paso?: PasoFormulario;
   titulo: string;
   filas: Fila[];
 }
@@ -97,7 +103,6 @@ export function ResumenRegistro({
       ],
     },
     {
-      paso: 'estacionamiento',
       titulo: t.formulario.secciones.estacionamiento,
       filas: [
         { clave: 'placa_vehiculo', etiqueta: c.placa },
@@ -134,7 +139,6 @@ export function ResumenRegistro({
       ],
     },
     {
-      paso: 'cierre',
       titulo: t.formulario.secciones.cierre,
       filas: [
         { clave: 'regimen_alimentario', etiqueta: c.regimenAlimentario },
@@ -186,7 +190,10 @@ export function ResumenRegistro({
         // esto, a quien participa en línea le aparecía un apartado
         // «Traslados» con un «No» que nunca respondió: el campo trae ese
         // valor por defecto y el resumen sólo miraba si estaba vacío.
-        if (!preguntados.has(seccion.paso)) return null;
+        //
+        // Las secciones sin paso son las que se dejaron de preguntar: pasan
+        // el filtro y las frena el de abajo, que las esconde si están vacías.
+        if (seccion.paso && !preguntados.has(seccion.paso)) return null;
         const visibles = seccion.filas.filter((f) => valorDe(f) !== '');
         if (visibles.length === 0) return null;
         return (

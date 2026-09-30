@@ -13,13 +13,15 @@ describe('pasos del formulario según el perfil', () => {
 
   it('al público general no se le preguntan requerimientos de sala', () => {
     // Proyector y micrófono son de quien expone, no de quien viene a
-    // escuchar. La accesibilidad no está ahí: va en el cierre, que todos ven.
+    // escuchar. La documentación de invitación, tampoco: no viene invitado.
     const pasos = pasosVisibles(perfilPorClave('publico_general'), 'presencial');
     expect(pasos).not.toContain('sala');
     expect(pasos).not.toContain('documentacion');
-    expect(pasos).not.toContain('alojamiento');
     expect(pasos).not.toContain('semblanza');
-    expect(pasos).toContain('cierre');
+    // Hospedaje y viaje sí: quien pisa la sede cuenta para la logística,
+    // venga invitado o por su cuenta.
+    expect(pasos).toContain('alojamiento');
+    expect(pasos).toContain('traslados');
   });
 
   it('quien sale en el programa sí los ve, si asiste en persona', () => {
@@ -30,18 +32,34 @@ describe('pasos del formulario según el perfil', () => {
     // Sin traslados: ese servicio es sólo para quien da una conferencia.
     expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).toEqual([
       'perfil', 'identificacion', 'ponencia', 'semblanza', 'documentacion',
-      'sala', 'alojamiento', 'traslados', 'estacionamiento', 'cierre', 'privacidad',
+      'sala', 'alojamiento', 'traslados', 'privacidad',
     ]);
   });
 
-  it('el traslado es para quien sube al programa, no para el público', () => {
-    expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).toContain('traslados');
-    expect(pasosVisibles(perfilPorClave('publico_general'), 'presencial')).not.toContain('traslados');
+  it('a quien viene en persona se le pide viaje y hospedaje, exponga o no', () => {
+    for (const clave of CLAVES_PERFIL) {
+      const pasos = pasosVisibles(perfilPorClave(clave), 'presencial');
+      expect(pasos, clave).toContain('alojamiento');
+      expect(pasos, clave).toContain('traslados');
+    }
   });
 
-  it('quien viene en persona pasa por estacionamiento, exponga o no', () => {
+  it('la recepción en el aeropuerto sólo se le ofrece a quien sube al programa', () => {
+    // Los datos del vuelo se piden a todos; el servicio, no. Preguntarle al
+    // público si lo quiere sería ofrecérselo.
+    expect(campoVisible('requiere_traslado', perfilPorClave('ponente'), 'presencial')).toBe(true);
+    expect(campoVisible('requiere_traslado', perfilPorClave('publico_general'), 'presencial')).toBe(false);
+  });
+
+  it('estacionamiento y cierre ya no se preguntan a nadie', () => {
+    // Se quitaron al simplificar: placas, régimen alimentario, facturación y
+    // contacto de emergencia dejaron de recogerse en el registro.
     for (const clave of CLAVES_PERFIL) {
-      expect(pasosVisibles(perfilPorClave(clave), 'presencial'), clave).toContain('estacionamiento');
+      for (const modalidad of ['presencial', 'en_linea'] as const) {
+        const pasos = pasosVisibles(perfilPorClave(clave), modalidad);
+        expect(pasos, `${clave}/${modalidad}`).not.toContain('estacionamiento');
+        expect(pasos, `${clave}/${modalidad}`).not.toContain('cierre');
+      }
     }
   });
 
@@ -49,10 +67,9 @@ describe('pasos del formulario según el perfil', () => {
     // Sala, hotel, traslados, comida y estacionamiento sobran si no se viene.
     for (const clave of CLAVES_PERFIL) {
       const pasos = pasosVisibles(perfilPorClave(clave), 'en_linea');
-      for (const paso of ['sala', 'alojamiento', 'traslados', 'estacionamiento', 'documentacion']) {
+      for (const paso of ['sala', 'alojamiento', 'traslados', 'documentacion']) {
         expect(pasos, `${clave} · ${paso}`).not.toContain(paso);
       }
-      expect(campoVisible('regimen_alimentario', perfilPorClave(clave), 'en_linea'), clave).toBe(false);
     }
   });
 
@@ -113,11 +130,6 @@ describe('visibilidad de campos', () => {
     expect(campoVisible('foto', perfilPorClave('publico_general'), 'presencial')).toBe(false);
   });
 
-  it('el régimen alimentario sólo aplica a quien asiste en persona', () => {
-    expect(campoVisible('regimen_alimentario', perfilPorClave('ponente'), 'presencial')).toBe(true);
-    expect(campoVisible('regimen_alimentario', perfilPorClave('ponente'), 'en_linea')).toBe(false);
-  });
-
   it('el ORCID se pide a quien presenta, no al público', () => {
     expect(campoVisible('orcid', perfilPorClave('ponente'), 'presencial')).toBe(true);
     expect(campoVisible('orcid', perfilPorClave('publico_general'), 'presencial')).toBe(false);
@@ -135,13 +147,6 @@ describe('visibilidad de campos', () => {
     expect(campoVisible('prueba_conexion', perfilPorClave('publico_general'), 'en_linea')).toBe(false);
   });
 
-  it('el apoyo de traslado es para quien viene por su cuenta, no para los invitados', () => {
-    // A quien invita el CIESS ya le resuelve el viaje; el apoyo existe para
-    // quien paga el suyo.
-    expect(campoVisible('datos_viatico', perfilPorClave('publico_general'), 'presencial')).toBe(true);
-    expect(campoVisible('datos_viatico', perfilPorClave('publico_general'), 'en_linea')).toBe(false);
-    expect(campoVisible('datos_viatico', perfilPorClave('ponente'), 'presencial')).toBe(false);
-  });
 });
 
 describe('registros anteriores al cambio de perfiles', () => {
