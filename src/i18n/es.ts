@@ -196,7 +196,7 @@ export const es = {
       documentacionOtra: '¿Cuál?',
       boletoVuelo: 'Boleto de vuelo',
       boletoVueloAyuda: 'PDF o JPG de hasta {mb} MB.',
-      requiereAlojamiento: '¿Requiere alojamiento gestionado por la organización?',
+      requiereAlojamiento: '¿Necesita hospedaje durante el congreso?',
       fechaEntradaHotel: 'Fecha de entrada al hotel',
       fechaSalidaHotel: 'Fecha de salida del hotel',
 
