@@ -156,7 +156,16 @@ export function FormularioRegistro({
       nuevos.consentimiento_datos = t.formulario.validacion.consentimiento;
     }
 
-    setErrores((e) => ({ ...e, ...nuevos }));
+    // Los errores de este paso se reemplazan, no se acumulan: si no, un campo
+    // que el servidor marcó en un envío anterior se queda en rojo aunque ya
+    // esté corregido, y quien se registra ve señalado algo que acaba de
+    // arreglar. Los de los demás pasos se conservan.
+    setErrores((antes) => {
+      const quedan = Object.fromEntries(
+        Object.entries(antes).filter(([campo]) => PASO_DE_CAMPO[campo] !== paso),
+      );
+      return { ...quedan, ...nuevos };
+    });
     if (Object.keys(nuevos).length > 0) enfocarPrimerError(nuevos);
     return Object.keys(nuevos).length === 0;
   }
@@ -215,6 +224,11 @@ export function FormularioRegistro({
     if (!validarPaso('privacidad')) return;
     setEnviando(true);
     setErrorGeneral('');
+    // Y se parte de cero: lo que el servidor rechazó la vez anterior no tiene
+    // por qué seguir rechazándolo ahora, y dejarlo puesto hace creer que el
+    // envío nuevo falló por lo mismo aunque haya fallado por otra cosa —o
+    // aunque no haya fallado.
+    setErrores({});
     try {
       const cuerpo = {
         ...valores,
