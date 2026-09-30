@@ -1086,8 +1086,8 @@ create unique index if not exists registros_correo_vigente_idx
 -- Límite configurable
 -- ---------------------------------------------------------------------
 insert into configuracion (clave, valor, descripcion) values
-  ('limite_registros_por_huella', '20'::jsonb,
-   'Registros que se aceptan en 24 h desde una misma dirección de origen. Holgado a propósito: una institución entera puede inscribirse desde la misma red.')
+  ('limite_registros_por_huella', '300'::jsonb,
+   'Registros que se aceptan en 24 h desde una misma dirección de origen. Holgado a propósito: una institución entera sale a internet por una sola dirección, y quien pase del límite recibe un rechazo sin haber hecho nada mal.')
 on conflict (clave) do nothing;
 
 -- =====================================================================

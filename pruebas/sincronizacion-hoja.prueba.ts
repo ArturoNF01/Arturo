@@ -11,8 +11,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * blindan las celdas y se llama a la API.
  */
 
-const llamadas: { append: unknown[]; batchUpdate: unknown[]; batchClear: unknown[] } = {
-  append: [], batchUpdate: [], batchClear: [],
+const llamadas: {
+  append: unknown[]; batchUpdate: unknown[]; batchClear: unknown[];
+  /** Cuentas de las dos llamadas que comprueban el libro antes de escribir. */
+  estructura: number; encabezados: number;
+} = {
+  append: [], batchUpdate: [], batchClear: [], estructura: 0, encabezados: 0,
 };
 
 /** Los encabezados que la hoja simulada dice tener. Por omisión, los buenos. */
@@ -25,10 +29,10 @@ vi.mock('googleapis', () => ({
       spreadsheets: {
         get: async () => ({
           data: {
-            sheets: [
+            sheets: (llamadas.estructura += 1, [
               'REG_Respuestas', 'PAR_Participantes', 'ALO_Alojamiento',
               'TRA_Traslados', 'PSE_Personificadores_Semblanzas', 'ALI_Restricciones',
-            ].map((title) => ({ properties: { title, sheetId: 1 } })),
+            ].map((title) => ({ properties: { title, sheetId: 1 } }))),
           },
         }),
         batchUpdate: async (p: unknown) => { llamadas.batchUpdate.push(p); return { data: {} }; },
@@ -37,12 +41,12 @@ vi.mock('googleapis', () => ({
           batchUpdate: async (p: unknown) => { llamadas.batchUpdate.push(p); return { data: {} }; },
           batchClear: async (p: unknown) => { llamadas.batchClear.push(p); return { data: {} }; },
           batchGet: async ({ ranges }: { ranges: string[] }) => ({
-            data: {
+            data: (llamadas.encabezados += 1, {
               valueRanges: ranges.map((r) => {
                 const fila = encabezadosDeLaHoja(r.split('!')[0]);
                 return { values: fila.length ? [fila] : [] };
               }),
-            },
+            }),
           }),
           get: async () => ({ data: { values: [] } }),
         },
@@ -177,6 +181,14 @@ describe('una hoja con las columnas de antes', () => {
     llamadas.append = [];
   });
 
+  beforeEach(async () => {
+    // La comprobación de encabezados se recuerda un minuto para no gastar la
+    // cuota de Google en cada alta. Entre pruebas hay que olvidarla: si no,
+    // la segunda mide lo que vio la primera.
+    const { olvidarRevisionDelLibro } = await import('@/lib/servidor/sheets');
+    olvidarRevisionDelLibro();
+  });
+
   it('se para en vez de escribir las filas desplazadas', async () => {
     // Es lo que pasa tras cambiar el formulario sin rehacer la hoja: el
     // teléfono acabaría bajo «Cargo» y nadie lo notaría en meses.
@@ -205,5 +217,43 @@ describe('una hoja con las columnas de antes', () => {
     const { HOJAS } = await import('@/lib/normalizacion');
     const reg = escritos.requestBody.data.find((d) => d.range.startsWith('REG_Respuestas'));
     expect(reg?.values[0]).toEqual(HOJAS.REG_Respuestas);
+  });
+});
+
+/**
+ * Google corta a las sesenta llamadas por minuto y por cuenta. Comprobar el
+ * libro cuesta dos —su estructura y la primera fila de cada pestaña— y se
+ * hacía en cada alta: con el registro abierto al público, una ráfaga de altas
+ * agotaba la cuota y la mitad de las filas no llegaba a la hoja en su momento.
+ */
+describe('una ráfaga de altas no agota la cuota de Google', () => {
+  beforeEach(async () => {
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'cuenta@ejemplo.iam.gserviceaccount.com';
+    process.env.GOOGLE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\\nx\\n-----END PRIVATE KEY-----\\n';
+    process.env.GOOGLE_SHEETS_ID = 'hoja-de-prueba';
+    encabezadosDeLaHoja = () => [];
+    llamadas.estructura = 0;
+    llamadas.encabezados = 0;
+    const { olvidarRevisionDelLibro } = await import('@/lib/servidor/sheets');
+    olvidarRevisionDelLibro();
+  });
+
+  it('veinte registros seguidos comprueban el libro una sola vez', async () => {
+    const { sincronizarRegistro } = await import('@/lib/servidor/sheets');
+    for (let i = 0; i < 20; i++) await sincronizarRegistro(ponente());
+
+    expect(llamadas.estructura, 'estructura del libro').toBe(1);
+    expect(llamadas.encabezados, 'encabezados').toBe(1);
+  });
+
+  it('rehacer la hoja obliga a volver a comprobarla', async () => {
+    // Si no, se seguirían escribiendo filas contra la forma de antes.
+    const { sincronizarRegistro, vaciarHojas } = await import('@/lib/servidor/sheets');
+    await sincronizarRegistro(ponente());
+    expect(llamadas.estructura).toBe(1);
+
+    await vaciarHojas();
+    await sincronizarRegistro(ponente());
+    expect(llamadas.estructura, 'tras vaciar, se vuelve a mirar').toBe(2);
   });
 });

@@ -102,6 +102,14 @@ update plantillas_correo
  where clave in ('confirmacion_registro', 'recordatorio')
    and cuerpo_html not like '%{{zoom_bloque}}%';
 
+-- Veinte registros por dirección en 24 h se pensó contra quien insiste. Con el
+-- registro abierto al público el cálculo se invierte: una institución entera
+-- sale a internet por una sola dirección, y la persona veintiuna se encontraba
+-- un rechazo sin haber hecho nada mal. Sólo se sube si sigue en el valor de
+-- antes: si el comité ya lo ajustó a mano, esa decisión manda.
+update configuracion set valor = '300'::jsonb
+ where clave = 'limite_registros_por_huella' and valor = '20'::jsonb;
+
 -- Quien convoca es el CIESS con la RIUSS; la CISS ya no se nombra. Iba sólo
 -- en las preguntas frecuentes, y la firma de los dieciocho correos se quedó
 -- atrás: cada acuse salía firmado por una institución que no convoca.

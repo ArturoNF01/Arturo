@@ -60,8 +60,42 @@ async function comprobarEncabezados(idLibro: string) {
   }
 }
 
+/**
+ * Cuándo se comprobó por última vez que el libro está en su sitio.
+ *
+ * La comprobación cuesta dos llamadas a Google —la estructura del libro y la
+ * primera fila de cada pestaña— y se hacía en cada alta. Con el registro
+ * abierto al público eso son entre tres y ocho llamadas por persona, y Google
+ * corta a las sesenta por minuto: en la primera hora de una convocatoria
+ * masiva, la mitad de los registros no llegaría a la hoja. Llegan igual
+ * —quedan pendientes y el cron los recoge— pero el panel se llena de avisos
+ * y la hoja va con retraso justo cuando más se mira.
+ *
+ * Un minuto de memoria basta para lo que importa: una ráfaga de cien altas
+ * en el mismo minuto gasta una comprobación en vez de cien. Más tiempo no
+ * ahorra mucho más y sí abre un hueco: si alguien reordena las columnas a
+ * mano —o se despliega una versión con columnas nuevas sin rehacer la hoja—
+ * durante ese rato se escriben filas desplazadas, que es exactamente lo que
+ * la comprobación existe para evitar y lo que nadie nota hasta meses después.
+ */
+let libroRevisado: { id: string; cuando: number } | null = null;
+const VIGENCIA_REVISION = 60 * 1000;
+
+/** Olvida lo comprobado. La usan las operaciones que rehacen la hoja. */
+export function olvidarRevisionDelLibro(): void {
+  libroRevisado = null;
+}
+
 /** Crea las pestañas que falten y escribe sus encabezados. */
 async function asegurarHojas(idLibro: string) {
+  if (
+    libroRevisado &&
+    libroRevisado.id === idLibro &&
+    Date.now() - libroRevisado.cuando < VIGENCIA_REVISION
+  ) {
+    return;
+  }
+
   const sheets = clienteSheets();
   const libro = await sheets.spreadsheets.get({ spreadsheetId: idLibro });
   const existentes = new Set(
@@ -71,6 +105,7 @@ async function asegurarHojas(idLibro: string) {
   const faltantes = Object.keys(HOJAS).filter((nombre) => !existentes.has(nombre));
   if (faltantes.length === 0) {
     await comprobarEncabezados(idLibro);
+    libroRevisado = { id: idLibro, cuando: Date.now() };
     return;
   }
 
@@ -93,6 +128,7 @@ async function asegurarHojas(idLibro: string) {
   });
 
   await comprobarEncabezados(idLibro);
+  libroRevisado = { id: idLibro, cuando: Date.now() };
 }
 
 /**
@@ -173,6 +209,9 @@ export async function vaciarHojas(): Promise<void> {
       })),
     },
   });
+  // El libro acaba de cambiar por debajo: lo que se hubiera comprobado antes
+  // ya no describe lo que hay.
+  olvidarRevisionDelLibro();
 }
 
 /**

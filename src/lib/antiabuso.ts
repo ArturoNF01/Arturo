@@ -9,8 +9,22 @@
 /** Segundos que, como mínimo, tarda una persona en llenar el formulario. */
 export const SEGUNDOS_MINIMOS = 4;
 
-/** Registros que se aceptan en 24 h desde una misma huella. */
-export const LIMITE_POR_HUELLA = 20;
+/**
+ * Registros que se aceptan en 24 h desde una misma dirección de origen.
+ *
+ * Eran veinte, pensando en frenar a quien insiste. Con el registro abierto al
+ * público el cálculo se invierte: un instituto, un ministerio o una
+ * universidad salen a internet por una sola dirección, y ahí dentro hay
+ * cientos de personas. La persona número veintiuno del IMSS se encontraba un
+ * rechazo que no entendía —y con razón: no había hecho nada mal—, escribía
+ * al comité, y alguien tenía que inscribirla a mano.
+ *
+ * Contra los envíos automáticos están el señuelo y el tiempo mínimo, que no
+ * castigan a nadie por compartir salida a internet con sus compañeros. Este
+ * límite queda como freno de último recurso, y sigue siendo editable desde el
+ * panel para bajarlo si de verdad apareciera un abuso.
+ */
+export const LIMITE_POR_HUELLA = 300;
 
 export type MotivoRechazo = 'senuelo' | 'demasiado_rapido' | 'limite_huella' | 'correo_repetido';
 
