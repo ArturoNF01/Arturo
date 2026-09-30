@@ -140,17 +140,29 @@ export async function POST(peticion: NextRequest) {
       valores,
     );
   } catch (error) {
-    // El índice único del correo salta si dos envíos entran a la vez.
-    if ((error as { code?: string })?.code === '23505') {
-      return NextResponse.json(
-        {
-          mensaje: 'Ya existe un registro con este correo.',
-          errores: { correo: 'Ya existe un registro con este correo.' },
-        },
-        { status: 409 },
-      );
+    const fallo = error as { code?: string; constraint?: string };
+    // Dos índices únicos pueden saltar aquí, y confundirlos sale caro: el
+    // mensaje del correo se devolvía para cualquier choque, así que una
+    // colisión de folio —que no es culpa de nadie— mandaba a esa persona a
+    // casa creyendo que ya estaba inscrita. Se distingue por el nombre del
+    // índice que reclamó.
+    if (fallo?.code === '23505') {
+      if (fallo.constraint === 'registros_correo_vigente_idx') {
+        return NextResponse.json(
+          {
+            mensaje: 'Ya existe un registro con este correo.',
+            errores: { correo: 'Ya existe un registro con este correo.' },
+          },
+          { status: 409 },
+        );
+      }
+      // Cualquier otro choque es cosa nuestra, no de quien se registra. Se
+      // anota entero y se responde como lo que es: un fallo del servidor,
+      // que invita a reintentar en vez de darle por inscrita.
+      console.error('Choque de unicidad al dar de alta:', fallo.constraint, error);
+    } else {
+      console.error('Alta de registro fallida:', error);
     }
-    console.error('Alta de registro fallida:', error);
   }
 
   if (!registro) {

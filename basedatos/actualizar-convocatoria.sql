@@ -260,6 +260,43 @@ create trigger trg_auditoria_usuarios
   after insert or update or delete on usuarios_panel
   for each row execute function registrar_auditoria_usuarios();
 
+-- El folio pasa de cuatro caracteres a seis, y se comprueba antes de
+-- devolverlo. El motivo, en el propio cuerpo de la función.
+create or replace function generar_folio() returns trigger
+language plpgsql as $$
+declare
+  v_dia    text;
+  v_intento int := 0;
+begin
+  if new.folio is not null and new.folio <> '' then
+    return new;
+  end if;
+
+  -- Eran cuatro caracteres: 65.536 folios distintos por día. Parece mucho y
+  -- no lo es. Con doscientas altas en un día la probabilidad de que dos
+  -- coincidan ronda el 26 %; con mil, es prácticamente segura. Y al chocar,
+  -- el alta se rechazaba diciendo que el correo ya estaba registrado —que es
+  -- lo único que esa respuesta sabía decir—, así que esa persona se iba
+  -- convencida de estar inscrita sin estarlo. Con seis son 16,7 millones al
+  -- día, y además se comprueba antes de devolverlo.
+  v_dia := to_char(now() at time zone 'America/Mexico_City', 'YYYYMMDD');
+
+  loop
+    new.folio := 'REG-' || v_dia || '-'
+                 || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
+    exit when not exists (select 1 from registros where folio = new.folio);
+
+    v_intento := v_intento + 1;
+    -- Diez sorteos fallidos seguidos con 16,7 millones de combinaciones no
+    -- pasa; si pasara, es que algo va muy mal y vale más parar que insistir.
+    if v_intento >= 10 then
+      raise exception 'No se pudo generar un folio único tras % intentos', v_intento;
+    end if;
+  end loop;
+
+  return new;
+end $$;
+
 commit;
 
 select clave, valor from configuracion
