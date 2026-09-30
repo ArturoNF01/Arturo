@@ -9,7 +9,7 @@ Esto es lo que hace falta para volver a generarlo.
 |---|---|
 | `anteproyecto.html` | El documento entero, en una sola página. |
 | `estilo.css` | La línea gráfica: fondo oscuro, texto crema, acento dorado. |
-| `capturas/` | Las 33 capturas: 29 del sistema y 4 de los correos, a doble resolución. |
+| `capturas/` | Las 35 capturas: 31 del sistema y 4 de los correos, a doble resolución. |
 | `correos/` | Los correos compuestos en HTML, paso previo a capturarlos. No se versiona: se rehace. |
 
 Las tipografías van incrustadas en `fuentes.css` como base64. Es deliberado: el
@@ -31,9 +31,9 @@ las pruebas de navegador. El resultado queda en `documentos/`.
 ### Las del sistema
 
 También salen solas. Se tomaban a mano, y por eso el documento envejecía cada
-vez que cambiaba el formulario: rehacer veintinueve pantallas a mano no lo hace
-nadie por gusto, y así acaba entregándose un manual que enseña una versión que
-ya no existe.
+vez que cambiaba el formulario: rehacer treinta y una pantallas a mano no lo
+hace nadie por gusto, y así acaba entregándose un manual que enseña una versión
+que ya no existe.
 
 Hace falta el sitio corriendo, una base con registros y una cuenta de
 superadministración:
@@ -44,6 +44,27 @@ SITIO=http://localhost:3000 \
   CUENTA=comite@ciess.org CLAVE=... \
   node guiones/capturar-pantallas.mjs
 ```
+
+Si la máquina donde se toman no tiene Drive conectado, el recorrido se atasca
+en el paso de la semblanza, que exige adjuntar un PDF. Con
+`ARCHIVOS_SIMULADOS=1` la subida se responde igual que la respondería Drive y
+la pantalla sale idéntica:
+
+```bash
+ARCHIVOS_SIMULADOS=1 SITIO=... CUENTA=... CLAVE=... \
+  node guiones/capturar-pantallas.mjs
+```
+
+El guion se detiene si una captura sale idéntica a la anterior. Suena excesivo
+hasta que pasa: en la tercera versión se entregaron tres figuras repetidas —el
+mapa de la sede, la documentación de invitación y el reparto por perfil— porque
+un desplazamiento no encontró su destino y un paso no validó, y nada avisó. El
+pie describía una pantalla que no estaba debajo.
+
+Un detalle que el guion no puede arreglar: el hueco de los campos de fecha
+—`dd/mm/aaaa` o `mm/dd/yyyy`— lo pinta Chromium según el idioma de su interfaz,
+no el de la página. Si las capturas se toman en una máquina en inglés, ese hueco
+sale en inglés aunque el formulario esté en español.
 
 Conviene que la base no tenga avisos pendientes —registros sin copiar a la hoja,
 acuses sin salir— o las franjas rojas del panel salen en todas las capturas y el

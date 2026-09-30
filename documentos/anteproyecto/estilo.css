@@ -241,6 +241,11 @@ figure img {
    hoja en blanco detrás. Son imágenes estrechas, así que pierden poco. */
 figure.correo img { max-height: 92mm; }
 
+/* Un formulario largo no cabe en 112 mm sin encogerse tanto que sus rótulos
+   dejan de leerse: la figura ocupa espacio y no enseña nada. Éstas van solas
+   en su hoja y se les deja casi toda. */
+figure.alta img { max-height: 200mm; }
+
 figcaption {
   margin-top: 2.2mm;
   font-size: 8.2pt;
