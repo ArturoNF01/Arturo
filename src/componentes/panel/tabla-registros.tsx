@@ -253,9 +253,24 @@ export function TablaRegistros({ permisos }: { permisos: Permisos }) {
                     {new Date(r.creado_en).toLocaleDateString(idioma)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <button type="button" className="boton-secundario !px-2 !py-1 !text-xs" onClick={() => void abrirDetalle(r)}>
-                      {t.acciones.ver}
-                    </button>
+                    <div className="flex gap-2">
+                      <button type="button" className="boton-secundario !px-2 !py-1 !text-xs" onClick={() => void abrirDetalle(r)}>
+                        {t.acciones.ver}
+                      </button>
+                      {/* Aquí mismo, sin abrir la ficha: dar de baja un registro
+                          es lo que más se hace sobre esta lista, y obligaba a
+                          entrar, buscar el botón y volver. El de dentro se queda
+                          para quien llega leyendo la ficha y decide ahí. */}
+                      {permisos.eliminarRegistros && (
+                        <button
+                          type="button"
+                          className="boton-peligro !px-2 !py-1 !text-xs"
+                          onClick={() => void eliminar(r)}
+                        >
+                          {t.acciones.eliminar}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
