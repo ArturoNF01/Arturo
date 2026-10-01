@@ -9,7 +9,7 @@ Esto es lo que hace falta para volver a generarlo.
 |---|---|
 | `anteproyecto.html` | El documento entero, en una sola página. |
 | `estilo.css` | La línea gráfica: fondo oscuro, texto crema, acento dorado. |
-| `capturas/` | Las 35 capturas: 31 del sistema y 4 de los correos, a doble resolución. |
+| `capturas/` | Las 34 capturas: 30 del sistema y 4 de los correos, a doble resolución. |
 | `correos/` | Los correos compuestos en HTML, paso previo a capturarlos. No se versiona: se rehace. |
 
 Las tipografías van incrustadas en `fuentes.css` como base64. Es deliberado: el
@@ -31,9 +31,9 @@ las pruebas de navegador. El resultado queda en `documentos/`.
 ### Las del sistema
 
 También salen solas. Se tomaban a mano, y por eso el documento envejecía cada
-vez que cambiaba el formulario: rehacer treinta y una pantallas a mano no lo
-hace nadie por gusto, y así acaba entregándose un manual que enseña una versión
-que ya no existe.
+vez que cambiaba el formulario: rehacer treinta pantallas a mano no lo hace
+nadie por gusto, y así acaba entregándose un manual que enseña una versión que
+ya no existe.
 
 Hace falta el sitio corriendo, una base con registros y una cuenta de
 superadministración:

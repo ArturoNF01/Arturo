@@ -210,16 +210,19 @@ async function main() {
   await adjuntar();
   await autorizar('grabaci');
   await tomar('13-registro-semblanza');
-  await siguiente('Documentación');
-  await tomar('14-registro-documentacion');
   await siguiente('Requerimientos en sala');
-  await siguiente('Alojamiento');
-  await tomar('15-registro-alojamiento');
+  await tomar('14-registro-sala');
+
+  // Y la única pantalla que el público general presencial no comparte con
+  // nadie: de dónde viene y qué días está.
+  await elegirPerfil('Público general', 'Presencial');
+  await siguiente('Identificación');
+  await llenarObligatorios(['Serrano', 'Jorge', 'j.serrano@imss.gob.mx', 'IMSS', 'México']);
   await siguiente('Llegada y salida');
-  await tomar('16-registro-llegada-salida', { alto: 1620 });
+  await tomar('15-registro-llegada-salida');
 
   console.log('\nPanel');
-  await ir('/login');   await tomar('17-login');
+  await ir('/login');   await tomar('16-login');
 
   if (!CUENTA || !CLAVE) {
     console.log('\nSin CUENTA y CLAVE: el panel se salta.');
@@ -232,14 +235,14 @@ async function main() {
   await pagina.getByRole('button', { name: /entrar|acceder|iniciar/i }).first().click();
   await pagina.waitForTimeout(3000);
 
-  await ir('/panel');                 await tomar('18-panel-dashboard');
-  await hasta('Distribución por modalidad'); await tomar('19-panel-graficas');
-  await ir('/panel/registros');       await tomar('20-panel-registros');
+  await ir('/panel');                 await tomar('17-panel-dashboard');
+  await hasta('Distribución por modalidad'); await tomar('18-panel-graficas');
+  await ir('/panel/registros');       await tomar('19-panel-registros');
 
   // La ficha de un registro, abierta.
   await pagina.getByRole('button', { name: /^Ver$/ }).first().click();
   await pagina.waitForTimeout(1600);
-  await tomar('21-panel-detalle');
+  await tomar('20-panel-detalle');
   // Se sale recargando, no pulsando «cerrar»: la ventana se pinta encima de
   // todo y el clic se queda reintentando contra el velo hasta agotar la
   // espera, que es donde esto se quedaba colgado.
@@ -249,17 +252,17 @@ async function main() {
   const casillas = pagina.locator('tbody input[type="checkbox"]');
   for (let i = 0; i < Math.min(3, await casillas.count()); i++) await casillas.nth(i).check();
   await pagina.waitForTimeout(400);
-  await tomar('22-panel-seleccion');
+  await tomar('21-panel-seleccion');
 
-  await ir('/panel/analitica');   await tomar('23-panel-analitica');
-  await ir('/panel/cupos');       await tomar('24-panel-cupos');
-  await hasta('Zoom');            await tomar('25-panel-zoom');
-  await ir('/panel/sql');         await tomar('26-panel-sql');
-  await ir('/panel/plantillas');  await tomar('27-panel-plantillas');
-  await ir('/panel/contenido');   await tomar('28-panel-contenido');
-  await ir('/panel/usuarios');    await tomar('29-panel-usuarios');
-  await ir('/panel/cuenta');      await tomar('30-panel-cuenta');
-  await ir('/panel/auditoria');   await tomar('31-panel-auditoria');
+  await ir('/panel/analitica');   await tomar('22-panel-analitica');
+  await ir('/panel/cupos');       await tomar('23-panel-cupos');
+  await hasta('Zoom');            await tomar('24-panel-zoom');
+  await ir('/panel/sql');         await tomar('25-panel-sql');
+  await ir('/panel/plantillas');  await tomar('26-panel-plantillas');
+  await ir('/panel/contenido');   await tomar('27-panel-contenido');
+  await ir('/panel/usuarios');    await tomar('28-panel-usuarios');
+  await ir('/panel/cuenta');      await tomar('29-panel-cuenta');
+  await ir('/panel/auditoria');   await tomar('30-panel-auditoria');
 
   await navegador.close();
   console.log(`\n${hechas.length} capturas en documentos/anteproyecto/capturas/`);
