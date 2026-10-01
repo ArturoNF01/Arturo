@@ -21,6 +21,21 @@ folios y portada. Por ahora contiene la portada, los preliminares, el índice y 
 | `salida/figuras-pdf/*.pdf` | Cada gráfica, mapa y diagrama en PDF vectorial (para InDesign/Illustrator) |
 | `figuras/svg/*.svg` | Las mismas figuras en SVG editable |
 
+## Fidelidad del texto (investigación oficial)
+
+El texto, las cifras, los títulos, las notas, las fuentes y los rótulos de las figuras
+se reproducen **tal cual los manuscritos**: no se corrige ortografía, puntuación,
+mayúsculas ni formato numérico. Lo que convenga corregir se anota en
+`OBSERVACIONES.md` para que lo decidan autoría y corrección de estilo.
+
+- Los cuadros que en el manuscrito son imagen se transcriben literalmente
+  (`datos/cuadros-imagen.json`) y se verifican cifra por cifra contra el Excel.
+- Los rótulos de las gráficas y mapas salen de `datos/figuras-original.json`
+  (transcripción de las imágenes del manuscrito).
+- `python guiones/auditar_texto.py MANUSCRITO.docx contenido/NN-capitulo-N.html salida/interiores.pdf PRIMERA ULTIMA`
+  compara palabra por palabra el manuscrito con el HTML y con el PDF compuesto
+  (párrafos, notas, celdas de tablas y texto perdido al componer).
+
 ## Especificaciones heredadas del libro de referencia
 
 - **Formato:** 130 × 210 mm. Caja de 100 mm; márgenes laterales de 15 mm.

@@ -3,7 +3,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import * as topojson from "topojson-client";
-import { RAIZ, ANCHO, C, texto, rect, linea, medir, numero, documento, d3 } from "./lib.mjs";
+// Rótulos, leyendas y cifras: los del manuscrito (datos/figuras-original.json), sin cambios.
+import { RAIZ, ANCHO, C, texto, rect, linea, medir, partir, documento, original, d3 } from "./lib.mjs";
+
+const O = original();
 
 const leerJSON = (ruta) => JSON.parse(fs.readFileSync(path.join(RAIZ, ruta), "utf8"));
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -17,11 +20,6 @@ const TRAMA = `<pattern id="trama" patternUnits="userSpaceOnUse" width="2.6" hei
 <rect width="2.6" height="2.6" fill="#f4f5f6"/><line x1="0" y1="0" x2="0" y2="2.6" stroke="${C.grisClaro}" stroke-width="0.55"/></pattern>`;
 
 /* ----------------------------------------------------------------- Mapa 1 */
-const NOMBRES_ES = {
-  "Colombia": "Colombia", "Peru": "Perú", "United States of America": "Estados Unidos", "Spain": "España",
-  "Brazil": "Brasil", "Ecuador": "Ecuador", "Chile": "Chile", "Argentina": "Argentina", "Panama": "Panamá",
-  "Dominican Republic": "República Dominicana", "Mexico": "México",
-};
 const NOMBRE_ATLAS = { "Dominican Republic": "Dominican Rep." };
 
 // Punto de anclaje (lon, lat), posición de la etiqueta (lon, lat) y alineación
@@ -53,14 +51,10 @@ export function mapa1(D) {
   const H = Math.ceil(y1 - y0);
   proy.clipExtent([[0, 0], [W, H]]);
 
-  const clases = [
-    { min: 2.0, color: C.oscuro, et: "2.0 y más" },
-    { min: 1.0, color: C.azul, et: "1.0 a 2.0" },
-    { min: 0.5, color: C.medio, et: "0.5 a 1.0" },
-    { min: 0.2, color: C.claro, et: "0.2 a 0.5" },
-    { min: 0.1, color: C.hielo, et: "0.1 a 0.2" },
-  ];
-  const colorDe = (v) => (clases.find((c) => v >= c.min) || clases[clases.length - 1]).color;
+  // Seis clases con los cortes de la leyenda del manuscrito (0.1M … 2.9M)
+  const tx = O.mapa_1;
+  const tonos = ["#c8d4e7", "#9db4d5", "#6f95c3", "#3f78b0", "#1e5f96", "#00427a"];
+  const colorDe = (v) => tonos[Math.max(0, Math.min(tonos.length - 1, d3.bisectRight(tx.cortes, v) - 1))];
 
   const p = [];
   const feats = paises("50m");
@@ -72,25 +66,17 @@ export function mapa1(D) {
     const d = camino(f);
     if (d) p.push(`<path d="${d}" fill="${relleno}" stroke="#fff" stroke-width="0.3" stroke-linejoin="round"/>`);
   }
-  // Venezuela (origen)
-  const [vx, vy] = proy([-65.5, 7.2]);
-  const [vex, vey] = proy([-54.5, 12.6]);
-  p.push(linea(vx, vy, vex - 1.5, vey - 2.2, C.gris, 0.35));
-  p.push(`<circle cx="${r2(vx)}" cy="${r2(vy)}" r="1.25" fill="${C.grisTexto}" stroke="#fff" stroke-width="0.45"/>`);
-  p.push(texto(vex, vey - 1.2, "Venezuela", { tam: 6.2, peso: 600, color: C.grisTexto, halo: "#fff" }));
-  p.push(texto(vex, vey + 6.4, "país de origen", { tam: 5.8, cursiva: true, color: C.grisTexto, halo: "#fff" }));
-
   // Etiquetas con líneas guía
   const capas = { lineas: [], puntos: [], textos: [] };
   for (const [pais, et] of Object.entries(ETIQUETAS_M1)) {
     const v = valores.get(pais);
     const [px, py] = proy(et.p);
     const [ex, ey] = proy(et.e);
-    const nombre = NOMBRES_ES[pais];
-    const valor = v < 1 ? v.toFixed(2) : v.toFixed(1);
+    const [nombre, valor] = tx.rotulos[pais];
     if (et.dentro) {
-      capas.textos.push(texto(ex, ey, nombre, { tam: 6.2, peso: 600, color: "#fff", ancla: "middle" }));
-      capas.textos.push(texto(ex, ey + 7.4, valor, { tam: 6.4, peso: 700, color: "#fff", ancla: "middle" }));
+      const claro = tonos.indexOf(colorDe(v)) < 3; // texto oscuro sobre los azules claros
+      capas.textos.push(texto(ex, ey, nombre, { tam: 6.2, peso: 600, color: claro ? C.noche : "#fff", ancla: "middle" }));
+      capas.textos.push(texto(ex, ey + 7.4, valor, { tam: 6.4, peso: 700, color: claro ? C.noche : "#fff", ancla: "middle" }));
       continue;
     }
     const dxTexto = et.a === "end" ? -2 : et.a === "start" ? 2 : 0;
@@ -103,14 +89,11 @@ export function mapa1(D) {
   }
   p.push(...capas.lineas, ...capas.puntos, ...capas.textos);
 
-  // Leyenda (Pacífico sur)
-  const lx = 6, ly = H - 58;
-  p.push(texto(lx, ly, "Millones de personas", { tam: 6.2, peso: 700, color: C.oscuro }));
-  clases.forEach((c, i) => {
-    const yy = ly + 6 + i * 9;
-    p.push(rect(lx, yy, 9, 6.2, c.color));
-    p.push(texto(lx + 12.5, yy + 5.2, c.et, { tam: 6, color: C.texto }));
-  });
+  // Leyenda del manuscrito: «Población migrante», escala de 0.1M a 2.9M
+  const lx = 6, ly = H - 30, paso = 19;
+  p.push(texto(lx, ly, tx.leyenda, { tam: 6.2, peso: 700, color: C.oscuro }));
+  tonos.forEach((c, i) => p.push(rect(lx + i * paso, ly + 4, paso, 6, c)));
+  tx.marcas.forEach((m, i) => p.push(texto(lx + i * paso, ly + 17, m, { tam: 5.2, color: C.grisTexto, ancla: i === 0 ? "start" : i === tx.marcas.length - 1 ? "end" : "middle" })));
 
   return documento(W, H, p.join("\n"), {
     titulo: "Mapa 1. Población migrante venezolana según país de destino, 2024 (millones de personas)",
@@ -119,13 +102,6 @@ export function mapa1(D) {
 
 /* ----------------------------------------------------------------- Mapa 2 */
 const normal = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
-const ROTULOS_M2 = {
-  "BOGOTA": "BOGOTÁ, D. C.", "ANTIOQUIA": "ANTIOQUIA", "VALLE DEL CAUCA": "VALLE DEL CAUCA",
-  "NORTE DE SANTANDER": "NORTE DE SANTANDER", "CUNDINAMARCA": "CUNDINAMARCA", "ATLANTICO": "ATLÁNTICO",
-  "SANTANDER": "SANTANDER", "LA GUAJIRA": "LA GUAJIRA", "BOLIVAR": "BOLÍVAR", "MAGDALENA": "MAGDALENA",
-  "CESAR": "CESAR", "META": "META", "RISARALDA": "RISARALDA", "BOYACA": "BOYACÁ", "NARINO": "NARIÑO",
-  "ARAUCA": "ARAUCA",
-};
 // Lado de la columna de rótulos para cada departamento
 const LADO_M2 = {
   "ATLANTICO": "izq", "BOLIVAR": "izq", "MAGDALENA": "izq", "ANTIOQUIA": "izq", "RISARALDA": "izq",
@@ -140,29 +116,23 @@ const ANCLA_M2 = {
 };
 
 export function mapa2(D) {
-  const tot = {}, sd = {};
-  for (const [k, v] of Object.entries(D.mapa_2.total)) tot[normal(k)] = v;
-  for (const [k, v] of Object.entries(D.mapa_2.sin_documentos)) sd[normal(k)] = v;
 
   const topo = leerJSON("datos/geo/colombia-departamentos.topo.json");
   const deptos = topojson.feature(topo, topo.objects.departamentos).features;
   for (const f of deptos) f.properties.clave = normal(f.properties.clave || f.properties.nombre);
   const continente = { type: "FeatureCollection", features: deptos.filter((f) => !f.properties.clave.includes("SAN ANDRES")) };
-  const sanAndres = deptos.find((f) => f.properties.clave.includes("SAN ANDRES"));
 
   const W = ANCHO, H = 300, colIzq = 60, colDer = 70;
   const proy = d3.geoTransverseMercator().rotate([73.5, -4.5]).fitExtent([[colIzq + 4, 6], [W - colDer - 4, H - 8]], continente);
   const camino = d3.geoPath(proy);
   proy.clipExtent([[0, 0], [W, H]]);
 
-  const clases = [
-    { min: 15, color: C.oscuro, et: "15.0 y más" },
-    { min: 7.5, color: C.azul, et: "7.5 a 15.0" },
-    { min: 4, color: C.medio, et: "4.0 a 7.5" },
-    { min: 2, color: C.claro, et: "2.0 a 4.0" },
-    { min: 0, color: C.hielo, et: "Menos de 2.0" },
-  ];
-  const colorDe = (v) => clases.find((c) => v >= c.min).color;
+  const tx = O.mapa_2;
+  // Escala continua del manuscrito: 0% a +18% de la población total (TP)
+  const rampa = d3.interpolateRgbBasis(["#e6ecf5", "#9db4d5", "#3f78b0", "#00427a"]);
+  const colorDe = (v) => rampa(Math.min(1, v / 18));
+  const conDatos = {};
+  for (const [k, v] of Object.entries(tx.departamentos)) conDatos[normal(k)] = v;
 
   const p = [];
   // Países vecinos
@@ -176,21 +146,17 @@ export function mapa2(D) {
     const d = camino(f);
     if (d) p.push(`<path d="${d}" fill="${C.tierra}" stroke="#fff" stroke-width="0.45" stroke-linejoin="round"/>`);
   }
-  for (const [nom, lonlat] of [["VENEZUELA", [-67.6, 6.2]], ["BRASIL", [-69.4, -2.5]],
-    ["ECUADOR", [-78.6, -1.4]], ["PERÚ", [-74.0, -3.6]]]) {
-    const [x, y] = proy(lonlat);
+  const posPais = { "PANAMÁ": [-79.4, 8.3], "VENEZUELA": [-67.6, 6.2], "BRASIL": [-67.2, -0.6], "ECUADOR": [-78.6, -1.4], "PERÚ": [-74.0, -3.6] };
+  for (const nom of tx.paises) {
+    const [x, y] = proy(posPais[nom]);
     p.push(texto(x, y, nom, { tam: 5.6, peso: 700, color: C.grisMedio, ancla: "middle", espaciado: 0.8 }));
   }
-  const [mcx, mcy] = proy([-77.6, 12.4]);
-  p.push(texto(mcx, mcy, "Mar Caribe", { tam: 6, cursiva: true, color: C.medio, ancla: "middle" }));
-  const [opx, opy] = proy([-79.3, 3.2]);
-  p.push(texto(opx, opy, ["Océano", "Pacífico"], { tam: 6, cursiva: true, color: C.medio, ancla: "middle", interlineado: 7 }));
 
   // Departamentos
   for (const f of continente.features) {
     const k = f.properties.clave;
-    const t = tot[k];
-    const relleno = t != null ? colorDe(t) : "url(#trama)";
+    const d = conDatos[k];
+    const relleno = d ? colorDe(parseFloat(d[1].replace("TP:", ""))) : "url(#trama)";
     p.push(`<path d="${camino(f)}" fill="${relleno}" stroke="#fff" stroke-width="0.4" stroke-linejoin="round"/>`);
   }
   // Contorno nacional
@@ -199,7 +165,7 @@ export function mapa2(D) {
 
   // Rótulos en columnas con líneas guía
   const lineas = [], puntos = [], textos = [];
-  const altoRotulo = 14.6;
+  const altoRotulo = 19.5;
   for (const lado of ["izq", "der"]) {
     const items = Object.keys(LADO_M2).filter((k) => LADO_M2[k] === lado).map((k) => {
       const f = continente.features.find((ff) => ff.properties.clave === k);
@@ -217,45 +183,34 @@ export function mapa2(D) {
     for (const it of items) {
       const xTexto = lado === "izq" ? 2 : W - 2;
       const ancla = lado === "izq" ? "start" : "end";
-      const nombre = ROTULOS_M2[it.k];
-      const vt = tot[it.k] != null ? numero(tot[it.k], 1) + "%" : "–";
-      const vs = sd[it.k] != null ? numero(sd[it.k], 1) + "%" : "–";
-      const linea2 = `TP ${vt}  ·  SD ${vs}`;
-      const ancho = Math.max(medir(nombre, 5.6, 700), medir(linea2, 5.6));
+      const [nombre, lTP, lSD] = conDatos[it.k];
+      const ancho = Math.max(medir(nombre, 5.6, 700), medir(lTP, 5.4), medir(lSD, 5.4));
       const xBorde = lado === "izq" ? xTexto + ancho + 2 : xTexto - ancho - 2;
       const yGuia = it.ey - 2;
       const codo = lado === "izq" ? Math.max(xBorde + 3, Math.min(it.ax - 6, xBorde + 10)) : Math.min(xBorde - 3, Math.max(it.ax + 6, xBorde - 10));
       lineas.push(`<polyline points="${r2(xBorde)},${r2(yGuia)} ${r2(codo)},${r2(yGuia)} ${r2(it.ax)},${r2(it.ay)}" fill="none" stroke="${C.texto}" stroke-width="0.3"/>`);
       puntos.push(`<circle cx="${r2(it.ax)}" cy="${r2(it.ay)}" r="1.05" fill="${C.noche}" stroke="#fff" stroke-width="0.4"/>`);
       textos.push(texto(xTexto, it.ey - 3.4, nombre, { tam: 5.6, peso: 700, color: C.oscuro, ancla, espaciado: 0.15, halo: "#fff" }));
-      textos.push(texto(xTexto, it.ey + 3.6, linea2, { tam: 5.6, color: C.texto, ancla, halo: "#fff" }));
+      textos.push(texto(xTexto, it.ey + 3.2, lTP, { tam: 5.4, color: C.texto, ancla, halo: "#fff" }));
+      textos.push(texto(xTexto, it.ey + 9.4, lSD, { tam: 5.4, color: C.texto, ancla, halo: "#fff" }));
     }
   }
   p.push(...lineas, ...puntos, ...textos);
 
-  // Leyenda (esquina inferior derecha, sobre Brasil)
-  const lx = W - 66, ly = H - 80;
-  p.push(texto(lx, ly, ["Población venezolana", "total (%)"], { tam: 5.9, peso: 700, color: C.oscuro, interlineado: 6.8 }));
-  clases.forEach((c, i) => {
-    const yy = ly + 10 + i * 8;
-    p.push(rect(lx, yy, 8.4, 5.6, c.color));
-    p.push(texto(lx + 11.5, yy + 4.8, c.et, { tam: 5.7, color: C.texto }));
+  // Leyenda del manuscrito (esquina inferior derecha)
+  const lx = W - 70, ly = H - 62;
+  p.push(texto(lx, ly, tx.leyenda, { tam: 6, peso: 700, color: C.oscuro, espaciado: 0.3 }));
+  for (let i = 0; i < 12; i++) p.push(rect(lx + i * 5.6, ly + 4, 5.65, 5.4, rampa(i / 11)));
+  p.push(texto(lx, ly + 16, tx.min, { tam: 5.4, color: C.grisTexto }));
+  p.push(texto(lx + 67.2, ly + 16, tx.max, { tam: 5.4, color: C.grisTexto, ancla: "end" }));
+  tx.claves.forEach(([sigla, desc], i) => {
+    const yy = ly + 26 + i * 7.6;
+    p.push(texto(lx, yy, sigla, { tam: 5.5, peso: 700, color: C.texto }));
+    p.push(texto(lx + medir(sigla, 5.5, 700) + 2, yy, desc, { tam: 5.5, color: C.texto }));
   });
-  const yt = ly + 10 + clases.length * 8;
+  const yt = ly + 26 + tx.claves.length * 7.6 - 1;
   p.push(rect(lx, yt, 8.4, 5.6, "url(#trama)", `stroke="${C.grisClaro}" stroke-width="0.3"`));
-  p.push(texto(lx + 11.5, yt + 4.8, "Otros departamentos", { tam: 5.7, color: C.texto }));
-  p.push(texto(lx, yt + 15, "TP: población total", { tam: 5.5, color: C.grisTexto }));
-  p.push(texto(lx, yt + 22, "SD: sin documentos", { tam: 5.5, color: C.grisTexto }));
-
-  // Recuadro de San Andrés, Providencia y Santa Catalina (abajo a la izquierda)
-  if (sanAndres) {
-    const bx = 4, by = H - 52, bw = 44, bh = 46;
-    const pi = d3.geoTransverseMercator().rotate([81.5, -13]).fitExtent([[bx + 6, by + 5], [bx + bw - 6, by + bh - 13]], sanAndres);
-    const ci = d3.geoPath(pi);
-    p.push(rect(bx, by, bw, bh, "#fff", `stroke="${C.grisClaro}" stroke-width="0.4"`));
-    p.push(`<path d="${ci(sanAndres)}" fill="url(#trama)" stroke="${C.titulo}" stroke-width="0.4"/>`);
-    p.push(texto(bx + bw / 2, by + bh - 7.4, ["San Andrés y", "Providencia"], { tam: 4.6, color: C.grisTexto, ancla: "middle", interlineado: 5.2 }));
-  }
+  p.push(texto(lx + 11.5, yt + 4.8, tx.otros, { tam: 5.5, color: C.texto }));
 
   return documento(W, H, p.join("\n"), {
     titulo: "Mapa 2. Población venezolana en Colombia, total y sin documentos migratorios, según departamento, 2025",

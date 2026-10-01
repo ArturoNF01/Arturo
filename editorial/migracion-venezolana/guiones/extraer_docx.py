@@ -17,25 +17,15 @@ from lxml import etree
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 NS = {"w": W[1:-1]}
 
-# Espacio fino para separar miles (criterio RAE/ISO). Crimson Pro no trae
-# U+202F, así que se usa U+2009 dentro de un <span class="nobr">.
-FINO = "\u2009"
-
-
 def limpiar(texto: str) -> str:
-    """Correcciones tipográficas mecánicas (no de estilo)."""
+    """Solo normaliza espacios (espacio duro y espacios repetidos).
+
+    El texto es de una investigación oficial: no se corrige ortografía, puntuación,
+    mayúsculas ni formato de cifras. Lo que haya que corregir se anota en
+    OBSERVACIONES.md para autoría y corrección de estilo.
+    """
     t = texto.replace("\u00a0", " ")
-    t = re.sub(r"[ \t]{2,}", " ", t)
-    # Miles escritos como "2, 808, 577" o "1 423 500" -> espacio fino irrompible.
-    # Solo cifras concretas del manuscrito: una regla general confundiría
-    # volúmenes y páginas de la bibliografía ("48, 233–270").
-    for cifra in ("2, 808, 577", "523, 495", "323, 108", "1 423 500"):
-        t = t.replace(cifra, '<span class="nobr">' + re.sub(r",? ", FINO, cifra) + "</span>")
-    # Coma pegada a la palabra siguiente ("data,y")
-    t = re.sub(r"(?<=[a-záéíóúñ]),(?=[a-záéíóúñ])", ", ", t)
-    # Espacio antes de signos de puntuación
-    t = re.sub(r" +([,.;:)])", r"\1", t)
-    return t
+    return re.sub(r"[ \t]{2,}", " ", t)
 
 
 def texto_run(r) -> str:

@@ -71,9 +71,9 @@ def testimonio(contenido):
     cita, _, quien = plano.rpartition("—")
     if not cita:
         return f'<blockquote class="testimonio"><p>{plano.strip()}</p></blockquote>'
-    quien = re.sub(r"\s+", " ", quien).strip().rstrip(".")
+    quien = re.sub(r"\s+", " ", quien).strip()
     return (f'<blockquote class="testimonio"><p>{cita.strip()}</p>'
-            f'<p class="atribucion">{quien}</p></blockquote>')
+            f'<p class="atribucion">— {quien}</p></blockquote>')
 
 
 def celda(tc, notas):

@@ -172,3 +172,8 @@ export function datos() {
 }
 
 export { d3 };
+
+/** Textos literales de las figuras del manuscrito (datos/figuras-original.json). */
+export function original() {
+  return JSON.parse(fs.readFileSync(path.join(RAIZ, "datos", "figuras-original.json"), "utf8"));
+}

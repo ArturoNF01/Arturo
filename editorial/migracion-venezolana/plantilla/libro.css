@@ -157,7 +157,7 @@ em { font-style: italic; }
 .nobr { white-space: nowrap; }
 
 /* ---------- Capítulo ---------- */
-section.capitulo { break-before: right; }
+section.capitulo { break-before: right; counter-reset: footnote; }  /* notas 1, 2… en cada capítulo, como en los manuscritos */
 
 .apertura {
   padding-top: 52pt;
@@ -348,6 +348,7 @@ table.cuadro td:first-child { white-space: normal; }
 table.cuadro thead th { white-space: normal; line-height: 1.15; }
 table.cuadro.c1 { font-size: 6.5pt; line-height: 7.8pt; }
 table.cuadro.c1 td:not(:first-child) { padding-left: 1.2pt; padding-right: 1.2pt; }
+table.cuadro.c1 tr.total td { font-weight: 600; }
 .llamada { white-space: nowrap; }
 .llamada .nota { white-space: normal; }
 
@@ -373,7 +374,6 @@ blockquote.testimonio p.atribucion {
   letter-spacing: 0.02em;
   margin-top: 3pt;
 }
-blockquote.testimonio p.atribucion::before { content: "— "; }
 blockquote + p { text-indent: 0; }
 
 /* ---------- Cuadros de texto (propuestas, matrices) ----------

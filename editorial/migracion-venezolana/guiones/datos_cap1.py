@@ -184,7 +184,7 @@ def main():
     ramas = []
     for r in range(3, 18):
         corto = ws[f"A{r}"].value
-        ramas.append({"rama": RAMAS[corto], "hombres": num(ws[f"B{r}"].value),
+        ramas.append({"rama": RAMAS[corto], "rama_excel": corto, "hombres": num(ws[f"B{r}"].value),
                       "mujeres": num(ws[f"C{r}"].value), "total": num(ws[f"D{r}"].value)})
     datos["grafica_7_8"] = sorted(ramas, key=lambda x: -x["total"])
 

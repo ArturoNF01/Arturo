@@ -1,5 +1,6 @@
 // Capa vectorial de la portada: contornos de Venezuela y Colombia en línea blanca
-// sobre la fotografía y una sola ruta de cruce (Caracas → Bogotá). Fondo
+// sobre la fotografía y una sola ruta de cruce, del centro de Venezuela al centro
+// de Colombia. Fondo
 // transparente: la foto va debajo, en el HTML.
 import fs from "node:fs";
 import path from "node:path";
@@ -13,9 +14,6 @@ const r2 = (v) => Math.round(v * 100) / 100;
 export const ANCHO_FOTO = 368.5;
 export const ALTO_FOTO = 352;
 
-// Ruta de cruce: de Caracas a Bogotá, principal destino (mapa 2)
-const ORIGEN = [-66.9, 10.49];
-const DESTINO = [-74.08, 4.61];
 
 /** Recorta una curva cuadrática para que empiece y acabe a cierta distancia de sus extremos. */
 function recortarArco(p0, q, p2, desdeInicio, antesDelFin) {
@@ -69,8 +67,8 @@ export function portada() {
     p.push(`<path d="${camino(pais)}" fill="none" stroke="${B}" stroke-width="1" stroke-linejoin="round"/>`);
   }
 
-  // Ruta de cruce: arco punteado que se detiene antes de los extremos
-  const [ox, oy] = proy(ORIGEN), [cx, cy] = proy(DESTINO);
+  // Ruta de cruce: arco punteado del centro (centroide) de Venezuela al de Colombia
+  const [ox, oy] = camino.centroid(paises[0]), [cx, cy] = camino.centroid(paises[1]);
   const dx = cx - ox, dy = cy - oy, largo = Math.hypot(dx, dy);
   const qx = (ox + cx) / 2 - (dy / largo) * 0.22 * largo;
   const qy = (oy + cy) / 2 + (dx / largo) * 0.22 * largo;
