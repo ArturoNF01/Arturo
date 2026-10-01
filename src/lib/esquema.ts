@@ -81,12 +81,11 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
     entidad_federativa: textoOpcional,
     ciudad_residencia: z.string().trim().max(120).optional().or(z.literal('')),
     nacionalidad: textoOpcional,
-    orcid: z
-      .string()
-      .trim()
-      .regex(/^$|^\d{4}-\d{4}-\d{4}-\d{3}[\dXx]$/, 'Formato ORCID no válido')
-      .optional()
-      .or(z.literal('')),
+    // Sin comprobar el formato: el campo dejó de pedirse, así que la regla
+    // sólo podía dispararse contra una ficha vieja al editarla, y el aviso
+    // habría señalado una casilla que ya no está en pantalla —ni hay paso al
+    // que llevar a nadie para corregirla—.
+    orcid: textoOpcional,
 
     // 2. La ponencia ya aceptada, tal como debe salir en el programa
     modalidad_participacion: textoOpcional,
@@ -246,7 +245,13 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
         message: 'Indique su zona horaria para enviarle el enlace a la hora correcta',
       });
     }
-    if (datos.requiere_alojamiento && datos.fecha_entrada_hotel && datos.fecha_salida_hotel) {
+    // Atada al paso, como las demás: el hotel dejó de preguntarse, y una
+    // ficha vieja con las fechas al revés no debe quedar imposible de
+    // guardar por un campo que nadie puede ya corregir.
+    if (
+      pasos.includes('alojamiento')
+      && datos.requiere_alojamiento && datos.fecha_entrada_hotel && datos.fecha_salida_hotel
+    ) {
       if (datos.fecha_salida_hotel < datos.fecha_entrada_hotel) {
         ctx.addIssue({
           code: 'custom',

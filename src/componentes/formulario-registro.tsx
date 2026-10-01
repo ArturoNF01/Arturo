@@ -128,9 +128,6 @@ export function FormularioRegistro({
       if (texto('correo') && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(texto('correo'))) {
         nuevos.correo = t.formulario.validacion.correo;
       }
-      if (texto('orcid') && !/^\d{4}-\d{4}-\d{4}-\d{3}[\dXx]$/.test(texto('orcid'))) {
-        nuevos.orcid = t.formulario.validacion.orcid;
-      }
     }
 
     // El archivo se exige aquí y no al enviar: quien llega al final y se

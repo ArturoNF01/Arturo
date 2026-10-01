@@ -96,11 +96,14 @@ describe('esquema de registro', () => {
     expect(resultado.error?.issues.some((i) => i.path[0] === 'semblanza_url')).toBeFalsy();
   });
 
-  it('acepta ORCID vacío pero rechaza uno mal formado', () => {
-    expect(esquemaRegistro.safeParse(valido({ orcid: '' })).success).toBe(true);
-    expect(esquemaRegistro.safeParse(valido({ orcid: '0000-0002-1825-0097' })).success).toBe(true);
-    expect(esquemaRegistro.safeParse(valido({ orcid: '0000-0002-1825-009X' })).success).toBe(true);
-    expect(esquemaRegistro.safeParse(valido({ orcid: '1234' })).success).toBe(false);
+  it('ya no juzga el formato del ORCID, porque ya no se pide', () => {
+    // El campo salió del formulario. Dejar la regla sólo servía para que una
+    // ficha vieja con un ORCID mal escrito quedara imposible de guardar al
+    // editarla: el aviso señalaría una casilla que no está en pantalla, y no
+    // hay paso al que llevar a nadie para corregirla.
+    for (const orcid of ['', '0000-0002-1825-0097', '1234']) {
+      expect(esquemaRegistro.safeParse(valido({ orcid })).success, orcid).toBe(true);
+    }
   });
 
   it('respeta el límite de resumen del formulario original', () => {
@@ -109,18 +112,20 @@ describe('esquema de registro', () => {
     ).toBe(false);
   });
 
-  it('rechaza una salida de hotel anterior a la entrada', () => {
+  it('tampoco el orden de las fechas de hotel, por lo mismo', () => {
+    // La regla sigue escrita y atada al paso de alojamiento, que hoy no ve
+    // nadie. Si el hospedaje vuelve a preguntarse, vuelve a aplicarse sola.
     const resultado = esquemaRegistro.safeParse(
       valido({
         perfil: 'ponente', modalidad: 'presencial',
+        titulo_ponencia: 'Pensiones y cuidados',
         semblanza_url: 'https://drive.google.com/file/d/x/view', autoriza_grabacion: true,
         requiere_alojamiento: true,
         fecha_entrada_hotel: '2026-11-12',
         fecha_salida_hotel: '2026-11-10',
       }),
     );
-    expect(resultado.success).toBe(false);
-    expect(resultado.error?.issues.some((i) => i.path[0] === 'fecha_salida_hotel')).toBe(true);
+    expect(resultado.success).toBe(true);
   });
 
   it('descarta los campos auxiliares de la interfaz que no pertenecen a la base', () => {
