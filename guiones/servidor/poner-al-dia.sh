@@ -6,6 +6,7 @@
 #
 #   sudo bash poner-al-dia.sh                    # código y datos
 #   sudo bash poner-al-dia.sh --demostracion     # además, 100 registros
+#   sudo bash poner-al-dia.sh --rehacer          # y reescribe la hoja entera
 #
 # Para conectar Google, deje el archivo de llave en /tmp/llave.json antes
 # de ejecutar; si no está, ese paso se salta sin ruido.
@@ -40,7 +41,15 @@ morir() { printf '\n\033[31mAlto en «%s». No se siguió adelante.\033[0m\n' "$
 cd /
 
 demostracion=no
-[ "${1:-}" = "--demostracion" ] && demostracion=sí
+rehacer=no
+# Las banderas pueden venir en cualquier orden, y el guion se recarga a sí
+# mismo pasándoselas enteras: por eso se recorren, en vez de mirar sólo $1.
+for argumento in "$@"; do
+  case "$argumento" in
+    --demostracion) demostracion=sí ;;
+    --rehacer)      rehacer=sí ;;
+  esac
+done
 
 entorno() { sudo -u "$USUARIO" env $(grep '^DATABASE_URL=' "$RAIZ/.env") "$@"; }
 
@@ -117,7 +126,15 @@ elif ! grep -q '^GOOGLE_PRIVATE_KEY=' "$RAIZ/.env"; then
   aviso "Se salta: Google no está conectado todavía."
 else
   cd "$RAIZ"
-  entorno npm run sincronizar || fallo_copia=sí
+  if [ "$rehacer" = "sí" ]; then
+    # Vacía la hoja y la escribe entera. Hace falta cuando una versión cambia
+    # las columnas del libro: lo que ya estaba escrito quedó con las de
+    # antes, y añadir filas nuevas debajo las dejaría desplazadas.
+    aviso "Se reescribe la hoja entera, porque se pidió --rehacer."
+    entorno npm run sincronizar -- --rehacer || fallo_copia=sí
+  else
+    entorno npm run sincronizar || fallo_copia=sí
+  fi
 fi
 
 # ---------------------------------------------------------------------
@@ -145,6 +162,10 @@ if [ "$fallo_copia" = "sí" ]; then
   aviso "Para reintentar sólo esto: cd $RAIZ && sudo -u $USUARIO npm run sincronizar"
 elif [ "$pendientes" = "0" ]; then
   aviso "La hoja está al día."
+  if [ "$rehacer" = "no" ]; then
+    aviso "Si esta versión cambió las columnas del libro, reescríbalo entero:"
+    aviso "  sudo bash ${ORIGEN:-$RAIZ/guiones/servidor/poner-al-dia.sh} --rehacer"
+  fi
 fi
 aviso "El sitio: https://congreso-dss.ciess.org"
 printf '\n'
