@@ -32,7 +32,8 @@ function recortarArco(p0, q, p2, desdeInicio, antesDelFin) {
   return [ini, qb, fin];
 }
 
-export function portada() {
+/** Geometría común del mapa de portada (contornos y proyección). */
+function geografia() {
   const W = ANCHO_FOTO, H = ALTO_FOTO;
   const topo = leer("datos/geo/colombia-departamentos.topo.json");
   const sinIslas = (g) => !String(g.properties.clave).includes("San Andr");
@@ -44,12 +45,28 @@ export function portada() {
     .fitExtent([[58, 26], [252, H - 22]], { type: "FeatureCollection", features: deptos });
   proy.clipExtent([[0, 0], [W, H]]);
   const camino = d3.geoPath(proy);
+  return { W, H, proy, camino, paises: [venezuela, colombia] };
+}
+
+/**
+ * Máscara de los dos países (blanco sobre negro): con ella guiones/fotos_portada.py
+ * hace en la foto el relleno de cristal esmerilado (desenfoque, aclarado y brillo).
+ */
+export function portadaMascara() {
+  const { W, H, camino, paises } = geografia();
+  const p = [`<rect width="${W}" height="${H}" fill="#000"/>`];
+  for (const pais of paises) p.push(`<path d="${camino(pais)}" fill="#fff"/>`);
+  return documento(W, H, p.join("\n"), { titulo: "Máscara del mapa de portada" });
+}
+
+export function portada() {
+  const { W, H, proy, camino, paises } = geografia();
   const B = "#ffffff";
   const p = [];
 
-  // Los dos países, con el mismo trazo
-  for (const pais of [venezuela, colombia]) {
-    p.push(`<path d="${camino(pais)}" fill="${B}" fill-opacity="0.06" stroke="${B}" stroke-width="1" stroke-linejoin="round"/>`);
+  // Los dos países: solo el contorno; el cristal está en la foto (ver portadaMascara)
+  for (const pais of paises) {
+    p.push(`<path d="${camino(pais)}" fill="none" stroke="${B}" stroke-width="1" stroke-linejoin="round"/>`);
   }
 
   // Ruta de cruce: arco punteado que se detiene antes de los extremos

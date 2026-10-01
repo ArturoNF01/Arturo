@@ -3,7 +3,7 @@
 import { datos, guardar } from "./lib.mjs";
 import * as G from "./graficas.mjs";
 import * as M from "./mapas.mjs";
-import { portada } from "./portada.mjs";
+import { portada, portadaMascara } from "./portada.mjs";
 
 const FIGURAS = {
   "mapa-1": M.mapa1,
@@ -19,6 +19,7 @@ const FIGURAS = {
   "grafica-8": G.grafica8,
   "grafica-9": G.grafica9,
   "portada-mapa": portada,
+  "portada-mascara": portadaMascara,
 };
 
 const D = datos();

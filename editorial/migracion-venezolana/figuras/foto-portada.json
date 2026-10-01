@@ -1,7 +1,10 @@
 {
   "_nota": "Fotografía de la portada (insumos/, no se versiona). 'foco' = punto [x, y] de la foto (0-1) que queda al centro del recorte; 'zoom' > 1 acerca. Tratamiento 'gris' (negro/blanco = niveles de salida; sombra_superior = oscurecimiento arriba, hasta alto_sombra de la altura) o 'azul' (virado en las tintas del libro).",
   "archivo": "insumos/fotos/portada.png",
-  "foco": [0.518, 0.5],
+  "foco": [
+    0.518,
+    0.5
+  ],
   "zoom": 1.0,
   "ancho": 368.5,
   "alto": 352,
@@ -11,6 +14,26 @@
   "blanco": 180,
   "sombra_superior": 0.62,
   "alto_sombra": 0.5,
+  "cristal": {
+    "_nota": "Relleno de cristal esmerilado del mapa. Medidas en pt; tinte_opacidad, blanco, brillo, borde_luz y sombra son opacidades (0-1).",
+    "mascara": "figuras/svg/portada-mascara.svg",
+    "desenfoque": 2.0,
+    "blanco": 0.06,
+    "brillo": [
+      0.22,
+      0.0
+    ],
+    "borde": 2.0,
+    "borde_luz": 0.5,
+    "sombra": 0.5,
+    "sombra_desenfoque": 4,
+    "sombra_desplazamiento": [
+      1.2,
+      2.0
+    ],
+    "tinte": "#1e6ea6",
+    "tinte_opacidad": 0.5
+  },
   "tema": "Personas migrantes con equipaje por un camino de terracería (imagen generada con IA por diseño; letrero limpiado y ampliada a 300 ppp)",
   "busqueda": ""
 }

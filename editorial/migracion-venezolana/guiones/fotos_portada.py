@@ -6,13 +6,19 @@ densa arriba para que se lean el mapa y los nombres. Tratamiento "azul": virado
 en tres tintas del libro. Si todavía no hay foto, se genera un fondo provisional
 con una nota con la foto que falta.
 
+Cristal: con la máscara del mapa (figuras/svg/portada-mascara.svg) el interior de
+los países se vuelve «cristal esmerilado»: la foto desenfocada, teñida y aclarada, con un
+brillo en diagonal, un borde interior luminoso y una sombra suave por fuera que
+despega el mapa del fondo. Los contornos nítidos van encima, en vector.
+
 Uso: python guiones/fotos_portada.py   (construir.py lo llama solo)
 """
 import json
 import math
 import pathlib
 
-from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageOps
+import pymupdf
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 CONFIG = RAIZ / "figuras" / "foto-portada.json"
@@ -59,6 +65,52 @@ def gris(img, cfg):
     return Image.merge("RGB", [img, img, img])
 
 
+def mascara(ruta_svg, tamano):
+    """Rasteriza la máscara SVG (blanco = dentro del mapa) al tamaño de la foto."""
+    pagina = pymupdf.open(ruta_svg)[0]
+    zoom = pymupdf.Matrix(tamano[0] / pagina.rect.width, tamano[1] / pagina.rect.height)
+    pm = pagina.get_pixmap(matrix=zoom, alpha=False, colorspace=pymupdf.csGRAY)
+    return Image.frombytes("L", (pm.width, pm.height), pm.samples).resize(tamano)
+
+
+def cristal(img, cfg, escala):
+    """Relleno de cristal esmerilado dentro de la máscara del mapa."""
+    c = cfg["cristal"]
+    ruta = RAIZ / c["mascara"]
+    if not ruta.exists():
+        return img
+    m = mascara(ruta, img.size)
+    pt = lambda v: max(1, round(v * escala))  # noqa: E731
+    # 1. Sombra suave por fuera, desplazada hacia abajo a la derecha
+    dx, dy = c.get("sombra_desplazamiento", [1.2, 2.0])
+    sombra = Image.new("L", img.size, 0)
+    sombra.paste(m, (pt(dx), pt(dy)))
+    sombra = sombra.filter(ImageFilter.GaussianBlur(pt(c.get("sombra_desenfoque", 4))))
+    sombra = sombra.point(lambda v: round(v * c.get("sombra", 0.45)))
+    con_sombra = Image.composite(Image.new("RGB", img.size, "black"), img, sombra)
+    # 2. Interior: la foto desenfocada y aclarada
+    vidrio = img.filter(ImageFilter.GaussianBlur(pt(c.get("desenfoque", 3))))
+    vidrio = Image.blend(vidrio, Image.new("RGB", img.size, c.get("tinte", "#ffffff")), c.get("tinte_opacidad", 0.0))
+    vidrio = Image.blend(vidrio, Image.new("RGB", img.size, "white"), c.get("blanco", 0.22))
+    # 3. Brillo en diagonal (más luz arriba a la izquierda)
+    b0, b1 = c.get("brillo", [0.28, 0.04])
+    w, h = img.size
+    chico = Image.new("L", (64, 64))
+    for y in range(64):
+        for x in range(64):
+            t = min(1.0, (x / 63 * w + y / 63 * h) / (w + h) * 1.25)
+            chico.putpixel((x, y), round(255 * (b0 + (b1 - b0) * t)))
+    vidrio = Image.composite(Image.new("RGB", img.size, "white"), vidrio, chico.resize(img.size, Image.BICUBIC))
+    # 4. Borde interior luminoso (bisel)
+    ancho_borde = pt(c.get("borde", 2.2))
+    interior = m.filter(ImageFilter.MinFilter(ancho_borde * 2 + 1))
+    borde = ImageChops.subtract(m, interior).filter(ImageFilter.GaussianBlur(ancho_borde / 1.5))
+    borde = borde.point(lambda v: round(v * c.get("borde_luz", 0.5)))
+    vidrio = Image.composite(Image.new("RGB", img.size, "white"), vidrio, borde)
+    # 5. Vidrio dentro de la máscara (borde apenas suavizado), sombra fuera
+    return Image.composite(vidrio, con_sombra, m.filter(ImageFilter.GaussianBlur(0.6)))
+
+
 def recortar(foto, ancho, alto, foco, zoom):
     """Recorta la foto a la proporción de la caja, centrada en `foco`."""
     w, h = foto.size
@@ -98,6 +150,8 @@ def componer():
         foto = ImageOps.autocontrast(foto, cutoff=0.5)
         foto = recortar(foto, ancho, alto, cfg["foco"], cfg.get("zoom", 1.0))
         img = gris(foto, cfg) if cfg.get("tratamiento") == "gris" else virar(foto)
+        if cfg.get("cristal"):
+            img = cristal(img, cfg, escala)
         falta = None
     else:
         img, falta = provisional(ancho, alto, escala, cfg["tema"].split(";")[0]), cfg["archivo"]
