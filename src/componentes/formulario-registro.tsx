@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from './proveedores';
 import {
-  CampoCasillas, CampoInterruptor, CampoOpcionUnica, CampoParrafo,
+  CampoCasillas, CampoInterruptor, CampoOpcionUnica,
   CampoSeleccion, CampoTexto,
 } from './campos';
 import { SubidaArchivo } from './subida-archivo';
@@ -34,7 +34,11 @@ const VALORES_INICIALES: Valores = {
   requerimientos_tecnicos: [], requerimientos_accesibilidad: '',
   placa_vehiculo: '', modelo_vehiculo: '', color_vehiculo: '',
   requiere_alojamiento: false, fecha_entrada_hotel: '', fecha_salida_hotel: '',
-  requiere_traslado: 'no', _alojamiento: '', medio_arribo: '', ciudad_origen: '', terminal_origen: '',
+  // Vacío, no 'no': estos campos ya no se preguntan, y un valor por defecto
+  // los deja guardados como si alguien los hubiera contestado. Siguen en la
+  // lista para que al editar un registro viejo sus respuestas vuelvan tal
+  // cual, en vez de borrarse al guardar.
+  requiere_traslado: '', _alojamiento: '', medio_arribo: '', ciudad_origen: '', terminal_origen: '',
   fecha_llegada: '', hora_llegada: '', aerolinea_llegada: '', vuelo_llegada: '',
   fecha_salida: '', hora_salida: '', aerolinea_salida: '', vuelo_salida: '',
   observaciones_traslado: '',
@@ -68,7 +72,7 @@ export function FormularioRegistro({
       inicial[clave] = Array.isArray(inicial[clave]) ? (v as string[]) ?? [] : (v as string | boolean);
     }
     inicial.consentimiento_datos = true;
-    inicial._alojamiento = registroExistente.requiere_alojamiento ? 'si' : 'no';
+    inicial._alojamiento = registroExistente.requiere_alojamiento ? 'si' : '';
     return inicial;
   });
   const [errores, setErrores] = useState<Record<string, string>>({});
@@ -105,11 +109,6 @@ export function FormularioRegistro({
   const texto = (clave: string) => (valores[clave] as string) ?? '';
   const lista = (clave: string) => (valores[clave] as string[]) ?? [];
   const visible = (clave: string) => campoVisible(clave, perfil, modalidad);
-
-  // Quien reside fuera de México necesita otra documentación. El dato se
-  // tomó en identificación; aquí sólo se lee.
-  const esExtranjero = texto('procedencia') === 'internacional';
-  const pidio = (opcion: string) => lista('documentacion_solicitada').includes(opcion);
 
   function validarPaso(paso: PasoFormulario): boolean {
     const nuevos: Record<string, string> = {};
@@ -331,20 +330,8 @@ export function FormularioRegistro({
               <CampoOpcionUnica etiqueta={t.formulario.campos.procedencia} ayuda={t.formulario.campos.procedenciaAyuda} opciones={opciones('procedencia', t)} valor={texto('procedencia')} onChange={(v) => fijar('procedencia', v)} />
             )}
             {visible('pais_residencia') && (
-              <div className="grid gap-5 sm:grid-cols-3">
-                <CampoTexto campo="pais_residencia" etiqueta={t.formulario.campos.pais} requerido valor={texto('pais_residencia')} onChange={(v) => fijar('pais_residencia', v)} error={errores.pais_residencia} />
-                <CampoTexto campo="entidad_federativa" etiqueta={t.formulario.campos.entidad} ayuda={t.formulario.campos.entidadAyuda} valor={texto('entidad_federativa')} onChange={(v) => fijar('entidad_federativa', v)} />
-                <CampoTexto campo="ciudad_residencia" etiqueta={t.formulario.campos.ciudad} valor={texto('ciudad_residencia')} onChange={(v) => fijar('ciudad_residencia', v)} />
-              </div>
+              <CampoTexto campo="pais_residencia" etiqueta={t.formulario.campos.pais} requerido valor={texto('pais_residencia')} onChange={(v) => fijar('pais_residencia', v)} error={errores.pais_residencia} />
             )}
-            <div className="grid gap-5 sm:grid-cols-2">
-              {visible('nacionalidad') && (
-                <CampoTexto campo="nacionalidad" etiqueta={t.formulario.campos.nacionalidad} ayuda={t.formulario.campos.nacionalidadAyuda} valor={texto('nacionalidad')} onChange={(v) => fijar('nacionalidad', v)} />
-              )}
-              {visible('orcid') && (
-                <CampoTexto campo="orcid" etiqueta={t.formulario.campos.orcid} ayuda={t.formulario.campos.orcidAyuda} marcador="0000-0000-0000-0000" valor={texto('orcid')} onChange={(v) => fijar('orcid', v)} error={errores.orcid} />
-              )}
-            </div>
           </section>
         )}
 
@@ -355,8 +342,6 @@ export function FormularioRegistro({
             <Cabecera titulo={t.formulario.secciones.ponencia} ayuda={t.formulario.secciones.ponenciaAyuda} />
             <CampoTexto campo="titulo_ponencia" etiqueta={t.formulario.campos.tituloPonencia} ayuda={t.formulario.campos.tituloPonenciaAyuda} requerido valor={texto('titulo_ponencia')} onChange={(v) => fijar('titulo_ponencia', v)} error={errores.titulo_ponencia} />
             <CampoOpcionUnica etiqueta={t.formulario.campos.idiomaPonencia} ayuda={t.formulario.campos.idiomaPonenciaAyuda} opciones={[{ valor: 'es', etiqueta: 'Español' }, { valor: 'pt', etiqueta: 'Português' }, { valor: 'en', etiqueta: 'English' }]} valor={texto('idioma_ponencia')} onChange={(v) => fijar('idioma_ponencia', v)} columnas={2} />
-            <CampoParrafo campo="coautoria" etiqueta={t.formulario.campos.coautoria} ayuda={t.formulario.campos.coautoriaAyuda} filas={3} valor={texto('coautoria')} onChange={(v) => fijar('coautoria', v)} />
-            <CampoInterruptor etiqueta={t.formulario.campos.autorizaPublicacion} valor={Boolean(valores.autoriza_publicacion)} onChange={(v) => fijar('autoriza_publicacion', v)} />
           </section>
         )}
 
@@ -417,45 +402,6 @@ export function FormularioRegistro({
           </section>
         )}
 
-        {pasoActual === 'documentacion' && (
-          <section className="space-y-5">
-            <Cabecera titulo={t.formulario.secciones.documentacion} ayuda={t.formulario.secciones.documentacionAyuda} />
-            {/* Lo que se puede pedir depende de dónde resida: una carta para
-                la visa mexicana no le sirve a quien ya vive en México. El
-                dato se tomó en la sección de identificación. */}
-            <CampoCasillas
-              etiqueta={t.formulario.campos.documentacionSolicitada}
-              opciones={opciones(esExtranjero ? 'documentacionExtranjero' : 'documentacionNacional', t)}
-              valores={lista('documentacion_solicitada')}
-              onChange={(v) => fijar('documentacion_solicitada', v)}
-            />
-
-            {pidio('carta_visa') && (
-              <CampoTexto campo="nombre_pasaporte" etiqueta={t.formulario.campos.nombrePasaporte} ayuda={t.formulario.campos.nombrePasaporteAyuda} valor={texto('nombre_pasaporte')} onChange={(v) => fijar('nombre_pasaporte', v)} />
-            )}
-
-            {pidio('boleto_vuelo') && (
-              <SubidaArchivo
-                destino="boleto"
-                etiqueta={t.formulario.campos.boletoVuelo}
-                ayuda={interpolar(t.formulario.campos.boletoVueloAyuda, { mb: congreso.foto_megabytes_maximo })}
-                megabytesMaximo={congreso.foto_megabytes_maximo}
-                valorUrl={texto('boleto_url')}
-                onSubida={(url, id) => { fijar('boleto_url', url); fijar('boleto_drive_id', id); }}
-                onQuitar={() => { fijar('boleto_url', ''); fijar('boleto_drive_id', ''); }}
-              />
-            )}
-
-            {pidio('oficio_institucion') && (
-              <CampoParrafo campo="destinatario_oficio" etiqueta={t.formulario.campos.destinatarioOficio} ayuda={t.formulario.campos.destinatarioOficioAyuda} filas={3} valor={texto('destinatario_oficio')} onChange={(v) => fijar('destinatario_oficio', v)} />
-            )}
-
-            {pidio('otra') && (
-              <CampoTexto campo="documentacion_otra" etiqueta={t.formulario.campos.documentacionOtra} valor={texto('documentacion_otra')} onChange={(v) => fijar('documentacion_otra', v)} />
-            )}
-          </section>
-        )}
-
         {pasoActual === 'sala' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.sala} />
@@ -470,57 +416,20 @@ export function FormularioRegistro({
           </section>
         )}
 
-        {pasoActual === 'alojamiento' && (
-          <section className="space-y-5">
-            <Cabecera titulo={t.formulario.secciones.alojamiento} ayuda={t.formulario.secciones.alojamientoAyuda} />
-            <CampoOpcionUnica
-              etiqueta={t.formulario.campos.requiereAlojamiento}
-              opciones={opciones('alojamiento', t)}
-              valor={texto('_alojamiento')}
-              onChange={(v) => {
-                fijar('_alojamiento', v);
-                fijar('requiere_alojamiento', v === 'si');
-              }}
-            />
-            {valores.requiere_alojamiento && (
-              <div className="grid gap-5 sm:grid-cols-2">
-                <CampoTexto campo="fecha_entrada_hotel" etiqueta={t.formulario.campos.fechaEntradaHotel} tipo="date" valor={texto('fecha_entrada_hotel')} onChange={(v) => fijar('fecha_entrada_hotel', v)} />
-                <CampoTexto campo="fecha_salida_hotel" etiqueta={t.formulario.campos.fechaSalidaHotel} tipo="date" valor={texto('fecha_salida_hotel')} onChange={(v) => fijar('fecha_salida_hotel', v)} error={errores.fecha_salida_hotel} />
-              </div>
-            )}
-          </section>
-        )}
-
         {pasoActual === 'traslados' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.traslados} ayuda={t.formulario.secciones.trasladosAyuda} />
-            {/* La recepción en el aeropuerto es un servicio acotado; los datos
-                del viaje se le piden a todo el que viene. Antes estaban
-                escondidos detrás de esta pregunta, así que quien contestaba
-                «no» no dejaba ni la fecha de llegada. */}
-            {visible('requiere_traslado') && (
-              <CampoOpcionUnica etiqueta={t.formulario.campos.requiereTraslado} opciones={opciones('traslado', t)} valor={texto('requiere_traslado')} onChange={(v) => fijar('requiere_traslado', v)} columnas={2} />
-            )}
-            <>
-                <CampoOpcionUnica etiqueta={t.formulario.campos.medioArribo} ayuda={t.formulario.campos.medioArriboAyuda} opciones={opciones('medioArribo', t)} valor={texto('medio_arribo')} onChange={(v) => fijar('medio_arribo', v)} />
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <CampoTexto campo="ciudad_origen" etiqueta={t.formulario.campos.ciudadOrigen} valor={texto('ciudad_origen')} onChange={(v) => fijar('ciudad_origen', v)} />
-                  <CampoTexto campo="terminal_origen" etiqueta={t.formulario.campos.terminalOrigen} valor={texto('terminal_origen')} onChange={(v) => fijar('terminal_origen', v)} />
-                </div>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <CampoTexto campo="fecha_llegada" etiqueta={t.formulario.campos.fechaLlegada} tipo="date" valor={texto('fecha_llegada')} onChange={(v) => fijar('fecha_llegada', v)} />
-                  <CampoTexto campo="hora_llegada" etiqueta={t.formulario.campos.horaLlegada} tipo="time" valor={texto('hora_llegada')} onChange={(v) => fijar('hora_llegada', v)} />
-                  <CampoTexto campo="aerolinea_llegada" etiqueta={t.formulario.campos.aerolineaLlegada} valor={texto('aerolinea_llegada')} onChange={(v) => fijar('aerolinea_llegada', v)} />
-                  <CampoTexto campo="vuelo_llegada" etiqueta={t.formulario.campos.vueloLlegada} valor={texto('vuelo_llegada')} onChange={(v) => fijar('vuelo_llegada', v)} />
-                </div>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <CampoTexto campo="fecha_salida" etiqueta={t.formulario.campos.fechaSalida} tipo="date" valor={texto('fecha_salida')} onChange={(v) => fijar('fecha_salida', v)} />
-                  <CampoTexto campo="hora_salida" etiqueta={t.formulario.campos.horaSalida} tipo="time" valor={texto('hora_salida')} onChange={(v) => fijar('hora_salida', v)} />
-                  <CampoTexto campo="aerolinea_salida" etiqueta={t.formulario.campos.aerolineaSalida} valor={texto('aerolinea_salida')} onChange={(v) => fijar('aerolinea_salida', v)} />
-                  <CampoTexto campo="vuelo_salida" etiqueta={t.formulario.campos.vueloSalida} valor={texto('vuelo_salida')} onChange={(v) => fijar('vuelo_salida', v)} />
-                </div>
-                <CampoParrafo campo="observaciones_traslado" etiqueta={t.formulario.campos.observacionesTraslado} ayuda={t.formulario.campos.observacionesTrasladoAyuda} filas={3} valor={texto('observaciones_traslado')} onChange={(v) => fijar('observaciones_traslado', v)} />
-            </>
+            {/* Tres campos: de dónde viene y qué días está. Con eso el comité
+                sabe cuánta gente hay en la sede cada día, que es lo único que
+                necesita de quien viene al público. La hora del vuelo, la
+                aerolínea y el número de corrida sólo hacían falta cuando la
+                organización iba a recogerle al aeropuerto, y ese servicio no
+                se le ofrece. */}
+            <CampoTexto campo="ciudad_origen" etiqueta={t.formulario.campos.ciudadOrigen} valor={texto('ciudad_origen')} onChange={(v) => fijar('ciudad_origen', v)} />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <CampoTexto campo="fecha_llegada" etiqueta={t.formulario.campos.fechaLlegada} tipo="date" valor={texto('fecha_llegada')} onChange={(v) => fijar('fecha_llegada', v)} />
+              <CampoTexto campo="fecha_salida" etiqueta={t.formulario.campos.fechaSalida} tipo="date" valor={texto('fecha_salida')} onChange={(v) => fijar('fecha_salida', v)} />
+            </div>
           </section>
         )}
 

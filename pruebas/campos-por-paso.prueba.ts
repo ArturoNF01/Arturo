@@ -33,6 +33,22 @@ describe('a qué paso pertenece cada campo', () => {
     'requerimientos_accesibilidad', 'regimen_alimentario', 'condicion_alimentaria',
     'condicion_alimentaria_detalle', 'contacto_emergencia', 'apoyo_traslado',
     'datos_viatico', 'requiere_factura', 'datos_facturacion', 'comentarios',
+
+    // Y del último recorte, el que dejó el registro en lo mínimo. De la
+    // identificación se fueron la entidad, la ciudad, la nacionalidad y el
+    // ORCID; de la ponencia, la coautoría y el permiso de publicación; y
+    // enteras, la documentación de invitación —la tramita el comité, no se
+    // pide por formulario—, el alojamiento, y todo lo que hacía falta sólo
+    // para ir a recoger a alguien al aeropuerto. De quien viene a escuchar
+    // quedan tres: de dónde llega y qué días está.
+    'entidad_federativa', 'ciudad_residencia', 'nacionalidad', 'orcid',
+    'autoriza_publicacion', 'coautoria',
+    'documentacion_solicitada', 'nombre_pasaporte', 'destinatario_oficio',
+    'documentacion_otra', 'boleto_url',
+    'requiere_alojamiento', 'fecha_entrada_hotel', 'fecha_salida_hotel',
+    'requiere_traslado', 'medio_arribo', 'terminal_origen',
+    'hora_llegada', 'aerolinea_llegada', 'vuelo_llegada',
+    'hora_salida', 'aerolinea_salida', 'vuelo_salida', 'observaciones_traslado',
   ]);
 
   it('todo campo que el servidor puede rechazar sabe en qué paso está', () => {

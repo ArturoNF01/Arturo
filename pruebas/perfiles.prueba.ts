@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CLAVES_PERFIL, PERFILES, campoVisible, nombrePerfil, pasosVisibles, perfilPorClave,
+  CLAVES_PERFIL, PASO_DE_CAMPO, PERFILES, campoVisible, nombrePerfil, pasosVisibles,
+  perfilPorClave,
 } from '@/lib/perfiles';
 
 describe('pasos del formulario según el perfil', () => {
@@ -13,14 +14,14 @@ describe('pasos del formulario según el perfil', () => {
 
   it('al público general no se le preguntan requerimientos de sala', () => {
     // Proyector y micrófono son de quien expone, no de quien viene a
-    // escuchar. La documentación de invitación, tampoco: no viene invitado.
+    // escuchar. La documentación de invitación, tampoco: la tramita el
+    // comité, no se pide por formulario.
     const pasos = pasosVisibles(perfilPorClave('publico_general'), 'presencial');
     expect(pasos).not.toContain('sala');
     expect(pasos).not.toContain('documentacion');
     expect(pasos).not.toContain('semblanza');
-    // Hospedaje y viaje sí: quien pisa la sede cuenta para la logística,
-    // venga invitado o por su cuenta.
-    expect(pasos).toContain('alojamiento');
+    // Llegada y salida sí: de quien viene a escuchar el comité no sabe nada,
+    // y necesita contar cuánta gente hay en la sede cada día.
     expect(pasos).toContain('traslados');
   });
 
@@ -29,26 +30,35 @@ describe('pasos del formulario según el perfil', () => {
   });
 
   it('un ponente presencial recorre todas las secciones que le tocan', () => {
-    // Sin traslados: ese servicio es sólo para quien da una conferencia.
+    // Seis pantallas: su ponencia, su semblanza y lo que necesita en sala.
+    // Su estancia la arma el comité con esa persona, por correo.
     expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).toEqual([
-      'perfil', 'identificacion', 'ponencia', 'semblanza', 'documentacion',
-      'sala', 'alojamiento', 'traslados', 'privacidad',
+      'perfil', 'identificacion', 'ponencia', 'semblanza', 'sala', 'privacidad',
     ]);
   });
 
-  it('a quien viene en persona se le pide viaje y hospedaje, exponga o no', () => {
-    for (const clave of CLAVES_PERFIL) {
-      const pasos = pasosVisibles(perfilPorClave(clave), 'presencial');
-      expect(pasos, clave).toContain('alojamiento');
-      expect(pasos, clave).toContain('traslados');
-    }
+  it('el público general presencial deja de dónde viene y qué días está', () => {
+    expect(pasosVisibles(perfilPorClave('publico_general'), 'presencial')).toEqual([
+      'perfil', 'identificacion', 'traslados', 'privacidad',
+    ]);
   });
 
-  it('la recepción en el aeropuerto sólo se le ofrece a quien sube al programa', () => {
-    // Los datos del vuelo se piden a todos; el servicio, no. Preguntarle al
-    // público si lo quiere sería ofrecérselo.
-    expect(campoVisible('requiere_traslado', perfilPorClave('ponente'), 'presencial')).toBe(true);
-    expect(campoVisible('requiere_traslado', perfilPorClave('publico_general'), 'presencial')).toBe(false);
+  it('las fechas de viaje se le piden a quien escucha, no a quien expone', () => {
+    // Al revés de lo que parece: la estancia de quien sube al programa la
+    // arma el comité con esa persona, una por una. Preguntárselo en el
+    // formulario era pedirle dos veces lo mismo.
+    expect(pasosVisibles(perfilPorClave('publico_general'), 'presencial')).toContain('traslados');
+    expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).not.toContain('traslados');
+  });
+
+  it('ni el hospedaje ni la documentación de invitación se preguntan ya', () => {
+    for (const clave of CLAVES_PERFIL) {
+      for (const modalidad of ['presencial', 'en_linea'] as const) {
+        const pasos = pasosVisibles(perfilPorClave(clave), modalidad);
+        expect(pasos, `${clave}/${modalidad}`).not.toContain('alojamiento');
+        expect(pasos, `${clave}/${modalidad}`).not.toContain('documentacion');
+      }
+    }
   });
 
   it('estacionamiento y cierre ya no se preguntan a nadie', () => {
@@ -130,9 +140,13 @@ describe('visibilidad de campos', () => {
     expect(campoVisible('foto', perfilPorClave('publico_general'), 'presencial')).toBe(false);
   });
 
-  it('el ORCID se pide a quien presenta, no al público', () => {
-    expect(campoVisible('orcid', perfilPorClave('ponente'), 'presencial')).toBe(true);
-    expect(campoVisible('orcid', perfilPorClave('publico_general'), 'presencial')).toBe(false);
+  it('la identificación se quedó en lo que de verdad hace falta', () => {
+    // Entidad, ciudad, nacionalidad y ORCID salieron del formulario: el
+    // mapa de campos a pasos es lo que decide si una casilla existe, y
+    // ninguna de las cuatro está ya en él.
+    for (const campo of ['entidad_federativa', 'ciudad_residencia', 'nacionalidad', 'orcid']) {
+      expect(PASO_DE_CAMPO[campo], campo).toBeUndefined();
+    }
   });
 
   it('la autorización de grabación se pide a todo el que sale en el programa', () => {

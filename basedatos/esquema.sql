@@ -189,7 +189,10 @@ create table if not exists registros (
   fecha_salida_hotel          date,
 
   -- 6. Traslados
-  requiere_traslado           text default 'No',
+  -- Sin valor por defecto a propósito: la pregunta se retiró del formulario
+  -- y un 'No' puesto por la base se lee en la ficha como si alguien lo
+  -- hubiera contestado.
+  requiere_traslado           text,
   medio_arribo                text,
   ciudad_origen               text,
   terminal_origen             text,

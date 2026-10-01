@@ -297,6 +297,14 @@ begin
   return new;
 end $$;
 
+-- El valor por defecto de «¿requiere recepción y traslado?» era 'No'. Esa
+-- pregunta se retiró del formulario, así que ese 'No' ya no es la respuesta
+-- de nadie: es la base rellenando un hueco. En la ficha del registro salía
+-- como un dato contestado, y en el libro de seguimiento contaba como una
+-- persona que dijo que no quería un servicio que nunca se le ofreció.
+-- Quitarlo deja el campo en nulo, que es lo que de verdad hay.
+alter table registros alter column requiere_traslado drop default;
+
 commit;
 
 select clave, valor from configuracion

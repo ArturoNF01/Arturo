@@ -83,7 +83,6 @@ export function ResumenRegistro({
       ],
     },
     {
-      paso: 'documentacion',
       titulo: t.formulario.secciones.documentacion,
       filas: [
         // Sin `grupo`: las dos listas de documentación tienen etiquetas
@@ -112,7 +111,6 @@ export function ResumenRegistro({
       ],
     },
     {
-      paso: 'alojamiento',
       titulo: t.formulario.secciones.alojamiento,
       filas: [
         { clave: 'fecha_entrada_hotel', etiqueta: c.fechaEntradaHotel },
@@ -120,18 +118,21 @@ export function ResumenRegistro({
       ],
     },
     {
-      paso: 'traslados',
+      // Sin `paso`, aunque «Llegada y salida» siga preguntándose: de los
+      // trece campos que tuvo quedan tres, y los otros diez sólo existen en
+      // fichas de antes. Atarla al paso los habría escondido justo en los
+      // registros que los traen.
       titulo: t.formulario.secciones.traslados,
       filas: [
+        { clave: 'ciudad_origen', etiqueta: c.ciudadOrigen },
+        { clave: 'fecha_llegada', etiqueta: c.fechaLlegada },
+        { clave: 'fecha_salida', etiqueta: c.fechaSalida },
         { clave: 'requiere_traslado', etiqueta: c.requiereTraslado, grupo: 'traslado' },
         { clave: 'medio_arribo', etiqueta: c.medioArribo, grupo: 'medioArribo' },
-        { clave: 'ciudad_origen', etiqueta: c.ciudadOrigen },
         { clave: 'terminal_origen', etiqueta: c.terminalOrigen },
-        { clave: 'fecha_llegada', etiqueta: c.fechaLlegada },
         { clave: 'hora_llegada', etiqueta: c.horaLlegada },
         { clave: 'aerolinea_llegada', etiqueta: c.aerolineaLlegada },
         { clave: 'vuelo_llegada', etiqueta: c.vueloLlegada },
-        { clave: 'fecha_salida', etiqueta: c.fechaSalida },
         { clave: 'hora_salida', etiqueta: c.horaSalida },
         { clave: 'aerolinea_salida', etiqueta: c.aerolineaSalida },
         { clave: 'vuelo_salida', etiqueta: c.vueloSalida },
@@ -164,6 +165,24 @@ export function ResumenRegistro({
     if (fila.clave === 'eje_tematico') {
       const eje = ejes.find((e) => e.clave === bruto);
       return eje ? traducir(eje.nombre, idioma) : String(bruto);
+    }
+    // Una columna `date` llega como objeto Date desde el controlador de
+    // PostgreSQL, y convertirlo a texto a secas da «Mon Nov 09 2026 00:00:00
+    // GMT+0000 (Coordinated Universal Time)» en la pantalla que alguien ve
+    // justo después de registrarse. Va en hora UTC a propósito: la fecha se
+    // guardó sin hora, y leerla en otro huso la correría un día.
+    // Y por la API llega la misma fecha convertida a texto ISO, porque JSON
+    // no tiene fechas: hay que reconocer las dos formas o el panel la pinta
+    // distinto que la pantalla de confirmación.
+    const fecha = bruto instanceof Date
+      ? bruto
+      : typeof bruto === 'string' && /^\d{4}-\d{2}-\d{2}(T00:00:00(\.000)?Z?)?$/.test(bruto)
+        ? new Date(bruto.length === 10 ? `${bruto}T00:00:00Z` : bruto)
+        : null;
+    if (fecha && !Number.isNaN(fecha.getTime())) {
+      return fecha.toLocaleDateString(idioma, {
+        timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric',
+      });
     }
     if (Array.isArray(bruto)) {
       if (bruto.length === 0) return '';

@@ -51,8 +51,6 @@ export interface DefinicionPerfil {
   invitado: boolean;
   /** Su fotografía sale en el programa. Sólo a quien preside o da una charla. */
   llevaFotografia: boolean;
-  /** El CIESS le paga los traslados. Es un servicio acotado, no un trámite. */
-  recibeTraslado: boolean;
 }
 
 /**
@@ -60,8 +58,8 @@ export interface DefinicionPerfil {
  * se transmite completo. Lo que cambia entre perfiles es qué se les pregunta.
  */
 export const PERFILES: DefinicionPerfil[] = [
-  { clave: 'ponente',         enPrograma: true,  presentaPonencia: true,  invitado: true,  llevaFotografia: true,  recibeTraslado: true  },
-  { clave: 'publico_general', enPrograma: false, presentaPonencia: false, invitado: false, llevaFotografia: false, recibeTraslado: false },
+  { clave: 'ponente',         enPrograma: true,  presentaPonencia: true,  invitado: true,  llevaFotografia: true  },
+  { clave: 'publico_general', enPrograma: false, presentaPonencia: false, invitado: false, llevaFotografia: false },
 ];
 
 export function perfilPorClave(clave: string | null | undefined): DefinicionPerfil | undefined {
@@ -111,22 +109,20 @@ export function pasosVisibles(
   if (perfil.presentaPonencia) pasos.push('ponencia');
   if (perfil.enPrograma) pasos.push('semblanza');
 
-  // Nada de lo que viene debajo —sala, hotel, traslados, comida,
-  // estacionamiento— tiene sentido para quien sigue el congreso desde su
-  // casa. Y el huso horario sólo se le pregunta a quien tiene una hora
-  // asignada en el programa: el público se conecta cuando quiere, al mismo
-  // enlace que todos.
+  // El huso horario sólo se le pregunta a quien tiene una hora asignada en el
+  // programa: el público se conecta cuando quiere, al mismo enlace que todos.
   if (!presencial && perfil.clave !== 'publico_general') pasos.push('conexion');
   if (presencial) {
-    if (perfil.invitado) pasos.push('documentacion');
     // Los requerimientos de sala —proyector, micrófono— son de quien expone,
     // no de quien viene a escuchar.
     if (perfil.enPrograma) pasos.push('sala');
-    // Hospedaje y viaje se le preguntan a todo el que pisa la sede, no sólo a
-    // quien viene invitado: el comité necesita saber cuánta gente llega, de
-    // dónde y qué días, y eso no depende de quién pague el vuelo.
-    pasos.push('alojamiento');
-    pasos.push('traslados');
+    // Y al revés: las fechas de llegada y salida se le preguntan a quien
+    // viene a escuchar, no a quien sube al programa. La estancia de quien
+    // expone la arma el comité con esa persona, una por una y por correo;
+    // preguntárselo aquí era pedirle dos veces lo mismo. De quien viene al
+    // público el comité no sabe nada, y necesita saber cuánta gente hay en la
+    // sede cada día.
+    if (!perfil.enPrograma) pasos.push('traslados');
   }
 
   pasos.push('privacidad');
@@ -152,31 +148,19 @@ export function campoVisible(
   switch (campo) {
     case 'nombre_constancia':
       return true;
-    case 'orcid':
-      return perfil.presentaPonencia;
     case 'foto':
       // La fotografía sale en el programa junto a quien preside o da una
       // charla; a nadie más se le pide su retrato.
       return perfil.llevaFotografia;
-    case 'autoriza_publicacion':
-      return perfil.presentaPonencia;
     case 'autoriza_grabacion':
       // Quien aparece ante cámara o en la transmisión tiene que autorizarlo.
       return perfil.enPrograma;
     case 'prueba_conexion':
       return perfil.enPrograma && !presencial;
-    case 'nacionalidad':
     case 'procedencia':
       return perfil.invitado || presencial;
-    case 'entidad_federativa':
-      return true;
     case 'requerimientos_tecnicos':
       return perfil.enPrograma;
-    case 'requiere_traslado':
-      // Los datos del vuelo se le piden a todo el que viene; la recepción en
-      // el aeropuerto es un servicio que el CIESS presta sólo a quien sube al
-      // programa. Preguntarle a los demás si la quieren sería ofrecerla.
-      return perfil.recibeTraslado && presencial;
     default:
       return true;
   }
@@ -205,17 +189,11 @@ export const PASO_DE_CAMPO: Record<string, PasoFormulario> = {
   cargo: 'identificacion',
   procedencia: 'identificacion',
   pais_residencia: 'identificacion',
-  entidad_federativa: 'identificacion',
-  ciudad_residencia: 'identificacion',
-  nacionalidad: 'identificacion',
-  orcid: 'identificacion',
 
   titulo_ponencia: 'ponencia',
   resumen_ponencia: 'ponencia',
   idioma_ponencia: 'ponencia',
   palabras_clave: 'ponencia',
-  coautoria: 'ponencia',
-  autoriza_publicacion: 'ponencia',
 
   semblanza_url: 'semblanza',
   foto_url: 'semblanza',
@@ -225,31 +203,11 @@ export const PASO_DE_CAMPO: Record<string, PasoFormulario> = {
   zona_horaria: 'conexion',
   prueba_conexion: 'conexion',
 
-  documentacion_solicitada: 'documentacion',
-  documentacion_otra: 'documentacion',
-  nombre_pasaporte: 'documentacion',
-  destinatario_oficio: 'documentacion',
-  boleto_url: 'documentacion',
-
   requerimientos_tecnicos: 'sala',
 
-  requiere_alojamiento: 'alojamiento',
-  fecha_entrada_hotel: 'alojamiento',
-  fecha_salida_hotel: 'alojamiento',
-
-  requiere_traslado: 'traslados',
-  medio_arribo: 'traslados',
   ciudad_origen: 'traslados',
-  terminal_origen: 'traslados',
   fecha_llegada: 'traslados',
-  hora_llegada: 'traslados',
-  aerolinea_llegada: 'traslados',
-  vuelo_llegada: 'traslados',
   fecha_salida: 'traslados',
-  hora_salida: 'traslados',
-  aerolinea_salida: 'traslados',
-  vuelo_salida: 'traslados',
-  observaciones_traslado: 'traslados',
 
   consentimiento_datos: 'privacidad',
   consentimiento_comunicaciones: 'privacidad',
