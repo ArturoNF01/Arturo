@@ -351,6 +351,45 @@ table.cuadro.c1 td:not(:first-child) { padding-left: 1.2pt; padding-right: 1.2pt
 .llamada { white-space: nowrap; }
 .llamada .nota { white-space: normal; }
 
+/* ---------- Testimonios (capítulos con trabajo de campo) ----------
+   Sangrados, en cursiva y con el mismo filete azul de las notas al pie;
+   la atribución en la sans, como los pies de figura. */
+blockquote.testimonio {
+  margin: 9pt 0 11pt 14.17pt;
+  padding: 1pt 0 1pt 10pt;
+  border-left: 1.2pt solid var(--azul);
+  break-inside: avoid;
+}
+blockquote.testimonio p {
+  font-style: italic;
+  font-size: 11pt;
+  line-height: 13.5pt;
+  text-indent: 0;
+  text-align: left;
+}
+blockquote.testimonio p.atribucion {
+  font: 600 7.5pt/9pt var(--sans);
+  color: var(--azul);
+  letter-spacing: 0.02em;
+  margin-top: 3pt;
+}
+blockquote.testimonio p.atribucion::before { content: "— "; }
+blockquote + p { text-indent: 0; }
+
+/* ---------- Cuadros de texto (propuestas, matrices) ----------
+   Pueden partirse entre páginas (se repite el encabezado); la primera
+   columna agrupa por tema y los grupos alternan color. */
+figure.partible { break-inside: auto; }
+figure.partible .titulo { break-after: avoid; }
+table.cuadro.texto td { white-space: normal; text-align: left; vertical-align: top; line-height: 9.4pt; }
+table.cuadro.texto td.tema { font-weight: 700; color: var(--azul-oscuro); }
+table.cuadro.texto tbody tr td { background: var(--azul-bruma); }
+table.cuadro.texto tbody.alt tr td { background: var(--azul-palido); }
+/* la celda de tema se ve como una sola dentro de su grupo */
+table.cuadro.texto tbody tr:not(:first-child) td.tema { border-top: none; }
+table.cuadro.texto tbody tr:not(:last-child) td.tema { border-bottom: none; }
+table.cuadro.texto tbody { break-inside: avoid; }
+
 /* ==========================================================================
    Preliminares
    ========================================================================== */
@@ -477,6 +516,9 @@ ol.toc a::after {
   text-indent: 0;
 }
 ol.toc .n { font-weight: 700; }
+/* Capítulo aún no entregado: en gris, con la marca «(pendiente)» */
+ol.toc li.pendiente-cap { color: var(--gris-titulo); }
+ol.toc li.pendiente-cap .estado { font-weight: 400; font-style: italic; }
 
 /* ==========================================================================
    Portada

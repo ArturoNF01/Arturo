@@ -7,7 +7,7 @@ insumos/
 # Contenido inédito del capítulo 1 (texto, datos, figuras y PDF). El repositorio
 # es público: no se versiona hasta que CISS/CIESS/CODESS autoricen publicarlo.
 # Todo se regenera desde insumos/ con los guiones (ver README).
-contenido/10-capitulo-1.html
+contenido/*-capitulo-*.html
 contenido/cuadros/
 datos/capitulo-1.json
 figuras/svg/

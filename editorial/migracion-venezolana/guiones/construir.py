@@ -27,6 +27,8 @@ PIEZAS = [
     "contenido/01-preliminares.html",
     "contenido/02-indice.html",
     "contenido/10-capitulo-1.html",
+    # contenido/20-capitulo-2.html: pendiente
+    "contenido/30-capitulo-3.html",
 ]
 
 NOMBRE_PDF = "acceso-seguridad-social-migrantes-venezolanos.pdf"

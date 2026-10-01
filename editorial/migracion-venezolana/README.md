@@ -3,13 +3,13 @@
 Maquetación editorial del libro CISS · CIESS · CODESS. Hereda la línea gráfica de
 *De un sistema de pensiones a un sistema integral de protección a la población
 mayor* (CISS-CIESS-CODESS, 2025): formato, tipografía, colores, tablas, cornisas,
-folios y portada. Por ahora contiene la portada, los preliminares, el índice y el
-**capítulo 1**; el resto de capítulos se suman con el mismo sistema.
+folios y portada. Por ahora contiene la portada, los preliminares, el índice y los
+**capítulos 1 y 3** (el 2 está pendiente); el resto se suma con el mismo sistema.
 
 ## Resultado
 
 > El repositorio es público: el texto del capítulo, sus datos, las figuras y los
-> PDF (`contenido/10-capitulo-1.html`, `contenido/cuadros/`, `datos/capitulo-1.json`,
+> PDF (`contenido/*-capitulo-*.html`, `contenido/cuadros/`, `datos/capitulo-1.json`,
 > `figuras/svg/`, `salida/`) **no se versionan** hasta que CISS/CIESS/CODESS
 > autoricen su publicación. Se regeneran con los guiones a partir de `insumos/`.
 
@@ -42,7 +42,7 @@ folios y portada. Por ahora contiene la portada, los preliminares, el índice y 
 ## Estructura
 
 ```
-contenido/        HTML por pieza: 00-portada, 01-preliminares, 02-indice, 10-capitulo-1
+contenido/        HTML por pieza: 00-portada, 01-preliminares, 02-indice, 10-capitulo-1, 30-capitulo-3
 contenido/cuadros Cuadros 1-9 generados desde los datos
 plantilla/        libro.css: toda la línea gráfica
 figuras/          Generador de figuras (Node + D3): graficas.mjs, mapas.mjs, portada.mjs (mapa de la portada)
@@ -94,8 +94,21 @@ Revisión visual: `guiones/hojas_contacto.py salida/interiores.pdf prefijo`.
 
 ## Sumar un capítulo
 
-1. `python guiones/extraer_docx.py insumos/CapN.docx contenido/capitulo-N.base.html`
-2. Copiar la estructura de `contenido/10-capitulo-1.html` (apertura, `h2` con `id`,
-   figuras con `<figure id="…">`, bibliografía) en `contenido/NN-capitulo-N.html`.
-3. Añadirlo a `PIEZAS` en `guiones/construir.py` y sus entradas en `02-indice.html`
-   (los folios del índice se calculan solos).
+Manuscritos con estilos de Word (Título, Título 1, Título 2), como el capítulo 3:
+
+```bash
+python guiones/capitulo_docx.py 3 insumos/Cap3.docx contenido/30-capitulo-3.html \
+    --cornisa "Experiencias y perspectivas de la población|migrante venezolana en Colombia"
+```
+
+Genera la apertura, las secciones N.1, N.2… (con `id` para el índice), subapartados,
+testimonios, notas al pie, cuadros de texto y referencias. Después:
+
+1. Añadir el archivo a `PIEZAS` en `guiones/construir.py` (en orden: `20-capitulo-2`,
+   `30-capitulo-3`…).
+2. Enlazar sus entradas en `contenido/02-indice.html` (`#cap-N`, `#sN-k`,
+   `#bibliografia-N`); los folios se calculan solos.
+3. Si trae gráficas o mapas, se dibujan como las del capítulo 1 (`figuras/`).
+
+El capítulo 1 se extrajo con `guiones/extraer_docx.py` (manuscrito sin estilos) y se
+ajustó a mano.
