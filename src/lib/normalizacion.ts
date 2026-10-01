@@ -1,57 +1,39 @@
-import { CONFIG } from './config';
+import { es } from '@/i18n/es';
 import { etiquetaEs, etiquetasEs } from './opciones';
 
 /**
  * Normalización de un registro hacia las pestañas del libro de seguimiento
- * (PAR, ALO, TRA, PSE, ALI) más una pestaña con la respuesta completa, con la
- * misma forma que producía el script de Google Apps Script original.
+ * (REG, PAR, PSE), con la misma forma que producía el script de Google Apps
+ * Script original.
+ *
+ * Eran seis pestañas. ALO, TRA y ALI se retiraron cuando el formulario dejó
+ * de preguntar hospedaje, recepción en el aeropuerto y régimen alimentario:
+ * sin esos campos no había de dónde sacar una sola fila, y una pestaña que
+ * nunca se llena es peor que no tenerla —el comité la abre, la ve vacía y no
+ * sabe si es que nadie lo pidió o es que el sistema dejó de escribirla.
  *
  * Es lógica pura y sin dependencias del servidor, para poder probarla.
  */
 export const HOJAS: Record<string, string[]> = {
   REG_Respuestas: [
     'Folio', 'ID', 'Marca temporal', 'Perfil', 'Grupo', 'Modalidad', 'Idioma',
-    'Apellidos', 'Nombre(s)', 'Correo', 'Teléfono', 'Institución', 'Cargo',
-    'Procedencia', 'País', 'Entidad', 'Ciudad', 'Nacionalidad', 'ORCID',
-    'Modalidad de participación', 'Título', 'Resumen', 'Palabras clave',
-    'Coautoría', 'Semblanza', 'Fotografía',
-    'Documentación solicitada', 'Otra documentación', 'Nombre en pasaporte',
-    'Destinatario del oficio', 'Boleto de vuelo',
-    'Autorizaciones', 'Requerimientos técnicos', 'Accesibilidad',
-    'Placa', 'Modelo del automóvil', 'Color del automóvil',
-    'Requiere alojamiento', 'Entrada hotel', 'Salida hotel',
-    'Requiere traslado', 'Medio de arribo', 'Ciudad de origen', 'Terminal de origen',
-    'Fecha de llegada', 'Hora de llegada', 'Aerolínea de llegada', 'Vuelo de llegada',
-    'Fecha de salida', 'Hora de salida', 'Aerolínea de salida', 'Vuelo de salida',
-    'Observaciones de traslado', 'Régimen alimentario', 'Condición alimentaria',
-    'Contacto de emergencia',
-    'Apoyo de traslado', 'Datos de viático', 'Requiere factura', 'Datos de facturación',
-    'Comentarios', 'Consentimiento', 'Estado',
+    'Apellidos', 'Nombre(s)', 'Nombre para constancia', 'Correo', 'Teléfono',
+    'Institución', 'Cargo', 'Procedencia', 'País',
+    'Título', 'Resumen', 'Palabras clave',
+    'Semblanza', 'Fotografía', 'Autoriza grabación', 'Autorizaciones',
+    'Requerimientos técnicos', 'Zona horaria',
+    'Ciudad de origen', 'Fecha de llegada', 'Fecha de salida',
+    'Consentimiento', 'Estado',
   ],
   PAR_Participantes: [
     'ID', 'Marca temporal', 'Apellidos y nombre', 'Institución', 'Procedencia',
     'Estado o país de origen', 'Rol', 'Correo', 'Teléfono / WhatsApp',
-    'Requiere alojamiento', 'Requiere traslado', 'Medio de arribo',
-    'Restricción alimentaria', 'Estado confirmación',
-  ],
-  ALO_Alojamiento: [
-    'ID', 'Persona', 'Rol', 'Procedencia', 'Hotel', 'Entrada',
-    'Salida', 'Noches', 'Tarifa por noche', 'Costo total', 'Estado reserva', 'Observaciones',
-  ],
-  TRA_Traslados: [
-    'ID', 'Persona', 'Ámbito', 'Movimiento', 'Medio', 'Fecha', 'Aerolínea / línea',
-    'Vuelo / corrida', 'Origen / destino', 'Terminal o punto de encuentro',
-    'Hora programada', 'Hora de presentación', 'Responsable de recepción',
-    'Vehículo / placas', 'Estado', 'Observaciones',
+    'Llegada', 'Salida', 'Estado confirmación',
   ],
   PSE_Personificadores_Semblanzas: [
     'ID', 'Día', 'Bloque', 'Apellidos y nombre', 'Cargo o función', 'Institución', 'País',
     'Fotografía', 'Semblanza', 'Semblanza recibida', 'Personificador impreso',
     'Responsable de edición', 'Responsable de impresión', 'Plazo recomendado',
-  ],
-  ALI_Restricciones: [
-    'ID', 'Persona', 'Régimen alimentario', 'Condición específica', 'Días de asistencia',
-    'Observaciones',
   ],
 };
 
@@ -73,10 +55,31 @@ export function enlaceDescarga(url: unknown): string {
   return `=HYPERLINK("${direccion.replace(/"/g, '""')}";"Descargar")`;
 }
 
-/** Roles que ocupan lugar en mesa o presídium y requieren personificador. */
-const ROLES_CON_PERSONIFICADOR = [
-  'conferencia_magistral', 'ponencia_mesa', 'moderacion_mesa', 'comite_cientifico',
-];
+/**
+ * Perfiles cuyo nombre y semblanza salen en el programa, y que por tanto
+ * llevan personificador en la mesa.
+ *
+ * Incluye las claves retiradas: el libro se sigue leyendo durante meses y una
+ * ficha hecha cuando había seis perfiles tiene que seguir produciendo su fila.
+ */
+const PERFILES_EN_PROGRAMA = new Set([
+  'ponente', 'conferencista', 'coordinador', 'moderador', 'panelista',
+]);
+
+/** El nombre del perfil en español, para un libro que se lleva en español. */
+function nombreDePerfil(clave: unknown): string {
+  const nombres = es.perfiles as unknown as Record<string, string>;
+  const texto = String(clave ?? '');
+  return nombres[texto] ?? texto;
+}
+
+/** Igual con la modalidad: en la celda se leía «en_linea», con guion bajo. */
+function nombreDeModalidad(clave: unknown): string {
+  const texto = String(clave ?? '');
+  if (texto === 'en_linea') return es.modalidad.en_linea;
+  if (texto === 'presencial') return es.modalidad.presencial;
+  return texto;
+}
 
 /** Ámbito derivado de la procedencia canónica. */
 function ambitoDe(procedencia: string): 'Internacional' | 'Nacional' | 'Local' {
@@ -85,60 +88,10 @@ function ambitoDe(procedencia: string): 'Internacional' | 'Nacional' | 'Local' {
   return 'Local';
 }
 
-function medioDe(medio: string): string {
-  if (!medio) return '';
-  if (medio === 'terrestre') return 'Terrestre';
-  if (medio === 'vehiculo_propio') return 'Vehículo propio';
-  return 'Aéreo';
-}
-
-/**
- * Hora de presentación del vehículo a partir de la hora programada, el
- * movimiento, el ámbito y el medio, con los márgenes de CONFIG.
- */
-export function horaPresentacion(
-  hora: string | null | undefined,
-  movimiento: 'Llegada' | 'Salida',
-  ambito: string,
-  medio: string,
-): string {
-  if (!hora) return '';
-  const [h, m] = hora.split(':').map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return '';
-
-  const g = CONFIG.margenes;
-  const delta =
-    movimiento === 'Llegada'
-      ? medio === 'Terrestre'
-        ? g.llegadaTerrestre
-        : ambito === 'Internacional'
-          ? g.llegadaAereaInternacional
-          : g.llegadaAereaNacional
-      : -(medio === 'Terrestre'
-          ? g.salidaTerrestre
-          : ambito === 'Internacional'
-            ? g.salidaAereaInternacional
-            : g.salidaAereaNacional);
-
-  const total = (((h * 60 + m + delta) % 1440) + 1440) % 1440;
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-}
-
 export function contarPalabras(texto: string | null | undefined): number {
   if (!texto) return 0;
   const limpio = texto.replace(/\s+/g, ' ').trim();
   return limpio ? limpio.split(' ').length : 0;
-}
-
-function noches(entrada?: string | null, salida?: string | null): string {
-  if (!entrada || !salida) return '';
-  const dias = (Date.parse(salida) - Date.parse(entrada)) / 86_400_000;
-  return Number.isFinite(dias) && dias > 0 ? String(Math.round(dias)) : '';
-}
-
-/** Qué lista de documentación se le mostró a esta persona. */
-function documentacionDe(r: Registro): 'documentacionExtranjero' | 'documentacionNacional' {
-  return r.procedencia === 'internacional' ? 'documentacionExtranjero' : 'documentacionNacional';
 }
 
 /** Filas normalizadas que corresponden a un registro. */
@@ -146,84 +99,39 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
   const persona = `${r.apellidos ?? ''}, ${r.nombres ?? ''}`;
   const marca = new Date(r.creado_en ?? Date.now()).toISOString();
   const ambito = ambitoDe(r.procedencia ?? '');
-  const medio = medioDe(r.medio_arribo ?? '');
-  const rolCanonico: string = r.modalidad_participacion || '';
-  const rol = rolCanonico ? etiquetaEs('roles', rolCanonico) : String(r.perfil ?? '');
+  const rol = nombreDePerfil(r.perfil);
+  // La entidad federativa dejó de pedirse: de quien vive en México queda el
+  // país, que es lo que hay. Sigue leyéndose de las fichas que la traen.
   const origen =
     ambito === 'Internacional'
       ? r.pais_residencia ?? ''
       : r.entidad_federativa || r.pais_residencia || '';
-  const traslado: string = r.requiere_traslado ?? 'no';
   const filas: Record<string, (string | number)[][]> = {};
   const s = (v: unknown) => (v === null || v === undefined ? '' : Array.isArray(v) ? v.join('; ') : String(v));
 
   filas.REG_Respuestas = [[
-    s(r.folio), s(r.id), marca, s(r.perfil), s(r.grupo), s(r.modalidad), s(r.idioma),
-    s(r.apellidos), s(r.nombres), s(r.correo), s(r.telefono_whatsapp), s(r.institucion), s(r.cargo),
-    etiquetaEs('procedencia', r.procedencia), s(r.pais_residencia), s(r.entidad_federativa), s(r.ciudad_residencia),
-    s(r.nacionalidad), s(r.orcid),
-    rol, s(r.titulo_ponencia), s(r.resumen_ponencia),
-    s(r.palabras_clave), s(r.coautoria),
+    s(r.folio), s(r.id), marca, rol, s(r.grupo), nombreDeModalidad(r.modalidad), s(r.idioma),
+    s(r.apellidos), s(r.nombres), s(r.nombre_constancia), s(r.correo), s(r.telefono_whatsapp),
+    s(r.institucion), s(r.cargo), etiquetaEs('procedencia', r.procedencia), s(r.pais_residencia),
+    s(r.titulo_ponencia), s(r.resumen_ponencia), s(r.palabras_clave),
     enlaceDescarga(r.semblanza_url), enlaceDescarga(r.foto_url),
-    etiquetasEs(documentacionDe(r), r.documentacion_solicitada), s(r.documentacion_otra),
-    s(r.nombre_pasaporte), s(r.destinatario_oficio), enlaceDescarga(r.boleto_url),
+    r.autoriza_grabacion ? 'Sí' : 'No',
     etiquetasEs('autorizaciones', r.autorizaciones),
-    etiquetasEs('tecnicos', r.requerimientos_tecnicos), s(r.requerimientos_accesibilidad),
-    s(r.placa_vehiculo), s(r.modelo_vehiculo), s(r.color_vehiculo),
-    r.requiere_alojamiento ? 'Sí' : 'No', s(r.fecha_entrada_hotel), s(r.fecha_salida_hotel),
-    etiquetaEs('traslado', traslado), etiquetaEs('medioArribo', r.medio_arribo),
-    s(r.ciudad_origen), s(r.terminal_origen),
-    s(r.fecha_llegada), s(r.hora_llegada), s(r.aerolinea_llegada), s(r.vuelo_llegada),
-    s(r.fecha_salida), s(r.hora_salida), s(r.aerolinea_salida), s(r.vuelo_salida),
-    s(r.observaciones_traslado), s(r.regimen_alimentario), s(r.condicion_alimentaria_detalle),
-    s(r.contacto_emergencia),
-    r.apoyo_traslado ? 'Sí' : 'No', s(r.datos_viatico), r.requiere_factura ? 'Sí' : 'No',
-    s(r.datos_facturacion), s(r.comentarios), r.consentimiento_datos ? 'Sí' : 'No', s(r.estado),
+    etiquetasEs('tecnicos', r.requerimientos_tecnicos), s(r.zona_horaria),
+    s(r.ciudad_origen), s(r.fecha_llegada), s(r.fecha_salida),
+    r.consentimiento_datos ? 'Sí' : 'No', s(r.estado),
   ]];
 
   filas.PAR_Participantes = [[
     s(r.folio), marca, persona, s(r.institucion), ambito, origen, rol, s(r.correo),
-    s(r.telefono_whatsapp), r.requiere_alojamiento ? 'Sí' : 'No',
-    traslado === 'no' ? 'No' : 'Sí', medio || 'No aplica',
-    s(r.regimen_alimentario) || 'Sin restricción', 'En proceso',
+    s(r.telefono_whatsapp), s(r.fecha_llegada), s(r.fecha_salida), 'En proceso',
   ]];
 
-  if (r.requiere_alojamiento) {
-    filas.ALO_Alojamiento = [[
-      s(r.folio), persona, rol, ambito, '',
-      s(r.fecha_entrada_hotel), s(r.fecha_salida_hotel),
-      noches(r.fecha_entrada_hotel, r.fecha_salida_hotel), '', '', 'No iniciado', '',
-    ]];
-  }
-
-  const trasladoFilas: (string | number)[][] = [];
-  const ciudadOrigen = r.ciudad_origen || origen;
-  if (traslado === 'llegada_y_salida' || traslado === 'solo_llegada') {
-    trasladoFilas.push([
-      s(r.folio), persona, ambito, 'Llegada', medio, s(r.fecha_llegada),
-      s(r.aerolinea_llegada), s(r.vuelo_llegada), s(ciudadOrigen), s(r.terminal_origen),
-      s(r.hora_llegada), horaPresentacion(r.hora_llegada, 'Llegada', ambito, medio),
-      '', '', 'No iniciado', s(r.observaciones_traslado),
-    ]);
-  }
-  if (traslado === 'llegada_y_salida' || traslado === 'solo_salida') {
-    trasladoFilas.push([
-      s(r.folio), persona, ambito, 'Salida', medio, s(r.fecha_salida),
-      s(r.aerolinea_salida), s(r.vuelo_salida), s(ciudadOrigen), s(r.terminal_origen),
-      s(r.hora_salida), horaPresentacion(r.hora_salida, 'Salida', ambito, medio),
-      '', '', 'No iniciado', s(r.observaciones_traslado),
-    ]);
-  }
-  if (trasladoFilas.length) filas.TRA_Traslados = trasladoFilas;
-
-  const requierePersonificador =
-    ROLES_CON_PERSONIFICADOR.includes(rolCanonico) ||
-    r.perfil === 'panelista' ||
-    r.perfil === 'conferencista';
-
-  if (requierePersonificador) {
-    // El personificador lleva el nombre tal como se registró: se dejó de
-    // preguntar aparte, porque en la práctica siempre era el mismo.
+  // El personificador lo lleva quien sale en el programa. Antes esto miraba
+  // `modalidad_participacion`, un campo que el formulario dejó de pedir al
+  // reducirse a dos perfiles: desde entonces la pestaña no recibía una sola
+  // fila, y nadie lo notó porque no falla, simplemente no escribe.
+  if (PERFILES_EN_PROGRAMA.has(String(r.perfil))) {
     filas.PSE_Personificadores_Semblanzas = [[
       s(r.folio), '', '', persona,
       r.cargo || rol, s(r.institucion), s(r.pais_residencia),
@@ -233,15 +141,5 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
     ]];
   }
 
-  const regimen = s(r.regimen_alimentario);
-  const condicion = s(r.condicion_alimentaria_detalle);
-  if (regimen || condicion) {
-    filas.ALI_Restricciones = [[
-      s(r.folio), persona, regimen, condicion, 'Días 1 a 3',
-      s(r.requerimientos_accesibilidad),
-    ]];
-  }
-
   return filas;
 }
-

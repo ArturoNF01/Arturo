@@ -327,6 +327,8 @@ export const en: Diccionario = {
       ejes: 'Distribution by thematic axis',
       alimentacion: 'Dietary regime',
       idioma: 'Registration language',
+      llegadasPorDia: 'Arrivals per day',
+      conFechaDeViaje: '{total} gave an arrival date',
       leyenda: 'Legend',
       dias: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
       registros: 'registrations',

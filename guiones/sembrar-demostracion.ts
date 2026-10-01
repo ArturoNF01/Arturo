@@ -115,22 +115,23 @@ function construir(indice: number) {
     cargo: azar(['Investigador', 'Directora', 'Analista', 'Coordinadora', 'Consultor']),
     procedencia: azar(OPCIONES.procedencia) === 'local' ? 'local' : procedencia,
     pais_residencia: pais,
-    ciudad_residencia: ciudad,
     eje_tematico: perfil.presentaPonencia ? azar(EJES) : null,
-    modalidad_participacion: perfil.presentaPonencia ? azar(OPCIONES.roles) : null,
     semblanza_url: perfil.enPrograma
       ? `https://drive.google.com/file/d/demo-semblanza-${indice}/view`
       : null,
     foto_url: perfil.llevaFotografia
       ? `https://drive.google.com/file/d/demo-foto-${indice}/view`
       : null,
-    regimen_alimentario:
-      modalidad === 'presencial' ? azar(['', '', 'Vegetariano', 'Vegano', 'Sin gluten']) : null,
-    requiere_alojamiento: perfil.invitado && modalidad === 'presencial' && Math.random() < 0.5,
-    requiere_traslado: perfil.recibeTraslado && modalidad === 'presencial'
-      ? azar(OPCIONES.traslado)
-      : 'no',
-    medio_arribo: azar(OPCIONES.medioArribo),
+    // Llegada y salida sólo las deja quien viene a escuchar: a quien sube al
+    // programa el formulario ya no se las pregunta. Si el sembrado se las
+    // pusiera igual, el panel enseñaría un reparto que el sitio no produce.
+    ...(modalidad === 'presencial' && !perfil.enPrograma
+      ? {
+        ciudad_origen: ciudad,
+        fecha_llegada: azar(['2026-11-10', '2026-11-11', '2026-11-11']),
+        fecha_salida: azar(['2026-11-13', '2026-11-13', '2026-11-14']),
+      }
+      : {}),
     estado: 'en_proceso',
     consentimiento_datos: true,
     consentimiento_fecha: creado.toISOString(),

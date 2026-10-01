@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useApp } from '@/componentes/proveedores';
+import { interpolar } from '@/i18n';
 import { BarraFiltros } from './filtros';
 import { TarjetaGrafica } from './tarjeta-grafica';
 import { GraficaBarras } from './graficas';
@@ -28,8 +29,16 @@ export function AnaliticaAvanzada({ permisos }: { permisos: Permisos }) {
   );
 
   const cruce = useMemo(() => cruzarPerfilModalidad(activos), [activos]);
-  const porCiudad = useMemo(
-    () => contarPor(activos, (r) => r.ciudad_residencia, (v) => v, { maximo: 8 }),
+  // Antes era la ciudad de residencia, que el formulario dejó de preguntar:
+  // la tarjeta salía vacía y nadie sabía si es que no había nadie o es que el
+  // panel estaba roto. Ahora es de dónde viaja quien viene a la sede.
+  const porCiudadOrigen = useMemo(
+    () => contarPor(
+      activos.filter((r) => r.ciudad_origen),
+      (r) => r.ciudad_origen,
+      (v) => v,
+      { maximo: 8 },
+    ),
     [activos],
   );
   const porProcedencia = useMemo(
@@ -59,8 +68,18 @@ export function AnaliticaAvanzada({ permisos }: { permisos: Permisos }) {
     [activos, t],
   );
 
-  const conLogistica = activos.filter((r) => r.requiere_alojamiento).length;
-  const conTraslado = activos.filter((r) => r.requiere_traslado && r.requiere_traslado !== 'no').length;
+  // Cuánta gente hay en la sede cada día: es para lo que se piden las dos
+  // fechas, y es lo que antes había que contar a mano sobre la hoja.
+  const porDiaDeLlegada = useMemo(
+    () => contarPor(
+      activos.filter((r) => r.fecha_llegada),
+      (r) => String(r.fecha_llegada).slice(0, 10),
+      (v) => v,
+      { maximo: 12 },
+    ),
+    [activos],
+  );
+  const conViaje = activos.filter((r) => r.fecha_llegada).length;
 
   return (
     <div className="p-4 sm:p-6">
@@ -124,8 +143,7 @@ export function AnaliticaAvanzada({ permisos }: { permisos: Permisos }) {
               </table>
             </div>
             <p className="ayuda mt-3">
-              {conLogistica} {t.formulario.campos.requiereAlojamiento.toLowerCase()} ·{' '}
-              {conTraslado} {t.formulario.campos.requiereTraslado.toLowerCase()}
+              {interpolar(t.panel.graficas.conFechaDeViaje, { total: conViaje })}
             </p>
           </section>
 
@@ -162,14 +180,27 @@ export function AnaliticaAvanzada({ permisos }: { permisos: Permisos }) {
             </TarjetaGrafica>
           )}
 
-          <TarjetaGrafica
-            titulo={t.formulario.campos.ciudad}
-            filas={porCiudad.map((d) => [d.nombre, d.total])}
-            columnas={[t.formulario.campos.ciudad, t.panel.graficas.registros]}
-            alto={300}
-          >
-            <GraficaBarras datos={porCiudad} unidad={t.panel.graficas.registros} />
-          </TarjetaGrafica>
+          {porDiaDeLlegada.length > 0 && (
+            <TarjetaGrafica
+              titulo={t.panel.graficas.llegadasPorDia}
+              filas={porDiaDeLlegada.map((d) => [d.nombre, d.total])}
+              columnas={[t.formulario.campos.fechaLlegada, t.panel.graficas.registros]}
+              alto={300}
+            >
+              <GraficaBarras datos={porDiaDeLlegada} unidad={t.panel.graficas.registros} />
+            </TarjetaGrafica>
+          )}
+
+          {porCiudadOrigen.length > 0 && (
+            <TarjetaGrafica
+              titulo={t.formulario.campos.ciudadOrigen}
+              filas={porCiudadOrigen.map((d) => [d.nombre, d.total])}
+              columnas={[t.formulario.campos.ciudadOrigen, t.panel.graficas.registros]}
+              alto={300}
+            >
+              <GraficaBarras datos={porCiudadOrigen} unidad={t.panel.graficas.registros} />
+            </TarjetaGrafica>
+          )}
         </div>
       )}
     </div>

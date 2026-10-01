@@ -19,7 +19,8 @@ export const dynamic = 'force-dynamic';
 const COLUMNAS_PANEL = `id, folio, creado_en, perfil, modalidad, idioma, estado,
   nombres, apellidos, correo, institucion, cargo, pais_residencia, entidad_federativa,
   ciudad_residencia, procedencia, eje_tematico, modalidad_participacion,
-  regimen_alimentario, requiere_alojamiento, requiere_traslado`;
+  regimen_alimentario, requiere_alojamiento, requiere_traslado,
+  ciudad_origen, fecha_llegada, fecha_salida`;
 
 /**
  * Lista de registros para el panel.

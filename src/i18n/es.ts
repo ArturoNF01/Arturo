@@ -379,6 +379,8 @@ export const es = {
       ejes: 'Distribución por eje temático',
       alimentacion: 'Régimen alimentario',
       idioma: 'Idioma de registro',
+      llegadasPorDia: 'Llegadas por día',
+      conFechaDeViaje: '{total} dejaron fecha de llegada',
       leyenda: 'Leyenda',
       dias: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
       registros: 'registros',

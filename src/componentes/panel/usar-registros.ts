@@ -26,6 +26,9 @@ export interface RegistroPanel {
   regimen_alimentario: string | null;
   requiere_alojamiento: boolean;
   requiere_traslado: string | null;
+  ciudad_origen: string | null;
+  fecha_llegada: string | null;
+  fecha_salida: string | null;
 }
 
 /**

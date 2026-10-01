@@ -1,5 +1,20 @@
 import 'server-only';
-import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import { Pool, types, type PoolClient, type QueryResultRow } from 'pg';
+
+/**
+ * Una columna `date` se lee tal cual se guardó: «2026-11-09».
+ *
+ * Por omisión el controlador la convierte en un objeto Date a medianoche del
+ * huso del servidor, y de ahí salían dos problemas. Uno visible: la pantalla
+ * de confirmación y la hoja de seguimiento enseñaban «Mon Nov 09 2026
+ * 00:00:00 GMT+0000 (Coordinated Universal Time)» donde debía decir una
+ * fecha. Y otro peor, callado: una fecha sin hora pasada por un huso se
+ * corre un día entero según dónde se lea, y estas fechas son las que dicen
+ * cuánta gente hay en la sede cada día.
+ *
+ * 1082 es el identificador de `date` en PostgreSQL.
+ */
+types.setTypeParser(1082, (valor) => valor);
 
 /**
  * Conexión a PostgreSQL.

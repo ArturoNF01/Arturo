@@ -118,7 +118,8 @@ describe('un registro llega a la hoja', () => {
     const hojas = llamadas.append.map((p) => (p as { range: string }).range.split('!')[0]);
     expect(hojas).toContain('REG_Respuestas');
     expect(hojas).toContain('PAR_Participantes');
-    expect(hojas).toContain('ALI_Restricciones');
+    // La del personificador: quien sube al programa lleva uno en la mesa.
+    expect(hojas).toContain('PSE_Personificadores_Semblanzas');
   });
 
   it('los seis perfiles y las dos modalidades pasan sin excepción', async () => {

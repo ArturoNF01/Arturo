@@ -328,6 +328,8 @@ export const pt: Diccionario = {
       ejes: 'Distribuição por eixo temático',
       alimentacion: 'Regime alimentar',
       idioma: 'Idioma de inscrição',
+      llegadasPorDia: 'Chegadas por dia',
+      conFechaDeViaje: '{total} informaram data de chegada',
       leyenda: 'Legenda',
       dias: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
       registros: 'inscrições',

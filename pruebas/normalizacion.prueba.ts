@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HOJAS, contarPalabras, filasDeRegistro, horaPresentacion } from '@/lib/normalizacion';
+import { HOJAS, contarPalabras, filasDeRegistro } from '@/lib/normalizacion';
 
 /** Registro mínimo con los valores canónicos que guarda el formulario. */
 function registro(extra: Record<string, unknown> = {}) {
@@ -7,7 +7,7 @@ function registro(extra: Record<string, unknown> = {}) {
     id: '11111111-2222-3333-4444-555555555555',
     folio: 'REG-20260401-AB12',
     creado_en: '2026-04-01T15:30:00.000Z',
-    perfil: 'panelista',
+    perfil: 'ponente',
     grupo: 'externo',
     modalidad: 'presencial',
     idioma: 'es',
@@ -18,145 +18,140 @@ function registro(extra: Record<string, unknown> = {}) {
     cargo: 'Investigadora',
     procedencia: 'internacional',
     pais_residencia: 'Brasil',
-    modalidad_participacion: 'ponencia_mesa',
-    requiere_alojamiento: false,
-    requiere_traslado: 'no',
     estado: 'en_proceso',
     consentimiento_datos: true,
     ...extra,
   };
 }
 
-describe('horaPresentacion', () => {
-  it('suma el margen aéreo internacional a la llegada', () => {
-    // 40 minutos de margen para llegada aérea internacional.
-    expect(horaPresentacion('14:20', 'Llegada', 'Internacional', 'Aéreo')).toBe('15:00');
-  });
-
-  it('usa el margen aéreo nacional cuando el ámbito no es internacional', () => {
-    expect(horaPresentacion('14:20', 'Llegada', 'Nacional', 'Aéreo')).toBe('14:40');
-  });
-
-  it('usa el margen terrestre sin importar el ámbito', () => {
-    expect(horaPresentacion('09:05', 'Llegada', 'Internacional', 'Terrestre')).toBe('09:15');
-  });
-
-  it('resta el margen en las salidas', () => {
-    // 180 minutos antes de un vuelo internacional.
-    expect(horaPresentacion('18:00', 'Salida', 'Internacional', 'Aéreo')).toBe('15:00');
-  });
-
-  it('ajusta el paso por medianoche sin devolver horas negativas', () => {
-    expect(horaPresentacion('01:00', 'Salida', 'Internacional', 'Aéreo')).toBe('22:00');
-    expect(horaPresentacion('23:50', 'Llegada', 'Internacional', 'Aéreo')).toBe('00:30');
-  });
-
-  it('devuelve cadena vacía cuando el dato es insuficiente', () => {
-    expect(horaPresentacion('', 'Llegada', 'Nacional', 'Aéreo')).toBe('');
-    expect(horaPresentacion('sin hora', 'Llegada', 'Nacional', 'Aéreo')).toBe('');
-    expect(horaPresentacion(null, 'Llegada', 'Nacional', 'Aéreo')).toBe('');
-  });
-});
-
 describe('contarPalabras', () => {
   it('cuenta palabras colapsando espacios y saltos de línea', () => {
-    expect(contarPalabras('  Doctora   en\n\nderecho  social ')).toBe(4);
+    expect(contarPalabras('  uno   dos\ntres  ')).toBe(3);
   });
 
   it('devuelve cero para texto vacío o ausente', () => {
     expect(contarPalabras('')).toBe(0);
-    expect(contarPalabras('   ')).toBe(0);
     expect(contarPalabras(null)).toBe(0);
+    expect(contarPalabras('   ')).toBe(0);
+  });
+});
+
+describe('las pestañas del libro', () => {
+  it('son las tres que el formulario puede llenar', () => {
+    // Fueron seis. ALO, TRA y ALI salieron con el hospedaje, la recepción en
+    // el aeropuerto y el régimen alimentario: sin esos campos no había de
+    // dónde sacar una fila, y una pestaña que nunca se escribe se lee como
+    // un sistema averiado.
+    expect(Object.keys(HOJAS)).toEqual([
+      'REG_Respuestas', 'PAR_Participantes', 'PSE_Personificadores_Semblanzas',
+    ]);
+  });
+
+  it('ninguna conserva una columna que el formulario ya no pregunta', () => {
+    const retiradas = [
+      'Entidad', 'Ciudad', 'Nacionalidad', 'ORCID', 'Coautoría',
+      'Documentación solicitada', 'Nombre en pasaporte', 'Boleto de vuelo',
+      'Requiere alojamiento', 'Entrada hotel', 'Salida hotel',
+      'Requiere traslado', 'Medio de arribo', 'Terminal de origen',
+      'Hora de llegada', 'Aerolínea de llegada', 'Vuelo de llegada',
+      'Hora de salida', 'Aerolínea de salida', 'Vuelo de salida',
+      'Observaciones de traslado', 'Régimen alimentario', 'Restricción alimentaria',
+      'Contacto de emergencia', 'Requiere factura', 'Comentarios', 'Placa',
+    ];
+    for (const [hoja, columnas] of Object.entries(HOJAS)) {
+      for (const columna of retiradas) {
+        expect(columnas, `${hoja} · ${columna}`).not.toContain(columna);
+      }
+    }
   });
 });
 
 describe('filasDeRegistro', () => {
   it('siempre produce la respuesta completa y la fila de participantes', () => {
-    const filas = filasDeRegistro(registro());
-    expect(Object.keys(filas)).toEqual(['REG_Respuestas', 'PAR_Participantes', 'PSE_Personificadores_Semblanzas']);
+    const filas = filasDeRegistro(registro({ perfil: 'publico_general' }));
+    expect(Object.keys(filas)).toEqual(['REG_Respuestas', 'PAR_Participantes']);
   });
 
   it('coloca el folio en la primera columna de cada pestaña, que es la clave de resincronización', () => {
-    const filas = filasDeRegistro(registro({ requiere_alojamiento: true, requiere_traslado: 'llegada_y_salida' }));
-    for (const valores of Object.values(filas)) {
+    // De ahí se parte para volver a escribir una fila: si el folio no está
+    // primero, resincronizar un registro escribe encima de otro.
+    const filas = filasDeRegistro(registro());
+    for (const [hoja, valores] of Object.entries(filas)) {
       for (const fila of valores) {
-        expect(fila[0]).toBe('REG-20260401-AB12');
+        expect(fila[0], hoja).toBe('REG-20260401-AB12');
       }
     }
   });
 
   it('cada fila tiene tantas celdas como encabezados declara su pestaña', () => {
-    const filas = filasDeRegistro(
-      registro({
-        requiere_alojamiento: true,
-        requiere_traslado: 'llegada_y_salida',
-        regimen_alimentario: 'vegano',
-        alergias: 'Nueces',
-      }),
-    );
-    for (const [hoja, valores] of Object.entries(filas)) {
+    // Una columna de más o de menos corre todo lo demás y nadie lo nota
+    // hasta que alguien lee la hoja meses después.
+    for (const [hoja, valores] of Object.entries(filasDeRegistro(registro()))) {
       for (const fila of valores) {
-        expect(fila, `pestaña ${hoja}`).toHaveLength(HOJAS[hoja].length);
+        expect(fila.length, hoja).toBe(HOJAS[hoja].length);
       }
     }
   });
 
-  it('traduce los valores canónicos al español para el libro de seguimiento', () => {
-    const [fila] = filasDeRegistro(registro()).PAR_Participantes;
-    expect(fila).toContain('Internacional');
-    expect(fila).toContain('Ponencia en mesa temática');
+  it('una ficha vieja, con datos que ya no se piden, sigue cuadrando', () => {
+    // El libro se lee durante meses: un registro hecho antes del recorte
+    // trae vuelos, hotel y régimen alimentario. No se escriben, pero tampoco
+    // pueden descuadrar la fila.
+    const filas = filasDeRegistro(registro({
+      perfil: 'conferencista',
+      requiere_alojamiento: true,
+      requiere_traslado: 'llegada_y_salida',
+      medio_arribo: 'aereo',
+      hora_llegada: '14:20',
+      regimen_alimentario: 'Vegano',
+      orcid: '0000-0002-1825-0097',
+    }));
+    for (const [hoja, valores] of Object.entries(filas)) {
+      for (const fila of valores) {
+        expect(fila.length, hoja).toBe(HOJAS[hoja].length);
+      }
+    }
   });
 
-  it('omite alojamiento cuando no se solicita', () => {
-    expect(filasDeRegistro(registro()).ALO_Alojamiento).toBeUndefined();
+  it('el libro se lleva en español: perfil y procedencia van traducidos', () => {
+    const [fila] = filasDeRegistro(registro()).REG_Respuestas;
+    expect(fila[3]).toBe('Ponente');
+    expect(fila[14]).toMatch(/^Internacional/);
   });
 
-  it('calcula las noches de hotel', () => {
-    const [fila] = filasDeRegistro(
-      registro({
-        requiere_alojamiento: true,
-        fecha_entrada_hotel: '2026-06-01',
-        fecha_salida_hotel: '2026-06-04',
-      }),
-    ).ALO_Alojamiento;
-    expect(fila[7]).toBe('3');
+  it('escribe las fechas de llegada y salida, que es lo que queda del viaje', () => {
+    const filas = filasDeRegistro(registro({
+      perfil: 'publico_general',
+      ciudad_origen: 'Lima',
+      fecha_llegada: '2026-11-10',
+      fecha_salida: '2026-11-13',
+    }));
+    const reg = HOJAS.REG_Respuestas;
+    const [completa] = filas.REG_Respuestas;
+    expect(completa[reg.indexOf('Ciudad de origen')]).toBe('Lima');
+    expect(completa[reg.indexOf('Fecha de llegada')]).toBe('2026-11-10');
+    expect(completa[reg.indexOf('Fecha de salida')]).toBe('2026-11-13');
+
+    const par = HOJAS.PAR_Participantes;
+    const [participante] = filas.PAR_Participantes;
+    expect(participante[par.indexOf('Llegada')]).toBe('2026-11-10');
+    expect(participante[par.indexOf('Salida')]).toBe('2026-11-13');
   });
 
-  it('genera dos movimientos de traslado en llegada y salida', () => {
-    const filas = filasDeRegistro(registro({ requiere_traslado: 'llegada_y_salida' }));
-    expect(filas.TRA_Traslados).toHaveLength(2);
-    expect(filas.TRA_Traslados[0][3]).toBe('Llegada');
-    expect(filas.TRA_Traslados[1][3]).toBe('Salida');
+  it('el personificador es de quien sale en el programa, no de quien escucha', () => {
+    // Esto miraba un campo —«modalidad de participación»— que el formulario
+    // dejó de pedir al reducirse a dos perfiles, y desde entonces la pestaña
+    // no recibía ni una fila. No fallaba: simplemente no escribía.
+    expect(filasDeRegistro(registro()).PSE_Personificadores_Semblanzas).toBeDefined();
+    expect(
+      filasDeRegistro(registro({ perfil: 'publico_general' })).PSE_Personificadores_Semblanzas,
+    ).toBeUndefined();
   });
 
-  it('genera un solo movimiento cuando sólo se pide la llegada', () => {
-    const filas = filasDeRegistro(registro({ requiere_traslado: 'solo_llegada' }));
-    expect(filas.TRA_Traslados).toHaveLength(1);
-    expect(filas.TRA_Traslados[0][3]).toBe('Llegada');
-  });
-
-  it('calcula la hora de presentación dentro de la fila de traslado', () => {
-    const filas = filasDeRegistro(
-      registro({
-        requiere_traslado: 'solo_llegada',
-        medio_arribo: 'aereo',
-        hora_llegada: '14:20',
-      }),
-    );
-    expect(filas.TRA_Traslados[0][10]).toBe('14:20');
-    expect(filas.TRA_Traslados[0][11]).toBe('15:00');
-  });
-
-  it('incluye personificador para panelistas y conferencistas aunque no declaren rol académico', () => {
-    const filas = filasDeRegistro(registro({ perfil: 'conferencista', modalidad_participacion: '' }));
-    expect(filas.PSE_Personificadores_Semblanzas).toBeDefined();
-  });
-
-  it('no incluye personificador para un espectador', () => {
-    const filas = filasDeRegistro(
-      registro({ perfil: 'espectador_presencial', modalidad_participacion: 'asistente' }),
-    );
-    expect(filas.PSE_Personificadores_Semblanzas).toBeUndefined();
+  it('también para las claves de perfil retiradas, que siguen en fichas hechas', () => {
+    expect(
+      filasDeRegistro(registro({ perfil: 'conferencista' })).PSE_Personificadores_Semblanzas,
+    ).toBeDefined();
   });
 
   it('la semblanza y la foto llegan como enlace de descarga, no como dirección', () => {
@@ -174,35 +169,5 @@ describe('filasDeRegistro', () => {
     const [fila] = filasDeRegistro(registro({})).PSE_Personificadores_Semblanzas;
     expect(fila[7]).toBe('');
     expect(fila[8]).toBe('');
-  });
-
-  it('registra restricciones alimentarias sólo cuando existen', () => {
-    // El régimen es texto libre: no hay un «sin_restriccion» que descartar,
-    // hay un campo vacío.
-    expect(filasDeRegistro(registro({ regimen_alimentario: '' })).ALI_Restricciones)
-      .toBeUndefined();
-    expect(filasDeRegistro(registro({ regimen_alimentario: 'Vegano' })).ALI_Restricciones)
-      .toBeDefined();
-    expect(
-      filasDeRegistro(registro({ condicion_alimentaria_detalle: 'Alergia a mariscos' }))
-        .ALI_Restricciones,
-    ).toBeDefined();
-  });
-
-  it('cada fila cuadra con los encabezados de su pestaña', () => {
-    // Una columna de más o de menos corre todo lo demás y nadie lo nota
-    // hasta que alguien lee la hoja meses después.
-    const filas = filasDeRegistro(
-      registro({
-        requiere_alojamiento: true,
-        requiere_traslado: 'llegada_y_salida',
-        regimen_alimentario: 'Vegano',
-      }),
-    );
-    for (const [hoja, valores] of Object.entries(filas)) {
-      for (const fila of valores) {
-        expect(fila.length, hoja).toBe(HOJAS[hoja].length);
-      }
-    }
   });
 });
