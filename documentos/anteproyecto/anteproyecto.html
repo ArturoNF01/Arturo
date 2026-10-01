@@ -229,7 +229,7 @@
       <li>Sitio público trilingüe: portada, registro, instalaciones, preguntas frecuentes y
         aviso de privacidad.</li>
       <li>Formulario de hasta seis pasos que se arma según el perfil y la modalidad elegidos.</li>
-      <li>Carga de semblanza, fotografía y boleto de vuelo a carpetas de Google&nbsp;Drive.</li>
+      <li>Carga de semblanza y fotografía a carpetas de Google&nbsp;Drive.</li>
       <li>Réplica de cada registro en la hoja de cálculo del comité, en tres pestañas.</li>
       <li>Panel de administración con cinco niveles de permiso, gráficas, exportación,
         consulta SQL de sólo lectura y auditoría.</li>
@@ -401,7 +401,7 @@
     <hr class="regla">
 
     <div class="ficha" style="margin-bottom:5mm">
-      <div><span class="rotulo">Pruebas automáticas</span><span class="valor mono">201</span></div>
+      <div><span class="rotulo">Pruebas automáticas</span><span class="valor mono">203</span></div>
       <div><span class="rotulo">Idiomas</span><span class="valor mono">3</span></div>
       <div><span class="rotulo">Perfiles de participación</span><span class="valor mono">2</span></div>
       <div><span class="rotulo">Campos, el recorrido más corto</span><span class="valor mono">3</span></div>
@@ -414,7 +414,7 @@
     <table>
       <tr><th style="width:34%">Capacidad</th><th>Cómo queda resuelta</th></tr>
       <tr><td><b>Preguntas por persona</b></td>
-        <td>De 3 a 11 pantallas, armadas a partir del perfil y la modalidad. Al público
+        <td>De 3 a 6 pantallas, armadas a partir del perfil y la modalidad. Al público
             en línea, tres campos.</td></tr>
       <tr><td><b>Calidad del dato</b></td>
         <td>Validado al capturar, en el navegador y otra vez en el servidor.</td></tr>
@@ -432,12 +432,37 @@
     </table>
 
     <div class="nota">
-      <b>Sobre las pruebas.</b> Las 210 pruebas no son una cifra de adorno: fijan la decisión
+      <b>Sobre las pruebas.</b> Las 203 pruebas no son una cifra de adorno: fijan la decisión
       de qué se le pregunta a cada perfil, la conversión de un registro a filas de la hoja, el
       blindaje de las celdas, los límites del formulario y el comportamiento de los guiones
       del servidor. Cada una deja por escrito un comportamiento que debe seguir cumpliéndose,
       y se ejecutan enteras antes de cada publicación.
     </div>
+
+    <h3>Qué pasa cuando llegan todos a la vez</h3>
+    <p>
+      El día que se publica una convocatoria no llega una persona cada diez minutos: llegan
+      cientos en la misma hora. Se midió con una prueba que se puede volver a correr
+      —<span class="mono-en">npm run probar-carga</span>—: <b>mil altas con cincuenta
+      personas registrándose al mismo tiempo</b>.
+    </p>
+    <table>
+      <tr><th style="width:38%">Qué se midió</th><th>Resultado</th></tr>
+      <tr><td><b>Altas guardadas</b></td>
+        <td>Las mil. Ninguna se perdió ni se rechazó.</td></tr>
+      <tr><td><b>Folios repetidos</b></td>
+        <td>Ninguno. Dos personas con el mismo folio es un problema que se descubre el
+            día del congreso, en la mesa de acreditación.</td></tr>
+      <tr><td><b>Espera de quien se registra</b></td>
+        <td>217 ms la mitad de las veces; 341 ms, nueve de cada diez.</td></tr>
+    </table>
+    <p style="font-size:9pt;color:#8b95a5">
+      La medición se hizo sobre una compilación de producción en una máquina de cuatro
+      núcleos; el servidor del CIESS tiene dos, así que allí el ritmo será menor. Lo que la
+      prueba demuestra no es la velocidad —ésa depende de la máquina— sino que nada se
+      pierde ni se duplica cuando llegan muchos a la vez, que sí depende del código y se
+      reproduce en cualquier parte. La prueba borra sola los registros que crea.
+    </p>
   </section>
   <div class="pie"><span>CIESS · Anteproyecto</span><span>Sistema de registro del congreso</span></div>
 </div>
@@ -455,8 +480,10 @@
         <td>El registro se guarda igual y la persona recibe su folio. Una tarea recoge los
             rezagados cada diez minutos y el panel avisa mientras quede alguno.</td></tr>
       <tr><td><b>Alguien cambia las columnas de la hoja</b></td>
-        <td>El sistema lo detecta antes de escribir, se detiene y dice qué ejecutar. Una
-            fila que no llega se recupera; cien filas descolocadas, no.</td></tr>
+        <td>El sistema lo detecta antes de escribir, se detiene y dice qué ejecutar.
+            También cuando no hay nada que copiar: si no, un despliegue con columnas
+            nuevas se daba por bueno sin haber abierto la hoja. Una fila que no llega se
+            recupera; cien filas descolocadas, no.</td></tr>
       <tr><td><b>Una actualización rompe el sitio</b></td>
         <td>Se compila aparte y sólo se cambia por la nueva cuando sale entera. Si el sitio
             no responde después de reiniciar, vuelve solo a la versión anterior.</td></tr>
@@ -1082,8 +1109,10 @@
         No toca la base ni revierte nada.</span></td>
         <td><span class="mono-en">sudo bash /opt/congreso/guiones/servidor/auxilio.sh</span></td></tr>
       <tr><td><b>Reescribir la hoja entera</b><br>
-        <span style="font-size:8.6pt;color:#8b95a5">Cuando cambian las columnas.</span></td>
-        <td><span class="mono-en">npm run sincronizar -- --rehacer</span></td></tr>
+        <span style="font-size:8.6pt;color:#8b95a5">Cuando una versión cambia las columnas
+        del libro. Hace todo lo de arriba y, al final, vacía la hoja y la escribe
+        entera.</span></td>
+        <td><span class="mono-en">sudo bash /opt/congreso/guiones/servidor/poner-al-dia.sh --rehacer</span></td></tr>
       <tr><td><b>Dejar el congreso sin registros</b><br>
         <span style="font-size:8.6pt;color:#8b95a5">Respalda, enseña qué se pierde y pide
         confirmación escrita.</span></td>
@@ -1137,7 +1166,7 @@
       <b>Qué se entrega.</b> El sistema funcionando en
       <span class="mono-en">congreso-dss.ciess.org</span>, el código completo con su
       historial, los guiones de operación del servidor, la documentación de despliegue y las
-      210 pruebas automáticas que lo respaldan. El servidor queda a nombre del CIESS y los
+      203 pruebas automáticas que lo respaldan. El servidor queda a nombre del CIESS y los
       datos no salen de él.
     </div>
   </section>
