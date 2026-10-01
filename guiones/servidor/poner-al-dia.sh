@@ -136,7 +136,11 @@ aviso "Pendientes de copiar a la hoja: $pendientes"
 printf '\n'
 if [ "$fallo_copia" = "sí" ]; then
   printf '   \033[33mLa copia a la hoja falló; el motivo está unas líneas más arriba.\033[0m\n'
-  aviso "Lo más común: la cuenta de servicio no es Editora de la hoja, o el"
+  aviso "Si dice que la hoja «tiene las columnas anteriores», es que esta versión"
+  aviso "cambió las columnas del libro. Se arregla reescribiéndolo entero:"
+  aviso "  cd $RAIZ && sudo -u $USUARIO npm run sincronizar -- --rehacer"
+  aviso ""
+  aviso "Si no, lo más común: la cuenta de servicio no es Editora de la hoja, o el"
   aviso "GOOGLE_SHEETS_ID del .env no es el de la hoja que está mirando."
   aviso "Para reintentar sólo esto: cd $RAIZ && sudo -u $USUARIO npm run sincronizar"
 elif [ "$pendientes" = "0" ]; then

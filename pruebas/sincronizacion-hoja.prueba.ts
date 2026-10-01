@@ -201,6 +201,28 @@ describe('una hoja con las columnas de antes', () => {
     expect(llamadas.append, 'no debe escribir nada').toHaveLength(0);
   });
 
+  it('revisar el libro sin nada que copiar también detecta las columnas viejas', async () => {
+    // El despliegue sincroniza al final. Con la cola vacía —lo normal justo
+    // después— no se abría la hoja y se anunciaba que estaba al día, con las
+    // columnas de antes dentro. El aviso llegaba semanas más tarde, cuando
+    // alguien se registraba y su alta fallaba.
+    encabezadosDeLaHoja = (nombre) =>
+      nombre === 'REG_Respuestas' ? ['Folio', 'ID', 'Una columna de antes'] : [];
+
+    const { revisarLibro } = await import('@/lib/servidor/sheets');
+    await expect(revisarLibro()).rejects.toThrow(/--rehacer/);
+    expect(llamadas.append, 'no debe escribir nada').toHaveLength(0);
+  });
+
+  it('y con los encabezados correctos no se queja', async () => {
+    const { HOJAS } = await import('@/lib/normalizacion');
+    encabezadosDeLaHoja = (nombre) => HOJAS[nombre] ?? [];
+
+    const { revisarLibro, olvidarRevisionDelLibro } = await import('@/lib/servidor/sheets');
+    olvidarRevisionDelLibro();
+    await expect(revisarLibro()).resolves.toBeUndefined();
+  });
+
   it('una pestaña vacía no se toma por desfasada: se le escriben los encabezados', async () => {
     encabezadosDeLaHoja = () => [];
     const { sincronizarRegistro } = await import('@/lib/servidor/sheets');

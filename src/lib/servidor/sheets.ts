@@ -158,6 +158,24 @@ export function blindar(valor: string | number): string | number {
   return PELIGROSOS.test(valor) ? `'${valor}` : valor;
 }
 
+/**
+ * Comprueba que el libro esté como el sistema lo espera, sin escribir nada.
+ *
+ * Existe porque el guion de sincronización sólo tocaba la hoja cuando había
+ * algo pendiente que copiar. Con la cola vacía —que es lo normal justo
+ * después de desplegar— no la miraba, y anunciaba «la hoja ya está al día»
+ * sin haberla abierto. Si el despliegue venía con columnas nuevas, eso era
+ * falso: la hoja se quedaba con las de antes y el aviso llegaba semanas más
+ * tarde, cuando alguien se registraba y su alta fallaba.
+ */
+export async function revisarLibro(): Promise<void> {
+  const idLibro = process.env.GOOGLE_SHEETS_ID;
+  if (!googleConfigurado() || !idLibro) {
+    throw new Error('Google Sheets no está configurado.');
+  }
+  await asegurarHojas(idLibro);
+}
+
 /** Añade un registro a todas las pestañas que le corresponden. */
 export async function sincronizarRegistro(registro: Registro): Promise<void> {
   const idLibro = process.env.GOOGLE_SHEETS_ID;

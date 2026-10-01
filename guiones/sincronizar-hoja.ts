@@ -33,7 +33,7 @@ async function principal() {
   // Se importan aquí, ya cargado el entorno: el módulo de la base abre la
   // conexión con lo que encuentre en el momento de cargarse.
   const { consultar } = await import('../src/lib/bd/conexion');
-  const { sincronizarRegistro, vaciarHojas } = await import('../src/lib/servidor/sheets');
+  const { revisarLibro, sincronizarRegistro, vaciarHojas } = await import('../src/lib/servidor/sheets');
   const { googleConfigurado } = await import('../src/lib/servidor/google');
 
   const problema = faltante(googleConfigurado());
@@ -76,7 +76,12 @@ async function principal() {
   );
 
   if (pendientes.length === 0) {
-    decir('No hay nada pendiente: la hoja ya está al día.');
+    // Mirarla aunque no haya nada que copiar. Decir «ya está al día» sin
+    // abrirla es lo que hacía que un despliegue con columnas nuevas pasara
+    // por bueno: la hoja se quedaba con las de antes y nadie se enteraba
+    // hasta que alguien se registraba y su alta fallaba.
+    await revisarLibro();
+    decir('No hay nada pendiente, y la hoja tiene las columnas de ahora.');
     return;
   }
 
