@@ -542,24 +542,14 @@ h1.portada-titulo {
   hyphens: manual;
   letter-spacing: -0.005em;
 }
-/* medias lunas de los títulos interiores, a mayor escala, abriendo y cerrando
-   la pregunta como un paréntesis */
-h1.portada-titulo::before,
-h1.portada-titulo .cierre {
-  content: "";
-  width: 10pt; height: 20pt;
-  background: var(--azul);
-}
+/* media luna de los títulos interiores, a mayor escala, abriendo la pregunta */
 h1.portada-titulo::before {
+  content: "";
   position: absolute;
   left: -12.6pt; top: 3.2pt;
+  width: 10pt; height: 20pt;
   border-radius: 10pt 0 0 10pt;
-}
-h1.portada-titulo .cierre {
-  display: inline-block;
-  margin-left: 3.4pt;
-  vertical-align: -4.2pt;
-  border-radius: 0 10pt 10pt 0;
+  background: var(--azul);
 }
 .portada-logos {
   position: absolute; left: 36.9pt; right: 36.9pt; top: 522pt; height: 41.7pt;

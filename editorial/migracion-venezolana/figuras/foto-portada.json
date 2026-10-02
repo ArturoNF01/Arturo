@@ -18,9 +18,9 @@
     "_nota": "Relleno de cristal esmerilado del mapa. Medidas en pt; tinte_opacidad, blanco, brillo, borde_luz y sombra son opacidades (0-1).",
     "mascara": "figuras/svg/portada-mascara.svg",
     "desenfoque": 2.6,
-    "blanco": 0.1,
+    "blanco": 0.2,
     "brillo": [
-      0.18,
+      0.16,
       0.0
     ],
     "borde": 2.0,
@@ -31,8 +31,8 @@
       1.2,
       2.0
     ],
-    "tinte": "#1e6ea6",
-    "tinte_opacidad": 0.32
+    "tinte": "#ffffff",
+    "tinte_opacidad": 0.0
   },
   "tema": "Personas migrantes con equipaje por un camino de terracería (imagen generada con IA por diseño; letrero limpiado y ampliada a 300 ppp)",
   "busqueda": ""
