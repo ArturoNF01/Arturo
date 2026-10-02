@@ -413,6 +413,26 @@ export function FormularioRegistro({
           </section>
         )}
 
+        {pasoActual === 'alojamiento' && (
+          <section className="space-y-5">
+            <Cabecera titulo={t.formulario.secciones.alojamiento} ayuda={t.formulario.secciones.alojamientoAyuda} />
+            <CampoInterruptor
+              campo="requiere_alojamiento"
+              etiqueta={t.formulario.campos.requiereAlojamiento}
+              valor={Boolean(valores.requiere_alojamiento)}
+              onChange={(v) => fijar('requiere_alojamiento', v)}
+            />
+            {/* El aviso sale sólo si marcó que sí. Puesto siempre, se lee como
+                una promesa a todo el mundo; puesto aquí, contesta la pregunta
+                que viene justo después de marcar: «¿y ahora qué pasa?». */}
+            {Boolean(valores.requiere_alojamiento) && (
+              <p className="rounded-lg border-l-4 border-ciess-500 py-2 pl-4 text-sm font-medium">
+                {t.formulario.secciones.alojamientoAviso}
+              </p>
+            )}
+          </section>
+        )}
+
         {pasoActual === 'traslados' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.traslados} ayuda={t.formulario.secciones.trasladosAyuda} />

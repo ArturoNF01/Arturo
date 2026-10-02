@@ -116,6 +116,11 @@ export function pasosVisibles(
     // Los requerimientos de sala —proyector, micrófono— son de quien expone,
     // no de quien viene a escuchar.
     if (perfil.enPrograma) pasos.push('sala');
+    // Y el hospedaje, al revés que las fechas de viaje: al comité le toca
+    // gestionarlo para quien invita, y lo que necesita saber es a quién.
+    // Una casilla, sin fechas: las fechas se acuerdan después, por correo,
+    // contra la disponibilidad del bloqueo hotelero.
+    if (perfil.enPrograma) pasos.push('alojamiento');
     // Y al revés: las fechas de llegada y salida se le preguntan a quien
     // viene a escuchar, no a quien sube al programa. La estancia de quien
     // expone la arma el comité con esa persona, una por una y por correo;
@@ -204,6 +209,8 @@ export const PASO_DE_CAMPO: Record<string, PasoFormulario> = {
   prueba_conexion: 'conexion',
 
   requerimientos_tecnicos: 'sala',
+
+  requiere_alojamiento: 'alojamiento',
 
   ciudad_origen: 'traslados',
   fecha_llegada: 'traslados',

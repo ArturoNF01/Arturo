@@ -113,8 +113,8 @@ describe('esquema de registro', () => {
   });
 
   it('tampoco el orden de las fechas de hotel, por lo mismo', () => {
-    // La regla sigue escrita y atada al paso de alojamiento, que hoy no ve
-    // nadie. Si el hospedaje vuelve a preguntarse, vuelve a aplicarse sola.
+    // Del hospedaje quedó una casilla, no las fechas: se acuerdan después por
+    // correo. Sin fechas que pedir no hay orden que comprobar.
     const resultado = esquemaRegistro.safeParse(
       valido({
         perfil: 'ponente', modalidad: 'presencial',

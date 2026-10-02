@@ -245,21 +245,10 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
         message: 'Indique su zona horaria para enviarle el enlace a la hora correcta',
       });
     }
-    // Atada al paso, como las demás: el hotel dejó de preguntarse, y una
-    // ficha vieja con las fechas al revés no debe quedar imposible de
-    // guardar por un campo que nadie puede ya corregir.
-    if (
-      pasos.includes('alojamiento')
-      && datos.requiere_alojamiento && datos.fecha_entrada_hotel && datos.fecha_salida_hotel
-    ) {
-      if (datos.fecha_salida_hotel < datos.fecha_entrada_hotel) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['fecha_salida_hotel'],
-          message: 'La fecha de salida no puede ser anterior a la de entrada',
-        });
-      }
-    }
+    // Del hospedaje queda una casilla, no las fechas: se acuerdan después
+    // por correo. Sin fechas que comparar no hay regla que aplicar, y
+    // mantenerla sólo servía para que una ficha vieja con las fechas al
+    // revés quedara imposible de guardar al editarla.
   });
 }
 

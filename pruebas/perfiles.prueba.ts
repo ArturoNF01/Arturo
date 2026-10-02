@@ -30,10 +30,12 @@ describe('pasos del formulario según el perfil', () => {
   });
 
   it('un ponente presencial recorre todas las secciones que le tocan', () => {
-    // Seis pantallas: su ponencia, su semblanza y lo que necesita en sala.
-    // Su estancia la arma el comité con esa persona, por correo.
+    // Siete pantallas: su ponencia, su semblanza, lo que necesita en sala y
+    // si le hace falta hospedaje. Las fechas del hotel no: se acuerdan
+    // después por correo, contra la disponibilidad del bloqueo.
     expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).toEqual([
-      'perfil', 'identificacion', 'ponencia', 'semblanza', 'sala', 'privacidad',
+      'perfil', 'identificacion', 'ponencia', 'semblanza', 'sala', 'alojamiento',
+      'privacidad',
     ]);
   });
 
@@ -51,14 +53,22 @@ describe('pasos del formulario según el perfil', () => {
     expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).not.toContain('traslados');
   });
 
-  it('ni el hospedaje ni la documentación de invitación se preguntan ya', () => {
+  it('la documentación de invitación ya no se pregunta a nadie', () => {
+    // Se tramita por correo con el comité, que la resolvía caso por caso.
     for (const clave of CLAVES_PERFIL) {
       for (const modalidad of ['presencial', 'en_linea'] as const) {
         const pasos = pasosVisibles(perfilPorClave(clave), modalidad);
-        expect(pasos, `${clave}/${modalidad}`).not.toContain('alojamiento');
         expect(pasos, `${clave}/${modalidad}`).not.toContain('documentacion');
       }
     }
+  });
+
+  it('el hospedaje se le pregunta a quien expone en la sede, y a nadie más', () => {
+    // Es al revés que las fechas de viaje, y a propósito: el hospedaje de
+    // quien invita lo gestiona el CIESS, así que necesita saber a quién.
+    expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).toContain('alojamiento');
+    expect(pasosVisibles(perfilPorClave('ponente'), 'en_linea')).not.toContain('alojamiento');
+    expect(pasosVisibles(perfilPorClave('publico_general'), 'presencial')).not.toContain('alojamiento');
   });
 
   it('estacionamiento y cierre ya no se preguntan a nadie', () => {

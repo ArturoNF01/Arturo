@@ -21,14 +21,14 @@ export const HOJAS: Record<string, string[]> = {
     'Institución', 'Cargo', 'Procedencia', 'País',
     'Título', 'Resumen', 'Palabras clave',
     'Semblanza', 'Fotografía', 'Autoriza grabación', 'Autorizaciones',
-    'Requerimientos técnicos', 'Zona horaria',
+    'Requerimientos técnicos', 'Zona horaria', 'Requiere hospedaje',
     'Ciudad de origen', 'Fecha de llegada', 'Fecha de salida',
     'Consentimiento', 'Estado',
   ],
   PAR_Participantes: [
     'ID', 'Marca temporal', 'Apellidos y nombre', 'Institución', 'Procedencia',
     'Estado o país de origen', 'Rol', 'Correo', 'Teléfono / WhatsApp',
-    'Llegada', 'Salida', 'Estado confirmación',
+    'Llegada', 'Salida', 'Requiere hospedaje', 'Estado confirmación',
   ],
   PSE_Personificadores_Semblanzas: [
     'ID', 'Día', 'Bloque', 'Apellidos y nombre', 'Cargo o función', 'Institución', 'País',
@@ -118,13 +118,15 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
     r.autoriza_grabacion ? 'Sí' : 'No',
     etiquetasEs('autorizaciones', r.autorizaciones),
     etiquetasEs('tecnicos', r.requerimientos_tecnicos), s(r.zona_horaria),
+    r.requiere_alojamiento ? 'Sí' : 'No',
     s(r.ciudad_origen), s(r.fecha_llegada), s(r.fecha_salida),
     r.consentimiento_datos ? 'Sí' : 'No', s(r.estado),
   ]];
 
   filas.PAR_Participantes = [[
     s(r.folio), marca, persona, s(r.institucion), ambito, origen, rol, s(r.correo),
-    s(r.telefono_whatsapp), s(r.fecha_llegada), s(r.fecha_salida), 'En proceso',
+    s(r.telefono_whatsapp), s(r.fecha_llegada), s(r.fecha_salida),
+    r.requiere_alojamiento ? 'Sí' : 'No', 'En proceso',
   ]];
 
   // El personificador lo lleva quien sale en el programa. Antes esto miraba

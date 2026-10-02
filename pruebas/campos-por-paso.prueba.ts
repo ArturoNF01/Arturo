@@ -45,7 +45,7 @@ describe('a qué paso pertenece cada campo', () => {
     'autoriza_publicacion', 'coautoria',
     'documentacion_solicitada', 'nombre_pasaporte', 'destinatario_oficio',
     'documentacion_otra', 'boleto_url',
-    'requiere_alojamiento', 'fecha_entrada_hotel', 'fecha_salida_hotel',
+    'fecha_entrada_hotel', 'fecha_salida_hotel',
     'requiere_traslado', 'medio_arribo', 'terminal_origen',
     'hora_llegada', 'aerolinea_llegada', 'vuelo_llegada',
     'hora_salida', 'aerolinea_salida', 'vuelo_salida', 'observaciones_traslado',

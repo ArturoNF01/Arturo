@@ -111,8 +111,15 @@ export function ResumenRegistro({
       ],
     },
     {
+      // Con paso otra vez: la casilla de hospedaje vuelve a preguntarse, y
+      // sin atarla al paso saldría un «No» en la ficha de todo el que nunca
+      // la vio —la columna es booleana y vale falso para todos—.
+      paso: 'alojamiento',
       titulo: t.formulario.secciones.alojamiento,
       filas: [
+        { clave: 'requiere_alojamiento', etiqueta: c.requiereAlojamiento },
+        // Las fechas dejaron de pedirse; siguen aquí por las fichas que las
+        // traen, y se esconden solas cuando están vacías.
         { clave: 'fecha_entrada_hotel', etiqueta: c.fechaEntradaHotel },
         { clave: 'fecha_salida_hotel', etiqueta: c.fechaSalidaHotel },
       ],

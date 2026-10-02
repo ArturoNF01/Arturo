@@ -138,6 +138,19 @@ describe('filasDeRegistro', () => {
     expect(participante[par.indexOf('Salida')]).toBe('2026-11-13');
   });
 
+  it('escribe quién necesita hospedaje, que es para lo que se pregunta', () => {
+    // El comité tiene que poder sacar de la hoja la lista a la que mandar la
+    // información del hotel. Si no sale aquí, hay que entrar al panel ficha
+    // por ficha.
+    const reg = HOJAS.REG_Respuestas;
+    const par = HOJAS.PAR_Participantes;
+    for (const [valor, esperado] of [[true, 'Sí'], [false, 'No']] as const) {
+      const filas = filasDeRegistro(registro({ requiere_alojamiento: valor }));
+      expect(filas.REG_Respuestas[0][reg.indexOf('Requiere hospedaje')], String(valor)).toBe(esperado);
+      expect(filas.PAR_Participantes[0][par.indexOf('Requiere hospedaje')], String(valor)).toBe(esperado);
+    }
+  });
+
   it('el personificador es de quien sale en el programa, no de quien escucha', () => {
     // Esto miraba un campo —«modalidad de participación»— que el formulario
     // dejó de pedir al reducirse a dos perfiles, y desde entonces la pestaña
