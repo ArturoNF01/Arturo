@@ -1,7 +1,8 @@
 """Prepara la fotografía de la portada: recorte y virado en los azules del libro.
 
 Lee figuras/foto-portada.json. La foto se recorta a la caja de la portada y se pasa
-a escala de grises. Tratamiento "gris": grises oscurecidos, con una sombra más
+a escala de grises. Tratamiento "color": la foto a color, algo oscurecida y con sombra
+superior. Tratamiento "gris": grises oscurecidos, con una sombra más
 densa arriba para que se lean el mapa y los nombres. Tratamiento "azul": virado
 en tres tintas del libro. Si todavía no hay foto, se genera un fondo provisional
 con una nota con la foto que falta.
@@ -18,7 +19,7 @@ import math
 import pathlib
 
 import pymupdf
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 CONFIG = RAIZ / "figuras" / "foto-portada.json"
@@ -111,6 +112,21 @@ def cristal(img, cfg, escala):
     return Image.composite(vidrio, con_sombra, m.filter(ImageFilter.GaussianBlur(0.6)))
 
 
+def color(img, cfg):
+    """Foto a color: oscurecida un poco (`brillo`) y con la misma sombra superior en
+    degradado que el tratamiento gris, para que se lean el mapa y los nombres."""
+    img = ImageEnhance.Brightness(img).enhance(cfg.get("brillo_color", 0.85))
+    img = ImageEnhance.Color(img).enhance(cfg.get("saturacion", 1.0))
+    sombra, alto_sombra = cfg.get("sombra_superior", 0.7), cfg.get("alto_sombra", 0.45)
+    capa = Image.new("L", (1, img.height))
+    for y in range(img.height):
+        t = min(1.0, y / (alto_sombra * img.height))
+        t = t * t * (3 - 2 * t)
+        capa.putpixel((0, y), round(255 * (sombra + (1 - sombra) * t)))
+    capa = Image.merge("RGB", [capa.resize(img.size)] * 3)
+    return ImageChops.multiply(img, capa)
+
+
 def recortar(foto, ancho, alto, foco, zoom):
     """Recorta la foto a la proporción de la caja, centrada en `foco`."""
     w, h = foto.size
@@ -146,10 +162,12 @@ def componer():
     ancho, alto = round(cfg["ancho"] * escala), round(cfg["alto"] * escala)
     ruta = RAIZ / cfg["archivo"]
     if ruta.exists():
-        foto = ImageOps.exif_transpose(Image.open(ruta)).convert("L")
-        foto = ImageOps.autocontrast(foto, cutoff=0.5)
+        trat = cfg.get("tratamiento")
+        foto = ImageOps.exif_transpose(Image.open(ruta)).convert("RGB" if trat == "color" else "L")
+        if trat != "color":
+            foto = ImageOps.autocontrast(foto, cutoff=0.5)
         foto = recortar(foto, ancho, alto, cfg["foco"], cfg.get("zoom", 1.0))
-        img = gris(foto, cfg) if cfg.get("tratamiento") == "gris" else virar(foto)
+        img = {"gris": gris, "color": color}.get(trat, lambda f, _: virar(f))(foto, cfg)
         if cfg.get("cristal"):
             img = cristal(img, cfg, escala)
         falta = None
