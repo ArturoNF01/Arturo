@@ -79,14 +79,28 @@ describe('esquema de registro', () => {
     expect(resultado.success).toBe(true);
   });
 
-  it('sin semblanza no pasa quien sale en el programa', () => {
-    // Es lo que se lee en voz alta antes de presentarle: sin ella no hay
-    // programa que armar.
+  it('la semblanza dejó de exigirse, porque dejó de pedirse', () => {
+    // La sección se retiró del formulario. Si el servidor siguiera
+    // exigiéndola, ningún ponente podría registrarse: el aviso señalaría un
+    // archivo que nadie tiene dónde adjuntar.
     const resultado = esquemaRegistro.safeParse(
-      valido({ perfil: 'ponente', modalidad: 'presencial', autoriza_grabacion: true }),
+      valido({
+        perfil: 'ponente', modalidad: 'presencial',
+        titulo_ponencia: 'Pensiones y cuidados', autoriza_grabacion: true,
+      }),
+    );
+    expect(resultado.success).toBe(true);
+  });
+
+  it('pero la autorización de grabación sí se sigue exigiendo', () => {
+    // Cambió de sección —ahora va con los demás consentimientos— y no de
+    // obligatoriedad: sin ella no se puede transmitir ni grabar a quien sale
+    // en el programa.
+    const resultado = esquemaRegistro.safeParse(
+      valido({ perfil: 'ponente', modalidad: 'presencial' }),
     );
     expect(resultado.success).toBe(false);
-    expect(resultado.error?.issues.some((i) => i.path[0] === 'semblanza_url')).toBe(true);
+    expect(resultado.error?.issues.some((i) => i.path[0] === 'autoriza_grabacion')).toBe(true);
   });
 
   it('al público general no se le pide semblanza', () => {

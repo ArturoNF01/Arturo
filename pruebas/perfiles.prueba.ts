@@ -30,13 +30,21 @@ describe('pasos del formulario según el perfil', () => {
   });
 
   it('un ponente presencial recorre todas las secciones que le tocan', () => {
-    // Siete pantallas: su ponencia, su semblanza, lo que necesita en sala y
-    // si le hace falta hospedaje. Las fechas del hotel no: se acuerdan
-    // después por correo, contra la disponibilidad del bloqueo.
+    // Seis pantallas, y el hospedaje justo después de identificarse: es la
+    // pregunta que decide si hay que reservarle habitación, y quien la
+    // contesta sigue pensando en su viaje, no en su ponencia.
     expect(pasosVisibles(perfilPorClave('ponente'), 'presencial')).toEqual([
-      'perfil', 'identificacion', 'ponencia', 'semblanza', 'sala', 'alojamiento',
-      'privacidad',
+      'perfil', 'identificacion', 'alojamiento', 'ponencia', 'sala', 'privacidad',
     ]);
+  });
+
+  it('la semblanza ya no se adjunta en el formulario', () => {
+    for (const clave of CLAVES_PERFIL) {
+      for (const modalidad of ['presencial', 'en_linea'] as const) {
+        expect(pasosVisibles(perfilPorClave(clave), modalidad), `${clave}/${modalidad}`)
+          .not.toContain('semblanza');
+      }
+    }
   });
 
   it('el público general presencial deja de dónde viene y qué días está', () => {
@@ -100,7 +108,6 @@ describe('pasos del formulario según el perfil', () => {
       expect(enLinea, paso).not.toContain(paso);
     }
     expect(enLinea).toContain('ponencia');
-    expect(enLinea).toContain('semblanza');
   });
 
   it('sólo hay dos perfiles con los que registrarse', () => {

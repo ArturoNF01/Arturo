@@ -8,7 +8,6 @@ import {
   CampoCasillas, CampoInterruptor, CampoOpcionUnica,
   CampoSeleccion, CampoTexto,
 } from './campos';
-import { SubidaArchivo } from './subida-archivo';
 import {
   PASO_DE_CAMPO, PERFILES, campoVisible, pasosVisibles, perfilPorClave,
   type ClavePerfil, type Modalidad, type PasoFormulario,
@@ -130,11 +129,6 @@ export function FormularioRegistro({
       }
     }
 
-    // El archivo se exige aquí y no al enviar: quien llega al final y se
-    // entera de que le falta un PDF tiene que volver siete pasos atrás.
-    if (paso === 'semblanza' && perfil?.enPrograma && !texto('semblanza_url')) {
-      nuevos.semblanza_url = t.formulario.validacion.requerido;
-    }
     if (paso === 'ponencia' && texto('resumen_ponencia').length > congreso.limite_resumen_caracteres) {
       nuevos.resumen_ponencia = interpolar(t.formulario.validacion.resumenLargo, {
         max: congreso.limite_resumen_caracteres,
@@ -143,11 +137,11 @@ export function FormularioRegistro({
     // Estas tres las exigía sólo el servidor, y su aviso llegaba al final,
     // cuando el campo ya no estaba en pantalla.
     if (paso === 'ponencia') obligatorio('titulo_ponencia');
-    if (paso === 'semblanza' && perfil?.enPrograma && !valores.autoriza_grabacion) {
-      nuevos.autoriza_grabacion = t.formulario.validacion.requerido;
-    }
     if (paso === 'conexion') obligatorio('zona_horaria');
 
+    if (paso === 'privacidad' && perfil?.enPrograma && !valores.autoriza_grabacion) {
+      nuevos.autoriza_grabacion = t.formulario.validacion.requerido;
+    }
     if (paso === 'privacidad' && !valores.consentimiento_datos) {
       nuevos.consentimiento_datos = t.formulario.validacion.consentimiento;
     }
@@ -355,50 +349,6 @@ export function FormularioRegistro({
           </section>
         )}
 
-        {pasoActual === 'semblanza' && (
-          <section className="space-y-5">
-            <Cabecera titulo={t.formulario.secciones.semblanza} ayuda={t.formulario.secciones.semblanzaAyuda} />
-            {/* La semblanza ya no se redacta aquí: se adjunta. Quien la
-                escribe suele tenerla hecha desde hace años, y un cuadro de
-                texto con límite de palabras obligaba a recortarla a mano. */}
-            <SubidaArchivo
-              destino="semblanza"
-              etiqueta={t.formulario.campos.semblanzaArchivo}
-              requerido
-              ayuda={interpolar(t.formulario.campos.semblanzaArchivoAyuda, { mb: congreso.foto_megabytes_maximo })}
-              megabytesMaximo={congreso.foto_megabytes_maximo}
-              valorUrl={texto('semblanza_url')}
-              error={errores.semblanza_url}
-              onSubida={(url, id) => { fijar('semblanza_url', url); fijar('semblanza_drive_id', id); }}
-              onQuitar={() => { fijar('semblanza_url', ''); fijar('semblanza_drive_id', ''); }}
-            />
-            {visible('foto') && (
-              <SubidaArchivo
-                destino="fotografia"
-                etiqueta={t.formulario.campos.foto}
-                ayuda={interpolar(t.formulario.campos.fotoAyuda, { mb: congreso.foto_megabytes_maximo })}
-                megabytesMaximo={congreso.foto_megabytes_maximo}
-                valorUrl={texto('foto_url')}
-                onSubida={(url, id) => { fijar('foto_url', url); fijar('foto_drive_id', id); }}
-                onQuitar={() => { fijar('foto_url', ''); fijar('foto_drive_id', ''); }}
-              />
-            )}
-            {/* Sin esta autorización no se puede transmitir ni grabar a quien
-                sale en el programa, así que se pide aquí y no al final. */}
-            {perfil?.enPrograma && (
-              <CampoInterruptor
-                campo="autoriza_grabacion"
-                etiqueta={t.formulario.campos.autorizaGrabacion}
-                ayuda={t.formulario.campos.autorizaGrabacionAyuda}
-                valor={Boolean(valores.autoriza_grabacion)}
-                onChange={(v) => fijar('autoriza_grabacion', v)}
-                error={errores.autoriza_grabacion}
-              />
-            )}
-            <CampoCasillas etiqueta={t.formulario.campos.autorizaciones} opciones={opciones('autorizaciones', t)} valores={lista('autorizaciones')} onChange={(v) => fijar('autorizaciones', v)} />
-          </section>
-        )}
-
         {pasoActual === 'sala' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.sala} />
@@ -454,6 +404,22 @@ export function FormularioRegistro({
           <section className="space-y-5">
             <Cabecera titulo={t.privacidad.titulo} />
             <div className="rounded-lg border p-4 text-sm" style={{ borderColor: 'var(--borde)' }}>
+              {/* Sin esta autorización no se puede transmitir ni grabar a
+                  quien sale en el programa. Vivía en la sección de semblanza;
+                  al retirarse esa sección se trae aquí, junto a los demás
+                  consentimientos, que es donde le corresponde estar. */}
+              {perfil?.enPrograma && (
+                <div className="mb-4">
+                  <CampoInterruptor
+                    campo="autoriza_grabacion"
+                    etiqueta={t.formulario.campos.autorizaGrabacion}
+                    ayuda={t.formulario.campos.autorizaGrabacionAyuda}
+                    valor={Boolean(valores.autoriza_grabacion)}
+                    onChange={(v) => fijar('autoriza_grabacion', v)}
+                    error={errores.autoriza_grabacion}
+                  />
+                </div>
+              )}
               <CampoInterruptor campo="consentimiento_datos" etiqueta={t.privacidad.aceptar} valor={valores.consentimiento_datos as boolean} onChange={(v) => fijar('consentimiento_datos', v)} />
               {errores.consentimiento_datos && <p className="error">{errores.consentimiento_datos}</p>}
               <div className="mt-4">

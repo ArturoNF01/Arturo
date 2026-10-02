@@ -146,13 +146,15 @@ describe('un registro llega a la hoja', () => {
   });
 
   it('la semblanza viaja como enlace de descarga, no como dirección', async () => {
+    // Ya no en la respuesta completa —esa columna se fue con la sección—,
+    // pero sí en la pestaña del personificador, que es de donde se imprime.
     const { sincronizarRegistro } = await import('@/lib/servidor/sheets');
     await sincronizarRegistro(ponente());
 
-    const reg = llamadas.append.find(
-      (p) => (p as { range: string }).range.startsWith('REG_Respuestas'),
+    const pse = llamadas.append.find(
+      (p) => (p as { range: string }).range.startsWith('PSE_'),
     ) as { requestBody: { values: string[][] } };
-    const fila = reg.requestBody.values[0];
+    const fila = pse.requestBody.values[0];
     expect(fila).toContain('=HYPERLINK("https://drive.google.com/file/d/sem123/view";"Descargar")');
   });
 

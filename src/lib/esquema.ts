@@ -202,20 +202,14 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
         message: 'Indique el título de su ponencia tal como debe aparecer en el programa',
       });
     }
-    // Quien sale en la transmisión tiene que autorizarlo por escrito.
+    // Quien sale en la transmisión tiene que autorizarlo por escrito. Se
+    // recoge en el paso de protección de datos, con los demás
+    // consentimientos; antes vivía en la sección de semblanza, que se retiró.
     if (perfil.enPrograma && datos.autoriza_grabacion !== true) {
       ctx.addIssue({
         code: 'custom',
         path: ['autoriza_grabacion'],
         message: 'Su participación se transmite y se graba: hace falta su autorización',
-      });
-    }
-    // Sin semblanza no se puede presentar a nadie ni armar el programa.
-    if (perfil.enPrograma && !datos.semblanza_url) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['semblanza_url'],
-        message: 'Adjunte su semblanza en PDF: se lee antes de su intervención',
       });
     }
     // Sin huso horario no se le puede avisar a qué hora conectarse —pero

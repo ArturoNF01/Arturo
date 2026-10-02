@@ -106,8 +106,11 @@ export function pasosVisibles(
   const presencial = modalidad === 'presencial';
   pasos.push('identificacion');
 
+  // El hospedaje, justo después de identificarse: es la pregunta que decide
+  // si hay que reservarle una habitación, y quien la contesta está pensando
+  // todavía en su viaje, no en su ponencia.
+  if (presencial && perfil.enPrograma) pasos.push('alojamiento');
   if (perfil.presentaPonencia) pasos.push('ponencia');
-  if (perfil.enPrograma) pasos.push('semblanza');
 
   // El huso horario sólo se le pregunta a quien tiene una hora asignada en el
   // programa: el público se conecta cuando quiere, al mismo enlace que todos.
@@ -116,11 +119,6 @@ export function pasosVisibles(
     // Los requerimientos de sala —proyector, micrófono— son de quien expone,
     // no de quien viene a escuchar.
     if (perfil.enPrograma) pasos.push('sala');
-    // Y el hospedaje, al revés que las fechas de viaje: al comité le toca
-    // gestionarlo para quien invita, y lo que necesita saber es a quién.
-    // Una casilla, sin fechas: las fechas se acuerdan después, por correo,
-    // contra la disponibilidad del bloqueo hotelero.
-    if (perfil.enPrograma) pasos.push('alojamiento');
     // Y al revés: las fechas de llegada y salida se le preguntan a quien
     // viene a escuchar, no a quien sube al programa. La estancia de quien
     // expone la arma el comité con esa persona, una por una y por correo;
@@ -200,10 +198,6 @@ export const PASO_DE_CAMPO: Record<string, PasoFormulario> = {
   idioma_ponencia: 'ponencia',
   palabras_clave: 'ponencia',
 
-  semblanza_url: 'semblanza',
-  foto_url: 'semblanza',
-  autorizaciones: 'semblanza',
-  autoriza_grabacion: 'semblanza',
 
   zona_horaria: 'conexion',
   prueba_conexion: 'conexion',
@@ -216,6 +210,7 @@ export const PASO_DE_CAMPO: Record<string, PasoFormulario> = {
   fecha_llegada: 'traslados',
   fecha_salida: 'traslados',
 
+  autoriza_grabacion: 'privacidad',
   consentimiento_datos: 'privacidad',
   consentimiento_comunicaciones: 'privacidad',
 };

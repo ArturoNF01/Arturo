@@ -74,7 +74,8 @@ export function ResumenRegistro({
       ],
     },
     {
-      paso: 'semblanza',
+      // Sin paso: la sección se retiró del formulario, pero las fichas que
+      // ya traen semblanza y fotografía tienen que seguir enseñándolas.
       titulo: t.formulario.secciones.semblanza,
       filas: [
         { clave: 'semblanza_url', etiqueta: c.semblanzaArchivo },

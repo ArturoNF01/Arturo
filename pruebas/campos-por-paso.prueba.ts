@@ -45,6 +45,10 @@ describe('a qué paso pertenece cada campo', () => {
     'autoriza_publicacion', 'coautoria',
     'documentacion_solicitada', 'nombre_pasaporte', 'destinatario_oficio',
     'documentacion_otra', 'boleto_url',
+    // Y la semblanza, que se retiró entera: el PDF, la fotografía y las
+    // autorizaciones sueltas. La de grabación no está aquí porque sigue
+    // pidiéndose, con los demás consentimientos.
+    'semblanza_url', 'foto_url', 'autorizaciones',
     'fecha_entrada_hotel', 'fecha_salida_hotel',
     'requiere_traslado', 'medio_arribo', 'terminal_origen',
     'hora_llegada', 'aerolinea_llegada', 'vuelo_llegada',

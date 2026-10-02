@@ -45,16 +45,6 @@ SITIO=http://localhost:3000 \
   node guiones/capturar-pantallas.mjs
 ```
 
-Si la máquina donde se toman no tiene Drive conectado, el recorrido se atasca
-en el paso de la semblanza, que exige adjuntar un PDF. Con
-`ARCHIVOS_SIMULADOS=1` la subida se responde igual que la respondería Drive y
-la pantalla sale idéntica:
-
-```bash
-ARCHIVOS_SIMULADOS=1 SITIO=... CUENTA=... CLAVE=... \
-  node guiones/capturar-pantallas.mjs
-```
-
 El guion se detiene si una captura sale idéntica a la anterior. Suena excesivo
 hasta que pasa: en la tercera versión se entregaron tres figuras repetidas —el
 mapa de la sede, la documentación de invitación y el reparto por perfil— porque
