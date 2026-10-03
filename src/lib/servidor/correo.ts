@@ -80,6 +80,7 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
 </div>`
         : '',
     url_agenda: datos.urlAgenda,
+    url_sitio: urlSitio(),
     correo_contacto: datos.correoContacto,
   };
 }

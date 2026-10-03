@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, type FocusEvent as ReactFocusEvent, type MouseEvent as ReactMouseEvent } from 'react';
 
 export interface Opcion { valor: string; etiqueta: string }
 
@@ -67,6 +67,20 @@ export function CampoTexto({
   maximo?: number;
 }) {
   const id = useId();
+  // En una fecha o una hora, el navegador sólo abre el calendario si se
+  // acierta al iconito del extremo; pulsar en el resto del campo no hace
+  // nada, y quien no lo sabe acaba tecleando el día a mano y equivocando el
+  // formato. `showPicker` lo abre desde cualquier punto. Donde no exista
+  // —navegadores viejos— el campo sigue funcionando como siempre.
+  const abrirSelector = (e: ReactMouseEvent<HTMLInputElement> | ReactFocusEvent<HTMLInputElement>) => {
+    if (tipo !== 'date' && tipo !== 'time') return;
+    try {
+      (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
+    } catch {
+      // Firefox lo rechaza si el gesto no le parece del usuario. No pasa nada:
+      // queda el comportamiento de siempre.
+    }
+  };
   return (
     <Envoltura {...base} id={id}>
       <input
@@ -74,13 +88,14 @@ export function CampoTexto({
         name={base.campo}
         autoComplete={base.campo ? AUTOCOMPLETADO[base.campo] : undefined}
         type={tipo}
-        className="campo"
+        className={`campo${tipo === 'date' || tipo === 'time' ? ' cursor-pointer' : ''}`}
         value={valor}
         placeholder={marcador}
         maxLength={maximo}
         required={base.requerido}
         aria-invalid={base.error ? true : undefined}
         onChange={(e) => onChange(e.target.value)}
+        onClick={abrirSelector}
       />
     </Envoltura>
   );

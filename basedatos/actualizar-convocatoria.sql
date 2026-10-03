@@ -25,7 +25,7 @@ update configuracion set valor =
   '{"es": "1er Congreso de Estudios Interamericanos de Seguridad Social", "en": "1st Congress of Inter-American Social Security Studies", "pt": "1º Congresso de Estudos Interamericanos de Seguridade Social"}'::jsonb
  where clave = 'congreso_nombre';
 
-update configuracion set valor = '"teresa.davila@ciss-bienestar.org"'::jsonb where clave = 'correo_contacto';
+update configuracion set valor = '"proyectos.ciess@ciss-bienestar.org"'::jsonb where clave = 'correo_contacto';
 
 -- ---------------------------------------------------------------------
 -- Aviso de privacidad: fuera los apartados de derechos y de seguridad.
@@ -304,6 +304,29 @@ end $$;
 -- persona que dijo que no quería un servicio que nunca se le ofreció.
 -- Quitarlo deja el campo en nulo, que es lo que de verdad hay.
 alter table registros alter column requiere_traslado drop default;
+
+-- El acuse remitía a «este documento» para la convocatoria y la agenda. El
+-- documento es un PDF que envejece: la agenda definitiva aún no existe, y
+-- cuando exista habrá que sustituirlo. El sitio del congreso no envejece, y
+-- ahí está todo —convocatoria, sede, programa y preguntas frecuentes—, así
+-- que el acuse manda a la raíz y no a un archivo.
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html,
+         '<p>La convocatoria y la agenda están disponibles en <a href="{{url_agenda}}">este documento</a>.</p>',
+         '<p>Toda la información del congreso —la convocatoria, la sede, el programa conforme se publique y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
+ where cuerpo_html like '%La convocatoria y la agenda están disponibles%';
+
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html,
+         '<p>The call for papers and the agenda are available in <a href="{{url_agenda}}">this document</a>.</p>',
+         '<p>All the congress information —the call for papers, the venue, the programme as it is published and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
+ where cuerpo_html like '%The call for papers and the agenda are available%';
+
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html,
+         '<p>A convocatória e a agenda estão disponíveis <a href="{{url_agenda}}">neste documento</a>.</p>',
+         '<p>Todas as informações do congresso —a convocatória, a sede, a programação conforme for publicada e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
+ where cuerpo_html like '%A convocatória e a agenda estão disponíveis%';
 
 commit;
 

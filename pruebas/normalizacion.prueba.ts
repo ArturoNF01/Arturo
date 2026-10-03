@@ -51,7 +51,7 @@ describe('las pestañas del libro', () => {
     const retiradas = [
       'Entidad', 'Ciudad', 'Nacionalidad', 'ORCID', 'Coautoría',
       'Documentación solicitada', 'Nombre en pasaporte', 'Boleto de vuelo',
-      'Requiere alojamiento', 'Entrada hotel', 'Salida hotel',
+      'Requiere alojamiento',
       'Requiere traslado', 'Medio de arribo', 'Terminal de origen',
       'Hora de llegada', 'Aerolínea de llegada', 'Vuelo de llegada',
       'Hora de salida', 'Aerolínea de salida', 'Vuelo de salida',

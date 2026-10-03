@@ -141,11 +141,17 @@ export function campoVisible(
   if (!perfil) return false;
   const presencial = modalidad === 'presencial';
 
-  // Tres campos y ya —pero sólo dentro de la identificación. El recorte no
-  // puede alcanzar al consentimiento de datos, que vive en otro paso y es lo
+  // Lo mínimo de la identificación —pero sólo dentro de ese paso. El recorte
+  // no puede alcanzar al consentimiento de datos, que vive en otro y es lo
   // único sin lo cual no se puede guardar a nadie.
+  //
+  // De quien sigue la transmisión se guardan seis cosas: con quién se habla,
+  // dónde está y de dónde viene. Ni teléfono, ni nombre para constancia, ni
+  // género: cada campo de más es gente que abandona a mitad del formulario, y
+  // esos tres no se usan para nada en una participación en línea.
   if (registroMinimo(perfil, modalidad) && PASO_DE_CAMPO[campo] === 'identificacion') {
-    return campo === 'apellidos' || campo === 'nombres' || campo === 'correo';
+    return ['apellidos', 'nombres', 'correo', 'institucion', 'cargo', 'pais_residencia']
+      .includes(campo);
   }
 
   switch (campo) {
@@ -205,6 +211,8 @@ export const PASO_DE_CAMPO: Record<string, PasoFormulario> = {
   requerimientos_tecnicos: 'sala',
 
   requiere_alojamiento: 'alojamiento',
+  fecha_entrada_hotel: 'alojamiento',
+  fecha_salida_hotel: 'alojamiento',
 
   ciudad_origen: 'traslados',
   fecha_llegada: 'traslados',

@@ -126,9 +126,9 @@ describe('esquema de registro', () => {
     ).toBe(false);
   });
 
-  it('tampoco el orden de las fechas de hotel, por lo mismo', () => {
-    // Del hospedaje quedó una casilla, no las fechas: se acuerdan después por
-    // correo. Sin fechas que pedir no hay orden que comprobar.
+  it('rechaza una salida de hotel anterior a la entrada', () => {
+    // Las fechas vuelven a pedirse, debajo de la casilla de hospedaje, así
+    // que vuelve a haber un orden que comprobar.
     const resultado = esquemaRegistro.safeParse(
       valido({
         perfil: 'ponente', modalidad: 'presencial',
@@ -139,7 +139,8 @@ describe('esquema de registro', () => {
         fecha_salida_hotel: '2026-11-10',
       }),
     );
-    expect(resultado.success).toBe(true);
+    expect(resultado.success).toBe(false);
+    expect(resultado.error?.issues.some((i) => i.path[0] === 'fecha_salida_hotel')).toBe(true);
   });
 
   it('descarta los campos auxiliares de la interfaz que no pertenecen a la base', () => {

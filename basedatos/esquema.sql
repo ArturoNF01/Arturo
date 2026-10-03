@@ -473,7 +473,7 @@ null = sin límite'),
   ('fecha_limite_registro', '"2026-10-30"'::jsonb, 'Fecha límite de registro y de edición'),
   ('url_agenda',  '"https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf"'::jsonb, 'PDF de agenda/convocatoria'),
   ('url_video_login', '"https://home.ciess.org/wp-content/uploads/2026/03/1er-Congreso-de-Estudios-Interamericanos-de-Seguridad-Social-B.mp4"'::jsonb, 'Video de fondo del login'),
-  ('correo_contacto', '"teresa.davila@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador'),
+  ('correo_contacto', '"proyectos.ciess@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador'),
   ('url_registro_zoom', '"https://us02web.zoom.us/webinar/register/WN_LMCy6fENTOiR2dSOvb_jDg"'::jsonb, 'Registro en Zoom para quien sigue la transmisión; de ahí sale el enlace personal')
 on conflict (clave) do nothing;
 drop trigger if exists trg_config_actualizado on configuracion;
@@ -528,7 +528,7 @@ group by 1 order by 2 desc;
 -- Plantillas iniciales (editables desde el panel)
 -- Variables disponibles: {{folio}} {{nombre}} {{perfil}} {{modalidad}}
 --                        {{correo}} {{fecha_limite}} {{url_edicion}}
---                        {{url_agenda}} {{correo_contacto}}
+--                        {{url_agenda}} {{url_sitio}} {{correo_contacto}}
 -- ---------------------------------------------------------------------
 insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 ('confirmacion_registro', 'es',
@@ -543,7 +543,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 {{zoom_bloque}}
 <p>Puede consultar o modificar sus datos hasta el {{fecha_limite}} en el siguiente enlace: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>La convocatoria y la agenda están disponibles en <a href="{{url_agenda}}">este documento</a>.</p>
+<p>Toda la información del congreso —la convocatoria, la sede, el programa conforme se publique y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Cualquier corrección posterior debe solicitarse a {{correo_contacto}}.</p>
 <p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -559,7 +559,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 {{zoom_bloque}}
 <p>You may review or edit your details until {{fecha_limite}} at the following link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>The call for papers and the agenda are available in <a href="{{url_agenda}}">this document</a>.</p>
+<p>All the congress information —the call for papers, the venue, the programme as it is published and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Any later correction must be requested at {{correo_contacto}}.</p>
 <p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
 
@@ -575,7 +575,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 {{zoom_bloque}}
 <p>Você pode consultar ou alterar seus dados até {{fecha_limite}} no seguinte link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>A convocatória e a agenda estão disponíveis <a href="{{url_agenda}}">neste documento</a>.</p>
+<p>Todas as informações do congresso —a convocatória, a sede, a programação conforme for publicada e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Qualquer correção posterior deve ser solicitada a {{correo_contacto}}.</p>
 <p>Comitê organizador<br/>CIESS · RIUSS</p>$html$),
 

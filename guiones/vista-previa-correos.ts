@@ -57,6 +57,13 @@ async function principal() {
   mkdirSync(SALIDA, { recursive: true });
   const t = obtenerDiccionario('es');
 
+  // El correo de contacto y el enlace de la convocatoria salen de la base, no
+  // de aquí. Estaban escritos a mano, y uno de los dos era una dirección que
+  // nunca existió: la vista previa enseñaba un buzón inventado justo donde la
+  // plantilla pone el que de verdad recibe las correcciones.
+  const { leerConfiguracion } = await import('../src/lib/servidor/configuracion');
+  const configuracion = await leerConfiguracion();
+
   for (const [clave, descripcion] of CUALES) {
     if (pedido && pedido !== clave) continue;
 
@@ -73,9 +80,9 @@ async function principal() {
     const variables = variablesDeRegistro({
       clave,
       registro: EJEMPLO,
-      correoContacto: 'congresodss@ciess.org',
-      fechaLimite: '15 de mayo de 2026',
-      urlAgenda: 'https://congreso-dss.ciess.org/agenda',
+      correoContacto: configuracion.correo_contacto,
+      fechaLimite: configuracion.fecha_limite_registro,
+      urlAgenda: configuracion.url_agenda,
     });
 
     const asunto = aplicarPlantilla(plantilla.asunto, variables);

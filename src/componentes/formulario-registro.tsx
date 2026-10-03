@@ -9,7 +9,7 @@ import {
   CampoSeleccion, CampoTexto,
 } from './campos';
 import {
-  PASO_DE_CAMPO, PERFILES, campoVisible, pasosVisibles, perfilPorClave,
+  PASO_DE_CAMPO, PERFILES, campoVisible, pasosVisibles, perfilPorClave, registroMinimo,
   type ClavePerfil, type Modalidad, type PasoFormulario,
 } from '@/lib/perfiles';
 import { ZONAS_HORARIAS } from '@/lib/husos';
@@ -295,6 +295,15 @@ export function FormularioRegistro({
         {pasoActual === 'identificacion' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.identificacion} ayuda={t.formulario.secciones.identificacionAyuda} />
+            {/* Quien sigue la transmisión tiene que saber, antes de terminar,
+                que el enlace no se lo damos nosotros: se lo manda Zoom cuando
+                se registre allá. Dicho sólo al final, se lee como un trámite
+                sorpresa. */}
+            {registroMinimo(perfil, modalidad) && (
+              <p className="rounded-lg border-l-4 border-ciess-500 py-2 pl-4 text-sm font-medium">
+                {t.formulario.secciones.zoomAviso}
+              </p>
+            )}
             <div className="grid gap-5 sm:grid-cols-2">
               <CampoTexto campo="apellidos" etiqueta={t.formulario.campos.apellidos} requerido valor={texto('apellidos')} onChange={(v) => fijar('apellidos', v)} error={errores.apellidos} />
               <CampoTexto campo="nombres" etiqueta={t.formulario.campos.nombres} requerido valor={texto('nombres')} onChange={(v) => fijar('nombres', v)} error={errores.nombres} />
@@ -376,9 +385,15 @@ export function FormularioRegistro({
                 una promesa a todo el mundo; puesto aquí, contesta la pregunta
                 que viene justo después de marcar: «¿y ahora qué pasa?». */}
             {Boolean(valores.requiere_alojamiento) && (
-              <p className="rounded-lg border-l-4 border-ciess-500 py-2 pl-4 text-sm font-medium">
-                {t.formulario.secciones.alojamientoAviso}
-              </p>
+              <>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <CampoTexto campo="fecha_entrada_hotel" etiqueta={t.formulario.campos.fechaEntradaHotel} tipo="date" valor={texto('fecha_entrada_hotel')} onChange={(v) => fijar('fecha_entrada_hotel', v)} />
+                  <CampoTexto campo="fecha_salida_hotel" etiqueta={t.formulario.campos.fechaSalidaHotel} tipo="date" valor={texto('fecha_salida_hotel')} onChange={(v) => fijar('fecha_salida_hotel', v)} error={errores.fecha_salida_hotel} />
+                </div>
+                <p className="rounded-lg border-l-4 border-ciess-500 py-2 pl-4 text-sm font-medium">
+                  {t.formulario.secciones.alojamientoAviso}
+                </p>
+              </>
             )}
           </section>
         )}

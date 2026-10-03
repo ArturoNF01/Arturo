@@ -21,7 +21,8 @@ export const HOJAS: Record<string, string[]> = {
     'Institución', 'Cargo', 'Procedencia', 'País',
     'Título', 'Resumen', 'Palabras clave',
     'Autoriza grabación',
-    'Requerimientos técnicos', 'Zona horaria', 'Requiere hospedaje',
+    'Requerimientos técnicos', 'Zona horaria',
+    'Requiere hospedaje', 'Entrada hotel', 'Salida hotel',
     'Ciudad de origen', 'Fecha de llegada', 'Fecha de salida',
     'Consentimiento', 'Estado',
   ],
@@ -117,6 +118,7 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
     r.autoriza_grabacion ? 'Sí' : 'No',
     etiquetasEs('tecnicos', r.requerimientos_tecnicos), s(r.zona_horaria),
     r.requiere_alojamiento ? 'Sí' : 'No',
+    s(r.fecha_entrada_hotel), s(r.fecha_salida_hotel),
     s(r.ciudad_origen), s(r.fecha_llegada), s(r.fecha_salida),
     r.consentimiento_datos ? 'Sí' : 'No', s(r.estado),
   ]];

@@ -157,6 +157,28 @@ describe('visibilidad de campos', () => {
     expect(campoVisible('foto', perfilPorClave('publico_general'), 'presencial')).toBe(false);
   });
 
+  it('al público en línea se le piden seis datos, no tres ni veinte', () => {
+    // Con quién se habla, dónde está y de dónde viene. Teléfono, nombre para
+    // constancia y género no: no se usan para nada en una participación en
+    // línea, y cada campo de más es gente que abandona a mitad.
+    const publico = perfilPorClave('publico_general');
+    const piden = ['apellidos', 'nombres', 'correo', 'institucion', 'cargo', 'pais_residencia'];
+    for (const campo of piden) {
+      expect(campoVisible(campo, publico, 'en_linea'), campo).toBe(true);
+    }
+    for (const campo of ['telefono_whatsapp', 'nombre_constancia', 'genero', 'procedencia']) {
+      expect(campoVisible(campo, publico, 'en_linea'), campo).toBe(false);
+    }
+  });
+
+  it('las fechas de hotel cuelgan del paso de alojamiento, no de otro', () => {
+    // Salen debajo de la casilla, y sólo si se marca. Atarlas al paso es lo
+    // que hace que el servidor no las exija a quien nunca las vio.
+    for (const campo of ['fecha_entrada_hotel', 'fecha_salida_hotel']) {
+      expect(PASO_DE_CAMPO[campo], campo).toBe('alojamiento');
+    }
+  });
+
   it('la identificación se quedó en lo que de verdad hace falta', () => {
     // Entidad, ciudad, nacionalidad y ORCID salieron del formulario: el
     // mapa de campos a pasos es lo que decide si una casilla existe, y

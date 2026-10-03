@@ -163,7 +163,7 @@ async function main() {
   await elegirPerfil('Público general', 'En línea');
   await tomar('09-registro-publico-en-linea');
   await siguiente('Identificación');
-  await tomar('10-registro-tres-campos');
+  await tomar('10-registro-publico-datos');
 
   // Ponente presencial: el recorrido largo, que es el que enseña todo.
   await elegirPerfil('Ponente', 'Presencial');
@@ -171,10 +171,10 @@ async function main() {
   await llenarObligatorios(['Robles', 'María Fernanda', 'mf.robles@universidad.edu.mx', 'UNAM', 'México']);
   await tomar('11-registro-identificacion');
   await siguiente('Alojamiento');
-  // Marcada: lo que esta pantalla tiene que enseñar no es la casilla, sino el
-  // aviso que sale al marcarla.
+  // Marcada: lo que esta pantalla tiene que enseñar no es la casilla, sino lo
+  // que sale al marcarla —las dos fechas y el aviso—.
   await pagina.locator('section input[type="checkbox"]').first().check();
-  await pagina.waitForTimeout(400);
+  await pagina.waitForTimeout(600);
   await tomar('12-registro-alojamiento');
   await siguiente('Su ponencia');
   await llenarObligatorios(['La seguridad social ante el envejecimiento en América Latina']);

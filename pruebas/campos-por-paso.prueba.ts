@@ -49,7 +49,6 @@ describe('a qué paso pertenece cada campo', () => {
     // autorizaciones sueltas. La de grabación no está aquí porque sigue
     // pidiéndose, con los demás consentimientos.
     'semblanza_url', 'foto_url', 'autorizaciones',
-    'fecha_entrada_hotel', 'fecha_salida_hotel',
     'requiere_traslado', 'medio_arribo', 'terminal_origen',
     'hora_llegada', 'aerolinea_llegada', 'vuelo_llegada',
     'hora_salida', 'aerolinea_salida', 'vuelo_salida', 'observaciones_traslado',

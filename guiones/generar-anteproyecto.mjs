@@ -8,7 +8,7 @@
  * servidor de tipografías siga en pie. Si `fuentes.css` no está, se construye.
  */
 import { chromium } from 'playwright';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -49,8 +49,41 @@ async function construirFuentes() {
   console.log(`  ${salida.length} caras · ${Math.round(readFileSync(destino).length / 1024)} KB`);
 }
 
+/**
+ * Que no sobre ni falte ninguna captura.
+ *
+ * Los guiones de captura llevan los números escritos dentro, y renumerar las
+ * del sistema no tocaba las de los correos: quedaban ocho archivos donde
+ * debía haber cuatro, el documento apuntaba a los cuatro viejos y el PDF se
+ * generaba sin una queja enseñando correos de hace tres versiones. Una
+ * captura que falta sí se nota —sale un hueco—; una que sobra, no.
+ */
+function revisarCapturas() {
+  const html = readFileSync(resolve(DOC, 'anteproyecto.html'), 'utf8');
+  const citadas = new Set([...html.matchAll(/src="(capturas\/[^"]+)"/g)].map((m) => m[1]));
+  const enDisco = new Set(
+    readdirSync(resolve(DOC, 'capturas')).map((n) => `capturas/${n}`),
+  );
+
+  const faltan = [...citadas].filter((c) => !enDisco.has(c)).sort();
+  const sobran = [...enDisco].filter((c) => !citadas.has(c)).sort();
+
+  if (faltan.length) {
+    console.error(`\nEl documento cita capturas que no existen:\n  ${faltan.join('\n  ')}`);
+  }
+  if (sobran.length) {
+    console.error(
+      `\nHay capturas que el documento no usa:\n  ${sobran.join('\n  ')}\n`
+      + 'Suele ser una renumeración a medias: el guion de captura escribe con '
+      + 'un número y el documento apunta a otro.',
+    );
+  }
+  if (faltan.length || sobran.length) process.exit(1);
+}
+
 async function main() {
   mkdirSync(dirname(SALIDA), { recursive: true });
+  revisarCapturas();
   await construirFuentes();
 
   const navegador = await chromium.launch({

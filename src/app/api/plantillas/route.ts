@@ -89,6 +89,7 @@ export async function POST(peticion: NextRequest) {
     fecha_limite: configuracion.fecha_limite_registro,
     url_edicion: `${urlSitio()}/confirmacion/demo?token=demo`,
     url_agenda: configuracion.url_agenda,
+    url_sitio: urlSitio(),
     correo_contacto: configuracion.correo_contacto,
   };
 
