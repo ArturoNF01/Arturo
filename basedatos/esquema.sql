@@ -473,7 +473,7 @@ null = sin límite'),
   ('fecha_limite_registro', '"2026-10-30"'::jsonb, 'Fecha límite de registro y de edición'),
   ('url_agenda',  '"https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf"'::jsonb, 'PDF de agenda/convocatoria'),
   ('url_video_login', '"https://home.ciess.org/wp-content/uploads/2026/03/1er-Congreso-de-Estudios-Interamericanos-de-Seguridad-Social-B.mp4"'::jsonb, 'Video de fondo del login'),
-  ('correo_contacto', '"proyectos.ciess@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador'),
+  ('correo_contacto', '"ciess.cooperacion@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador'),
   ('url_registro_zoom', '"https://us02web.zoom.us/webinar/register/WN_LMCy6fENTOiR2dSOvb_jDg"'::jsonb, 'Registro en Zoom para quien sigue la transmisión; de ahí sale el enlace personal')
 on conflict (clave) do nothing;
 drop trigger if exists trg_config_actualizado on configuracion;

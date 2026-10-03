@@ -25,7 +25,7 @@ update configuracion set valor =
   '{"es": "1er Congreso de Estudios Interamericanos de Seguridad Social", "en": "1st Congress of Inter-American Social Security Studies", "pt": "1º Congresso de Estudos Interamericanos de Seguridade Social"}'::jsonb
  where clave = 'congreso_nombre';
 
-update configuracion set valor = '"proyectos.ciess@ciss-bienestar.org"'::jsonb where clave = 'correo_contacto';
+update configuracion set valor = '"ciess.cooperacion@ciss-bienestar.org"'::jsonb where clave = 'correo_contacto';
 
 -- ---------------------------------------------------------------------
 -- Aviso de privacidad: fuera los apartados de derechos y de seguridad.
