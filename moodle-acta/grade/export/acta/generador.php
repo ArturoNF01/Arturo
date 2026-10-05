@@ -61,11 +61,17 @@ foreach ($users as $u) {
     $matriz[] = $fila;
 }
 
-$datos = ['curso' => format_string($course->fullname, true, ['context' => $context]), 'matriz' => $matriz];
+$datos = [
+    'curso' => format_string($course->fullname, true, ['context' => $context, 'escape' => false]),
+    'docente' => \gradeexport_acta\helper::docente($context),
+    'matriz' => $matriz,
+];
 $logourl = (new moodle_url('/grade/export/acta/generador.php', ['id' => $courseid, 'logo' => 1]))->out(false);
 
 $html = file_get_contents(__DIR__ . '/templates/generador.html');
-$inyeccion = '<script>window.ACTA_DATOS = ' . json_encode($datos, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) . ';'
+// Modo directo: la interfaz del generador queda oculta; index.php maneja el botón y la descarga.
+$inyeccion = '<style>#acta-app{display:none!important}</style>'
+    . '<script>window.ACTA_DIRECTO = true;window.ACTA_DATOS = ' . json_encode($datos, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) . ';'
     . 'window.ACTA_LOGO_URL = ' . json_encode($logourl, JSON_HEX_TAG | JSON_HEX_AMP) . ';</script>';
 $html = str_replace('<body>', '<body>' . $inyeccion, $html);
 

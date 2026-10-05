@@ -855,6 +855,8 @@
     nombreArchivo: null,
     catalogo: null,
     catalogoCargado: false,
+    catalogoError: false,
+    ultimoBlob: null,
     pasoActual: 1,
     pasosCompletados: { 1: false, 2: false },
     logoDataUrl: null,
@@ -908,6 +910,7 @@
     dom.fecha.value = obtenerFechaFormateada();
     cargarCatalogo();
     precargarLogo();
+    if (window.ACTA_DIRECTO) return; // modo directo: sin pantallas, lo maneja window.ActaDirecto
     if (window.ACTA_DATOS) cargarDesdeMoodle();
 
     dom.dropzone.addEventListener('click', function () { dom.fileInput.click(); });
@@ -1103,6 +1106,7 @@
       })
       .catch(function (err) {
         console.error('Error al cargar catálogo:', err);
+        estado.catalogoError = true;
         mostrarErrorActividad(
           'No se pudo cargar el catálogo desde Google Sheets. ' +
           'Verifica tu conexión a internet y haz clic en "Reintentar". (' + err.message + ')'
@@ -1719,6 +1723,7 @@
       ['Módulo:', config.modulo],
       ['Fecha de elaboración:', config.fecha]
     ];
+    infoLineas = infoLineas.filter(function (l) { return String(l[1] == null ? '' : l[1]).trim() !== ''; });
     var infoRowHeight = 7;
     for (var k = 0; k < infoLineas.length; k++) {
       doc.setFont('helvetica', 'bold');
@@ -1935,6 +1940,7 @@
     estado.nombreArchivo = 'Acta_' + nombreLimpio + '.pdf';
 
     var blob = doc.output('blob');
+    estado.ultimoBlob = blob;
     return URL.createObjectURL(blob);
   }
 
@@ -1952,6 +1958,162 @@
     document.body.removeChild(a);
     setTimeout(function () { mostrarEstado('PDF descargado correctamente.', 'ok'); }, 500);
   }
+
+
+  // ---------------------------------------------------------------------------
+  // Modo directo (plugin gradeexport_acta): sin pantallas. Moodle entrega el curso,
+  // el docente y las calificaciones; esta función solo genera el PDF y lo devuelve.
+  // ---------------------------------------------------------------------------
+  var STOP_TOKENS = { de: 1, del: 1, la: 1, las: 1, los: 1, el: 1, en: 1, y: 1, e: 1, a: 1, al: 1, para: 1, por: 1, con: 1, un: 1, una: 1 };
+  var HONORIFICOS = { dr: 1, dra: 1, doctor: 1, doctora: 1, mtro: 1, mtra: 1, maestro: 1, maestra: 1, lic: 1, licenciado: 1, licenciada: 1,
+    ing: 1, ingeniero: 1, ingeniera: 1, mc: 1, msc: 1, mba: 1, phd: 1, prof: 1, profesor: 1, profesora: 1, sr: 1, sra: 1, srta: 1 };
+
+  function tokensDe(texto, ignorar) {
+    var norm = String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    var vistos = {}, out = [];
+    norm.split(' ').forEach(function (t) {
+      if (t.length < 2 || ignorar[t] || vistos[t]) return;
+      vistos[t] = true;
+      out.push(t);
+    });
+    return out;
+  }
+  function interseccion(a, b) {
+    return a.filter(function (t) { return b.indexOf(t) !== -1; }).length;
+  }
+  // Mismos nombres aunque cambien títulos (Dra.), acentos, orden o nombres de más: un conjunto contiene al otro y hay 2+ palabras en común.
+  function mismoNombre(a, b) {
+    var ign = {}; for (var k in STOP_TOKENS) ign[k] = 1; for (var h in HONORIFICOS) ign[h] = 1;
+    var ta = tokensDe(a, ign), tb = tokensDe(b, ign);
+    var comun = interseccion(ta, tb);
+    return comun >= 2 && (comun === ta.length || comun === tb.length);
+  }
+  function similitudActividad(a, b) {
+    var ta = tokensDe(a, STOP_TOKENS), tb = tokensDe(b, STOP_TOKENS);
+    var comun = interseccion(ta, tb);
+    var union = ta.length + tb.length - comun;
+    return union === 0 ? 0 : comun / union;
+  }
+  // Busca en el catálogo (Actividad, Módulo, Docente) la actividad que corresponde al curso de Moodle y,
+  // dentro de ella, el módulo del docente. Solo responde si la coincidencia es clara; si no, devuelve null.
+  function buscarEnCatalogo(curso, docente) {
+    if (!estado.catalogo || !estado.catalogo.length || !curso || !docente) return null;
+    var mejor = null, mejorPuntaje = 0, empate = false;
+    var vistas = {};
+    estado.catalogo.forEach(function (fila) {
+      if (vistas[fila.actividad]) return;
+      vistas[fila.actividad] = true;
+      var puntaje = similitudActividad(curso, fila.actividad);
+      if (puntaje > mejorPuntaje) { mejor = fila.actividad; mejorPuntaje = puntaje; empate = false; }
+      else if (puntaje === mejorPuntaje && puntaje > 0) { empate = true; }
+    });
+    if (!mejor || empate || mejorPuntaje < 0.75) return null;
+    var filas = estado.catalogo.filter(function (f) { return f.actividad === mejor && f.modulo && mismoNombre(docente, f.docente); });
+    if (!filas.length) return null;
+    var modulos = [];
+    filas.forEach(function (f) { if (modulos.indexOf(f.modulo) === -1) modulos.push(f.modulo); });
+    return { modulo: modulos.join(', '), docente: filas[0].docente };
+  }
+
+  function esperar(condicion, ms) {
+    return new Promise(function (resolve) {
+      var t = 0;
+      (function sondear() {
+        var ok = false;
+        try { ok = !!condicion(); } catch (e) {}
+        if (ok) return resolve(true);
+        t += 100;
+        if (t >= ms) return resolve(false);
+        setTimeout(sondear, 100);
+      })();
+    });
+  }
+
+  var preparacionDirecta = null;
+  // Espera (con límite de tiempo) a que carguen jsPDF, el logo y el catálogo. Nunca rechaza.
+  function prepararDirecto() {
+    if (preparacionDirecta) return preparacionDirecta;
+    var r = { pdf: false, logo: false, catalogo: false };
+    preparacionDirecta = esperar(function () { return window.jspdf && window.jspdf.jsPDF; }, 10000)
+      .then(function (ok) { r.pdf = ok; return esperar(function () { return estado.logoDataUrl || estado.logoError; }, 6000); })
+      .then(function (ok) { r.logo = !!estado.logoDataUrl; return esperar(function () { return estado.catalogoCargado || estado.catalogoError; }, 6000); })
+      .then(function () { r.catalogo = !!estado.catalogoCargado; return r; });
+    return preparacionDirecta;
+  }
+
+  function cargarFirmaDirecta(dataUrl) {
+    return new Promise(function (resolve, reject) {
+      if (!dataUrl) { estado.firmaDataUrl = null; estado.firmaWidth = 0; estado.firmaHeight = 0; return resolve(); }
+      var img = new Image();
+      img.onload = function () {
+        estado.firmaDataUrl = dataUrl;
+        estado.firmaWidth = img.naturalWidth || img.width || 0;
+        estado.firmaHeight = img.naturalHeight || img.height || 0;
+        estado.firmaFormato = /^data:image\/png/i.test(dataUrl) ? 'PNG' : 'JPEG';
+        resolve();
+      };
+      img.onerror = function () { reject(new Error('No se pudo leer la imagen de la firma.')); };
+      img.src = dataUrl;
+    });
+  }
+
+  // opciones: { firma: dataURL opcional }  ->  Promise<{ blob, nombre, docente, modulo, estudiantes }>
+  function generarDirecto(opciones) {
+    opciones = opciones || {};
+    var datos = window.ACTA_DATOS;
+    return prepararDirecto().then(function (listo) {
+      if (!datos || !datos.matriz || datos.matriz.length < 2) throw new Error('Este curso no tiene estudiantes con calificaciones.');
+      if (!listo.pdf) throw new Error('No se pudo cargar la librería de PDF (jsPDF). Verifica tu conexión a internet e inténtalo de nuevo.');
+      return cargarFirmaDirecta(opciones.firma);
+    }).then(function () {
+      var datosRaw = datos.matriz;
+      var encabezados = datosRaw[0];
+      var indiceCorreo = -1;
+      for (var i = 0; i < encabezados.length; i++) {
+        var enc0 = String(encabezados[i]).toLowerCase();
+        if (enc0.indexOf('correo') !== -1 || enc0.indexOf('email') !== -1) { indiceCorreo = i; break; }
+      }
+      if (indiceCorreo === -1) throw new Error('No se encontró la columna de correo en las calificaciones del curso.');
+
+      var actividades = [];
+      var totalDelCurso = null;
+      for (var j = indiceCorreo + 1; j < encabezados.length; j++) {
+        var enc = String(encabezados[j]);
+        if (enc.indexOf('Última descarga') !== -1) continue;
+        if (enc.toLowerCase().indexOf('inducción') !== -1 || enc.toLowerCase().indexOf('induccion') !== -1) continue;
+        if (enc.indexOf('Total del curso') !== -1 && enc.indexOf('(Real)') !== -1) { totalDelCurso = { indice: j, nombre: enc }; continue; }
+        if (enc.indexOf('(Real)') !== -1) actividades.push({ indice: j, nombre: enc });
+      }
+      var calificacionFinal = null;
+      if (totalDelCurso !== null) {
+        for (var f = 1; f < datosRaw.length; f++) {
+          var v = datosRaw[f][totalDelCurso.indice];
+          if (v && String(v).trim() !== '' && String(v).trim() !== '-') { calificacionFinal = totalDelCurso; break; }
+        }
+      }
+      if (calificacionFinal === null && actividades.length > 0) calificacionFinal = actividades.pop();
+      if (actividades.length === 0 && calificacionFinal === null) throw new Error('No se identificaron actividades con calificación en este curso.');
+
+      var docente = datos.docente || '';
+      var modulo = '';
+      var coincidencia = null;
+      try { coincidencia = buscarEnCatalogo(datos.curso, docente); } catch (e) { console.warn('Catálogo:', e); }
+      if (coincidencia) { modulo = coincidencia.modulo; docente = coincidencia.docente || docente; }
+
+      estado.config = { actividad: datos.curso || '', docente: docente, modulo: modulo, fecha: obtenerFechaFormateada() };
+      estado.datosRaw = datosRaw;
+      estado.actividades = actividades;
+      estado.calificacionFinal = calificacionFinal;
+
+      var url = generarPDFBlob(datosRaw, actividades, calificacionFinal, estado.config);
+      try { URL.revokeObjectURL(url); } catch (e) {}
+      var estudiantes = 0;
+      for (var n = 1; n < datosRaw.length; n++) { if (datosRaw[n][0] || datosRaw[n][1]) estudiantes++; }
+      return { blob: estado.ultimoBlob, nombre: estado.nombreArchivo, docente: docente, modulo: modulo, estudiantes: estudiantes };
+    });
+  }
+
+  window.ActaDirecto = { preparar: prepararDirecto, generar: generarDirecto };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

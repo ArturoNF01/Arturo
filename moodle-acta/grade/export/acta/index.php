@@ -1,8 +1,10 @@
 <?php
-// Pantalla "Calificaciones > Exportar > Acta de calificaciones": marco de Moodle + generador dentro de un iframe
-// (el iframe evita que las librerías de PDF choquen con requirejs de Moodle).
+// Pantalla "Calificaciones > Exportar > Acta de calificaciones": un solo botón, "Descargar", que baja el acta en PDF
+// con el curso y el docente de Moodle. El generador corre en un iframe oculto (evita que las librerías de PDF
+// choquen con requirejs de Moodle) y esta página solo recibe el archivo y lo descarga.
 require_once(__DIR__ . '/../../../config.php');
 require_once($CFG->dirroot . '/grade/lib.php');
+require_once($CFG->libdir . '/grouplib.php');
 
 $id = required_param('id', PARAM_INT);
 $PAGE->set_url('/grade/export/acta/index.php', ['id' => $id]);
@@ -26,15 +28,139 @@ try {
     }
 }
 
+$docente = \gradeexport_acta\helper::docente($context);
+$estudiantes = count_enrolled_users($context, 'moodle/grade:view', groups_get_course_group($course, true), true);
+try {
+    $fecha = userdate(time(), get_string('strftimedate', 'langconfig'));
+} catch (\Throwable $e) {
+    $fecha = date('d/m/Y');
+}
+$curso = format_string($course->fullname, true, ['context' => $context, 'escape' => false]);
+
+$filas = [
+    get_string('resumen_curso', 'gradeexport_acta') => s($curso),
+    get_string('resumen_docente', 'gradeexport_acta') => s($docente),
+    get_string('resumen_fecha', 'gradeexport_acta') => s($fecha),
+    get_string('resumen_estudiantes', 'gradeexport_acta') => (int) $estudiantes,
+];
+echo '<div class="card"><div class="card-body">';
+echo html_writer::tag('p', s(get_string('intro', 'gradeexport_acta')));
+echo '<dl class="row mb-0">';
+foreach ($filas as $etiqueta => $valor) {
+    echo html_writer::tag('dt', s($etiqueta), ['class' => 'col-sm-3']);
+    echo html_writer::tag('dd', $valor, ['class' => 'col-sm-9']);
+}
+echo '</dl>';
+echo '<div class="mt-3"><label for="acta-firma" class="d-block">' . s(get_string('firma', 'gradeexport_acta')) . '</label>'
+    . '<input type="file" id="acta-firma" accept="image/png,image/jpeg"></div>';
+echo '<div class="mt-4"><button type="button" id="acta-descargar" class="btn btn-primary" disabled>'
+    . s(get_string('preparando', 'gradeexport_acta')) . '</button></div>';
+echo '<div id="acta-estado" role="status" aria-live="polite"></div>';
+echo '</div></div>';
+
 $src = new moodle_url('/grade/export/acta/generador.php', ['id' => $id]);
 echo html_writer::tag('iframe', '', [
     'id' => 'acta-frame',
     'src' => $src->out(false),
     'title' => $titulo,
-    'style' => 'width:100%;height:900px;border:0;display:block;overflow:hidden',
+    'tabindex' => '-1',
+    'aria-hidden' => 'true',
+    'style' => 'position:absolute;width:0;height:0;border:0;visibility:hidden',
 ]);
-echo html_writer::script("(function(){var f=document.getElementById('acta-frame');"
-    . "function fit(){try{var d=f.contentDocument;if(d&&d.documentElement){"
-    . "f.style.height=Math.max(700,d.documentElement.scrollHeight)+'px';}}catch(e){}}"
-    . "f.addEventListener('load',fit);setInterval(fit,500);})();");
+
+$textos = [
+    'descargar' => get_string('descargar', 'gradeexport_acta'),
+    'generando' => get_string('generando', 'gradeexport_acta'),
+    'listo' => get_string('listo', 'gradeexport_acta'),
+    'error' => get_string('error', 'gradeexport_acta'),
+    'firmainvalida' => get_string('firmainvalida', 'gradeexport_acta'),
+    'sinestudiantes' => get_string('sinestudiantes', 'gradeexport_acta'),
+    'noframe' => get_string('noframe', 'gradeexport_acta'),
+    'sinlibreria' => get_string('sinlibreria', 'gradeexport_acta'),
+];
+$cfg = json_encode(['t' => $textos, 'estudiantes' => (int) $estudiantes], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+echo html_writer::script(<<<JS
+(function () {
+  var cfg = $cfg;
+  var frame = document.getElementById('acta-frame');
+  var btn = document.getElementById('acta-descargar');
+  var estado = document.getElementById('acta-estado');
+  var firmaInput = document.getElementById('acta-firma');
+  var firma = null;
+
+  function mensaje(texto, tipo) {
+    estado.className = 'alert alert-' + tipo + ' mt-3 mb-0';
+    estado.textContent = texto;
+  }
+  function api() {
+    var w = frame.contentWindow;
+    return w && w.ActaDirecto ? w.ActaDirecto : null;
+  }
+  function esperarApi(ms) {
+    return new Promise(function (ok, no) {
+      var t = 0;
+      (function sondear() {
+        var a = api();
+        if (a) return ok(a);
+        t += 100;
+        if (t >= ms) return no(new Error(cfg.t.noframe));
+        setTimeout(sondear, 100);
+      })();
+    });
+  }
+
+  firmaInput.addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    firma = null;
+    if (!f) return;
+    if (!/^image\/(png|jpeg)$/.test(f.type)) {
+      this.value = '';
+      mensaje(cfg.t.firmainvalida, 'warning');
+      return;
+    }
+    var lector = new FileReader();
+    lector.onload = function (e) { firma = e.target.result; };
+    lector.readAsDataURL(f);
+  });
+
+  if (!cfg.estudiantes) {
+    btn.textContent = cfg.t.descargar;
+    mensaje(cfg.t.sinestudiantes, 'warning');
+    return;
+  }
+  // Se habilita cuando el generador terminó de cargar (librería de PDF, logo y catálogo).
+  esperarApi(20000).then(function (a) { return a.preparar(); }).then(function (r) {
+    btn.textContent = cfg.t.descargar;
+    if (!r.pdf) {
+      mensaje(cfg.t.sinlibreria, 'danger');
+      return;
+    }
+    btn.disabled = false;
+  }).catch(function (e) {
+    btn.textContent = cfg.t.descargar;
+    mensaje(cfg.t.error + ' ' + e.message, 'danger');
+  });
+
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    mensaje(cfg.t.generando, 'info');
+    esperarApi(5000).then(function (a) { return a.generar({ firma: firma }); }).then(function (r) {
+      var url = URL.createObjectURL(r.blob);
+      var enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = r.nombre;
+      document.body.appendChild(enlace);
+      enlace.click();
+      document.body.removeChild(enlace);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+      mensaje(cfg.t.listo.replace('{\$a}', function () { return r.nombre; }), 'success');
+    }).catch(function (e) {
+      mensaje(cfg.t.error + ' ' + (e && e.message ? e.message : ''), 'danger');
+    }).then(function () {
+      btn.disabled = false;
+    });
+  });
+})();
+JS
+);
 echo $OUTPUT->footer();

@@ -7,6 +7,32 @@ class helper {
     const LOGO_URL = 'https://home.ciess.org/wp-content/uploads/2026/01/LOGO-CIESS-PR-C.png';
 
     /**
+     * Docente que firma el acta: quien inició sesión si es parte del curso; si es personal de coordinación o
+     * administración (no inscrito) y el curso tiene un único profesor, ese profesor; si no, quien inició sesión.
+     */
+    public static function docente(\context_course $context): string {
+        global $DB, $USER;
+        $nombre = function ($u) {
+            return trim($u->firstname . ' ' . $u->lastname);
+        };
+        try {
+            if (is_enrolled($context, $USER, '', true)) {
+                return $nombre($USER);
+            }
+            $rolid = $DB->get_field('role', 'id', ['shortname' => 'editingteacher']);
+            if ($rolid) {
+                $profes = get_role_users($rolid, $context, false, 'u.id, u.firstname, u.lastname', 'u.lastname, u.firstname');
+                if (count($profes) === 1) {
+                    return $nombre(reset($profes));
+                }
+            }
+        } catch (\Throwable $e) {
+            debugging($e->getMessage(), DEBUG_DEVELOPER);
+        }
+        return $nombre($USER);
+    }
+
+    /**
      * Entrega el logo desde este mismo sitio para que el navegador pueda incrustarlo en el PDF
      * sin depender de CORS en home.ciess.org. Si no se puede obtener, responde 404 y el acta sale sin logo.
      */
