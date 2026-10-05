@@ -13,6 +13,7 @@ Uso: python guiones/auditar_texto.py insumos/Cap3.docx contenido/30-capitulo-3.h
 import collections
 import difflib
 import html as htmlmod
+import json
 import pathlib
 import re
 import sys
@@ -193,15 +194,47 @@ def comparar_pdf(html_txt, pdf, primera, ultima):
     return faltan
 
 
+def cambios_aprobados(docx):
+    """Cambios al manuscrito aprobados por la institución (datos/cambios-aprobados.json)."""
+    ruta = pathlib.Path(__file__).resolve().parent.parent / "datos" / "cambios-aprobados.json"
+    if not ruta.exists():
+        return [], []
+    todos = json.loads(ruta.read_text(encoding="utf-8"))["cambios"]
+    mios = [c for c in todos if c["docx"] == pathlib.Path(docx).name]
+    return [c for c in mios if "original" in c], [norm(c["añadido"]) for c in mios if "añadido" in c]
+
+
+def aplicar(unidades, cambios, usados):
+    salida = []
+    for u in unidades:
+        for k, c in enumerate(cambios):
+            if c.get("exacto"):
+                if u == c["original"]:
+                    u = c["nuevo"]; usados.add(k)
+            elif c["original"] in u:
+                u = u.replace(c["original"], c["nuevo"]); usados.add(k)
+        salida.append(u)
+    return salida
+
+
 def main():
     docx, html_ruta = sys.argv[1], sys.argv[2]
     p_docx, n_docx, c_docx = leer_docx(docx)
+    cambios, anadidos = cambios_aprobados(docx)
+    usados = set()
+    p_docx, n_docx, c_docx = (aplicar(x, cambios, usados) for x in (p_docx, n_docx, c_docx))
+    if cambios or anadidos:
+        print(f"Cambios aprobados aplicados al manuscrito: {len(usados)} de {len(cambios)}; añadidos: {len(anadidos)}")
+        for k, c in enumerate(cambios):
+            if k not in usados:
+                print(f"  ¡No se encontró en el manuscrito!: «{c['original'][:80]}»")
     bloques, n_html, figuras, c_html = leer_html(html_ruta)
     destino = bloques + figuras
     print(f"DOCX: {len(p_docx)} párrafos, {len(n_docx)} notas, {len(c_docx)} celdas")
     print(f"HTML: {len(bloques)} bloques + {len(figuras)} líneas de figura, {len(n_html)} notas, {len(c_html)} celdas")
     print("\n== Párrafos, títulos, pies y referencias")
     prob, sobrantes = emparejar(p_docx, destino, "texto")
+    sobrantes = [s for s in sobrantes if s not in anadidos]
     print(f"  {prob} diferencias")
     if sobrantes:
         print("  Texto en el HTML que no está en el DOCX:")

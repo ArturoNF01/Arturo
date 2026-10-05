@@ -1,5 +1,5 @@
 {
-  "_nota": "Ajustes de formación: alto de fila (pt) de algunas gráficas para que llenen la página. Se afinan tras componer.",
+  "_nota": "Ajustes de formación: alto de fila (pt) de algunas gráficas para que llenen la página. Gráficas 2 y 3: sin subtítulos ni anotación de mayor divergencia (revisión V1).",
   "grafica-5": {
     "fila": 17
   },
@@ -11,5 +11,13 @@
   },
   "grafica-9": {
     "panel": 110.0
+  },
+  "grafica-2": {
+    "subtitulos": false,
+    "anotaciones": false
+  },
+  "grafica-3": {
+    "subtitulos": false,
+    "anotaciones": false
   }
 }

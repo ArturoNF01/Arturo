@@ -96,13 +96,16 @@ export function diagrama1(D) {
 /* ------------------------------------------------------ Gráficas 2 y 3 (pirámides) */
 // Cada panel lleva el título, el subtítulo y la anotación del manuscrito; la fila de
 // mayor divergencia (máxima diferencia entre sexos) se resalta como en el original.
-function piramides(paneles, textos, titulo) {
+function piramides(paneles, textos, titulo, nombre) {
+  // ajustes.json: "subtitulos": false / "anotaciones": false los retiran (revisión V1)
+  const aj = ajustes(nombre);
+  const conSub = aj.subtitulos !== false, conAnot = aj.anotaciones !== false;
   const W = ANCHO;
   const sep = 14, colEdad = 17, margen = 3;
   const anchoPanel = (W - sep - 2 * margen) / 2;
   const mitad = (anchoPanel - colEdad) / 2;
   const titLineas = Math.max(...textos.paneles.map((t) => partir(t.titulo, anchoPanel, 6.4, 700).length));
-  const subLineas = Math.max(...textos.paneles.map((t) => partir(t.subtitulo, anchoPanel, 5.3).length));
+  const subLineas = conSub ? Math.max(...textos.paneles.map((t) => partir(t.subtitulo, anchoPanel, 5.3).length)) : 0;
   const ySub = 7 + titLineas * 7.4 + 1.2;
   const sup = ySub + subLineas * 6.2 + 4, filaAlto = 7.9, n = 18;
   const H = sup + n * filaAlto + 18;
@@ -115,12 +118,12 @@ function piramides(paneles, textos, titulo) {
     const ejeM = eje + colEdad; // borde interior de las mujeres
     const xs = d3.scaleLinear().domain([0, maximo]).range([0, mitad - 1]);
     p.push(texto(x0, 7, partir(tx.titulo, anchoPanel, 6.4, 700), { tam: 6.4, peso: 700, color: C.oscuro, interlineado: 7.4 }));
-    p.push(texto(x0, ySub, partir(tx.subtitulo, anchoPanel, 5.3), { tam: 5.3, color: C.grisTexto, interlineado: 6.2 }));
+    if (conSub) p.push(texto(x0, ySub, partir(tx.subtitulo, anchoPanel, 5.3), { tam: 5.3, color: C.grisTexto, interlineado: 6.2 }));
     // fila de mayor divergencia
     const iMax = panel.datos.reduce((a, f, i, arr) =>
       Math.abs(f.hombres - f.mujeres) > Math.abs(arr[a].hombres - arr[a].mujeres) ? i : a, 0);
     const yMax = sup + (n - 1 - iMax) * filaAlto;
-    p.push(rect(x0, yMax, anchoPanel, filaAlto, "#000", `fill-opacity="0.045"`));
+    if (conAnot) p.push(rect(x0, yMax, anchoPanel, filaAlto, "#000", `fill-opacity="0.045"`));
     // retícula
     for (let t = 0; t <= maximo; t += 2) {
       p.push(linea(eje - xs(t), sup - 2, eje - xs(t), sup + n * filaAlto, t === 0 ? C.gris : C.reticula, t === 0 ? 0.45 : 0.3));
@@ -138,6 +141,7 @@ function piramides(paneles, textos, titulo) {
       p.push(texto(eje + colEdad / 2, yy + filaAlto / 2 + 2, f.edad, { tam: 5.3, color: C.grisTexto, ancla: "middle" }));
     });
     // anotación: en la zona libre de arriba a la derecha, con guía hasta la fila
+    if (!conAnot) return;
     const fMax = panel.datos[iMax];
     const ax = ejeM + xs(fMax.mujeres) + 1.5, ay = yMax + filaAlto / 2;
     const lx = ejeM + xs(maximo * 0.4), lineasA = partir(tx.anotacion, x0 + anchoPanel - lx, 5.4, 600);
@@ -150,12 +154,12 @@ function piramides(paneles, textos, titulo) {
 
 export function grafica2(D) {
   return piramides([{ datos: D.grafica_2["2022"] }, { datos: D.grafica_2["2025"] }], O.grafica_2,
-    "Gráfica 2. Estructura por edad y sexo de la población venezolana en Colombia, 2022 y 2025");
+    "Gráfica 2. Estructura por edad y sexo de la población venezolana en Colombia, 2022 y 2025", "grafica-2");
 }
 
 export function grafica3(D) {
   return piramides([{ datos: D.grafica_3.otros }, { datos: D.grafica_3.colombiana }], O.grafica_3,
-    "Gráfica 3. Estructura por edad y sexo de otra población inmigrante y colombiana, 2025");
+    "Gráfica 3. Estructura por edad y sexo de otra población inmigrante y colombiana, 2025", "grafica-3");
 }
 
 /* ---------------------------------------------------------------- Gráfica 4 */

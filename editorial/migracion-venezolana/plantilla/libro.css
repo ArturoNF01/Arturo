@@ -67,7 +67,7 @@
     padding-top: 2pt;
   }
   @top-left {
-    content: "Acceso a seguridad social de la población\A migrante venezolana en Colombia";
+    content: "¿Cuál será el futuro de la población venezolana\A en Colombia al llegar a la vejez?";
     white-space: pre;
     font: 700 9pt/10.8pt var(--sans);
     color: var(--azul);
@@ -329,7 +329,9 @@ table.cuadro.compacto th, table.cuadro.compacto td { padding: var(--aire, 2.6pt)
 table.cuadro:not(.compacto) th, table.cuadro:not(.compacto) td { padding-top: var(--aire, 4pt); padding-bottom: var(--aire, 3.6pt); }
 
 /* ---------- Bibliografía ---------- */
-.bibliografia h2 { margin-top: 30pt; }
+/* Referencias en página propia (revisión V1) */
+section.bibliografia { break-before: page; }
+.bibliografia h2 { margin-top: 0; }
 p.bib {
   text-indent: -14.17pt;
   padding-left: 14.17pt;
@@ -536,7 +538,7 @@ h1.portada-titulo {
   position: absolute;
   left: 36.9pt; right: 30pt; top: 384pt;
   margin: 0;
-  font: 400 21pt/24.5pt var(--sans);
+  font: 400 24pt/28.5pt var(--sans);
   color: var(--azul-noche);
   text-align: left;
   hyphens: manual;
@@ -546,9 +548,9 @@ h1.portada-titulo {
 h1.portada-titulo::before {
   content: "";
   position: absolute;
-  left: -12.6pt; top: 3.2pt;
-  width: 10pt; height: 20pt;
-  border-radius: 10pt 0 0 10pt;
+  left: -13.6pt; top: 4.2pt;
+  width: 11pt; height: 22pt;
+  border-radius: 11pt 0 0 11pt;
   background: var(--azul);
 }
 .portada-logos {

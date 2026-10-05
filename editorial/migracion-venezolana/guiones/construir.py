@@ -31,7 +31,7 @@ PIEZAS = [
     "contenido/30-capitulo-3.html",
 ]
 
-NOMBRE_PDF = "acceso-seguridad-social-migrantes-venezolanos.pdf"
+NOMBRE_PDF = "futuro-poblacion-venezolana-colombia-vejez.pdf"
 
 
 def incrustar_svg(html: str) -> str:
@@ -67,7 +67,7 @@ def ensamblar(piezas=PIEZAS) -> str:
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>¿Cómo es el acceso a seguridad social de la población migrante venezolana en las principales ciudades de Colombia?</title>
+<title>¿Cuál será el futuro de la población venezolana en Colombia al llegar a la vejez?</title>
 <meta name="author" content="CISS · CIESS · CODESS">
 <link rel="stylesheet" href="../plantilla/libro.css">
 </head>
@@ -108,7 +108,7 @@ def construir_libro():
     for parte in (portada, interiores):
         union.append(str(parte))
     union.add_metadata({
-        "/Title": "¿Cómo es el acceso a seguridad social de la población migrante venezolana en las principales ciudades de Colombia?",
+        "/Title": "¿Cuál será el futuro de la población venezolana en Colombia al llegar a la vejez?",
         "/Author": "CISS · CIESS · CODESS",
     })
     destino = SALIDA / NOMBRE_PDF

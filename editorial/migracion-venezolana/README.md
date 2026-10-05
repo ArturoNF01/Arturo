@@ -1,4 +1,4 @@
-# ¿Cómo es el acceso a seguridad social de la población migrante venezolana en las principales ciudades de Colombia?
+# ¿Cuál será el futuro de la población venezolana en Colombia al llegar a la vejez?
 
 Maquetación editorial del libro CISS · CIESS · CODESS. Hereda la línea gráfica de
 *De un sistema de pensiones a un sistema integral de protección a la población
@@ -15,7 +15,7 @@ folios y portada. Por ahora contiene la portada, los preliminares, el índice y 
 
 | Archivo | Uso |
 | --- | --- |
-| `salida/acceso-seguridad-social-migrantes-venezolanos.pdf` | Edición digital: portada + interiores |
+| `salida/futuro-poblacion-venezolana-colombia-vejez.pdf` | Edición digital: portada + interiores |
 | `salida/portada.pdf` | Portada sola (propuesta) |
 | `salida/interiores.pdf` | Interiores para imprenta, p. 1 = portadilla |
 | `salida/figuras-pdf/*.pdf` | Cada gráfica, mapa y diagrama en PDF vectorial (para InDesign/Illustrator) |
