@@ -21,7 +21,16 @@ if ($logo) {
 }
 
 // Respeta el modo de grupos del curso (con grupos separados, solo los alumnos del grupo del docente).
-$groupid = groups_get_course_group($course, true);
+$groupid = \gradeexport_acta\helper::grupo($course, $context);
+
+// Igual que las exportaciones de Moodle: si hay notas pendientes de recalcular, se recalculan antes de leerlas.
+ob_start();
+try {
+    grade_regrade_final_grades_if_required($course);
+} catch (\Throwable $e) {
+    debugging($e->getMessage(), DEBUG_DEVELOPER);
+}
+ob_end_clean();
 $users = get_enrolled_users($context, 'moodle/grade:view', $groupid, 'u.id, u.firstname, u.lastname, u.email',
     'u.lastname, u.firstname', 0, 0, true);
 
@@ -74,6 +83,8 @@ $inyeccion = '<style>#acta-app{display:none!important}</style>'
     . '<script>window.ACTA_DIRECTO = true;window.ACTA_DATOS = ' . json_encode($datos, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) . ';'
     . 'window.ACTA_LOGO_URL = ' . json_encode($logourl, JSON_HEX_TAG | JSON_HEX_AMP) . ';</script>';
 $html = str_replace('<body>', '<body>' . $inyeccion, $html);
+// La lectura de CSV/XLSX no se usa en modo directo: no se carga la librería XLSX (900 KB de terceros en el sitio).
+$html = preg_replace('#<script src="[^"]*xlsx[^"]*"></script>#i', '', $html);
 
 header('Content-Type: text/html; charset=utf-8');
 echo $html;

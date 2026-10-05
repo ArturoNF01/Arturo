@@ -1732,11 +1732,15 @@
       var valorTxt = String(infoLineas[k][1]);
       var maxWidth = contentWidth - 45;
       var lineasValor = doc.splitTextToSize(valorTxt, maxWidth);
-      if (lineasValor.length > 1) {
-        valorTxt = lineasValor[0];
-        if (valorTxt.length > 2) valorTxt = valorTxt.substring(0, valorTxt.length - 2) + '..';
+      if (lineasValor.length > 2) {
+        lineasValor = lineasValor.slice(0, 2);
+        var ultima = lineasValor[1];
+        lineasValor[1] = (ultima.length > 2 ? ultima.substring(0, ultima.length - 2) : ultima) + '..';
       }
-      doc.text(valorTxt, margin + 45, y);
+      for (var lv = 0; lv < lineasValor.length; lv++) {
+        doc.text(lineasValor[lv], margin + 45, y);
+        if (lv < lineasValor.length - 1) y += 5;
+      }
       y += infoRowHeight;
       if (k < infoLineas.length - 1) {
         doc.setDrawColor(220, 220, 220);
@@ -1964,7 +1968,7 @@
   // Modo directo (plugin gradeexport_acta): sin pantallas. Moodle entrega el curso,
   // el docente y las calificaciones; esta función solo genera el PDF y lo devuelve.
   // ---------------------------------------------------------------------------
-  var STOP_TOKENS = { de: 1, del: 1, la: 1, las: 1, los: 1, el: 1, en: 1, y: 1, e: 1, a: 1, al: 1, para: 1, por: 1, con: 1, un: 1, una: 1 };
+  var STOP_TOKENS = { de: 1, del: 1, la: 1, las: 1, los: 1, el: 1, en: 1, y: 1, e: 1, a: 1, o: 1, u: 1, al: 1, para: 1, por: 1, con: 1, un: 1, una: 1 };
   var HONORIFICOS = { dr: 1, dra: 1, doctor: 1, doctora: 1, mtro: 1, mtra: 1, maestro: 1, maestra: 1, lic: 1, licenciado: 1, licenciada: 1,
     ing: 1, ingeniero: 1, ingeniera: 1, mc: 1, msc: 1, mba: 1, phd: 1, prof: 1, profesor: 1, profesora: 1, sr: 1, sra: 1, srta: 1 };
 
@@ -1972,7 +1976,7 @@
     var norm = String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     var vistos = {}, out = [];
     norm.split(' ').forEach(function (t) {
-      if (t.length < 2 || ignorar[t] || vistos[t]) return;
+      if (!t || ignorar[t] || vistos[t]) return;
       vistos[t] = true;
       out.push(t);
     });
@@ -1988,10 +1992,16 @@
     var comun = interseccion(ta, tb);
     return comun >= 2 && (comun === ta.length || comun === tb.length);
   }
+  function esNumeral(t) { return /^[0-9]+$/.test(t) || /^[ivx]+$/.test(t); }
+  // Parecido entre dos nombres de actividad (0 a 1). Los números/numerales deben ser idénticos
+  // ("Inglés 1" no es "Inglés 2"); en las palabras se tolera como máximo una de más en nombres largos.
   function similitudActividad(a, b) {
     var ta = tokensDe(a, STOP_TOKENS), tb = tokensDe(b, STOP_TOKENS);
-    var comun = interseccion(ta, tb);
-    var union = ta.length + tb.length - comun;
+    var na = ta.filter(esNumeral).sort().join(','), nb = tb.filter(esNumeral).sort().join(',');
+    if (na !== nb) return 0;
+    var pa = ta.filter(function (t) { return !esNumeral(t); }), pb = tb.filter(function (t) { return !esNumeral(t); });
+    var comun = interseccion(pa, pb);
+    var union = pa.length + pb.length - comun;
     return union === 0 ? 0 : comun / union;
   }
   // Busca en el catálogo (Actividad, Módulo, Docente) la actividad que corresponde al curso de Moodle y,
@@ -2007,12 +2017,12 @@
       if (puntaje > mejorPuntaje) { mejor = fila.actividad; mejorPuntaje = puntaje; empate = false; }
       else if (puntaje === mejorPuntaje && puntaje > 0) { empate = true; }
     });
-    if (!mejor || empate || mejorPuntaje < 0.75) return null;
+    if (!mejor || empate || mejorPuntaje < 0.8) return null;
     var filas = estado.catalogo.filter(function (f) { return f.actividad === mejor && f.modulo && mismoNombre(docente, f.docente); });
     if (!filas.length) return null;
     var modulos = [];
     filas.forEach(function (f) { if (modulos.indexOf(f.modulo) === -1) modulos.push(f.modulo); });
-    return { modulo: modulos.join(', '), docente: filas[0].docente };
+    return { modulo: modulos.join(', ') };
   }
 
   function esperar(condicion, ms) {
@@ -2061,7 +2071,12 @@
   function generarDirecto(opciones) {
     opciones = opciones || {};
     var datos = window.ACTA_DATOS;
-    return prepararDirecto().then(function (listo) {
+    return prepararDirecto().then(function () {
+      // Si el logo o el catálogo seguían en camino cuando venció la espera inicial, se les da unos segundos más.
+      return esperar(function () { return estado.logoDataUrl || estado.logoError; }, 3000)
+        .then(function () { return esperar(function () { return estado.catalogoCargado || estado.catalogoError; }, 3000); });
+    }).then(function () {
+      var listo = { pdf: !!(window.jspdf && window.jspdf.jsPDF) };
       if (!datos || !datos.matriz || datos.matriz.length < 2) throw new Error('Este curso no tiene estudiantes con calificaciones.');
       if (!listo.pdf) throw new Error('No se pudo cargar la librería de PDF (jsPDF). Verifica tu conexión a internet e inténtalo de nuevo.');
       return cargarFirmaDirecta(opciones.firma);
@@ -2098,7 +2113,8 @@
       var modulo = '';
       var coincidencia = null;
       try { coincidencia = buscarEnCatalogo(datos.curso, docente); } catch (e) { console.warn('Catálogo:', e); }
-      if (coincidencia) { modulo = coincidencia.modulo; docente = coincidencia.docente || docente; }
+      // El docente que firma es siempre el de Moodle; el catálogo solo aporta el módulo.
+      if (coincidencia) modulo = coincidencia.modulo;
 
       estado.config = { actividad: datos.curso || '', docente: docente, modulo: modulo, fecha: obtenerFechaFormateada() };
       estado.datosRaw = datosRaw;
@@ -2109,7 +2125,7 @@
       try { URL.revokeObjectURL(url); } catch (e) {}
       var estudiantes = 0;
       for (var n = 1; n < datosRaw.length; n++) { if (datosRaw[n][0] || datosRaw[n][1]) estudiantes++; }
-      return { blob: estado.ultimoBlob, nombre: estado.nombreArchivo, docente: docente, modulo: modulo, estudiantes: estudiantes };
+      return { blob: estado.ultimoBlob, nombre: estado.nombreArchivo, docente: docente, modulo: modulo, estudiantes: estudiantes, logo: !!estado.logoDataUrl };
     });
   }
 

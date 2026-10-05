@@ -28,8 +28,15 @@ try {
     }
 }
 
+try {
+    $groupid = \gradeexport_acta\helper::grupo($course, $context);
+} catch (\moodle_exception $e) {
+    echo $OUTPUT->notification($e->getMessage(), \core\output\notification::NOTIFY_WARNING);
+    echo $OUTPUT->footer();
+    die();
+}
 $docente = \gradeexport_acta\helper::docente($context);
-$estudiantes = count_enrolled_users($context, 'moodle/grade:view', groups_get_course_group($course, true), true);
+$estudiantes = count_enrolled_users($context, 'moodle/grade:view', $groupid, true);
 try {
     $fecha = userdate(time(), get_string('strftimedate', 'langconfig'));
 } catch (\Throwable $e) {
@@ -43,6 +50,9 @@ $filas = [
     get_string('resumen_fecha', 'gradeexport_acta') => s($fecha),
     get_string('resumen_estudiantes', 'gradeexport_acta') => (int) $estudiantes,
 ];
+if ($groupid) {
+    $filas[get_string('resumen_grupo', 'gradeexport_acta')] = s(groups_get_group_name($groupid));
+}
 echo '<div class="card"><div class="card-body">';
 echo html_writer::tag('p', s(get_string('intro', 'gradeexport_acta')));
 echo '<dl class="row mb-0">';
@@ -77,6 +87,8 @@ $textos = [
     'sinestudiantes' => get_string('sinestudiantes', 'gradeexport_acta'),
     'noframe' => get_string('noframe', 'gradeexport_acta'),
     'sinlibreria' => get_string('sinlibreria', 'gradeexport_acta'),
+    'sinlogo' => get_string('sinlogo', 'gradeexport_acta'),
+    'sinmodulo' => get_string('sinmodulo', 'gradeexport_acta'),
 ];
 $cfg = json_encode(['t' => $textos, 'estudiantes' => (int) $estudiantes], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 echo html_writer::script(<<<JS
@@ -129,7 +141,7 @@ echo html_writer::script(<<<JS
     return;
   }
   // Se habilita cuando el generador terminó de cargar (librería de PDF, logo y catálogo).
-  esperarApi(20000).then(function (a) { return a.preparar(); }).then(function (r) {
+  esperarApi(60000).then(function (a) { return a.preparar(); }).then(function (r) {
     btn.textContent = cfg.t.descargar;
     if (!r.pdf) {
       mensaje(cfg.t.sinlibreria, 'danger');
@@ -141,7 +153,10 @@ echo html_writer::script(<<<JS
     mensaje(cfg.t.error + ' ' + e.message, 'danger');
   });
 
+  var ocupado = false;
   btn.addEventListener('click', function () {
+    if (ocupado) return;
+    ocupado = true;
     btn.disabled = true;
     mensaje(cfg.t.generando, 'info');
     esperarApi(5000).then(function (a) { return a.generar({ firma: firma }); }).then(function (r) {
@@ -153,11 +168,17 @@ echo html_writer::script(<<<JS
       enlace.click();
       document.body.removeChild(enlace);
       setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
-      mensaje(cfg.t.listo.replace('{\$a}', function () { return r.nombre; }), 'success');
+      var avisos = [];
+      if (!r.logo) avisos.push(cfg.t.sinlogo);
+      if (!r.modulo) avisos.push(cfg.t.sinmodulo);
+      mensaje(cfg.t.listo.replace('{\$a}', function () { return r.nombre; }) + (avisos.length ? ' ' + avisos.join(' ') : ''),
+        avisos.length ? 'warning' : 'success');
     }).catch(function (e) {
       mensaje(cfg.t.error + ' ' + (e && e.message ? e.message : ''), 'danger');
     }).then(function () {
+      ocupado = false;
       btn.disabled = false;
+      btn.focus();
     });
   });
 })();
