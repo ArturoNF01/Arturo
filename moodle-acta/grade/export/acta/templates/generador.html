@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acta de Calificaciones</title>
+<style>
+  #acta-app {
+    --ac-azul-oscuro: #0b2570;
+    --ac-azul-medio: #1d3a8a;
+    --ac-azul-claro: #e8eef9;
+    --ac-dorado: #C7AE6F;
+    --ac-dorado-claro: #f5edd6;
+    --ac-dorado-oscuro: #b69a55;
+    --ac-texto: #1a1d23;
+    --ac-texto-suave: #4b5563;
+    --ac-texto-tenue: #6b7280;
+    --ac-borde: #e1e3e8;
+    --ac-gris-claro: #f5f6f8;
+    --ac-gris-medio: #e1e3e8;
+    --ac-gris-fondo: #fafbfc;
+    --ac-exito: #1e6b35;
+    --ac-error: #b91c1c;
+    --ac-sombra-sm: 0 1px 2px rgba(11, 37, 112, .04);
+    --ac-sombra: 0 1px 3px rgba(11, 37, 112, .06), 0 4px 12px rgba(11, 37, 112, .04);
+    --ac-sombra-md: 0 4px 6px rgba(11, 37, 112, .05), 0 10px 24px rgba(11, 37, 112, .06);
+    --ac-sombra-lg: 0 10px 24px rgba(11, 37, 112, .08), 0 20px 48px rgba(11, 37, 112, .06);
+    --ac-radio: 10px;
+    --ac-radio-sm: 6px;
+    --ac-radio-lg: 16px;
+    --ac-transicion: .25s cubic-bezier(.4, 0, .2, 1);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    color: var(--ac-texto);
+    background: #f2f2f2;
+    margin: 0;
+    padding: 24px 20px 48px;
+    box-sizing: border-box;
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  #acta-app * { box-sizing: border-box; }
+  #acta-app h1, #acta-app h2, #acta-app h3, #acta-app h4 {
+    margin: 0 0 8px 0;
+    font-weight: 600;
+    color: var(--ac-azul-oscuro);
+    letter-spacing: -.01em;
+  }
+  #acta-app h2 {
+    font-size: 18px;
+    border-bottom: 2px solid var(--ac-dorado);
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+  }
+
+  #acta-app .ac-panel {
+    background: #fff;
+    border: 1px solid var(--ac-borde);
+    border-radius: var(--ac-radio);
+    padding: 22px;
+    margin-bottom: 18px;
+    box-shadow: var(--ac-sombra);
+    transition: box-shadow var(--ac-transicion);
+  }
+  #acta-app .ac-panel:hover { box-shadow: var(--ac-sombra-md); }
+
+  #acta-app .ac-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+  }
+  #acta-app .ac-campo { display: flex; flex-direction: column; gap: 5px; }
+  #acta-app .ac-campo label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ac-texto-suave);
+    letter-spacing: .2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #acta-app .ac-campo input[type="text"],
+  #acta-app .ac-campo input[type="date"],
+  #acta-app .ac-campo select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border: 1.5px solid var(--ac-gris-medio);
+    border-radius: var(--ac-radio-sm);
+    background: #fff;
+    color: var(--ac-texto);
+    font-family: inherit;
+    transition: border-color var(--ac-transicion), box-shadow var(--ac-transicion), background var(--ac-transicion);
+  }
+  #acta-app .ac-campo input:hover,
+  #acta-app .ac-campo select:hover { border-color: #c5cad3; }
+  #acta-app .ac-campo input:focus,
+  #acta-app .ac-campo select:focus {
+    outline: none;
+    border-color: var(--ac-azul-oscuro);
+    box-shadow: 0 0 0 4px rgba(11, 37, 112, .1);
+  }
+  #acta-app .ac-campo input[readonly] {
+    background: #f2f2f2;
+    color: #2c3242;
+    cursor: default;
+    border-color: var(--ac-gris-medio);
+  }
+  #acta-app .ac-campo select:disabled {
+    background: var(--ac-gris-claro);
+    color: var(--ac-texto-tenue);
+    cursor: not-allowed;
+  }
+  #acta-app .ac-campo .ac-campo-hint { font-size: 11px; color: var(--ac-texto-tenue); margin-top: 2px; }
+  #acta-app .ac-campo .ac-campo-error { font-size: 11px; color: var(--ac-error); margin-top: 4px; display: none; }
+  #acta-app .ac-campo .ac-campo-error.ac-visible { display: block; }
+  #acta-app .ac-campo .ac-retry {
+    margin-top: 6px;
+    background: #fff;
+    border: 1.5px solid var(--ac-azul-oscuro);
+    color: var(--ac-azul-oscuro);
+    padding: 5px 12px;
+    border-radius: var(--ac-radio-sm);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    transition: background var(--ac-transicion), transform .05s;
+  }
+  #acta-app .ac-campo .ac-retry:hover { background: var(--ac-azul-claro); }
+  #acta-app .ac-campo .ac-retry:active { transform: translateY(1px); }
+  #acta-app .ac-campo select.ac-loading { color: var(--ac-texto-tenue); font-style: italic; }
+
+  #acta-app .ac-dropzone {
+    border: 2px dashed var(--ac-gris-medio);
+    border-radius: var(--ac-radio);
+    padding: 52px 24px;
+    text-align: center;
+    background: #f2f2f2;
+    cursor: pointer;
+    transition: border-color var(--ac-transicion), background var(--ac-transicion), transform var(--ac-transicion);
+    position: relative;
+    overflow: hidden;
+  }
+  #acta-app .ac-dropzone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(199, 174, 111, .08) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity var(--ac-transicion);
+    pointer-events: none;
+  }
+  #acta-app .ac-dropzone:hover {
+    border-color: var(--ac-dorado);
+    transform: translateY(-1px);
+  }
+  #acta-app .ac-dropzone:hover::before { opacity: 1; }
+  #acta-app .ac-dropzone.ac-dragover {
+    border-color: var(--ac-dorado);
+    background: var(--ac-dorado-claro);
+    transform: scale(1.01);
+  }
+  #acta-app .ac-dropzone .ac-drop-icon {
+    font-size: 32px;
+    color: var(--ac-dorado);
+    margin-bottom: 8px;
+    display: inline-flex;
+    transition: transform var(--ac-transicion);
+  }
+  #acta-app .ac-dropzone:hover .ac-drop-icon { transform: translateY(-2px); }
+  #acta-app .ac-dropzone .ac-drop-text { font-size: 17px; color: var(--ac-texto-suave); font-weight: 500; }
+  #acta-app .ac-dropzone .ac-drop-hint { font-size: 14px; color: var(--ac-texto-tenue); margin-top: 8px; }
+
+  #acta-app .ac-file-info {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    background: #eef3fc;
+    border: 1px solid #c5d4f7;
+    border-radius: var(--ac-radio-sm);
+    padding: 14px 16px;
+    margin-top: 14px;
+    font-size: 15px;
+    gap: 12px;
+    animation: acSlideDown .25s ease;
+  }
+  @keyframes acSlideDown {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  #acta-app .ac-file-info.ac-visible { display: flex; }
+  #acta-app .ac-file-info-icon { font-size: 24px; line-height: 1; }
+  #acta-app .ac-file-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--ac-azul-oscuro);
+  }
+  #acta-app .ac-file-remove {
+    background: none;
+    border: none;
+    color: var(--ac-error);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: var(--ac-radio-sm);
+    font-family: inherit;
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: background var(--ac-transicion);
+  }
+  #acta-app .ac-file-remove:hover { background: rgba(185, 28, 28, .08); }
+
+  #acta-app .ac-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  #acta-app .ac-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 24px;
+    border: none;
+    border-radius: var(--ac-radio-sm);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background var(--ac-transicion), transform .08s, opacity var(--ac-transicion), box-shadow var(--ac-transicion);
+    letter-spacing: -.005em;
+  }
+  #acta-app .ac-btn:active { transform: translateY(1px); }
+  #acta-app .ac-btn:disabled { opacity: .45; cursor: not-allowed; }
+  #acta-app .ac-btn-primary {
+    background: linear-gradient(180deg, var(--ac-azul-medio) 0%, var(--ac-azul-oscuro) 100%);
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(11, 37, 112, .15), inset 0 1px 0 rgba(255, 255, 255, .15);
+  }
+  #acta-app .ac-btn-primary:hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--ac-azul-oscuro) 0%, #08194f 100%);
+    box-shadow: 0 4px 12px rgba(11, 37, 112, .25), inset 0 1px 0 rgba(255, 255, 255, .15);
+  }
+  #acta-app .ac-btn-secondary {
+    background: linear-gradient(180deg, var(--ac-dorado) 0%, var(--ac-dorado-oscuro) 100%);
+    color: #1a1d23;
+    box-shadow: 0 2px 4px rgba(199, 174, 111, .2), inset 0 1px 0 rgba(255, 255, 255, .2);
+  }
+  #acta-app .ac-btn-secondary:hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--ac-dorado-oscuro) 0%, #a08746 100%);
+    box-shadow: 0 4px 12px rgba(199, 174, 111, .3), inset 0 1px 0 rgba(255, 255, 255, .2);
+  }
+  #acta-app .ac-btn-ghost {
+    background: #fff;
+    color: var(--ac-azul-oscuro);
+    border: 1.5px solid var(--ac-azul-oscuro);
+  }
+  #acta-app .ac-btn-ghost:hover:not(:disabled) {
+    background: var(--ac-azul-claro);
+    border-color: var(--ac-azul-medio);
+  }
+
+  #acta-app .ac-estado {
+    margin-top: 12px;
+    padding: 11px 14px;
+    border-radius: var(--ac-radio-sm);
+    font-size: 13px;
+    display: none;
+    border-left: 3px solid;
+    animation: acSlideDown .25s ease;
+  }
+  #acta-app .ac-estado.ac-visible { display: block; }
+  #acta-app .ac-estado.ac-info {
+    background: var(--ac-azul-claro);
+    color: var(--ac-azul-oscuro);
+    border-left-color: var(--ac-azul-oscuro);
+  }
+  #acta-app .ac-estado.ac-error {
+    background: #fdecea;
+    color: var(--ac-error);
+    border-left-color: var(--ac-error);
+  }
+  #acta-app .ac-estado.ac-ok {
+    background: #e8f6ec;
+    color: var(--ac-exito);
+    border-left-color: var(--ac-exito);
+  }
+  #acta-app .ac-stats {
+    display: none;
+    flex-wrap: wrap;
+    gap: 22px;
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #f2f2f2;
+    border: 1px solid var(--ac-borde);
+    border-radius: var(--ac-radio-sm);
+    font-size: 13px;
+  }
+  #acta-app .ac-stats.ac-visible { display: flex; }
+  #acta-app .ac-stats strong {
+    color: var(--ac-azul-oscuro);
+    font-size: 16px;
+    font-weight: 700;
+    display: block;
+    line-height: 1.2;
+  }
+  #acta-app .ac-stats span {
+    color: var(--ac-texto-tenue);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  #acta-app .ac-stats > div { display: flex; flex-direction: column; gap: 2px; }
+
+  #acta-app .ac-preview-wrap {
+    overflow: auto;
+    margin-top: 6px;
+    padding: 12px;
+    background: #f2f2f2;
+    border: 1px solid var(--ac-borde);
+    border-radius: var(--ac-radio);
+  }
+  #acta-app .ac-pdf-preview {
+    display: block;
+    width: 100%;
+    height: 85vh;
+    min-height: 600px;
+    border: 1px solid var(--ac-borde);
+    border-radius: var(--ac-radio-sm);
+    background: #fff;
+    box-shadow: var(--ac-sombra);
+  }
+  #acta-app .ac-hidden { display: none !important; }
+  #acta-app .ac-help {
+    font-size: 14px;
+    color: var(--ac-texto-suave);
+    margin-top: 14px;
+    line-height: 1.6;
+    padding: 12px 16px;
+    background: var(--ac-gris-claro);
+    border-radius: var(--ac-radio-sm);
+    border-left: 3px solid var(--ac-dorado);
+    text-align: center;
+    font-weight: 500;
+  }
+  #acta-app .ac-help code {
+    background: #fff;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    border: 1px solid var(--ac-borde);
+    color: var(--ac-azul-oscuro);
+  }
+  #acta-app .ac-label-hint { font-weight: 400; color: var(--ac-texto-tenue); font-size: 11px; }
+
+  #acta-app .ac-stepper {
+    background: #fff;
+    border: 1px solid var(--ac-borde);
+    border-radius: var(--ac-radio-lg);
+    padding: 26px 28px;
+    margin-bottom: 22px;
+    box-shadow: var(--ac-sombra);
+  }
+  #acta-app .ac-stepper-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  #acta-app .ac-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+    cursor: default;
+    transition: opacity var(--ac-transicion);
+  }
+  #acta-app .ac-step-circle {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2.5px solid var(--ac-gris-medio);
+    color: var(--ac-texto-tenue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    flex-shrink: 0;
+    position: relative;
+    transition: all .4s cubic-bezier(.4, 0, .2, 1);
+  }
+  #acta-app .ac-step-num,
+  #acta-app .ac-step-check {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: opacity .3s ease, transform .3s ease;
+  }
+  #acta-app .ac-step-check {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.3);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  #acta-app .ac-step.is-active .ac-step-circle {
+    background: linear-gradient(180deg, var(--ac-azul-medio) 0%, var(--ac-azul-oscuro) 100%);
+    border-color: var(--ac-azul-oscuro);
+    color: #fff;
+    box-shadow: 0 0 0 6px rgba(11, 37, 112, .1), 0 4px 12px rgba(11, 37, 112, .2);
+  }
+  #acta-app .ac-step.is-active .ac-step-num { opacity: 1; }
+  #acta-app .ac-step.is-active .ac-step-check { opacity: 0; }
+  #acta-app .ac-step.is-complete .ac-step-circle {
+    background: linear-gradient(180deg, var(--ac-dorado) 0%, var(--ac-dorado-oscuro) 100%);
+    border-color: var(--ac-dorado-oscuro);
+    color: #1a1d23;
+    box-shadow: 0 2px 6px rgba(199, 174, 111, .3);
+  }
+  #acta-app .ac-step.is-complete .ac-step-num { opacity: 0; transform: translate(-50%, -50%) scale(.3); }
+  #acta-app .ac-step.is-complete .ac-step-check { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #acta-app .ac-step .ac-step-num { opacity: 1; }
+  #acta-app .ac-step .ac-step-check { opacity: 0; }
+  #acta-app .ac-step-label { display: flex; flex-direction: column; gap: 2px; line-height: 1.2; }
+  #acta-app .ac-step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ac-texto-tenue);
+    transition: color var(--ac-transicion);
+    letter-spacing: -.005em;
+  }
+  #acta-app .ac-step-sub { font-size: 11px; color: #9aa0a8; font-weight: 400; }
+  #acta-app .ac-step.is-active .ac-step-title { color: var(--ac-azul-oscuro); }
+  #acta-app .ac-step.is-complete .ac-step-title { color: var(--ac-texto); }
+  #acta-app .ac-step-connector {
+    flex: 1 1 auto;
+    height: 2.5px;
+    background: var(--ac-gris-medio);
+    margin: 0 18px;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    min-width: 24px;
+  }
+  #acta-app .ac-step-connector::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--ac-dorado) 0%, var(--ac-dorado-oscuro) 100%);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform .6s cubic-bezier(.4, 0, .2, 1);
+  }
+  #acta-app .ac-step-connector.is-filled::after { transform: scaleX(1); }
+  @media (max-width: 640px) {
+    #acta-app .ac-stepper { padding: 18px 16px; }
+    #acta-app .ac-stepper-list { gap: 0; }
+    #acta-app .ac-step { gap: 10px; }
+    #acta-app .ac-step-circle { width: 36px; height: 36px; font-size: 14px; }
+    #acta-app .ac-step-title { font-size: 12px; }
+    #acta-app .ac-step-sub { display: none; }
+    #acta-app .ac-step-connector { margin: 0 10px; min-width: 16px; }
+  }
+  @media (max-width: 420px) {
+    #acta-app .ac-step-label { display: none; }
+    #acta-app .ac-stepper-list { justify-content: space-between; }
+  }
+
+  #acta-app .ac-step-page {
+    display: none;
+    animation: acFadeSlideIn .45s cubic-bezier(.4, 0, .2, 1);
+  }
+  #acta-app .ac-step-page.is-active { display: block; }
+  @keyframes acFadeSlideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  #acta-app .ac-step-page.is-active.ac-slide-right {
+    animation: acFadeSlideInRight .45s cubic-bezier(.4, 0, .2, 1);
+  }
+  @keyframes acFadeSlideInRight {
+    from { opacity: 0; transform: translateX(-14px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  #acta-app .ac-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ac-azul-oscuro);
+    margin: 0 0 4px 0;
+    border: none;
+    padding: 0;
+    letter-spacing: -.02em;
+  }
+  #acta-app .ac-panel-title-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, var(--ac-azul-medio) 0%, var(--ac-azul-oscuro) 100%);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(11, 37, 112, .2);
+  }
+  #acta-app .ac-panel-subtitle {
+    font-size: 15px;
+    color: var(--ac-texto-tenue);
+    margin: 0 0 22px 0;
+    line-height: 1.6;
+  }
+
+  #acta-app .ac-firma {
+    margin-top: 16px;
+    padding: 14px 16px;
+    background: #f7f8fa;
+    border: 1px dashed var(--ac-gris-medio);
+    border-radius: var(--ac-radio-sm);
+  }
+  #acta-app .ac-firma-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ac-texto-suave);
+    margin-bottom: 10px;
+    letter-spacing: .01em;
+  }
+  #acta-app .ac-firma-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  #acta-app .ac-firma-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    color: var(--ac-azul-oscuro);
+    border: 1px solid var(--ac-borde);
+    border-radius: var(--ac-radio-sm);
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color var(--ac-transicion), background var(--ac-transicion), transform var(--ac-transicion);
+  }
+  #acta-app .ac-firma-btn:hover {
+    border-color: var(--ac-azul-oscuro);
+    background: var(--ac-azul-claro);
+    transform: translateY(-1px);
+  }
+  #acta-app .ac-firma-remove {
+    background: none;
+    border: none;
+    color: var(--ac-error);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: var(--ac-radio-sm);
+    font-family: inherit;
+    font-weight: 600;
+    transition: background var(--ac-transicion);
+  }
+  #acta-app .ac-firma-remove:hover { background: rgba(185, 28, 28, .08); }
+  #acta-app .ac-firma-preview {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid var(--ac-borde);
+    border-radius: var(--ac-radio-sm);
+    padding: 10px;
+    min-height: 60px;
+  }
+  #acta-app .ac-firma-preview.ac-hidden { display: none; }
+  #acta-app .ac-firma-preview img {
+    max-height: 70px;
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    display: block;
+    object-fit: contain;
+  }
+
+  #acta-app .ac-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 0 4px;
+  }
+  #acta-app .ac-nav-spacer { display: none; }
+  #acta-app .ac-btn-next,
+  #acta-app .ac-btn-back { min-width: 140px; justify-content: center; }
+  #acta-app .ac-btn-arrow { font-size: 16px; line-height: 1; }
+  #acta-app .ac-btn-icon { font-size: 16px; line-height: 1; }
+
+  #acta-app .ac-preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  #acta-app .ac-preview-head .ac-panel-title { margin: 0; }
+  #acta-app .ac-preview-head .ac-panel-title-num {
+    background: linear-gradient(180deg, #2a8a4f 0%, var(--ac-exito) 100%);
+    box-shadow: 0 2px 6px rgba(30, 107, 53, .25);
+  }
+  #acta-app .ac-pdf-open-link {
+    font-size: 13px;
+    color: var(--ac-azul-oscuro);
+    text-decoration: none;
+    padding: 8px 14px;
+    border: 1.5px solid var(--ac-borde);
+    border-radius: var(--ac-radio-sm);
+    background: #fff;
+    transition: background var(--ac-transicion), border-color var(--ac-transicion), transform var(--ac-transicion);
+    font-weight: 600;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #acta-app .ac-pdf-open-link:hover {
+    background: var(--ac-azul-claro);
+    border-color: var(--ac-azul-oscuro);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 600px) {
+    #acta-app { padding: 18px 12px 32px; }
+    #acta-app .ac-grid-2 { grid-template-columns: 1fr; }
+    #acta-app .ac-panel { padding: 18px 16px; }
+    #acta-app .ac-nav { gap: 8px; }
+    #acta-app .ac-btn-next,
+    #acta-app .ac-btn-back {
+      min-width: 0;
+      flex: 1 1 0;
+      padding: 12px 14px;
+    }
+    #acta-app .ac-panel-title { font-size: 19px; }
+  }
+
+  @media print {
+    body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+    #acta-app { padding: 0 !important; margin: 0 !important; background: #fff !important; }
+    #acta-app .ac-stepper,
+    #acta-app .ac-nav,
+    #acta-app .ac-acciones,
+    #acta-app .ac-estado,
+    #acta-app .ac-stats,
+    #acta-app .ac-preview-wrap { background: #fff; border: none; padding: 0; margin: 0; overflow: visible; }
+  }
+</style>
+</head>
+<body>
+
+<div id="acta-app">
+
+  <div class="ac-stepper" role="navigation" aria-label="Progreso del acta">
+    <ol class="ac-stepper-list">
+      <li class="ac-step is-active" data-step="1">
+        <div class="ac-step-circle" aria-current="step">
+          <span class="ac-step-num">1</span>
+          <span class="ac-step-check" aria-hidden="true">✓</span>
+        </div>
+        <div class="ac-step-label">
+          <span class="ac-step-title">Datos del acta</span>
+          <span class="ac-step-sub">Actividad, módulo y fecha</span>
+        </div>
+      </li>
+      <li class="ac-step-connector" data-connector="1-2"></li>
+      <li class="ac-step" data-step="2">
+        <div class="ac-step-circle">
+          <span class="ac-step-num">2</span>
+          <span class="ac-step-check" aria-hidden="true">✓</span>
+        </div>
+        <div class="ac-step-label">
+          <span class="ac-step-title">Archivo de Moodle</span>
+          <span class="ac-step-sub">CSV o XLSX</span>
+        </div>
+      </li>
+    </ol>
+  </div>
+
+  <section class="ac-step-page is-active" data-step-page="1" aria-labelledby="ac-step-1-title">
+    <div class="ac-panel">
+      <h2 id="ac-step-1-title" class="ac-panel-title">
+        <span class="ac-panel-title-num">1</span>
+        Datos del acta
+      </h2>
+      <p class="ac-panel-subtitle">Selecciona la actividad, el módulo y la fecha. El docente se autocompleta desde el catálogo.</p>
+      <div class="ac-grid-2">
+        <div class="ac-campo">
+          <label for="ac-actividad">Actividad <span class="ac-label-hint">(curso, diplomado, seminario…)</span></label>
+          <select id="ac-actividad" class="ac-loading" disabled>
+            <option value="">Cargando catálogo…</option>
+          </select>
+          <div class="ac-campo-error" id="ac-actividad-error"></div>
+        </div>
+        <div class="ac-campo">
+          <label for="ac-modulo">Módulo</label>
+          <select id="ac-modulo" disabled>
+            <option value="">— Primero elige una actividad —</option>
+          </select>
+          <div class="ac-campo-hint" id="ac-modulo-hint"></div>
+        </div>
+        <div class="ac-campo">
+          <label for="ac-docente">Nombre del docente</label>
+          <input type="text" id="ac-docente" readonly placeholder="Se autocompleta al elegir módulo" />
+          <div class="ac-campo-hint">Autocompletado desde el catálogo</div>
+        </div>
+        <div class="ac-campo">
+          <label for="ac-fecha">Fecha de elaboración</label>
+          <input type="text" id="ac-fecha" placeholder="Ej: 23 de julio de 2026" />
+        </div>
+      </div>
+    </div>
+    <div class="ac-nav">
+      <span class="ac-nav-spacer"></span>
+      <button type="button" class="ac-btn ac-btn-primary ac-btn-next" id="ac-btn-next-1" disabled>
+        Continuar
+        <span class="ac-btn-arrow" aria-hidden="true">→</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="ac-step-page" data-step-page="2" aria-labelledby="ac-step-2-title" hidden>
+    <div class="ac-panel">
+      <h2 id="ac-step-2-title" class="ac-panel-title">
+        <span class="ac-panel-title-num">2</span>
+        Archivo de Moodle
+      </h2>
+      <p class="ac-panel-subtitle">Descarga el archivo de calificaciones desde Moodle y arrástralo aquí.</p>
+            <p class="ac-help">No modifiques el archivo descargado de Moodle.</p>
+            <br>
+      <div class="ac-dropzone" id="ac-dropzone">
+        <div class="ac-drop-icon" aria-hidden="true">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="ac-drop-text">Arrastra tu archivo <strong>XLSX</strong> de Moodle aquí</div>
+        <div class="ac-drop-hint">o haz clic para seleccionarlo</div>
+        <input type="file" id="ac-file-input" accept=".csv,.txt,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" />
+      </div>
+      
+      <div class="ac-file-info" id="ac-file-info">
+        <span class="ac-file-info-icon" aria-hidden="true">📄</span>
+        <span class="ac-file-name" id="ac-file-name"></span>
+        <button type="button" id="ac-file-remove" class="ac-file-remove" aria-label="Quitar archivo">Quitar</button>
+      </div>
+
+
+      <div class="ac-firma" id="ac-firma">
+        <div class="ac-firma-label">Firma del docente (opcional)</div>
+        <div class="ac-firma-row">
+          <button type="button" class="ac-firma-btn" id="ac-firma-btn">
+            <span aria-hidden="true">✎</span>
+            <span id="ac-firma-btn-text">Subir firma</span>
+          </button>
+          <button type="button" class="ac-firma-remove ac-hidden" id="ac-firma-remove" aria-label="Quitar firma">Quitar</button>
+          <input type="file" id="ac-firma-input" accept="image/png,image/jpeg,image/jpg" style="display:none" />
+        </div>
+        <div class="ac-firma-preview ac-hidden" id="ac-firma-preview-wrap">
+          <img id="ac-firma-preview" alt="Vista previa de la firma" />
+        </div>
+      </div>
+
+      <div class="ac-estado" id="ac-estado"></div>
+      <div class="ac-stats" id="ac-stats"></div>
+    </div>
+
+    <div class="ac-nav">
+      <button type="button" class="ac-btn ac-btn-ghost ac-btn-back" id="ac-btn-back-2">
+        <span class="ac-btn-arrow" aria-hidden="true">←</span>
+        Atrás
+      </button>
+      <span class="ac-nav-spacer"></span>
+      <button type="button" class="ac-btn ac-btn-primary" id="ac-btn-generar" disabled>
+        <span class="ac-btn-icon" aria-hidden="true">✨</span>
+        Generar acta
+      </button>
+    </div>
+
+    <div class="ac-panel ac-hidden" id="ac-preview-panel">
+      <div class="ac-preview-head">
+        <h2 class="ac-panel-title">
+          <span class="ac-panel-title-num">✓</span>
+          Vista previa del PDF
+        </h2>
+        <a href="#" id="ac-pdf-open" class="ac-pdf-open-link" target="_blank" rel="noopener">
+          Abrir en nueva pestaña ↗
+        </a>
+      </div>
+      <div class="ac-acciones" style="margin-bottom:14px;">
+        <button type="button" class="ac-btn ac-btn-secondary" id="ac-btn-pdf" disabled>
+          <span class="ac-btn-icon" aria-hidden="true">⬇</span>
+          Descargar PDF
+        </button>
+        <button type="button" class="ac-btn ac-btn-ghost" id="ac-btn-limpiar">Empezar de nuevo</button>
+      </div>
+      <div class="ac-preview-wrap">
+        <iframe id="ac-pdf-preview" class="ac-pdf-preview" title="Vista previa del acta en PDF"></iframe>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  var LOGO_URL = window.ACTA_LOGO_URL || 'https://home.ciess.org/wp-content/uploads/2026/01/LOGO-CIESS-PR-C.png';
+
+  var estado = {
+    csvTexto: null,
+    csvNombre: null,
+    formatoOrigen: null,
+    datosPreParseados: null,
+    datosRaw: null,
+    actividades: [],
+    calificacionFinal: null,
+    config: {},
+    actaGenerada: false,
+    pdfBlobUrl: null,
+    nombreArchivo: null,
+    catalogo: null,
+    catalogoCargado: false,
+    pasoActual: 1,
+    pasosCompletados: { 1: false, 2: false },
+    logoDataUrl: null,
+    logoCargando: false,
+    logoError: false,
+    firmaDataUrl: null,
+    firmaWidth: 0,
+    firmaHeight: 0,
+    firmaFormato: 'PNG'
+  };
+
+  var CATALOGO_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRisKt_dz-vEdCmSYpPBDWwkdg_or3nqrIiD_SyYqidyHfxQHMafySxnSahsp1H5pfX3tccIELp0b3X/pub?gid=0&single=true&output=csv';
+  var CATALOGO_CACHE_KEY = 'acta-app:catalogo';
+  var CATALOGO_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+  var dom = {
+    dropzone: document.getElementById('ac-dropzone'),
+    fileInput: document.getElementById('ac-file-input'),
+    fileInfo: document.getElementById('ac-file-info'),
+    fileName: document.getElementById('ac-file-name'),
+    fileRemove: document.getElementById('ac-file-remove'),
+    actividad: document.getElementById('ac-actividad'),
+    actividadError: document.getElementById('ac-actividad-error'),
+    modulo: document.getElementById('ac-modulo'),
+    moduloHint: document.getElementById('ac-modulo-hint'),
+    docente: document.getElementById('ac-docente'),
+    fecha: document.getElementById('ac-fecha'),
+    btnGenerar: document.getElementById('ac-btn-generar'),
+    btnPdf: document.getElementById('ac-btn-pdf'),
+    btnLimpiar: document.getElementById('ac-btn-limpiar'),
+    estado: document.getElementById('ac-estado'),
+    stats: document.getElementById('ac-stats'),
+    previewPanel: document.getElementById('ac-preview-panel'),
+    pdfPreview: document.getElementById('ac-pdf-preview'),
+    pdfOpen: document.getElementById('ac-pdf-open'),
+    stepper: document.querySelector('.ac-stepper'),
+    stepPages: document.querySelectorAll('.ac-step-page'),
+    stepItems: document.querySelectorAll('.ac-step'),
+    stepConnectors: document.querySelectorAll('.ac-step-connector'),
+    btnNext1: document.getElementById('ac-btn-next-1'),
+    btnBack2: document.getElementById('ac-btn-back-2'),
+    firmaBtn: document.getElementById('ac-firma-btn'),
+    firmaBtnText: document.getElementById('ac-firma-btn-text'),
+    firmaInput: document.getElementById('ac-firma-input'),
+    firmaRemove: document.getElementById('ac-firma-remove'),
+    firmaPreviewWrap: document.getElementById('ac-firma-preview-wrap'),
+    firmaPreview: document.getElementById('ac-firma-preview')
+  };
+
+  function init() {
+    dom.fecha.value = obtenerFechaFormateada();
+    cargarCatalogo();
+    precargarLogo();
+    if (window.ACTA_DATOS) cargarDesdeMoodle();
+
+    dom.dropzone.addEventListener('click', function () { dom.fileInput.click(); });
+    dom.fileInput.addEventListener('change', function (e) {
+      if (e.target.files && e.target.files[0]) cargarArchivo(e.target.files[0]);
+    });
+    dom.fileRemove.addEventListener('click', function (e) { e.stopPropagation(); limpiarArchivo(); });
+
+    dom.firmaBtn.addEventListener('click', function () { dom.firmaInput.click(); });
+    dom.firmaInput.addEventListener('change', function (e) {
+      if (e.target.files && e.target.files[0]) cargarFirma(e.target.files[0]);
+    });
+    dom.firmaRemove.addEventListener('click', function () { limpiarFirma(); });
+
+    ['dragenter', 'dragover'].forEach(function (evt) {
+      dom.dropzone.addEventListener(evt, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dom.dropzone.classList.add('ac-dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (evt) {
+      dom.dropzone.addEventListener(evt, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dom.dropzone.classList.remove('ac-dragover');
+      });
+    });
+    dom.dropzone.addEventListener('drop', function (e) {
+      var files = e.dataTransfer.files;
+      if (files && files[0]) cargarArchivo(files[0]);
+    });
+
+    dom.actividad.addEventListener('change', function () {
+      llenarModulos(dom.actividad.value);
+      dom.docente.value = '';
+      evaluarPaso(1);
+      evaluarBotonGenerar();
+    });
+    dom.modulo.addEventListener('change', function () {
+      autollenarDocente(dom.actividad.value, dom.modulo.value);
+      evaluarPaso(1);
+      evaluarBotonGenerar();
+    });
+
+    dom.btnGenerar.addEventListener('click', function () {
+      generarActa();
+      if (estado.actaGenerada) {
+        estado.pasosCompletados[2] = true;
+        actualizarStepper();
+      }
+    });
+    dom.btnPdf.addEventListener('click', descargarPDF);
+    dom.btnLimpiar.addEventListener('click', limpiarTodo);
+
+    dom.btnNext1.addEventListener('click', function () { irAPaso(2); });
+    dom.btnBack2.addEventListener('click', function () { irAPaso(1); });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') {
+        if (estado.pasoActual === 1 && !dom.btnNext1.disabled) {
+          e.preventDefault();
+          irAPaso(2);
+        }
+      }
+    });
+
+    estado.pasoActual = 1;
+    evaluarPaso(1);
+    actualizarStepper();
+  }
+
+  function precargarLogo() {
+    if (estado.logoDataUrl || estado.logoCargando || estado.logoError) return;
+    estado.logoCargando = true;
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function () {
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        estado.logoDataUrl = canvas.toDataURL('image/png');
+      } catch (e) {
+        console.warn('No se pudo convertir el logo (CORS):', e);
+        estado.logoError = true;
+      }
+      estado.logoCargando = false;
+    };
+    img.onerror = function () {
+      console.warn('No se pudo cargar el logo desde', LOGO_URL);
+      estado.logoError = true;
+      estado.logoCargando = false;
+    };
+    img.src = LOGO_URL;
+  }
+
+  function irAPaso(num) {
+    if (num < 1 || num > 2) return;
+    var pasoAnterior = estado.pasoActual;
+    estado.pasoActual = num;
+
+    dom.stepPages.forEach(function (page) {
+      var pageNum = parseInt(page.getAttribute('data-step-page'), 10);
+      if (pageNum === num) {
+        page.classList.remove('ac-slide-right');
+        if (num < pasoAnterior) page.classList.add('ac-slide-right');
+        page.classList.add('is-active');
+        page.removeAttribute('hidden');
+      } else {
+        page.classList.remove('is-active', 'ac-slide-right');
+        page.setAttribute('hidden', '');
+      }
+    });
+
+    actualizarStepper();
+
+    setTimeout(function () {
+      var top = dom.stepper.getBoundingClientRect().top + window.scrollY - 20;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+    }, 50);
+
+    evaluarPaso(num);
+  }
+
+  function evaluarPaso(num) {
+    if (num === 1) {
+      var ok = !!dom.actividad.value && !!dom.modulo.value && !!dom.docente.value;
+      dom.btnNext1.disabled = !ok;
+      estado.pasosCompletados[1] = ok;
+    } else if (num === 2) {
+      estado.pasosCompletados[2] = estado.actaGenerada;
+    }
+    actualizarStepper();
+  }
+
+  function actualizarStepper() {
+    var actual = estado.pasoActual;
+    dom.stepItems.forEach(function (item) {
+      var num = parseInt(item.getAttribute('data-step'), 10);
+      item.classList.remove('is-active', 'is-complete');
+      if (num < actual) item.classList.add('is-complete');
+      else if (num === actual) item.classList.add('is-active');
+    });
+    dom.stepConnectors.forEach(function (conn) {
+      var parts = conn.getAttribute('data-connector').split('-');
+      var desde = parseInt(parts[0], 10);
+      if (estado.pasosCompletados[desde] || desde < actual) conn.classList.add('is-filled');
+      else conn.classList.remove('is-filled');
+    });
+  }
+
+  function cargarCatalogo() {
+    var cacheOk = false;
+    try {
+      var raw = sessionStorage.getItem(CATALOGO_CACHE_KEY);
+      if (raw) {
+        var cache = JSON.parse(raw);
+        if (cache && cache.timestamp && (Date.now() - cache.timestamp < CATALOGO_CACHE_TTL) && Array.isArray(cache.data)) {
+          estado.catalogo = cache.data;
+          estado.catalogoCargado = true;
+          llenarActividades();
+          cacheOk = true;
+        }
+      }
+    } catch (e) {}
+    if (!cacheOk) fetchCatalogo();
+  }
+
+  function fetchCatalogo() {
+    dom.actividad.className = 'ac-loading';
+    dom.actividad.disabled = true;
+    dom.actividad.innerHTML = '<option value="">Cargando catálogo…</option>';
+    ocultarErrorActividad();
+
+    fetch(CATALOGO_URL, { cache: 'no-store' })
+      .then(function (resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.text();
+      })
+      .then(function (texto) {
+        var datos = parsearCatalogo(texto);
+        if (!datos || datos.length === 0) throw new Error('El catálogo está vacío o no tiene el formato esperado.');
+        estado.catalogo = datos;
+        estado.catalogoCargado = true;
+        try {
+          sessionStorage.setItem(CATALOGO_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: datos }));
+        } catch (e) {}
+        llenarActividades();
+      })
+      .catch(function (err) {
+        console.error('Error al cargar catálogo:', err);
+        mostrarErrorActividad(
+          'No se pudo cargar el catálogo desde Google Sheets. ' +
+          'Verifica tu conexión a internet y haz clic en "Reintentar". (' + err.message + ')'
+        );
+        dom.actividad.className = '';
+        dom.actividad.disabled = true;
+        dom.actividad.innerHTML = '<option value="">— Catálogo no disponible —</option>';
+      });
+  }
+
+  function parsearCatalogo(texto) {
+    var delim = detectarDelimitador(texto);
+    var filas = parsearCSV(texto, delim);
+    if (filas.length < 2) return [];
+
+    var encabezados = filas[0].map(function (h) { return String(h).trim().toLowerCase(); });
+    var idxActividad = encabezados.indexOf('actividad');
+    var idxModulo = encabezados.indexOf('módulo');
+    if (idxModulo === -1) idxModulo = encabezados.indexOf('modulo');
+    var idxDocente = encabezados.indexOf('docente');
+
+    if (idxActividad === -1) idxActividad = 0;
+    if (idxModulo === -1) idxModulo = 1;
+    if (idxDocente === -1) idxDocente = 2;
+
+    var out = [];
+    for (var i = 1; i < filas.length; i++) {
+      var fila = filas[i];
+      if (!fila || fila.length === 0) continue;
+      var act = (fila[idxActividad] || '').trim();
+      var mod = (fila[idxModulo] || '').trim();
+      var doc = (fila[idxDocente] || '').trim();
+      if (!act && !mod && !doc) continue;
+      if (!act) continue;
+      out.push({ actividad: act, modulo: mod, docente: doc });
+    }
+    return out;
+  }
+
+  function llenarActividades() {
+    if (!estado.catalogo || estado.catalogo.length === 0) return;
+    var unicas = {};
+    for (var i = 0; i < estado.catalogo.length; i++) {
+      var a = estado.catalogo[i].actividad;
+      if (a) unicas[a] = true;
+    }
+    var lista = Object.keys(unicas).sort(function (x, y) { return x.localeCompare(y, 'es'); });
+
+    dom.actividad.className = '';
+    dom.actividad.disabled = false;
+    dom.actividad.innerHTML = '';
+    dom.actividad.appendChild(new Option('— Selecciona una actividad —', ''));
+    for (var i = 0; i < lista.length; i++) dom.actividad.appendChild(new Option(lista[i], lista[i]));
+    ocultarErrorActividad();
+    evaluarPaso(1);
+  }
+
+  function llenarModulos(actividad) {
+    dom.modulo.innerHTML = '';
+    dom.docente.value = '';
+
+    if (!actividad) {
+      dom.modulo.disabled = true;
+      dom.modulo.appendChild(new Option('— Primero elige una actividad —', ''));
+      dom.moduloHint.textContent = '';
+      return;
+    }
+
+    var modulos = [];
+    for (var i = 0; i < estado.catalogo.length; i++) {
+      if (estado.catalogo[i].actividad === actividad) modulos.push(estado.catalogo[i]);
+    }
+
+    if (modulos.length === 0) {
+      dom.modulo.disabled = true;
+      dom.modulo.appendChild(new Option('— Sin módulos para esta actividad —', ''));
+      dom.moduloHint.textContent = '';
+      return;
+    }
+
+    dom.modulo.disabled = false;
+    dom.modulo.appendChild(new Option('— Selecciona un módulo —', ''));
+    for (var i = 0; i < modulos.length; i++) {
+      var m = modulos[i].modulo || '(sin nombre)';
+      dom.modulo.appendChild(new Option(m, m));
+    }
+    dom.moduloHint.textContent = modulos.length + ' módulo(s) disponible(s)';
+  }
+
+  function autollenarDocente(actividad, modulo) {
+    if (!actividad || !modulo) { dom.docente.value = ''; return; }
+    for (var i = 0; i < estado.catalogo.length; i++) {
+      var fila = estado.catalogo[i];
+      if (fila.actividad === actividad && fila.modulo === modulo) {
+        dom.docente.value = fila.docente || '';
+        return;
+      }
+    }
+    dom.docente.value = '';
+  }
+
+  function evaluarBotonGenerar() {
+    var hayArchivo = estado.csvTexto || (estado.formatoOrigen === 'xlsx' && estado.datosPreParseados);
+    var hayActividad = !!dom.actividad.value;
+    var hayModulo = !!dom.modulo.value;
+    dom.btnGenerar.disabled = !(hayArchivo && hayActividad && hayModulo);
+  }
+
+  function mostrarErrorActividad(mensaje) {
+    dom.actividadError.textContent = mensaje;
+    dom.actividadError.classList.add('ac-visible');
+    if (!document.getElementById('ac-retry-btn')) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'ac-retry-btn';
+      btn.className = 'ac-retry';
+      btn.textContent = '↻ Reintentar';
+      btn.addEventListener('click', function () { cargarCatalogo(); });
+      dom.actividadError.appendChild(document.createElement('br'));
+      dom.actividadError.appendChild(btn);
+    }
+  }
+  function ocultarErrorActividad() {
+    dom.actividadError.classList.remove('ac-visible');
+    dom.actividadError.textContent = '';
+  }
+
+  function esArchivoXLSX(archivo) {
+    var nombre = archivo.name.toLowerCase();
+    return nombre.endsWith('.xlsx') || nombre.endsWith('.xls') ||
+           archivo.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+           archivo.type === 'application/vnd.ms-excel';
+  }
+  function esArchivoCSV(archivo) {
+    var nombre = archivo.name.toLowerCase();
+    return nombre.endsWith('.csv') || nombre.endsWith('.txt') || archivo.type === 'text/csv';
+  }
+
+  function cargarArchivo(archivo) {
+    if (!archivo) return;
+    if (!esArchivoCSV(archivo) && !esArchivoXLSX(archivo)) {
+      mostrarEstado('Formato no soportado. Sube un archivo .csv, .xlsx o .xls.', 'error');
+      return;
+    }
+    mostrarEstado('Leyendo archivo "' + archivo.name + '"…', 'info');
+    if (esArchivoXLSX(archivo)) leerXLSX(archivo);
+    else leerCSV(archivo);
+  }
+
+  function leerCSV(archivo) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      estado.csvTexto = e.target.result;
+      estado.csvNombre = archivo.name;
+      estado.formatoOrigen = 'csv';
+      finalizarCarga(archivo);
+    };
+    reader.onerror = function () { mostrarEstado('No se pudo leer el archivo CSV. Inténtalo de nuevo.', 'error'); };
+    reader.readAsText(archivo, 'UTF-8');
+  }
+
+  function leerXLSX(archivo) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        if (typeof XLSX === 'undefined') {
+          mostrarEstado('No se pudo cargar la librería para leer Excel. Verifica tu conexión a internet e inténtalo de nuevo.', 'error');
+          return;
+        }
+        var data = new Uint8Array(e.target.result);
+        var workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: false, cellText: true });
+        var primeraHoja = workbook.SheetNames[0];
+        if (!primeraHoja) { mostrarEstado('El archivo Excel no contiene hojas.', 'error'); return; }
+        var hoja = workbook.Sheets[primeraHoja];
+        var matriz = XLSX.utils.sheet_to_json(hoja, {
+          header: 1, raw: false, dateNF: 'yyyy-mm-dd', defval: ''
+        });
+        matriz = matriz.filter(function (f) {
+          return f && f.some(function (c) { return String(c).trim() !== ''; });
+        });
+        estado.csvTexto = null;
+        estado.csvNombre = archivo.name;
+        estado.formatoOrigen = 'xlsx';
+        estado.datosPreParseados = matriz;
+        finalizarCarga(archivo);
+      } catch (err) {
+        console.error(err);
+        mostrarEstado('Error al leer el Excel: ' + err.message, 'error');
+      }
+    };
+    reader.onerror = function () { mostrarEstado('No se pudo leer el archivo Excel. Inténtalo de nuevo.', 'error'); };
+    reader.readAsArrayBuffer(archivo);
+  }
+
+  // Datos del libro de calificaciones entregados por el plugin local_actacalif
+  // (misma matriz que produce la lectura de un XLSX exportado de Moodle).
+  function cargarDesdeMoodle() {
+    var datos = window.ACTA_DATOS;
+    estado.csvTexto = null;
+    estado.formatoOrigen = 'xlsx';
+    estado.datosPreParseados = datos.matriz;
+    estado.csvNombre = datos.curso;
+
+    var pagina = document.querySelector('[data-step-page="2"]');
+    pagina.querySelector('.ac-panel-title').lastChild.textContent = ' Calificaciones del curso';
+    pagina.querySelector('.ac-panel-subtitle').textContent = 'Las calificaciones se leyeron directamente de este curso en Moodle. No necesitas descargar ni subir ningún archivo.';
+    var paso = document.querySelector('.ac-step[data-step="2"]');
+    if (paso) {
+      var t = paso.querySelector('.ac-step-title'), u = paso.querySelector('.ac-step-sub');
+      if (t) t.textContent = 'Calificaciones';
+      if (u) u.textContent = 'Desde Moodle';
+    }
+    var ayuda = pagina.querySelector('.ac-help');
+    if (ayuda) ayuda.style.display = 'none';
+    dom.dropzone.style.display = 'none';
+    dom.fileRemove.style.display = 'none';
+
+    dom.fileName.textContent = datos.curso + ' · ' + (datos.matriz.length - 1) + ' estudiante(s), desde Moodle';
+    dom.fileInfo.classList.add('ac-visible');
+    dom.btnLimpiar.disabled = false;
+    evaluarBotonGenerar();
+    evaluarPaso(2);
+    mostrarEstado('Calificaciones cargadas desde Moodle. Pulsa "Generar acta" para crear el PDF.', 'info');
+  }
+
+  function finalizarCarga(archivo) {
+    dom.fileName.textContent = archivo.name + ' (' + (archivo.size / 1024).toFixed(1) + ' KB)';
+    dom.fileInfo.classList.add('ac-visible');
+    dom.btnLimpiar.disabled = false;
+    evaluarBotonGenerar();
+    evaluarPaso(2);
+    var tipo = estado.formatoOrigen === 'xlsx' ? 'Excel' : 'CSV';
+    mostrarEstado(tipo + ' cargado. Pulsa "Generar acta" para crear el PDF.', 'info');
+  }
+
+  function cargarFirma(archivo) {
+    if (!archivo) return;
+    var tipo = (archivo.type || '').toLowerCase();
+    var nombre = (archivo.name || '').toLowerCase();
+    var esPng = tipo === 'image/png' || nombre.endsWith('.png');
+    var esJpg = tipo === 'image/jpeg' || nombre.endsWith('.jpg') || nombre.endsWith('.jpeg');
+    if (!esPng && !esJpg) {
+      mostrarEstado('La firma debe ser una imagen PNG o JPG.', 'error');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var dataUrl = e.target.result;
+      var img = new Image();
+      img.onload = function () {
+        estado.firmaDataUrl = dataUrl;
+        estado.firmaWidth = img.naturalWidth || img.width || 0;
+        estado.firmaHeight = img.naturalHeight || img.height || 0;
+        estado.firmaFormato = esPng ? 'PNG' : 'JPEG';
+        dom.firmaPreview.src = dataUrl;
+        dom.firmaPreviewWrap.classList.remove('ac-hidden');
+        dom.firmaRemove.classList.remove('ac-hidden');
+        dom.firmaBtnText.textContent = 'Cambiar firma';
+        dom.firmaInput.value = '';
+        mostrarEstado('Firma cargada. Se incluirá en el PDF.', 'ok');
+        setTimeout(function () { ocultarEstado(); }, 2500);
+      };
+      img.onerror = function () {
+        mostrarEstado('No se pudo procesar la imagen de la firma. Intenta con otra.', 'error');
+      };
+      img.src = dataUrl;
+    };
+    reader.onerror = function () {
+      mostrarEstado('No se pudo leer el archivo de firma.', 'error');
+    };
+    reader.readAsDataURL(archivo);
+  }
+
+  function limpiarFirma() {
+    estado.firmaDataUrl = null;
+    estado.firmaWidth = 0;
+    estado.firmaHeight = 0;
+    estado.firmaFormato = 'PNG';
+    dom.firmaPreview.src = '';
+    dom.firmaPreviewWrap.classList.add('ac-hidden');
+    dom.firmaRemove.classList.add('ac-hidden');
+    dom.firmaBtnText.textContent = 'Subir firma';
+    dom.firmaInput.value = '';
+  }
+
+  function limpiarArchivo() {
+    estado.csvTexto = null;
+    estado.csvNombre = null;
+    estado.formatoOrigen = null;
+    estado.datosPreParseados = null;
+    estado.datosRaw = null;
+    estado.actividades = [];
+    estado.calificacionFinal = null;
+    estado.actaGenerada = false;
+    estado.pasosCompletados[2] = false;
+    if (estado.pdfBlobUrl) {
+      try { URL.revokeObjectURL(estado.pdfBlobUrl); } catch (e) {}
+      estado.pdfBlobUrl = null;
+    }
+    estado.nombreArchivo = null;
+    dom.fileInput.value = '';
+    dom.fileInfo.classList.remove('ac-visible');
+    dom.fileName.textContent = '';
+    dom.btnGenerar.disabled = true;
+    dom.btnPdf.disabled = true;
+    dom.previewPanel.classList.add('ac-hidden');
+    dom.pdfPreview.src = 'about:blank';
+    dom.pdfOpen.href = '#';
+    ocultarEstado();
+    ocultarStats();
+    evaluarPaso(2);
+    evaluarPaso(1);
+    actualizarStepper();
+  }
+
+  function limpiarTodo() {
+    limpiarArchivo();
+    limpiarFirma();
+    dom.actividad.value = '';
+    llenarModulos('');
+    dom.docente.value = '';
+    dom.fecha.value = obtenerFechaFormateada();
+    estado.pasosCompletados = { 1: false, 2: false };
+    if (window.ACTA_DATOS) cargarDesdeMoodle();
+    irAPaso(1);
+  }
+
+  function mostrarEstado(mensaje, tipo) {
+    dom.estado.textContent = mensaje;
+    dom.estado.className = 'ac-estado ac-visible ' + (tipo === 'error' ? 'ac-error' : tipo === 'ok' ? 'ac-ok' : 'ac-info');
+  }
+  function ocultarEstado() {
+    dom.estado.className = 'ac-estado';
+    dom.estado.textContent = '';
+  }
+  function mostrarStats(numEstudiantes, numActividades, tieneFinal) {
+    dom.stats.innerHTML =
+      '<div><strong>' + numEstudiantes + '</strong><span>Estudiante(s)</span></div>' +
+      '<div><strong>' + numActividades + '</strong><span>Actividad(es)</span></div>' +
+      '<div><strong>' + (tieneFinal ? 'Sí' : 'No') + '</strong><span>Calificación final</span></div>';
+    dom.stats.className = 'ac-stats ac-visible';
+  }
+  function ocultarStats() {
+    dom.stats.className = 'ac-stats';
+    dom.stats.innerHTML = '';
+  }
+
+  function obtenerFechaFormateada() {
+    var fecha = new Date();
+    var meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    return fecha.getDate() + ' de ' + meses[fecha.getMonth()] + ' de ' + fecha.getFullYear();
+  }
+
+  function detectarDelimitador(texto) {
+    var lineas = texto.split(/\r\n|\n|\r/).filter(function (l) { return l.trim() !== ''; }).slice(0, 5);
+    var muestra = lineas.join('\n');
+    var cuentas = {
+      ',': (muestra.match(/,/g) || []).length,
+      ';': (muestra.match(/;/g) || []).length,
+      '\t': (muestra.match(/\t/g) || []).length,
+      '|': (muestra.match(/\|/g) || []).length
+    };
+    var max = 0, delim = ',';
+    for (var d in cuentas) {
+      if (cuentas[d] > max) { max = cuentas[d]; delim = d; }
+    }
+    return delim;
+  }
+
+  function parsearCSV(texto, delimitador) {
+    if (texto.charCodeAt(0) === 0xFEFF) texto = texto.slice(1);
+    var filas = [], fila = [], campo = '', enComillas = false, i = 0, len = texto.length;
+    while (i < len) {
+      var c = texto[i];
+      if (enComillas) {
+        if (c === '"') {
+          if (texto[i + 1] === '"') { campo += '"'; i += 2; }
+          else { enComillas = false; i++; }
+        } else { campo += c; i++; }
+      } else {
+        if (c === '"') { enComillas = true; i++; }
+        else if (c === delimitador) { fila.push(campo); campo = ''; i++; }
+        else if (c === '\r') {
+          if (texto[i + 1] === '\n') i++;
+          fila.push(campo); campo = ''; filas.push(fila); fila = []; i++;
+        } else if (c === '\n') {
+          fila.push(campo); campo = ''; filas.push(fila); fila = []; i++;
+        } else { campo += c; i++; }
+      }
+    }
+    if (campo !== '' || fila.length > 0) { fila.push(campo); filas.push(fila); }
+    return filas.filter(function (f) { return f.some(function (c) { return c.trim() !== ''; }); });
+  }
+
+  function generarActa() {
+    if (!estado.csvTexto && !(estado.formatoOrigen === 'xlsx' && estado.datosPreParseados)) {
+      mostrarEstado('Primero carga un archivo CSV o XLSX.', 'error');
+      return;
+    }
+    if (!estado.catalogoCargado || !estado.catalogo || estado.catalogo.length === 0) {
+      mostrarEstado('El catálogo de actividades no está cargado. Revisa la conexión o haz clic en "Reintentar" en el campo Actividad.', 'error');
+      return;
+    }
+
+    var actividad = dom.actividad.value;
+    var modulo = dom.modulo.value;
+    var docente = dom.docente.value;
+    var fecha = dom.fecha.value.trim() || obtenerFechaFormateada();
+
+    if (!actividad) { mostrarEstado('Selecciona una actividad antes de generar el acta.', 'error'); dom.actividad.focus(); return; }
+    if (!modulo) { mostrarEstado('Selecciona un módulo antes de generar el acta.', 'error'); dom.modulo.focus(); return; }
+    if (!docente) { mostrarEstado('No se encontró el docente para ese módulo. Verifica el catálogo en Google Sheets.', 'error'); return; }
+
+    mostrarEstado('Generando acta…', 'info');
+
+    var proceder = function () {
+      try {
+        estado.config = { actividad: actividad, docente: docente, modulo: modulo, fecha: fecha };
+
+        var datosRaw;
+        if (estado.formatoOrigen === 'xlsx' && estado.datosPreParseados) {
+          datosRaw = estado.datosPreParseados;
+        } else if (estado.csvTexto) {
+          var delimitador = detectarDelimitador(estado.csvTexto);
+          datosRaw = parsearCSV(estado.csvTexto, delimitador);
+        } else {
+          mostrarEstado('No hay archivo cargado. Vuelve a subir el CSV o XLSX.', 'error');
+          return;
+        }
+
+        if (datosRaw.length < 2) {
+          mostrarEstado('El archivo no tiene suficientes datos (solo se encontró el encabezado o está vacío).', 'error');
+          return;
+        }
+
+        var encabezados = datosRaw[0];
+        var indiceCorreo = -1;
+        for (var i = 0; i < encabezados.length; i++) {
+          var enc = String(encabezados[i]).toLowerCase();
+          if (enc.indexOf('correo') !== -1 || enc.indexOf('email') !== -1) {
+            indiceCorreo = i;
+            break;
+          }
+        }
+        if (indiceCorreo === -1) {
+          mostrarEstado('No se encontró la columna de correo en el CSV. Verifica que exista una columna llamada "Correo" o "Email".', 'error');
+          return;
+        }
+
+        var actividades = [];
+        var totalDelCurso = null;
+        for (var i = indiceCorreo + 1; i < encabezados.length; i++) {
+          var enc = String(encabezados[i]);
+          if (enc.indexOf('Última descarga') !== -1) continue;
+          if (enc.toLowerCase().indexOf('inducción') !== -1 || enc.toLowerCase().indexOf('induccion') !== -1) continue;
+          if (enc.indexOf('Total del curso') !== -1 && enc.indexOf('(Real)') !== -1) {
+            totalDelCurso = { indice: i, nombre: enc };
+            continue;
+          }
+          if (enc.indexOf('(Real)') !== -1) actividades.push({ indice: i, nombre: enc });
+        }
+
+        var calificacionFinal = null;
+        if (totalDelCurso !== null) {
+          var tieneValores = false;
+          for (var i = 1; i < datosRaw.length; i++) {
+            var valor = datosRaw[i][totalDelCurso.indice];
+            if (valor && String(valor).trim() !== '' && String(valor).trim() !== '-') { tieneValores = true; break; }
+          }
+          if (tieneValores) calificacionFinal = totalDelCurso;
+        }
+        if (calificacionFinal === null && actividades.length > 0) {
+          calificacionFinal = actividades[actividades.length - 1];
+          actividades.pop();
+        }
+        if (actividades.length === 0 && calificacionFinal === null) {
+          mostrarEstado('No se identificaron actividades con calificación "(Real)" en el CSV.', 'error');
+          return;
+        }
+
+        estado.datosRaw = datosRaw;
+        estado.actividades = actividades;
+        estado.calificacionFinal = calificacionFinal;
+
+        if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
+          mostrarEstado('No se pudo cargar la librería jsPDF. Verifica tu conexión a internet e inténtalo de nuevo.', 'error');
+          return;
+        }
+        if (estado.pdfBlobUrl) {
+          try { URL.revokeObjectURL(estado.pdfBlobUrl); } catch (e) {}
+          estado.pdfBlobUrl = null;
+        }
+
+        var blobUrl = generarPDFBlob(datosRaw, actividades, calificacionFinal, estado.config);
+        estado.pdfBlobUrl = blobUrl;
+        dom.pdfPreview.src = blobUrl;
+        dom.pdfOpen.href = blobUrl;
+        dom.previewPanel.classList.remove('ac-hidden');
+        dom.btnPdf.disabled = false;
+
+        var numEstudiantes = 0;
+        for (var i = 1; i < datosRaw.length; i++) {
+          var nombre = datosRaw[i][0];
+          var apellido = datosRaw[i][1];
+          if (nombre || apellido) numEstudiantes++;
+        }
+        mostrarStats(numEstudiantes, actividades.length, calificacionFinal !== null);
+
+        estado.actaGenerada = true;
+        mostrarEstado('PDF generado correctamente. Revisa la vista previa abajo.', 'ok');
+
+        setTimeout(function () {
+          dom.previewPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+
+      } catch (err) {
+        console.error(err);
+        mostrarEstado('Ocurrió un error al generar el acta: ' + err.message, 'error');
+      }
+    };
+
+    if (estado.logoDataUrl) {
+      proceder();
+    } else if (estado.logoCargando) {
+      mostrarEstado('Cargando logo del CIESS…', 'info');
+      var esperar = function () {
+        if (estado.logoDataUrl) { proceder(); }
+        else if (estado.logoError) { proceder(); }
+        else { setTimeout(esperar, 100); }
+      };
+      esperar();
+    } else {
+      proceder();
+    }
+  }
+
+  function formatearCalificacion(valor) {
+    if (valor === null || valor === undefined) return '-';
+    if (typeof valor === 'string') {
+      var str = valor.trim();
+      if (str === '' || str === '-') return '-';
+      if (str.indexOf('/') !== -1 && /^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(str)) return '-';
+      var strNum = str.replace(',', '.');
+      var num = parseFloat(strNum);
+      if (!isNaN(num) && isFinite(num)) {
+        if (Math.abs(num) > 1000) return '-';
+        return num.toFixed(2).replace(/\.?0+$/, '');
+      }
+      return str;
+    }
+    if (typeof valor === 'number') {
+      if (isNaN(valor) || !isFinite(valor)) return '-';
+      if (Math.abs(valor) > 1000) return '-';
+      return valor.toFixed(2).replace(/\.?0+$/, '');
+    }
+    return '-';
+  }
+
+  function simplificarNombre(nombre, numero) {
+    nombre = String(nombre).replace(/\s*\(Real\)\s*/g, '').trim();
+    var match = nombre.match(/Total M[oó]dulo\s*(\d+)/i);
+    if (match) return 'Módulo ' + match[1];
+    if (nombre.indexOf('Total del curso') !== -1) return 'Total';
+    if (nombre.indexOf('Tarea:') !== -1) {
+      nombre = nombre.replace('Tarea:', 'Act.');
+      if (nombre.length > 12) nombre = nombre.substring(0, 10) + '..';
+      return nombre;
+    }
+    if (nombre.indexOf('Foro:') !== -1) return 'Foro ' + numero;
+    if (nombre.indexOf('Cuestionario:') !== -1) {
+      nombre = nombre.replace('Cuestionario:', 'Ex.');
+      if (nombre.length > 12) nombre = nombre.substring(0, 10) + '..';
+      return nombre;
+    }
+    if (nombre.length > 12) nombre = nombre.substring(0, 10) + '..';
+    return nombre;
+  }
+
+  function generarPDFBlob(datosRaw, actividades, calificacionFinal, config) {
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
+
+    var pageWidth = 216, pageHeight = 279, margin = 8;
+    var contentWidth = pageWidth - 2 * margin;
+    var bottomLimit = pageHeight - margin;
+    var y = margin;
+
+    if (estado.logoDataUrl) {
+      try {
+        var logoW = 38;
+        var logoH = logoW / 2.71509009009009;
+        var logoX = (pageWidth - logoW) / 2;
+        doc.addImage(estado.logoDataUrl, 'PNG', logoX, y, logoW, logoH);
+        y += logoH + 3;
+      } catch (e) {
+        console.warn('No se pudo insertar el logo en el PDF:', e);
+      }
+    }
+
+    doc.setFillColor(11, 37, 112);
+    doc.rect(margin, y, contentWidth, 9, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ACTA DE CALIFICACIONES', pageWidth / 2, y + 6, { align: 'center' });
+    y += 15;
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    var infoLineas = [
+      ['Actividad:', config.actividad],
+      ['Nombre del docente:', config.docente],
+      ['Módulo:', config.modulo],
+      ['Fecha de elaboración:', config.fecha]
+    ];
+    var infoRowHeight = 7;
+    for (var k = 0; k < infoLineas.length; k++) {
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(infoLineas[k][0]), margin, y);
+      doc.setFont('helvetica', 'normal');
+      var valorTxt = String(infoLineas[k][1]);
+      var maxWidth = contentWidth - 45;
+      var lineasValor = doc.splitTextToSize(valorTxt, maxWidth);
+      if (lineasValor.length > 1) {
+        valorTxt = lineasValor[0];
+        if (valorTxt.length > 2) valorTxt = valorTxt.substring(0, valorTxt.length - 2) + '..';
+      }
+      doc.text(valorTxt, margin + 45, y);
+      y += infoRowHeight;
+      if (k < infoLineas.length - 1) {
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.2);
+        doc.line(margin, y - infoRowHeight / 2, margin + contentWidth, y - infoRowHeight / 2);
+      }
+    }
+    y += 6;
+
+    var tieneCalificacionFinal = calificacionFinal !== null;
+    var numAct = actividades.length;
+    var numColsCalif = numAct + (tieneCalificacionFinal ? 1 : 0);
+    var colNumWidth = contentWidth * 0.04;
+    var colNombreWidth = contentWidth * 0.28;
+    var colFinalWidth = tieneCalificacionFinal ? contentWidth * 0.08 : 0;
+    var totalCalifWidth = contentWidth - colNumWidth - colNombreWidth - colFinalWidth;
+    var colCalifWidth = numAct > 0 ? totalCalifWidth / numAct : 0;
+
+    var fontSizeHeader, fontSizeBody, rowHeight;
+    if (numColsCalif > 16)      { fontSizeHeader = 6.5; fontSizeBody = 6.5; rowHeight = 4.5; }
+    else if (numColsCalif > 12) { fontSizeHeader = 7.5; fontSizeBody = 7.5; rowHeight = 4.5; }
+    else if (numColsCalif > 8)  { fontSizeHeader = 8;   fontSizeBody = 8;   rowHeight = 5; }
+    else                        { fontSizeHeader = 9;   fontSizeBody = 9;   rowHeight = 5; }
+
+    var headerHeight = 9;
+
+    function dibujarEncabezadoTabla() {
+      var x = margin;
+      doc.setDrawColor(120, 120, 120);
+      doc.setLineWidth(0.2);
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(fontSizeHeader);
+      doc.setFont('helvetica', 'bold');
+
+      doc.setFillColor(199, 174, 111);
+      doc.rect(x, y, colNumWidth, headerHeight, 'FD');
+      doc.text('N°', x + colNumWidth / 2, y + headerHeight / 2 + 1, { align: 'center' });
+      x += colNumWidth;
+
+      doc.setFillColor(199, 174, 111);
+      doc.rect(x, y, colNombreWidth, headerHeight, 'FD');
+      doc.text('Nombre(s)', x + 2, y + headerHeight / 2 + 1);
+      x += colNombreWidth;
+
+      for (var i = 0; i < actividades.length; i++) {
+        doc.setFillColor(199, 174, 111);
+        doc.rect(x, y, colCalifWidth, headerHeight, 'FD');
+        var nombreSimpl = simplificarNombre(actividades[i].nombre, i + 1);
+        var lineas = doc.splitTextToSize(String(nombreSimpl), colCalifWidth - 1);
+        if (lineas.length > 2) lineas = lineas.slice(0, 2);
+        var lineH = fontSizeHeader * 0.42;
+        var startY = y + headerHeight / 2 - (lineas.length - 1) * lineH / 2 + 1;
+        for (var li = 0; li < lineas.length; li++) {
+          doc.text(lineas[li], x + colCalifWidth / 2, startY + li * lineH, { align: 'center' });
+        }
+        x += colCalifWidth;
+      }
+
+      if (tieneCalificacionFinal) {
+        doc.setFillColor(199, 174, 111);
+        doc.rect(x, y, colFinalWidth, headerHeight, 'FD');
+        var lineasFin = doc.splitTextToSize('Calificación', colFinalWidth - 1);
+        if (lineasFin.length > 2) lineasFin = lineasFin.slice(0, 2);
+        var lineHFin = fontSizeHeader * 0.42;
+        var startYFin = y + headerHeight / 2 - (lineasFin.length - 1) * lineHFin / 2 + 1;
+        for (var lf = 0; lf < lineasFin.length; lf++) {
+          doc.text(lineasFin[lf], x + colFinalWidth / 2, startYFin + lf * lineHFin, { align: 'center' });
+        }
+      }
+      y += headerHeight;
+    }
+
+    dibujarEncabezadoTabla();
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(fontSizeBody);
+
+    var numEstudiante = 1;
+    for (var i = 1; i < datosRaw.length; i++) {
+      var filaDatos = datosRaw[i];
+      var nombre = filaDatos[0];
+      var apellido = filaDatos[1];
+      if (!nombre && !apellido) continue;
+
+      if (y + rowHeight > bottomLimit) {
+        doc.addPage();
+        y = margin;
+        dibujarEncabezadoTabla();
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(fontSizeBody);
+      }
+
+      var nombreCompleto = ((nombre || '') + ' ' + (apellido || '')).trim();
+      var esPar = (numEstudiante % 2 === 0);
+      var bgR = esPar ? 255 : 242;
+      var bgG = esPar ? 255 : 242;
+      var bgB = esPar ? 255 : 242;
+
+      var x = margin;
+      doc.setFillColor(bgR, bgG, bgB);
+      doc.setDrawColor(120, 120, 120);
+      doc.setLineWidth(0.2);
+      doc.rect(margin, y, contentWidth, rowHeight, 'F');
+
+      doc.rect(x, y, colNumWidth, rowHeight, 'S');
+      doc.text(String(numEstudiante), x + colNumWidth / 2, y + rowHeight / 2 + 1, { align: 'center' });
+      x += colNumWidth;
+
+      doc.rect(x, y, colNombreWidth, rowHeight, 'S');
+      var nombreMostrar = nombreCompleto;
+      var nombreMaxWidth = colNombreWidth - 3;
+      if (doc.getTextWidth(nombreMostrar) > nombreMaxWidth) {
+        while (doc.getTextWidth(nombreMostrar + '..') > nombreMaxWidth && nombreMostrar.length > 1) {
+          nombreMostrar = nombreMostrar.substring(0, nombreMostrar.length - 1);
+        }
+        nombreMostrar = nombreMostrar + '..';
+      }
+      doc.text(nombreMostrar, x + 1.5, y + rowHeight / 2 + 1);
+      x += colNombreWidth;
+
+      for (var j = 0; j < actividades.length; j++) {
+        var valor = filaDatos[actividades[j].indice];
+        var calif = formatearCalificacion(valor);
+        doc.rect(x, y, colCalifWidth, rowHeight, 'S');
+        if (calif && calif !== '-') {
+          doc.text(calif, x + colCalifWidth / 2, y + rowHeight / 2 + 1, { align: 'center' });
+        }
+        x += colCalifWidth;
+      }
+
+      if (tieneCalificacionFinal) {
+        var valorFinal = filaDatos[calificacionFinal.indice];
+        var califFinal = formatearCalificacion(valorFinal);
+        doc.rect(x, y, colFinalWidth, rowHeight, 'S');
+        doc.setFont('helvetica', 'bold');
+        if (califFinal && califFinal !== '-') {
+          doc.text(califFinal, x + colFinalWidth / 2, y + rowHeight / 2 + 1, { align: 'center' });
+        }
+        doc.setFont('helvetica', 'normal');
+      }
+
+      y += rowHeight;
+      numEstudiante++;
+    }
+
+    var tieneFirma = estado.firmaDataUrl && estado.firmaWidth > 0 && estado.firmaHeight > 0;
+    var firmaH = 0, firmaW = 0;
+    if (tieneFirma) {
+      var firmaMaxH = 22;
+      var firmaMaxW = 60;
+      var aspect = estado.firmaWidth / estado.firmaHeight;
+      firmaH = firmaMaxH;
+      firmaW = firmaH * aspect;
+      if (firmaW > firmaMaxW) {
+        firmaW = firmaMaxW;
+        firmaH = firmaW / aspect;
+      }
+    }
+    // Espacio total necesario: 18mm (separación) + firma (si hay) + 22mm (línea + textos)
+    var bloqueFirmaAlto = 18 + firmaH + 22;
+    if (y + bloqueFirmaAlto > bottomLimit) { doc.addPage(); y = margin + 10; }
+    else { y += 18; }
+
+    if (tieneFirma) {
+      // Reservamos espacio extra para la imagen ANTES de la línea,
+      // de modo que la imagen no retroceda dentro de la tabla.
+      var firmaX = (pageWidth - firmaW) / 2;
+      var firmaY = y; // parte superior de la imagen
+      try {
+        doc.addImage(estado.firmaDataUrl, estado.firmaFormato, firmaX, firmaY, firmaW, firmaH);
+      } catch (e) {
+        if (window.console) console.warn('No se pudo incrustar la firma en el PDF:', e);
+      }
+      // Avanzar y hasta dejar la línea justo debajo de la imagen
+      y += firmaH + 2;
+    }
+
+    var lineaWidth = contentWidth * 0.6;
+    var lineaX = margin + (contentWidth - lineaWidth) / 2;
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.4);
+    doc.line(lineaX, y, lineaX + lineaWidth, y);
+
+    y += 5;
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('FIRMA', pageWidth / 2, y, { align: 'center' });
+
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text(String(config.docente || ''), pageWidth / 2, y, { align: 'center' });
+
+    var nombreLimpio = (config.docente || 'calificaciones')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .substring(0, 40);
+    if (!nombreLimpio) nombreLimpio = 'calificaciones';
+    estado.nombreArchivo = 'Acta_' + nombreLimpio + '.pdf';
+
+    var blob = doc.output('blob');
+    return URL.createObjectURL(blob);
+  }
+
+  function descargarPDF() {
+    if (!estado.pdfBlobUrl) {
+      mostrarEstado('Primero genera el acta antes de descargar el PDF.', 'error');
+      return;
+    }
+    mostrarEstado('Descargando PDF…', 'info');
+    var a = document.createElement('a');
+    a.href = estado.pdfBlobUrl;
+    a.download = estado.nombreArchivo || 'acta-calificaciones.pdf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { mostrarEstado('PDF descargado correctamente.', 'ok'); }, 500);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>

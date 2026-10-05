@@ -1,4 +1,21 @@
-# local_actacalif (borrador probado solo con simulación)
+# Actas de calificaciones en Moodle (borradores probados solo con simulación)
+
+Hay dos plugins; el recomendado es `gradeexport_acta`. El primero (`local_actacalif`) se puede desinstalar
+cuando el segundo funcione.
+
+## gradeexport_acta (recomendado): Calificaciones > Exportar > Acta de calificaciones
+Aparece junto a las otras opciones de exportación (archivo de texto, Excel...) y abre el generador de
+actas con las calificaciones del curso ya cargadas: no hay que descargar ni subir ningún CSV.
+- Sin permisos por defecto: solo los administradores lo ven. Para los docentes, dar el permiso
+  `gradeexport/acta:view` al rol Profesor (en todo el sitio: Administración > Usuarios > Permisos > Definir roles;
+  o solo en un curso: Curso > Participantes > Permisos).
+- Instalar: ZIP `gradeexport_acta.zip` (raíz `acta/`) en Administración > Extensiones > Instalar plugins. Si el
+  instalador no puede escribir en `grade/export`, copiar la carpeta `acta` a `<moodle>/grade/export/`
+  (Moodle 5.1+: `public/grade/export/`) y entrar a Administración > Notificaciones.
+- Solo lectura; respeta el modo de grupos del curso.
+- Desinstalar: Administración > Extensiones > Resumen de extensiones > Desinstalar (y borrar la carpeta).
+
+## local_actacalif (primer borrador)
 
 Plugin local de Moodle 4.5+: agrega "Generar acta de calificaciones" al menú del curso
 (solo con `local/actacalif:generate` y `moodle/grade:viewall`). Solo lee el libro de
