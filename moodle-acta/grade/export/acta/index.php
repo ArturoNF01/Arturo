@@ -36,7 +36,6 @@ try {
     die();
 }
 $docente = \gradeexport_acta\helper::docente($context);
-$estudiantes = count_enrolled_users($context, 'moodle/grade:view', $groupid, true);
 try {
     $fecha = userdate(time(), get_string('strftimedate', 'langconfig'));
 } catch (\Throwable $e) {
@@ -48,7 +47,7 @@ $filas = [
     get_string('resumen_curso', 'gradeexport_acta') => s($curso),
     get_string('resumen_docente', 'gradeexport_acta') => s($docente),
     get_string('resumen_fecha', 'gradeexport_acta') => s($fecha),
-    get_string('resumen_estudiantes', 'gradeexport_acta') => (int) $estudiantes,
+    get_string('resumen_estudiantes', 'gradeexport_acta') => html_writer::span('…', '', ['id' => 'acta-estudiantes']),
 ];
 if ($groupid) {
     $filas[get_string('resumen_grupo', 'gradeexport_acta')] = s(groups_get_group_name($groupid));
@@ -90,7 +89,7 @@ $textos = [
     'sinlogo' => get_string('sinlogo', 'gradeexport_acta'),
     'sinmodulo' => get_string('sinmodulo', 'gradeexport_acta'),
 ];
-$cfg = json_encode(['t' => $textos, 'estudiantes' => (int) $estudiantes], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+$cfg = json_encode(['t' => $textos], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
 echo html_writer::script(<<<JS
 (function () {
   var cfg = $cfg;
@@ -100,9 +99,14 @@ echo html_writer::script(<<<JS
   var firmaInput = document.getElementById('acta-firma');
   var firma = null;
 
-  function mensaje(texto, tipo) {
+  function mensaje(texto, tipo, avisos) {
     estado.className = 'alert alert-' + tipo + ' mt-3 mb-0';
-    estado.textContent = texto;
+    estado.textContent = '';
+    [texto].concat(avisos || []).forEach(function (linea) {
+      var p = document.createElement('div');
+      p.textContent = linea;
+      estado.appendChild(p);
+    });
   }
   function api() {
     var w = frame.contentWindow;
@@ -135,14 +139,14 @@ echo html_writer::script(<<<JS
     lector.readAsDataURL(f);
   });
 
-  if (!cfg.estudiantes) {
-    btn.textContent = cfg.t.descargar;
-    mensaje(cfg.t.sinestudiantes, 'warning');
-    return;
-  }
   // Se habilita cuando el generador terminó de cargar (librería de PDF, logo y catálogo).
   esperarApi(60000).then(function (a) { return a.preparar(); }).then(function (r) {
     btn.textContent = cfg.t.descargar;
+    document.getElementById('acta-estudiantes').textContent = r.estudiantes;
+    if (!r.estudiantes) {
+      mensaje(cfg.t.sinestudiantes, 'warning');
+      return;
+    }
     if (!r.pdf) {
       mensaje(cfg.t.sinlibreria, 'danger');
       return;
@@ -150,6 +154,7 @@ echo html_writer::script(<<<JS
     btn.disabled = false;
   }).catch(function (e) {
     btn.textContent = cfg.t.descargar;
+    document.getElementById('acta-estudiantes').textContent = '–';
     mensaje(cfg.t.error + ' ' + e.message, 'danger');
   });
 
@@ -171,8 +176,7 @@ echo html_writer::script(<<<JS
       var avisos = [];
       if (!r.logo) avisos.push(cfg.t.sinlogo);
       if (!r.modulo) avisos.push(cfg.t.sinmodulo);
-      mensaje(cfg.t.listo.replace('{\$a}', function () { return r.nombre; }) + (avisos.length ? ' ' + avisos.join(' ') : ''),
-        avisos.length ? 'warning' : 'success');
+      mensaje(cfg.t.listo.replace('{\$a}', function () { return r.nombre; }), avisos.length ? 'warning' : 'success', avisos);
     }).catch(function (e) {
       mensaje(cfg.t.error + ' ' + (e && e.message ? e.message : ''), 'danger');
     }).then(function () {

@@ -992,10 +992,12 @@
     img.onload = function () {
       try {
         var canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
+        var lw = img.naturalWidth, lh = img.naturalHeight;
+        if (lw > 900) { lh = Math.round(lh * 900 / lw); lw = 900; }
+        canvas.width = lw;
+        canvas.height = lh;
         var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0, lw, lh);
         estado.logoDataUrl = canvas.toDataURL('image/png');
       } catch (e) {
         console.warn('No se pudo convertir el logo (CORS):', e);
@@ -1688,7 +1690,7 @@
 
   function generarPDFBlob(datosRaw, actividades, calificacionFinal, config) {
     var jsPDF = window.jspdf.jsPDF;
-    var doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
+    var doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait', compress: true });
 
     var pageWidth = 216, pageHeight = 279, margin = 8;
     var contentWidth = pageWidth - 2 * margin;
@@ -1700,7 +1702,7 @@
         var logoW = 38;
         var logoH = logoW / 2.71509009009009;
         var logoX = (pageWidth - logoW) / 2;
-        doc.addImage(estado.logoDataUrl, 'PNG', logoX, y, logoW, logoH);
+        doc.addImage(estado.logoDataUrl, 'PNG', logoX, y, logoW, logoH, undefined, 'FAST');
         y += logoH + 3;
       } catch (e) {
         console.warn('No se pudo insertar el logo en el PDF:', e);
@@ -1910,7 +1912,7 @@
       var firmaX = (pageWidth - firmaW) / 2;
       var firmaY = y; // parte superior de la imagen
       try {
-        doc.addImage(estado.firmaDataUrl, estado.firmaFormato, firmaX, firmaY, firmaW, firmaH);
+        doc.addImage(estado.firmaDataUrl, estado.firmaFormato, firmaX, firmaY, firmaW, firmaH, undefined, 'FAST');
       } catch (e) {
         if (window.console) console.warn('No se pudo incrustar la firma en el PDF:', e);
       }
@@ -2039,11 +2041,17 @@
     });
   }
 
+  function contarEstudiantes(datos) {
+    var n = 0, filas = (datos && datos.matriz) || [];
+    for (var i = 1; i < filas.length; i++) { if (filas[i][0] || filas[i][1]) n++; }
+    return n;
+  }
+
   var preparacionDirecta = null;
   // Espera (con límite de tiempo) a que carguen jsPDF, el logo y el catálogo. Nunca rechaza.
   function prepararDirecto() {
     if (preparacionDirecta) return preparacionDirecta;
-    var r = { pdf: false, logo: false, catalogo: false };
+    var r = { pdf: false, logo: false, catalogo: false, estudiantes: contarEstudiantes(window.ACTA_DATOS) };
     preparacionDirecta = esperar(function () { return window.jspdf && window.jspdf.jsPDF; }, 10000)
       .then(function (ok) { r.pdf = ok; return esperar(function () { return estado.logoDataUrl || estado.logoError; }, 6000); })
       .then(function (ok) { r.logo = !!estado.logoDataUrl; return esperar(function () { return estado.catalogoCargado || estado.catalogoError; }, 6000); })
@@ -2123,8 +2131,7 @@
 
       var url = generarPDFBlob(datosRaw, actividades, calificacionFinal, estado.config);
       try { URL.revokeObjectURL(url); } catch (e) {}
-      var estudiantes = 0;
-      for (var n = 1; n < datosRaw.length; n++) { if (datosRaw[n][0] || datosRaw[n][1]) estudiantes++; }
+      var estudiantes = contarEstudiantes(datos);
       return { blob: estado.ultimoBlob, nombre: estado.nombreArchivo, docente: docente, modulo: modulo, estudiantes: estudiantes, logo: !!estado.logoDataUrl };
     });
   }

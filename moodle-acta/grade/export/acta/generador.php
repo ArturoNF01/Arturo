@@ -4,6 +4,8 @@
 require_once(__DIR__ . '/../../../config.php');
 require_once($CFG->libdir . '/gradelib.php');
 require_once($CFG->libdir . '/grouplib.php');
+require_once($CFG->dirroot . '/grade/lib.php');
+require_once($CFG->dirroot . '/grade/export/lib.php');
 
 $courseid = required_param('id', PARAM_INT);
 $logo = optional_param('logo', 0, PARAM_BOOL);
@@ -31,44 +33,48 @@ try {
     debugging($e->getMessage(), DEBUG_DEVELOPER);
 }
 ob_end_clean();
-$users = get_enrolled_users($context, 'moodle/grade:view', $groupid, 'u.id, u.firstname, u.lastname, u.email',
-    'u.lastname, u.firstname', 0, 0, true);
 
-// Misma regla de nombres de columna que la exportación de Moodle.
+// Mismas columnas, mismo orden y mismos nombres que el formulario de exportación de Moodle
+// (los totales respetan la posición configurada en el curso; los ítems ocultos solo los ve quien puede verlos).
+$switch = grade_get_setting($courseid, 'aggregationposition', $CFG->grade_aggregationposition);
+$gseq = new grade_seq($courseid, $switch);
+$verocultos = has_capability('moodle/grade:viewhidden', $context);
 $items = [];
-foreach (grade_item::fetch_all(['courseid' => $courseid]) ?: [] as $item) {
+$nombres = [];
+foreach ($gseq->items as $item) {
+    if ($item->is_hidden() && !$verocultos) {
+        continue;
+    }
     if ($item->itemtype === 'mod') {
         $nombre = get_string('modulename', $item->itemmodule) . get_string('labelsep', 'langconfig') . $item->get_name();
     } else {
-        $nombre = $item->get_name();
+        $nombre = $item->get_name(true);
     }
-    $nombre = html_entity_decode(strip_tags($nombre), ENT_QUOTES, 'UTF-8');
-    $items[] = ['item' => $item, 'nombre' => $nombre . ' (Real)'];
-}
-usort($items, function ($a, $b) {
-    return $a['item']->sortorder <=> $b['item']->sortorder;
-});
-
-// Una consulta por ítem (no una por alumno y ítem).
-$notas = [];
-foreach ($items as $k => $it) {
-    foreach (grade_grade::fetch_all(['itemid' => $it['item']->id]) ?: [] as $g) {
-        $notas[$k][$g->userid] = $g;
-    }
+    $items[$item->id] = $item;
+    $nombres[] = html_entity_decode(strip_tags($nombre), ENT_QUOTES, 'UTF-8') . ' (Real)';
 }
 
-$matriz = [array_merge(['Nombre', 'Apellido(s)', 'Correo'], array_column($items, 'nombre'))];
-foreach ($users as $u) {
+// Mismos alumnos que la exportación de Moodle: roles del libro de calificaciones con matrícula activa
+// (y, si el curso usa grupos, solo los del grupo elegido).
+$gui = new graded_users_iterator($course, $items, $groupid);
+$gui->require_active_enrolment(true);
+if (!$gui->init()) {
+    throw new moodle_exception('gradesneedregrading', 'grades');
+}
+$matriz = [array_merge(['Nombre', 'Apellido(s)', 'Correo'], $nombres)];
+while ($alumno = $gui->next_user()) {
+    $u = $alumno->user;
     $fila = [$u->firstname, $u->lastname, $u->email];
-    foreach ($items as $k => $it) {
-        $g = $notas[$k][$u->id] ?? null;
+    foreach ($items as $id => $item) {
+        $g = $alumno->grades[$id] ?? null;
         $valor = ($g && $g->finalgrade !== null)
-            ? grade_format_gradevalue($g->finalgrade, $it['item'], false, GRADE_DISPLAY_TYPE_REAL, 2)
+            ? grade_format_gradevalue($g->finalgrade, $item, false, GRADE_DISPLAY_TYPE_REAL, 2)
             : null;
         $fila[] = ($valor === null || $valor === '') ? '-' : $valor;
     }
     $matriz[] = $fila;
 }
+$gui->close();
 
 $datos = [
     'curso' => format_string($course->fullname, true, ['context' => $context, 'escape' => false]),

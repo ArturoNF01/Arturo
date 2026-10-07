@@ -1,24 +1,27 @@
-# Actas de calificaciones en Moodle (borradores probados solo con simulación)
+# Actas de calificaciones en Moodle
 
 Hay dos plugins; el recomendado es `gradeexport_acta`. El primero (`local_actacalif`) se puede desinstalar
 cuando el segundo funcione.
 
-## gradeexport_acta 0.2 (recomendado): Calificaciones > Exportar > Acta de calificaciones
+## gradeexport_acta 0.2.1 (recomendado): Calificaciones > Exportar > Acta de calificaciones
 Aparece junto a las otras opciones de exportación. Muestra curso, docente, fecha y número de estudiantes, y un
 botón **Descargar** que baja el acta en PDF directamente (sin pantallas, sin CSV). Firma opcional (PNG/JPG).
 - Curso y calificaciones: los de Moodle (solo lectura; se leen al abrir la página, se recalculan si estaban
-  pendientes). Docente: quien inició sesión; si es administrador/coordinador no inscrito y el curso tiene un único
+  pendientes). Alumnos, columnas, orden y nombres son los mismos que da Exportar > Archivo en texto plano con sus
+  valores por defecto: roles del libro de calificaciones con matrícula activa, totales de módulo y del curso con
+  su nombre completo y en la posición configurada. Docente: quien inició sesión; si es administrador/coordinador no inscrito y el curso tiene un único
   profesor activo, ese profesor.
 - Línea "Módulo": solo si el catálogo (Google Sheet) coincide con el curso (mismos números/numerales, nombre casi
   igual) y con el docente. Si no, el acta sale sin esa línea y la pantalla lo avisa. El docente del PDF siempre es
   el de Moodle.
 - Grupos: con grupos separados, quien no ve todos los grupos solo obtiene los de su grupo; sin grupo, se le niega.
 - Sin permisos por defecto: solo los administradores lo ven. Para los docentes, dar el permiso
-  `gradeexport/acta:view` al rol Profesor (en todo el sitio: Administración > Usuarios > Permisos > Definir roles;
+  `gradeexport/acta:view` al rol que usan para calificar (en el campus del CIESS: "Docente", y los demás roles que
+  ya pueden exportar calificaciones) (en todo el sitio: Administración > Usuarios > Permisos > Definir roles;
   o solo en un curso: Curso > Participantes > Permisos). Al ordenar alfabéticamente, "Acta" queda primero entre las
   exportaciones; si Moodle abre la primera al entrar a Exportar, los docentes con el permiso caerán directo aquí.
 - Instalar/actualizar: ZIP `gradeexport_acta.zip` (raíz `acta/`) en Administración > Extensiones > Instalar plugins
-  (si ya está la 0.1, Moodle ofrece actualizar a 2026100502). Hacerlo en horario tranquilo: durante la actualización
+  (si ya está la 0.1, Moodle ofrece actualizar a 2026100503). Hacerlo en horario tranquilo: durante la actualización
   de BD todo el sitio pide pasar por Notificaciones. Si el instalador no puede escribir en `grade/export`, copiar
   la carpeta `acta` a `<moodle>/grade/export/` (Moodle 5.1+: `public/grade/export/`).
 - Respaldo y reversa: sin respaldo no hay vuelta atrás. NO restaurar archivos de una versión anterior sobre la
@@ -53,6 +56,13 @@ rechaza el acceso. Para apagarlo: vaciar ese ajuste.
 Desinstalar: Administración > Plugins > Plugins locales > Desinstalar.
 
 ## Qué se probó
-Con un Moodle simulado (no hay Moodle real en el entorno de desarrollo): lectura de notas y
-armado de la tabla, bloqueo en cursos no habilitados, y el generador en un navegador con datos
-de ejemplo hasta el paso de generar el PDF (jsPDF simulado). No probado contra un Moodle real.
+`gradeexport_acta` se probó contra un clon real del campus (Moodle 5.1.1+, PHP 8.4, MariaDB 10.11, plugin 0.1
+actualizado a 0.2.1 con el instalador de ZIP): descarga del PDF, firma PNG, línea de módulo (con catálogo
+simulado), rol Docente con y sin el permiso, y paginación con 130 alumnos inventados. La tabla que lee el plugin
+es idéntica (alumnos, orden, columnas, nombres y valores) a la de Exportar > Archivo en texto plano con los
+valores por defecto. En esa prueba salieron tres diferencias que ya están corregidas en 0.2.1: se colaban
+docentes con el permiso `moodle/grade:view`, las columnas no seguían el orden del libro y los totales de módulo se
+llamaban "Total categoría". El PDF pasó de 8,6 MB a unos 100 KB (logo reducido y compresión).
+No se probó con un usuario docente real (solo cambio de rol de un administrador), ni con el catálogo real
+de Google Sheets (el entorno de pruebas no alcanza googleusercontent.com), ni con grupos separados.
+`local_actacalif` solo se probó con un Moodle simulado.
