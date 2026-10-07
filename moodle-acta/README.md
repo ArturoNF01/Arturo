@@ -3,10 +3,27 @@
 Hay dos plugins; el recomendado es `gradeexport_acta`. El primero (`local_actacalif`) se puede desinstalar
 cuando el segundo funcione.
 
-## gradeexport_acta 0.3.0 (recomendado): Calificaciones > Exportar > Acta de calificaciones
+## gradeexport_acta 0.4.0 (recomendado): Calificaciones > Exportar > Acta de calificaciones
 Aparece junto a las otras opciones de exportación. Muestra curso, docente, fecha y número de estudiantes, los
-ítems de calificación a incluir (agrupados por módulo) y un botón **Descargar** que baja el acta en PDF
-directamente (sin pantallas, sin CSV). Firma opcional (PNG/JPG).
+ítems de calificación a incluir (agrupados por módulo), la firma del docente y un botón **Descargar** que baja el
+acta en PDF directamente (sin pantallas, sin CSV).
+- Novedades de 0.4.0:
+  - **Firma del docente destacada**: el título de la firma tiene la misma tipografía que los títulos de módulo y
+    al elegir el archivo (PNG o JPG) se muestra una vista previa con la leyenda "FIRMA" y el nombre del docente,
+    como saldrá en el PDF, con el botón "Quitar firma". La imagen se lee y se normaliza en el navegador (respeta la
+    orientación de las fotos del celular, se reduce a 900×300 px como máximo y se aplana sobre fondo blanco si es
+    JPG); la misma imagen se usa en la vista previa y en el PDF. Mientras se lee, Descargar queda desactivado; una
+    imagen dañada o de otro formato se avisa y el acta sale sin firma.
+  - **"Exportar" abre directo el generador de actas**: al instalar o actualizar, el plugin pone
+    `gradeexport_default = acta` (Administración > Calificaciones > Ajustes generales > "Método de exportación de
+    calificaciones por defecto"), así Moodle abre el acta a quien tiene el permiso; quien no lo tiene sigue cayendo
+    en la primera opción que pueda usar. Moodle guarda el valor anterior (`exportpredeterminado_previo`) y al
+    **desinstalar** el plugin lo restaura (solo si el ajuste sigue en `acta`; si un administrador lo cambió a mano, no
+    se toca). El cambio queda en Administración > Informes > Cambios de configuración.
+  - **Permiso automático para Docente y Docente de Módulo**: al instalar o actualizar, el plugin da
+    `gradeexport/acta:view` en todo el sitio a los roles con nombre corto `docente` y `docente_modulo` (los del
+    campus del CIESS) si existen y todavía no tienen una regla para esa capacidad; no pisa lo que un administrador
+    ya hubiera definido. Los demás roles siguen sin permiso por defecto.
 - Selección de ítems o módulos (nuevo en 0.3.0): como en Exportar > hoja de cálculo, hay una casilla por ítem y una
   por módulo (cada categoría del libro de calificaciones, con su total), más "Seleccionar todo" y "Quitar todo".
   Al abrir va todo marcado y el acta sale como en 0.2.2. Para un docente que da un solo módulo: marcar solo ese
@@ -34,19 +51,22 @@ directamente (sin pantallas, sin CSV). Firma opcional (PNG/JPG).
   casi igual) y con el docente; si no, el acta sale sin esa línea y la pantalla lo avisa. El docente del PDF
   siempre es el de Moodle.
 - Grupos: con grupos separados, quien no ve todos los grupos solo obtiene los de su grupo; sin grupo, se le niega.
-- Sin permisos por defecto: solo los administradores lo ven. Para los docentes, dar el permiso
-  `gradeexport/acta:view` al rol que usan para calificar (en el campus del CIESS: "Docente", y los demás roles que
-  ya pueden exportar calificaciones) (en todo el sitio: Administración > Usuarios > Permisos > Definir roles;
-  o solo en un curso: Curso > Participantes > Permisos). "Acta de calificaciones" queda como primera opción de
-  "Exportar como". Al entrar a Exportar Moodle abre OpenOffice si el rol puede usarla; el rol Docente del campus
-  solo tiene Excel y el acta, así que cae directo en el acta.
+- Permisos: la capacidad `gradeexport/acta:view` no tiene permisos por defecto (solo administradores); el plugin se
+  la da solo a los roles `docente` y `docente_modulo` al instalar o actualizar (ver arriba). Para otros roles que
+  ya pueden exportar calificaciones (en el campus del CIESS: Profesor, Profesor sin permiso de edición, Profesor
+  presencial), darlo a mano en todo el sitio: Administración > Usuarios > Permisos > Definir roles; o solo en un
+  curso: Curso > Participantes > Permisos. "Acta de calificaciones" queda como primera opción de "Exportar como".
 - Instalar/actualizar: ZIP `gradeexport_acta.zip` (raíz `acta/`) en Administración > Extensiones > Instalar plugins
-  (si ya está una versión anterior, Moodle ofrece actualizar a 2026100505). Hacerlo en horario tranquilo: durante la actualización
+  (si ya está una versión anterior, Moodle ofrece actualizar a 2026100506). Hacerlo en horario tranquilo: durante la actualización
   de BD todo el sitio pide pasar por Notificaciones. Si el instalador no puede escribir en `grade/export`, copiar
   la carpeta `acta` a `<moodle>/grade/export/` (Moodle 5.1+: `public/grade/export/`).
 - Respaldo y reversa: sin respaldo no hay vuelta atrás. NO restaurar archivos de una versión anterior sobre la
   nueva (Moodle bloquea el sitio por "downgrade"); para retirarlo, desinstalar el plugin desde Administración >
-  Extensiones > Resumen de extensiones y borrar la carpeta.
+  Extensiones > Resumen de extensiones; Moodle ofrece entonces eliminar la carpeta (botón Continuar): hacerlo en ese
+  momento, antes de abrir otras pantallas de actualización. Al desinstalar se restaura el método de exportación
+  predeterminado (si la carpeta ya no está, esa restauración no corre y el ajuste queda en `acta`; se cambia a mano) y
+  Moodle borra el permiso `gradeexport/acta:view` de todos los roles, también las reglas por curso: al reinstalar
+  solo Docente y Docente de Módulo lo reciben de nuevo, a los demás roles hay que volver a darlo.
 - Requiere internet en el navegador del docente (jsPDF desde cdnjs, catálogo desde Google Sheets); el logo se pide
   a home.ciess.org desde el servidor de Moodle.
 - Límites conocidos: con muchas actividades las columnas del PDF se vuelven pequeñas (igual que en el generador
@@ -79,7 +99,7 @@ Desinstalar: Administración > Plugins > Plugins locales > Desinstalar.
 
 ## Qué se probó
 `gradeexport_acta` se probó contra un clon real del campus (Moodle 5.1.1+, PHP 8.4, MariaDB 10.11), instalando el
-ZIP con el instalador de Moodle (de la 0.1 a la 0.3.0). Se aplicó a los 94 cursos del clon (1.626 alumnos en 77 cursos):
+ZIP con el instalador de Moodle (de la 0.1 a la 0.4.0). Se aplicó a los 94 cursos del clon (1.626 alumnos en 77 cursos):
 - Datos: en 93 cursos la tabla que lee el plugin es idéntica (alumnos, orden, columnas, nombres y valores) a la de
   Exportar > Archivo en texto plano con los valores por defecto. En el curso restante Moodle no puede recalcular las
   calificaciones (un cálculo usa actividades borradas) y la exportación estándar también falla; el plugin lo avisa.
@@ -103,6 +123,14 @@ ZIP con el instalador de Moodle (de la 0.1 a la 0.3.0). Se aplicó a los 94 curs
   el del cálculo roto muestran su aviso; 3 cursos con alumnos pero sin actividades con nota avisan sin PDF, como
   antes. Con el cambio de rol a Docente, Docente de Módulo, Profesor, Profesor sin permiso de edición y Profesor
   presencial (permiso dado en el clon) la pantalla abre y el acta se genera.
+- 0.4.0 (firma con vista previa, Exportar abre el acta, permiso automático): sin Moodle, 114 comprobaciones del
+  generador y la pantalla (incluye fotos de celular giradas por EXIF, imágenes de 4000×1500 px, archivos dañados,
+  Descargar mientras se lee la firma y fallos del lector de archivos) y 20 de las funciones de instalar, actualizar y
+  desinstalar con un Moodle simulado. En el clon: instalar la 0.1 (la de producción) y actualizar a la 0.4.0 con el
+  instalador; desinstalar y reinstalar (tres veces); `gradeexport_default` pasa a `acta` y vuelve al valor anterior al
+  desinstalar; Docente y Docente de Módulo reciben el permiso solos; Exportar abre el acta para el administrador,
+  Docente y Docente de Módulo y sigue abriendo OpenOffice para Profesor, Profesor sin permiso de edición y Profesor
+  presencial (sin el permiso); regresión en los 94 cursos del clon con todo marcado y con el primer módulo.
 - Corregido en 0.3.0 al probar en el clon: el texto de ayuda y el contador salían en blanco (el tema del campus
   pinta `text-muted` de blanco), "Calificación" se partía en dos líneas con pocas columnas y con solo el total la
   tabla quedaba a medias.

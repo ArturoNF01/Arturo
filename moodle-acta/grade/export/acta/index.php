@@ -12,6 +12,7 @@ $course = get_course($id);
 require_login($course);
 $context = context_course::instance($id);
 require_capability('moodle/grade:export', $context);
+require_capability('moodle/grade:viewall', $context);   // el generador (generador.php) exige las mismas tres capacidades
 require_capability('gradeexport/acta:view', $context);
 
 $titulo = get_string('pluginname', 'gradeexport_acta');
@@ -69,8 +70,26 @@ echo '<fieldset id="acta-seleccion" class="mt-4" hidden>'
     . '<button type="button" id="acta-nada" class="btn btn-link p-0">' . s(get_string('seleccionarnada', 'gradeexport_acta')) . '</button>'
     . '<span id="acta-conteo" class="ms-3 text-body-secondary" aria-live="polite"></span></div>'
     . '<div id="acta-grupos"></div></fieldset>';
-echo '<div class="mt-3"><label for="acta-firma" class="d-block">' . s(get_string('firma', 'gradeexport_acta')) . '</label>'
-    . '<input type="file" id="acta-firma" accept="image/png,image/jpeg"></div>';
+// Firma del docente: mismo bloque (encabezado en negritas) que los módulos, con vista previa de cómo queda al pie del acta.
+echo '<div id="acta-firma-bloque" class="border rounded mt-4" role="group" aria-labelledby="acta-firma-titulo acta-firma-opc">'
+    . '<div class="px-3 py-2 m-0 bg-light border-bottom d-flex align-items-baseline flex-wrap">'
+    . '<span id="acta-firma-titulo" class="fw-bold">' . s(get_string('firma', 'gradeexport_acta')) . '</span>'
+    . '<span id="acta-firma-opc" class="ms-2 small text-body-secondary">' . s(get_string('firmaopcional', 'gradeexport_acta')) . '</span></div>'
+    . '<div class="px-3 py-3">'
+    . '<label for="acta-firma" class="visually-hidden">' . s(get_string('firma', 'gradeexport_acta') . ' ' . get_string('firmaopcional', 'gradeexport_acta')) . '</label>'
+    . '<div id="acta-firma-ayuda" class="small text-body-secondary mb-1">' . s(get_string('ayudafirma', 'gradeexport_acta')) . '</div>'
+    . '<input type="file" id="acta-firma" class="form-control" accept="image/png,image/jpeg" aria-describedby="acta-firma-ayuda">'
+    . '<span id="acta-firma-estado" class="visually-hidden" role="status"></span>'
+    . '<div id="acta-firma-vista" class="mt-3" hidden>'
+    . '<div class="small fw-bold mb-1">' . s(get_string('firmavista', 'gradeexport_acta')) . '</div>'
+    . '<div class="border rounded text-center px-4 pt-3 pb-2" style="background:#fff;color:#000;max-width:340px">'
+    . '<div class="d-flex justify-content-center align-items-end" style="min-height:64px">'
+    . '<img id="acta-firma-img" alt="' . s(get_string('firmaalt', 'gradeexport_acta')) . '" style="max-width:min(240px,100%);max-height:88px"></div>'
+    . '<div style="border-top:2px solid #000;margin:2px 12% 5px"></div>'
+    . '<div class="fw-bold small" style="color:#000">FIRMA</div>'
+    . '<div id="acta-firma-nombre" class="small" style="color:#505050"></div></div>'
+    . '<button type="button" id="acta-firma-quitar" class="btn btn-link p-0 mt-2">' . s(get_string('firmaquitar', 'gradeexport_acta')) . '</button>'
+    . '</div></div></div>';
 echo '<div class="mt-4"><button type="button" id="acta-descargar" class="btn btn-primary" disabled>'
     . s(get_string('preparando', 'gradeexport_acta')) . '</button></div>';
 echo '<div id="acta-estado" role="status" aria-live="polite"></div>';
@@ -92,6 +111,10 @@ $textos = [
     'listo' => get_string('listo', 'gradeexport_acta'),
     'error' => get_string('error', 'gradeexport_acta'),
     'firmainvalida' => get_string('firmainvalida', 'gradeexport_acta'),
+    'firmanoleida' => get_string('firmanoleida', 'gradeexport_acta'),
+    'firmailegible' => get_string('firmailegible', 'gradeexport_acta'),
+    'firmacargada' => get_string('firmacargada', 'gradeexport_acta'),
+    'firmaquitada' => get_string('firmaquitada', 'gradeexport_acta'),
     'sinestudiantes' => get_string('sinestudiantes', 'gradeexport_acta'),
     'noframe' => get_string('noframe', 'gradeexport_acta'),
     'sinlibreria' => get_string('sinlibreria', 'gradeexport_acta'),
@@ -102,6 +125,7 @@ $textos = [
     'grupocurso' => get_string('grupocurso', 'gradeexport_acta'),
     'sugerido' => get_string('sugerido', 'gradeexport_acta'),
 ];
-$cfg = json_encode(['t' => $textos], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+$cfg = json_encode(['t' => $textos, 'docente' => $docente],
+    JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
 echo html_writer::script('window.ACTA_CFG = ' . $cfg . ';' . file_get_contents(__DIR__ . '/templates/panel.js'));
 echo $OUTPUT->footer();

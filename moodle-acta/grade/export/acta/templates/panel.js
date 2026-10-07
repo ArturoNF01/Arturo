@@ -15,6 +15,7 @@
   var firma = null;
   var listo = false;      // el generador cargó y hay estudiantes: se puede descargar
   var ocupado = false;    // generando el PDF
+  var leyendo = false;    // leyendo o decodificando la imagen de la firma
   var columnas = [];      // ítems que se ofrecen (sin los que el generador siempre omite)
   var marcados = {};      // id de ítem -> true
   var cajas = {};         // id de ítem -> <input>
@@ -26,7 +27,9 @@
     if (texto !== undefined && texto !== null) e.textContent = texto;
     return e;
   }
+  var avisoFirma = false;   // el mensaje que hay en pantalla es un aviso de la firma (se quita al elegir una buena)
   function mensaje(texto, tipo, extra) {
+    avisoFirma = false;
     estado.className = 'alert alert-' + tipo + ' mt-3 mb-0';
     estado.textContent = '';
     [texto].concat(extra || []).forEach(function (linea) {
@@ -64,7 +67,7 @@
     conteo.textContent = T.conteo.replace('{$a->sel}', sel).replace('{$a->total}', columnas.length);
     conteo.className = 'ms-3 ' + (sel ? 'text-body-secondary' : 'text-danger');
     if (!sel && columnas.length) conteo.textContent += ' · ' + T.sinseleccion;
-    btn.disabled = ocupado || !listo || (columnas.length > 0 && sel === 0);
+    btn.disabled = ocupado || leyendo || !listo || (columnas.length > 0 && sel === 0);
   }
   function ponerTodos(valor, ids) {
     ids.forEach(function (id) { marcados[id] = valor; cajas[id].checked = valor; });
@@ -126,18 +129,91 @@
   document.getElementById('acta-todo').addEventListener('click', function () { ponerTodos(true, columnas.map(function (c) { return c.id; })); });
   document.getElementById('acta-nada').addEventListener('click', function () { ponerTodos(false, columnas.map(function (c) { return c.id; })); });
 
+  // ---- Firma del docente: se lee como imagen, se normaliza (orientación EXIF y tamaño), se muestra una vista previa
+  // de cómo queda al pie del acta y se manda al generador. La vista previa es la misma imagen que se incrusta. ----
+  var vista = document.getElementById('acta-firma-vista');
+  var vistaImg = document.getElementById('acta-firma-img');
+  var vistaNombre = document.getElementById('acta-firma-nombre');
+  var anuncio = document.getElementById('acta-firma-estado');
+  var lectura = 0;        // descarta lecturas viejas si se elige otro archivo mientras se lee
+  vistaNombre.textContent = cfg.docente || '';
+  function anunciar(texto) { anuncio.textContent = texto; }
+  function avisarFirma(texto) { mensaje(texto, 'warning'); avisoFirma = true; }
+  function limpiarAvisoFirma() {
+    if (!avisoFirma) return;
+    estado.className = '';
+    estado.textContent = '';
+    avisoFirma = false;
+  }
+  function limpiarVista() {
+    lectura++;
+    firma = null;
+    leyendo = false;
+    vista.hidden = true;
+    vistaImg.removeAttribute('src');
+    refrescar();
+  }
+  function quitarFirma() {
+    limpiarVista();
+    firmaInput.value = '';
+  }
+  // El lienzo aplica la orientación EXIF (fotos de celular) y deja la imagen en 900 x 300 px como máximo:
+  // la firma ocupa 60 x 22 mm en el acta y así el PDF no engorda con imágenes de varios megapíxeles.
+  function normalizar(img, esJpeg) {
+    var nw = img.naturalWidth, nh = img.naturalHeight;
+    if (!nw || !nh) throw new Error('imagen vacía');
+    var k = Math.min(1, 900 / nw, 300 / nh);
+    var lienzo = document.createElement('canvas');
+    lienzo.width = Math.max(1, Math.round(nw * k));
+    lienzo.height = Math.max(1, Math.round(nh * k));
+    var g = lienzo.getContext('2d');
+    if (esJpeg) { g.fillStyle = '#fff'; g.fillRect(0, 0, lienzo.width, lienzo.height); }
+    g.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+    return lienzo.toDataURL(esJpeg ? 'image/jpeg' : 'image/png', 0.92);
+  }
   firmaInput.addEventListener('change', function () {
     var f = this.files && this.files[0];
-    firma = null;
+    limpiarVista();
+    limpiarAvisoFirma();
     if (!f) return;
     if (!/^image\/(png|jpeg)$/.test(f.type)) {
-      this.value = '';
-      mensaje(T.firmainvalida, 'warning');
+      quitarFirma();
+      avisarFirma(T.firmainvalida);
       return;
     }
+    var mia = lectura;
+    leyendo = true;
+    refrescar();
+    function fallo(texto) {
+      if (mia !== lectura) return;
+      quitarFirma();
+      avisarFirma(texto);
+    }
     var lector = new FileReader();
-    lector.onload = function (e) { firma = e.target.result; };
+    lector.onerror = lector.onabort = function () { fallo(T.firmanoleida); };
+    lector.onload = function (e) {
+      if (mia !== lectura) return;
+      var img = new Image();
+      img.onerror = function () { fallo(T.firmailegible); };
+      img.onload = function () {
+        if (mia !== lectura) return;
+        var url;
+        try { url = normalizar(img, f.type === 'image/jpeg'); } catch (err) { return fallo(T.firmailegible); }
+        firma = url;
+        vistaImg.src = url;
+        vista.hidden = false;
+        leyendo = false;
+        anunciar(T.firmacargada);
+        refrescar();
+      };
+      img.src = e.target.result;
+    };
     lector.readAsDataURL(f);
+  });
+  document.getElementById('acta-firma-quitar').addEventListener('click', function () {
+    quitarFirma();
+    anunciar(T.firmaquitada);
+    firmaInput.focus();
   });
 
   // Se habilita cuando el generador terminó de cargar (librería de PDF, logo y catálogo).

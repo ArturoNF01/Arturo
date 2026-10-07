@@ -126,7 +126,7 @@ $logourl = (new moodle_url('/grade/export/acta/generador.php', ['id' => $coursei
 $html = file_get_contents(__DIR__ . '/templates/generador.html');
 // Modo directo: la interfaz del generador queda oculta; index.php maneja el botón y la descarga.
 $inyeccion = '<style>#acta-app{display:none!important}</style>'
-    . '<script>window.ACTA_DIRECTO = true;window.ACTA_DATOS = ' . json_encode($datos, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) . ';'
+    . '<script>window.ACTA_DIRECTO = true;window.ACTA_DATOS = ' . json_encode($datos, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) . ';'
     . 'window.ACTA_LOGO_URL = ' . json_encode($logourl, JSON_HEX_TAG | JSON_HEX_AMP) . ';</script>';
 $html = str_replace('<body>', '<body>' . $inyeccion, $html);
 // La lectura de CSV/XLSX no se usa en modo directo: no se carga la librería XLSX (900 KB de terceros en el sitio).
