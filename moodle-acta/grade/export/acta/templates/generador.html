@@ -1565,7 +1565,7 @@
           var enc = String(encabezados[i]);
           if (enc.indexOf('Última descarga') !== -1) continue;
           if (enc.toLowerCase().indexOf('inducción') !== -1 || enc.toLowerCase().indexOf('induccion') !== -1) continue;
-          if (enc.indexOf('Total del curso') !== -1 && enc.indexOf('(Real)') !== -1) {
+          if (esColumnaTotalCurso(i, enc)) {
             totalDelCurso = { indice: i, nombre: enc };
             continue;
           }
@@ -1644,6 +1644,14 @@
     } else {
       proceder();
     }
+  }
+
+  // El plugin indica en ACTA_DATOS.total qué columna es el total del curso (no depende del idioma del curso);
+  // con un CSV subido a mano se reconoce por el nombre.
+  function esColumnaTotalCurso(indice, encabezado) {
+    var d = window.ACTA_DATOS;
+    if (d && typeof d.total === 'number') return indice === d.total;
+    return encabezado.indexOf('Total del curso') !== -1 && encabezado.indexOf('(Real)') !== -1;
   }
 
   function formatearCalificacion(valor) {
@@ -2104,7 +2112,7 @@
         var enc = String(encabezados[j]);
         if (enc.indexOf('Última descarga') !== -1) continue;
         if (enc.toLowerCase().indexOf('inducción') !== -1 || enc.toLowerCase().indexOf('induccion') !== -1) continue;
-        if (enc.indexOf('Total del curso') !== -1 && enc.indexOf('(Real)') !== -1) { totalDelCurso = { indice: j, nombre: enc }; continue; }
+        if (esColumnaTotalCurso(j, enc)) { totalDelCurso = { indice: j, nombre: enc }; continue; }
         if (enc.indexOf('(Real)') !== -1) actividades.push({ indice: j, nombre: enc });
       }
       var calificacionFinal = null;

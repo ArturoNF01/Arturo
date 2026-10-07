@@ -73,4 +73,20 @@ class helper {
         echo $png;
         die();
     }
+
+    /**
+     * Si no se pueden leer las calificaciones, responde de inmediato (con un mensaje claro) en lugar de dejar la
+     * página esperando: reemplaza al generador por un stub cuyas funciones rechazan con ese mensaje.
+     */
+    public static function responder_error(\Throwable $e): void {
+        error_log('gradeexport_acta: ' . get_class($e) . ': ' . $e->getMessage());
+        $recalculo = $e instanceof \moodle_exception && $e->errorcode === 'gradesneedregrading';
+        $mensaje = get_string($recalculo ? 'errorrecalculo' : 'errorlectura', 'gradeexport_acta');
+        $js = json_encode($mensaje, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<!DOCTYPE html><meta charset="utf-8"><title>-</title><script>(function(){var m=' . $js . ';'
+            . 'function no(){return Promise.reject(new Error(m));}'
+            . 'window.ActaDirecto={preparar:no,generar:no};})();</script>';
+        die();
+    }
 }

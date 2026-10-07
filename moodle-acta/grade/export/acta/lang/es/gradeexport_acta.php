@@ -23,3 +23,5 @@ $string['resumen_grupo'] = 'Grupo';
 $string['singrupo'] = 'Este curso usa grupos separados y no perteneces a ningún grupo, por lo que no puedes generar el acta.';
 $string['sinlogo'] = 'No se pudo cargar el logo; el acta salió sin él.';
 $string['sinmodulo'] = 'No se encontró el módulo en el catálogo; el acta salió sin esa línea.';
+$string['errorrecalculo'] = 'Las calificaciones de este curso necesitan recalcularse y Moodle no pudo hacerlo (por ejemplo, un cálculo del libro de calificaciones usa actividades que ya no existen). Pide a un administrador revisar Calificaciones > Configuración; mientras tanto, la exportación estándar de Moodle tampoco funciona en este curso.';
+$string['errorlectura'] = 'No se pudieron leer las calificaciones del curso. Inténtalo de nuevo; si sigue igual, avisa a un administrador.';

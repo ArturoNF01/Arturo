@@ -36,49 +36,63 @@ ob_end_clean();
 
 // Mismas columnas, mismo orden y mismos nombres que el formulario de exportación de Moodle
 // (los totales respetan la posición configurada en el curso; los ítems ocultos solo los ve quien puede verlos).
-$switch = grade_get_setting($courseid, 'aggregationposition', $CFG->grade_aggregationposition);
-$gseq = new grade_seq($courseid, $switch);
-$verocultos = has_capability('moodle/grade:viewhidden', $context);
-$items = [];
-$nombres = [];
-foreach ($gseq->items as $item) {
-    if ($item->is_hidden() && !$verocultos) {
-        continue;
+$gui = null;
+try {
+    $switch = grade_get_setting($courseid, 'aggregationposition', $CFG->grade_aggregationposition);
+    $gseq = new grade_seq($courseid, $switch);
+    $verocultos = has_capability('moodle/grade:viewhidden', $context);
+    $items = [];
+    $nombres = [];
+    $indicetotal = null;
+    foreach ($gseq->items as $item) {
+        if ($item->is_hidden() && !$verocultos) {
+            continue;
+        }
+        if ($item->itemtype === 'mod') {
+            $nombre = get_string('modulename', $item->itemmodule) . get_string('labelsep', 'langconfig') . $item->get_name();
+        } else {
+            $nombre = $item->get_name(true);
+        }
+        if ($item->itemtype === 'course') {
+            // El generador usa esta columna como calificación final aunque el curso fuerce otro idioma
+            // (en inglés se llama "Course total", no "Total del curso").
+            $indicetotal = 3 + count($items);
+        }
+        $items[$item->id] = $item;
+        // Igual que grade_export::format_column_name(): texto plano, sin espacios repetidos.
+        $nombres[] = html_to_text($nombre . ' (Real)', 0, false);
     }
-    if ($item->itemtype === 'mod') {
-        $nombre = get_string('modulename', $item->itemmodule) . get_string('labelsep', 'langconfig') . $item->get_name();
-    } else {
-        $nombre = $item->get_name(true);
-    }
-    $items[$item->id] = $item;
-    $nombres[] = html_entity_decode(strip_tags($nombre), ENT_QUOTES, 'UTF-8') . ' (Real)';
-}
 
-// Mismos alumnos que la exportación de Moodle: roles del libro de calificaciones con matrícula activa
-// (y, si el curso usa grupos, solo los del grupo elegido).
-$gui = new graded_users_iterator($course, $items, $groupid);
-$gui->require_active_enrolment(true);
-if (!$gui->init()) {
-    throw new moodle_exception('gradesneedregrading', 'grades');
-}
-$matriz = [array_merge(['Nombre', 'Apellido(s)', 'Correo'], $nombres)];
-while ($alumno = $gui->next_user()) {
-    $u = $alumno->user;
-    $fila = [$u->firstname, $u->lastname, $u->email];
-    foreach ($items as $id => $item) {
-        $g = $alumno->grades[$id] ?? null;
-        $valor = ($g && $g->finalgrade !== null)
-            ? grade_format_gradevalue($g->finalgrade, $item, false, GRADE_DISPLAY_TYPE_REAL, 2)
-            : null;
-        $fila[] = ($valor === null || $valor === '') ? '-' : $valor;
+    // Mismos alumnos que la exportación de Moodle: roles del libro de calificaciones con matrícula activa
+    // (y, si el curso usa grupos, solo los del grupo elegido).
+    $gui = new graded_users_iterator($course, $items, $groupid);
+    $gui->require_active_enrolment(true);
+    if (!$gui->init()) {
+        throw new moodle_exception('gradesneedregrading', 'grades');
     }
-    $matriz[] = $fila;
+    $matriz = [array_merge(['Nombre', 'Apellido(s)', 'Correo'], $nombres)];
+    while ($alumno = $gui->next_user()) {
+        $u = $alumno->user;
+        $fila = [$u->firstname, $u->lastname, $u->email];
+        foreach ($items as $id => $item) {
+            $g = $alumno->grades[$id] ?? null;
+            // Mismo texto que la exportación: "-" si no hay nota, vacío en los ítems sin calificación numérica.
+            $fila[] = grade_format_gradevalue($g ? $g->finalgrade : null, $item, false, GRADE_DISPLAY_TYPE_REAL, 2);
+        }
+        $matriz[] = $fila;
+    }
+    $gui->close();
+} catch (\Throwable $e) {
+    if ($gui) {
+        $gui->close();
+    }
+    \gradeexport_acta\helper::responder_error($e);
 }
-$gui->close();
 
 $datos = [
     'curso' => format_string($course->fullname, true, ['context' => $context, 'escape' => false]),
     'docente' => \gradeexport_acta\helper::docente($context),
+    'total' => $indicetotal,
     'matriz' => $matriz,
 ];
 $logourl = (new moodle_url('/grade/export/acta/generador.php', ['id' => $courseid, 'logo' => 1]))->out(false);

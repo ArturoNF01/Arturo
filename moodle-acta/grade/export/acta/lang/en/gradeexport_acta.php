@@ -23,3 +23,5 @@ $string['resumen_grupo'] = 'Group';
 $string['singrupo'] = 'This course uses separate groups and you do not belong to any group, so you cannot generate the report.';
 $string['sinlogo'] = 'The logo could not be loaded; the report was generated without it.';
 $string['sinmodulo'] = 'The module was not found in the catalog; the report was generated without that line.';
+$string['errorrecalculo'] = 'The grades of this course need to be recalculated and Moodle could not do it (for example, a gradebook calculation uses activities that no longer exist). Ask an administrator to review Grades > Setup; until then, the standard Moodle export does not work in this course either.';
+$string['errorlectura'] = 'The course grades could not be read. Try again; if it persists, tell an administrator.';
