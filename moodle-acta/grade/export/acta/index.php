@@ -60,6 +60,15 @@ foreach ($filas as $etiqueta => $valor) {
     echo html_writer::tag('dd', $valor, ['class' => 'col-sm-9']);
 }
 echo '</dl>';
+echo '<fieldset id="acta-seleccion" class="mt-4" hidden>'
+    . '<legend class="h6 fw-bold mb-1">' . s(get_string('seleccion', 'gradeexport_acta')) . '</legend>'
+    . '<p class="text-body-secondary small mb-2">' . s(get_string('ayudaseleccion', 'gradeexport_acta')) . '</p>'
+    . '<p id="acta-sugerido" class="alert alert-info py-2" hidden></p>'
+    . '<div class="mb-2"><button type="button" id="acta-todo" class="btn btn-link p-0 me-3">'
+    . s(get_string('seleccionartodo', 'gradeexport_acta')) . '</button>'
+    . '<button type="button" id="acta-nada" class="btn btn-link p-0">' . s(get_string('seleccionarnada', 'gradeexport_acta')) . '</button>'
+    . '<span id="acta-conteo" class="ms-3 text-body-secondary" aria-live="polite"></span></div>'
+    . '<div id="acta-grupos"></div></fieldset>';
 echo '<div class="mt-3"><label for="acta-firma" class="d-block">' . s(get_string('firma', 'gradeexport_acta')) . '</label>'
     . '<input type="file" id="acta-firma" accept="image/png,image/jpeg"></div>';
 echo '<div class="mt-4"><button type="button" id="acta-descargar" class="btn btn-primary" disabled>'
@@ -88,104 +97,11 @@ $textos = [
     'sinlibreria' => get_string('sinlibreria', 'gradeexport_acta'),
     'sinlogo' => get_string('sinlogo', 'gradeexport_acta'),
     'sinmodulo' => get_string('sinmodulo', 'gradeexport_acta'),
+    'conteo' => get_string('conteo', 'gradeexport_acta'),
+    'sinseleccion' => get_string('sinseleccion', 'gradeexport_acta'),
+    'grupocurso' => get_string('grupocurso', 'gradeexport_acta'),
+    'sugerido' => get_string('sugerido', 'gradeexport_acta'),
 ];
 $cfg = json_encode(['t' => $textos], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
-echo html_writer::script(<<<JS
-(function () {
-  var cfg = $cfg;
-  var frame = document.getElementById('acta-frame');
-  var btn = document.getElementById('acta-descargar');
-  var estado = document.getElementById('acta-estado');
-  var firmaInput = document.getElementById('acta-firma');
-  var firma = null;
-
-  function mensaje(texto, tipo, avisos) {
-    estado.className = 'alert alert-' + tipo + ' mt-3 mb-0';
-    estado.textContent = '';
-    [texto].concat(avisos || []).forEach(function (linea) {
-      var p = document.createElement('div');
-      p.textContent = linea;
-      estado.appendChild(p);
-    });
-  }
-  function api() {
-    var w = frame.contentWindow;
-    return w && w.ActaDirecto ? w.ActaDirecto : null;
-  }
-  function esperarApi(ms) {
-    return new Promise(function (ok, no) {
-      var t = 0;
-      (function sondear() {
-        var a = api();
-        if (a) return ok(a);
-        t += 100;
-        if (t >= ms) return no(new Error(cfg.t.noframe));
-        setTimeout(sondear, 100);
-      })();
-    });
-  }
-
-  firmaInput.addEventListener('change', function () {
-    var f = this.files && this.files[0];
-    firma = null;
-    if (!f) return;
-    if (!/^image\/(png|jpeg)$/.test(f.type)) {
-      this.value = '';
-      mensaje(cfg.t.firmainvalida, 'warning');
-      return;
-    }
-    var lector = new FileReader();
-    lector.onload = function (e) { firma = e.target.result; };
-    lector.readAsDataURL(f);
-  });
-
-  // Se habilita cuando el generador terminó de cargar (librería de PDF, logo y catálogo).
-  esperarApi(60000).then(function (a) { return a.preparar(); }).then(function (r) {
-    btn.textContent = cfg.t.descargar;
-    document.getElementById('acta-estudiantes').textContent = r.estudiantes;
-    if (!r.estudiantes) {
-      mensaje(cfg.t.sinestudiantes, 'warning');
-      return;
-    }
-    if (!r.pdf) {
-      mensaje(cfg.t.sinlibreria, 'danger');
-      return;
-    }
-    btn.disabled = false;
-  }).catch(function (e) {
-    btn.textContent = cfg.t.descargar;
-    document.getElementById('acta-estudiantes').textContent = '–';
-    mensaje(cfg.t.error + ' ' + e.message, 'danger');
-  });
-
-  var ocupado = false;
-  btn.addEventListener('click', function () {
-    if (ocupado) return;
-    ocupado = true;
-    btn.disabled = true;
-    mensaje(cfg.t.generando, 'info');
-    esperarApi(5000).then(function (a) { return a.generar({ firma: firma }); }).then(function (r) {
-      var url = URL.createObjectURL(r.blob);
-      var enlace = document.createElement('a');
-      enlace.href = url;
-      enlace.download = r.nombre;
-      document.body.appendChild(enlace);
-      enlace.click();
-      document.body.removeChild(enlace);
-      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
-      var avisos = [];
-      if (!r.logo) avisos.push(cfg.t.sinlogo);
-      if (!r.modulo) avisos.push(cfg.t.sinmodulo);
-      mensaje(cfg.t.listo.replace('{\$a}', function () { return r.nombre; }), avisos.length ? 'warning' : 'success', avisos);
-    }).catch(function (e) {
-      mensaje(cfg.t.error + ' ' + (e && e.message ? e.message : ''), 'danger');
-    }).then(function () {
-      ocupado = false;
-      btn.disabled = false;
-      btn.focus();
-    });
-  });
-})();
-JS
-);
+echo html_writer::script('window.ACTA_CFG = ' . $cfg . ';' . file_get_contents(__DIR__ . '/templates/panel.js'));
 echo $OUTPUT->footer();

@@ -1565,7 +1565,7 @@
           var enc = String(encabezados[i]);
           if (enc.indexOf('Última descarga') !== -1) continue;
           if (enc.toLowerCase().indexOf('inducción') !== -1 || enc.toLowerCase().indexOf('induccion') !== -1) continue;
-          if (esColumnaTotalCurso(i, enc)) {
+          if (esColumnaTotalCurso(i, enc, totalIdxDeMoodle())) {
             totalDelCurso = { indice: i, nombre: enc };
             continue;
           }
@@ -1647,11 +1647,14 @@
   }
 
   // El plugin indica en ACTA_DATOS.total qué columna es el total del curso (no depende del idioma del curso);
-  // con un CSV subido a mano se reconoce por el nombre.
-  function esColumnaTotalCurso(indice, encabezado) {
-    var d = window.ACTA_DATOS;
-    if (d && typeof d.total === 'number') return indice === d.total;
+  // con un CSV subido a mano (totalIdx no es un número) se reconoce por el nombre.
+  function esColumnaTotalCurso(indice, encabezado, totalIdx) {
+    if (typeof totalIdx === 'number') return indice === totalIdx;
     return encabezado.indexOf('Total del curso') !== -1 && encabezado.indexOf('(Real)') !== -1;
+  }
+  function totalIdxDeMoodle() {
+    var d = window.ACTA_DATOS;
+    return (d && typeof d.total === 'number') ? d.total : null;
   }
 
   function formatearCalificacion(valor) {
@@ -1766,6 +1769,11 @@
     var colNumWidth = contentWidth * 0.04;
     var colNombreWidth = contentWidth * 0.28;
     var colFinalWidth = tieneCalificacionFinal ? contentWidth * 0.08 : 0;
+    if (numAct === 0 && tieneCalificacionFinal) {
+      // Sin columnas de actividad (p. ej. solo el total de un módulo): la tabla ocupa todo el ancho en vez de quedar a medias.
+      colFinalWidth = contentWidth * 0.2;
+      colNombreWidth = contentWidth - colNumWidth - colFinalWidth;
+    }
     var totalCalifWidth = contentWidth - colNumWidth - colNombreWidth - colFinalWidth;
     var colCalifWidth = numAct > 0 ? totalCalifWidth / numAct : 0;
 
@@ -1812,13 +1820,17 @@
       if (tieneCalificacionFinal) {
         doc.setFillColor(199, 174, 111);
         doc.rect(x, y, colFinalWidth, headerHeight, 'FD');
+        // Con pocas columnas la letra es grande y "Calificación" no cabe en una línea (se partía en "Calificaci-ón"): se achica solo este encabezado.
+        var tamFin = fontSizeHeader;
+        while (tamFin > 5.5 && doc.getTextWidth('Calificación') > colFinalWidth - 1) { tamFin -= 0.5; doc.setFontSize(tamFin); }
         var lineasFin = doc.splitTextToSize('Calificación', colFinalWidth - 1);
         if (lineasFin.length > 2) lineasFin = lineasFin.slice(0, 2);
-        var lineHFin = fontSizeHeader * 0.42;
+        var lineHFin = tamFin * 0.42;
         var startYFin = y + headerHeight / 2 - (lineasFin.length - 1) * lineHFin / 2 + 1;
         for (var lf = 0; lf < lineasFin.length; lf++) {
           doc.text(lineasFin[lf], x + colFinalWidth / 2, startYFin + lf * lineHFin, { align: 'center' });
         }
+        doc.setFontSize(fontSizeHeader);
       }
       y += headerHeight;
     }
@@ -2032,7 +2044,7 @@
     if (!filas.length) return null;
     var modulos = [];
     filas.forEach(function (f) { if (modulos.indexOf(f.modulo) === -1) modulos.push(f.modulo); });
-    return { modulo: modulos.join(', ') };
+    return { modulo: modulos.join(', '), modulos: modulos };
   }
 
   function esperar(condicion, ms) {
@@ -2083,7 +2095,45 @@
     });
   }
 
-  // opciones: { firma: dataURL opcional }  ->  Promise<{ blob, nombre, docente, modulo, estudiantes }>
+  // ---- Selección de ítems y módulos (modo directo) ----
+  function esInduccion(nombre) {
+    var n = String(nombre || '').toLowerCase();
+    return n.indexOf('inducción') !== -1 || n.indexOf('induccion') !== -1;
+  }
+  function numeroDe(texto) {
+    var m = String(texto || '').match(/\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  }
+
+  // Columnas y módulos (categorías del libro de calificaciones) que entrega Moodle; la pantalla arma la selección con esto.
+  function infoDirecta() {
+    var d = window.ACTA_DATOS || {};
+    var cols = (d.columnas || []).map(function (c, k) {
+      return { id: c.id, tipo: c.tipo, grupo: c.grupo, nombre: c.nombre, indice: 3 + k, omitida: esInduccion(c.nombre) };
+    });
+    return { columnas: cols, grupos: d.grupos || [] };
+  }
+
+  // Módulo(s) del docente según el catálogo, como ids de categoría. null si no se puede asegurar cuáles son.
+  function sugerirDirecto() {
+    var d = window.ACTA_DATOS;
+    if (!d || !d.grupos || !d.grupos.length) return null;
+    var c = null;
+    try { c = buscarEnCatalogo(d.curso, d.docente || ''); } catch (e) { return null; }
+    if (!c || !c.modulos || !c.modulos.length) return null;
+    var ids = [];
+    for (var i = 0; i < c.modulos.length; i++) {
+      var n = numeroDe(c.modulos[i]);
+      if (n === null) return null;
+      var gs = d.grupos.filter(function (g) { return !g.raiz && numeroDe(g.nombre) === n; });
+      if (gs.length !== 1) return null;
+      if (ids.indexOf(gs[0].id) === -1) ids.push(gs[0].id);
+    }
+    return { grupos: ids, textos: c.modulos };
+  }
+
+  // opciones: { firma: dataURL opcional, columnas: ids de los ítems que van en el acta (sin esto, todos) }
+  //   ->  Promise<{ blob, nombre, docente, modulo, estudiantes, logo }>
   function generarDirecto(opciones) {
     opciones = opciones || {};
     var datos = window.ACTA_DATOS;
@@ -2097,7 +2147,31 @@
       if (!listo.pdf) throw new Error('No se pudo cargar la librería de PDF (jsPDF). Verifica tu conexión a internet e inténtalo de nuevo.');
       return cargarFirmaDirecta(opciones.firma);
     }).then(function () {
-      var datosRaw = datos.matriz;
+      var original = datos.matriz;
+      var meta = datos.columnas || null;
+      if (meta && meta.length !== original[0].length - 3) meta = null;   // metadatos que no corresponden a la tabla: se ignoran
+
+      // 1) Columnas elegidas (sin selección, todas). "personalizada" = el docente quitó algún ítem de los que se ofrecen.
+      var elegidas = null;
+      if (meta && Array.isArray(opciones.columnas)) {
+        elegidas = {};
+        opciones.columnas.forEach(function (id) { elegidas[id] = true; });
+      }
+      var idxSel = [], metaSel = [], personalizada = false;
+      for (var c = 3; c < original[0].length; c++) {
+        var mc = meta ? meta[c - 3] : null;
+        if (elegidas && mc) {
+          if (elegidas[mc.id]) { idxSel.push(c); metaSel.push(mc); }
+          else if (!esInduccion(mc.nombre)) personalizada = true;
+        } else {
+          idxSel.push(c); metaSel.push(mc);
+        }
+      }
+      if (elegidas && !idxSel.length) throw new Error('Selecciona al menos un ítem para el acta.');
+      var datosRaw = original.map(function (fila) {
+        return fila.slice(0, 3).concat(idxSel.map(function (j) { return fila[j]; }));
+      });
+
       var encabezados = datosRaw[0];
       var indiceCorreo = -1;
       for (var i = 0; i < encabezados.length; i++) {
@@ -2106,15 +2180,23 @@
       }
       if (indiceCorreo === -1) throw new Error('No se encontró la columna de correo en las calificaciones del curso.');
 
+      // 2) Total del curso: lo marca Moodle (no depende del idioma); su posición cambia al quitar columnas.
+      var totalIdx = null;
+      if (typeof datos.total === 'number') {
+        var pos = idxSel.indexOf(datos.total);
+        totalIdx = pos >= 0 ? 3 + pos : -1;
+      }
       var actividades = [];
       var totalDelCurso = null;
       for (var j = indiceCorreo + 1; j < encabezados.length; j++) {
         var enc = String(encabezados[j]);
         if (enc.indexOf('Última descarga') !== -1) continue;
-        if (enc.toLowerCase().indexOf('inducción') !== -1 || enc.toLowerCase().indexOf('induccion') !== -1) continue;
-        if (esColumnaTotalCurso(j, enc)) { totalDelCurso = { indice: j, nombre: enc }; continue; }
-        if (enc.indexOf('(Real)') !== -1) actividades.push({ indice: j, nombre: enc });
+        if (esInduccion(enc)) continue;
+        if (esColumnaTotalCurso(j, enc, totalIdx)) { totalDelCurso = { indice: j, nombre: enc }; continue; }
+        if (enc.indexOf('(Real)') !== -1) actividades.push({ indice: j, nombre: enc, meta: metaSel[j - 3] || null });
       }
+
+      // 3) Calificación final: el total del curso; con una selección propia, si queda un solo módulo, el total de ese módulo.
       var calificacionFinal = null;
       if (totalDelCurso !== null) {
         for (var f = 1; f < datosRaw.length; f++) {
@@ -2122,15 +2204,44 @@
           if (v && String(v).trim() !== '' && String(v).trim() !== '-') { calificacionFinal = totalDelCurso; break; }
         }
       }
-      if (calificacionFinal === null && actividades.length > 0) calificacionFinal = actividades.pop();
+      if (calificacionFinal === null && personalizada) {
+        var totales = actividades.filter(function (a) { return a.meta && a.meta.tipo === 'categoria'; });
+        var gruposSel = {};
+        actividades.forEach(function (a) { if (a.meta && a.meta.grupo !== null) gruposSel[a.meta.grupo] = true; });
+        var idsGrupo = Object.keys(gruposSel);
+        if (totales.length === 1 && idsGrupo.length === 1 && String(totales[0].meta.grupo) === idsGrupo[0]) {
+          calificacionFinal = totales[0];
+          actividades.splice(actividades.indexOf(totales[0]), 1);
+        }
+      } else if (calificacionFinal === null && actividades.length > 0) {
+        calificacionFinal = actividades.pop();   // sin selección propia: como siempre
+      }
       if (actividades.length === 0 && calificacionFinal === null) throw new Error('No se identificaron actividades con calificación en este curso.');
 
+      // 4) Docente y módulo. El docente que firma es siempre el de Moodle. El módulo sale de lo elegido si es de uno o varios
+      //    módulos (con el título del catálogo cuando coincide el número); si no, del catálogo.
       var docente = datos.docente || '';
-      var modulo = '';
       var coincidencia = null;
       try { coincidencia = buscarEnCatalogo(datos.curso, docente); } catch (e) { console.warn('Catálogo:', e); }
-      // El docente que firma es siempre el de Moodle; el catálogo solo aporta el módulo.
-      if (coincidencia) modulo = coincidencia.modulo;
+      var modulo = coincidencia ? coincidencia.modulo : '';
+      if (personalizada && meta) {
+        var porId = {};
+        (datos.grupos || []).forEach(function (g) { porId[g.id] = g; });
+        var visto = {}, nombresMod = [], fuera = false;
+        metaSel.forEach(function (m) {
+          if (!m) return;
+          var g = (m.tipo === 'curso' || m.grupo === null) ? null : porId[m.grupo];
+          if (!g || g.raiz) { fuera = true; return; }
+          if (visto[g.id]) return;
+          visto[g.id] = true;
+          var titulo = null;
+          if (coincidencia && coincidencia.modulos) {
+            coincidencia.modulos.forEach(function (t) { if (!titulo && numeroDe(t) !== null && numeroDe(t) === numeroDe(g.nombre)) titulo = t; });
+          }
+          nombresMod.push(titulo || g.nombre);
+        });
+        if (!fuera && nombresMod.length) modulo = nombresMod.join(', ');
+      }
 
       estado.config = { actividad: datos.curso || '', docente: docente, modulo: modulo, fecha: obtenerFechaFormateada() };
       estado.datosRaw = datosRaw;
@@ -2144,7 +2255,7 @@
     });
   }
 
-  window.ActaDirecto = { preparar: prepararDirecto, generar: generarDirecto };
+  window.ActaDirecto = { preparar: prepararDirecto, generar: generarDirecto, info: infoDirecta, sugerir: sugerirDirecto };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

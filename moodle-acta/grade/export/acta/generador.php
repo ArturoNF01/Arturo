@@ -43,6 +43,9 @@ try {
     $verocultos = has_capability('moodle/grade:viewhidden', $context);
     $items = [];
     $nombres = [];
+    $columnas = [];
+    $categorias = $DB->get_records('grade_categories', ['courseid' => $courseid], '', 'id, parent, fullname');
+    $grupos = [];
     $indicetotal = null;
     foreach ($gseq->items as $item) {
         if ($item->is_hidden() && !$verocultos) {
@@ -53,12 +56,33 @@ try {
         } else {
             $nombre = $item->get_name(true);
         }
+        // Cada columna dice a qué categoría (módulo) pertenece: los ítems, a la suya; el total de un módulo, al módulo
+        // que totaliza; el total del curso, a ninguna.
         if ($item->itemtype === 'course') {
             // El generador usa esta columna como calificación final aunque el curso fuerce otro idioma
             // (en inglés se llama "Course total", no "Total del curso").
             $indicetotal = 3 + count($items);
+            $tipo = 'curso';
+            $grupo = null;
+        } else if ($item->itemtype === 'category') {
+            $tipo = 'categoria';
+            $grupo = (int) $item->iteminstance;
+        } else {
+            $tipo = 'item';
+            $grupo = (int) $item->categoryid;
+        }
+        if ($grupo !== null && !isset($grupos[$grupo])) {
+            $cat = $categorias[$grupo] ?? null;
+            $raiz = !$cat || $cat->parent === null;
+            $grupos[$grupo] = [
+                'id' => $grupo,
+                'raiz' => $raiz,
+                'nombre' => $raiz ? get_string('gruposinmodulo', 'gradeexport_acta')
+                    : html_to_text(format_string($cat->fullname, true, ['context' => $context]), 0, false),
+            ];
         }
         $items[$item->id] = $item;
+        $columnas[] = ['id' => (int) $item->id, 'tipo' => $tipo, 'grupo' => $grupo, 'nombre' => html_to_text($nombre, 0, false)];
         // Igual que grade_export::format_column_name(): texto plano, sin espacios repetidos.
         $nombres[] = html_to_text($nombre . ' (Real)', 0, false);
     }
@@ -93,6 +117,8 @@ $datos = [
     'curso' => format_string($course->fullname, true, ['context' => $context, 'escape' => false]),
     'docente' => \gradeexport_acta\helper::docente($context),
     'total' => $indicetotal,
+    'columnas' => $columnas,
+    'grupos' => array_values($grupos),
     'matriz' => $matriz,
 ];
 $logourl = (new moodle_url('/grade/export/acta/generador.php', ['id' => $courseid, 'logo' => 1]))->out(false);
