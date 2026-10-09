@@ -111,7 +111,7 @@ Desinstalar: Administración > Plugins > Plugins locales > Desinstalar.
 
 ## Qué se probó
 `gradeexport_acta` se probó contra un clon real del campus (Moodle 5.1.1+, PHP 8.4, MariaDB 10.11), instalando el
-ZIP con el instalador de Moodle (de la 0.1 a la 0.4.0). Se aplicó a los 94 cursos del clon (1.626 alumnos en 77 cursos):
+ZIP con el instalador de Moodle (de la 0.1 a la 0.4.0; la 0.4.1 aún no). Se aplicó a los 94 cursos del clon (1.626 alumnos en 77 cursos):
 - Datos: en 93 cursos la tabla que lee el plugin es idéntica (alumnos, orden, columnas, nombres y valores) a la de
   Exportar > Archivo en texto plano con los valores por defecto. En el curso restante Moodle no puede recalcular las
   calificaciones (un cálculo usa actividades borradas) y la exportación estándar también falla; el plugin lo avisa.
@@ -143,6 +143,12 @@ ZIP con el instalador de Moodle (de la 0.1 a la 0.4.0). Se aplicó a los 94 curs
   desinstalar; Docente y Docente de Módulo reciben el permiso solos; Exportar abre el acta para el administrador,
   Docente y Docente de Módulo y sigue abriendo OpenOffice para Profesor, Profesor sin permiso de edición y Profesor
   presencial (sin el permiso); regresión en los 94 cursos del clon con todo marcado y con el primer módulo.
+- 0.4.1 (plantilla del acta), sin Moodle y con datos inventados: 114 comprobaciones del generador y la pantalla (con
+  todo marcado, las mismas filas y la misma línea de módulo que la 0.2.2), 215 del PDF en 20 casos (hasta 130
+  alumnos y 43 columnas; firma sola en una hoja con su encabezado, en la hoja 1, la 2 o la última; sin logo; sin la
+  tipografía; nombres y actividades largos; Ñ, Ü, Ø, Ł) y 3 del paso de actualización de 0.4.0 a 0.4.1. Las medidas
+  del PDF se tomaron del archivo de la plantilla y se compararon con ella a simple vista. Pendiente: instalar la
+  0.4.1 en el clon y generar un acta con datos reales.
 - Corregido en 0.3.0 al probar en el clon: el texto de ayuda y el contador salían en blanco (el tema del campus
   pinta `text-muted` de blanco), "Calificación" se partía en dos líneas con pocas columnas y con solo el total la
   tabla quedaba a medias.
