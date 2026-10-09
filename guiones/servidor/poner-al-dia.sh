@@ -143,24 +143,49 @@ cuantos=$(sudo -u "$USUARIO" psql "$DATABASE_URL" -tAc 'select count(*) from reg
 pendientes=$(sudo -u "$USUARIO" psql "$DATABASE_URL" -tAc \
   'select count(*) from registros where sheets_sincronizado_en is null' 2>/dev/null || echo '?')
 
-printf '\n\033[1m══ Listo\033[0m\n'
+# El titular dice lo que pasó, no lo que se esperaba que pasara. Decía
+# «Listo» aunque la copia a la hoja hubiera fallado, y quien despliega lee el
+# titular: la hoja se quedaba atrás semanas sin que nadie lo notara, mientras
+# cada alta nueva se guardaba bien y el sitio seguía en pie.
+# Un registro sin copiar basta para que la hoja no esté al día, aunque la
+# orden de copiar no haya devuelto error: puede haberse quedado corta, o
+# haberse saltado el paso. Si ni siquiera se pudo contar —«?»— tampoco se
+# canta victoria.
+hoja_al_dia=sí
+[ "$fallo_copia" = "sí" ] && hoja_al_dia=no
+[ "$fallo_google" = "sí" ] && hoja_al_dia=no
+[ "$pendientes" = "0" ] || hoja_al_dia=no
+
+if [ "$hoja_al_dia" = "no" ]; then
+  printf '\n\033[1;33m══ El sitio quedó al día, pero la hoja no\033[0m\n'
+else
+  printf '\n\033[1m══ Listo\033[0m\n'
+fi
 if [ "$fallo_google" = "sí" ]; then
   printf '   \033[33mGoogle Sheets no quedó conectado; lo de arriba dice por qué.\033[0m\n'
   aviso "El resto sí se completó. Se puede reintentar sólo ese paso cuando quiera."
 fi
 aviso "Registros en la base: $cuantos"
-aviso "Pendientes de copiar a la hoja: $pendientes"
+if [ "$pendientes" = "0" ]; then
+  aviso "Pendientes de copiar a la hoja: 0"
+else
+  printf '   \033[33mPendientes de copiar a la hoja: %s\033[0m\n' "$pendientes"
+fi
 printf '\n'
 if [ "$fallo_copia" = "sí" ]; then
   printf '   \033[33mLa copia a la hoja falló; el motivo está unas líneas más arriba.\033[0m\n'
   aviso "Si dice que la hoja «tiene las columnas anteriores», es que esta versión"
   aviso "cambió las columnas del libro. Se arregla reescribiéndolo entero:"
-  aviso "  cd $RAIZ && sudo -u $USUARIO npm run sincronizar -- --rehacer"
+  aviso "  sudo bash ${ORIGEN:-$RAIZ/guiones/servidor/poner-al-dia.sh} --rehacer"
   aviso ""
   aviso "Si no, lo más común: la cuenta de servicio no es Editora de la hoja, o el"
   aviso "GOOGLE_SHEETS_ID del .env no es el de la hoja que está mirando."
   aviso "Para reintentar sólo esto: cd $RAIZ && sudo -u $USUARIO npm run sincronizar"
-elif [ "$pendientes" = "0" ]; then
+elif [ "$pendientes" != "0" ]; then
+  aviso "Quedan registros sin copiar aunque la orden de copiar no dio error."
+  aviso "Para ver cuáles y por qué, fila por fila:"
+  aviso "  cd $RAIZ && sudo -u $USUARIO npm run cotejar-hoja"
+else
   aviso "La hoja está al día."
   if [ "$rehacer" = "no" ]; then
     aviso "Si esta versión cambió las columnas del libro, reescríbalo entero:"
@@ -169,3 +194,7 @@ elif [ "$pendientes" = "0" ]; then
 fi
 aviso "El sitio: https://congreso-dss.ciess.org"
 printf '\n'
+
+# Y termina con error. Mientras salía con éxito, cualquier automatismo que
+# mirase el resultado daba el despliegue por bueno con la hoja desfasada.
+[ "$hoja_al_dia" = "sí" ] || exit 1
