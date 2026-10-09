@@ -75,6 +75,25 @@ class helper {
     }
 
     /**
+     * Entrega una de las dos tipografías de la plantilla del acta (Work Sans, licencia OFL) para incrustarla en el PDF.
+     * Solo existen estos dos archivos; cualquier otro nombre responde 404.
+     */
+    public static function enviar_fuente(string $nombre): void {
+        $archivos = ['normal' => 'WorkSans-Regular.ttf', 'negrita' => 'WorkSans-Bold.ttf'];
+        $ruta = isset($archivos[$nombre]) ? __DIR__ . '/../fonts/' . $archivos[$nombre] : null;
+        if (!$ruta || !is_readable($ruta)) {
+            http_response_code(404);
+            die();
+        }
+        \core\session\manager::write_close();
+        header('Content-Type: font/ttf');
+        header('Content-Length: ' . filesize($ruta));
+        header('Cache-Control: private, max-age=86400');
+        readfile($ruta);
+        die();
+    }
+
+    /**
      * Si no se pueden leer las calificaciones, responde de inmediato (con un mensaje claro) en lugar de dejar la
      * página esperando: reemplaza al generador por un stub cuyas funciones rechazan con ese mensaje.
      */

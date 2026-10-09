@@ -3,13 +3,25 @@
 Hay dos plugins; el recomendado es `gradeexport_acta`. El primero (`local_actacalif`) se puede desinstalar
 cuando el segundo funcione.
 
-## gradeexport_acta 0.4.0 (recomendado): Calificaciones > Exportar > Acta de calificaciones
+## gradeexport_acta 0.4.1 (recomendado): Calificaciones > Exportar > Acta de calificaciones
 Aparece junto a las otras opciones de exportación. Muestra curso, docente, fecha y número de estudiantes, los
 ítems de calificación a incluir (agrupados por módulo), la firma del docente y un botón **Descargar** que baja el
 acta en PDF directamente (sin pantallas, sin CSV).
+- Novedades de 0.4.1:
+  - **Nueva plantilla del acta** (la del CIESS, archivo "Acta de calificaciones.ai"): franja azul y dorada arriba,
+    título con ornamentos, logo a la derecha, filete azul, datos del acta (Actividad, Módulo si lo hay, Nombre del
+    docente y Fecha) con filetes, tabla con encabezado azul y filas alternadas, "Calificación" en azul y negrita,
+    firma con línea dorada, "Firma", nombre del docente y logo, y barra dorada y azul al pie de todas las hojas.
+    Letra Work Sans (licencia OFL; en `fonts/` va una versión reducida a caracteres latinos y el plugin se la entrega
+    al navegador desde `generador.php`); si no cargara, el acta sale igual en Helvetica. Los datos no cambian (mismos
+    alumnos, columnas y valores); solo el diseño del PDF. Con pocas columnas el nombre del alumno tiene más ancho.
+  - **La firma nunca queda sola**: si el bloque de firma no cabe en la hoja donde termina la tabla, pasa a una hoja
+    nueva que repite el encabezado (título, actividad, módulo, docente y fecha) para saber a qué acta pertenece.
+    Las hojas de continuación de la tabla siguen la plantilla (solo el encabezado de la tabla).
+  - La vista previa de la firma en la pantalla usa los mismos colores (línea dorada, "Firma" y nombre en azul).
 - Novedades de 0.4.0:
   - **Firma del docente destacada**: el título de la firma tiene la misma tipografía que los títulos de módulo y
-    al elegir el archivo (PNG o JPG) se muestra una vista previa con la leyenda "FIRMA" y el nombre del docente,
+    al elegir el archivo (PNG o JPG) se muestra una vista previa con la leyenda "Firma" y el nombre del docente,
     como saldrá en el PDF, con el botón "Quitar firma". La imagen se lee y se normaliza en el navegador (respeta la
     orientación de las fotos del celular, se reduce a 900×300 px como máximo y se aplana sobre fondo blanco si es
     JPG); la misma imagen se usa en la vista previa y en el PDF. Mientras se lee, Descargar queda desactivado; una
@@ -57,7 +69,7 @@ acta en PDF directamente (sin pantallas, sin CSV).
   presencial), darlo a mano en todo el sitio: Administración > Usuarios > Permisos > Definir roles; o solo en un
   curso: Curso > Participantes > Permisos. "Acta de calificaciones" queda como primera opción de "Exportar como".
 - Instalar/actualizar: ZIP `gradeexport_acta.zip` (raíz `acta/`) en Administración > Extensiones > Instalar plugins
-  (si ya está una versión anterior, Moodle ofrece actualizar a 2026100506). Hacerlo en horario tranquilo: durante la actualización
+  (si ya está una versión anterior, Moodle ofrece actualizar a 2026100507). Hacerlo en horario tranquilo: durante la actualización
   de BD todo el sitio pide pasar por Notificaciones. Si el instalador no puede escribir en `grade/export`, copiar
   la carpeta `acta` a `<moodle>/grade/export/` (Moodle 5.1+: `public/grade/export/`).
 - Respaldo y reversa: sin respaldo no hay vuelta atrás. NO restaurar archivos de una versión anterior sobre la
@@ -68,10 +80,10 @@ acta en PDF directamente (sin pantallas, sin CSV).
   Moodle borra el permiso `gradeexport/acta:view` de todos los roles, también las reglas por curso: al reinstalar
   solo Docente y Docente de Módulo lo reciben de nuevo, a los demás roles hay que volver a darlo.
 - Requiere internet en el navegador del docente (jsPDF desde cdnjs, catálogo desde Google Sheets); el logo se pide
-  a home.ciess.org desde el servidor de Moodle.
+  a home.ciess.org desde el servidor de Moodle y la letra (Work Sans) la entrega el propio plugin.
 - Límites conocidos: con muchas actividades las columnas del PDF se vuelven pequeñas (igual que en el generador
   original): hasta ~25 se lee bien; con 30 los números casi se tocan y con 43 es ilegible (marcar solo un módulo
-  reduce las columnas). Caracteres fuera de Latin-1 (emoji, ć, ł) pueden salir mal. Los encabezados de actividad
+  reduce las columnas). Caracteres fuera del alfabeto latino (cirílico, griego, emoji) salen en blanco. Los encabezados de actividad
   se abrevian como en el generador original ("Act.M2. Ac.." si varios nombres comparten el inicio).
 
 ## local_actacalif (primer borrador)

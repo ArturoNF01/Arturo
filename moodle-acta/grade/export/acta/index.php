@@ -85,9 +85,9 @@ echo '<div id="acta-firma-bloque" class="border rounded mt-4" role="group" aria-
     . '<div class="border rounded text-center px-4 pt-3 pb-2" style="background:#fff;color:#000;max-width:340px">'
     . '<div class="d-flex justify-content-center align-items-end" style="min-height:64px">'
     . '<img id="acta-firma-img" alt="' . s(get_string('firmaalt', 'gradeexport_acta')) . '" style="max-width:min(240px,100%);max-height:88px"></div>'
-    . '<div style="border-top:2px solid #000;margin:2px 12% 5px"></div>'
-    . '<div class="fw-bold small" style="color:#000">FIRMA</div>'
-    . '<div id="acta-firma-nombre" class="small" style="color:#505050"></div></div>'
+    . '<div style="border-top:1px solid #c6ac6f;margin:2px 12% 7px"></div>'
+    . '<div class="fw-bold small" style="color:#002269">Firma</div>'
+    . '<div id="acta-firma-nombre" class="small" style="color:#002269"></div></div>'
     . '<button type="button" id="acta-firma-quitar" class="btn btn-link p-0 mt-2">' . s(get_string('firmaquitar', 'gradeexport_acta')) . '</button>'
     . '</div></div></div>';
 echo '<div class="mt-4"><button type="button" id="acta-descargar" class="btn btn-primary" disabled>'

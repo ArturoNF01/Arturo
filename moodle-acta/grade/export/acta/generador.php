@@ -21,6 +21,10 @@ require_capability('gradeexport/acta:view', $context);
 if ($logo) {
     \gradeexport_acta\helper::enviar_logo();
 }
+$fuente = optional_param('fuente', '', PARAM_ALPHA);
+if ($fuente !== '') {
+    \gradeexport_acta\helper::enviar_fuente($fuente);
+}
 
 // Respeta el modo de grupos del curso (con grupos separados, solo los alumnos del grupo del docente).
 $groupid = \gradeexport_acta\helper::grupo($course, $context);
@@ -122,12 +126,17 @@ $datos = [
     'matriz' => $matriz,
 ];
 $logourl = (new moodle_url('/grade/export/acta/generador.php', ['id' => $courseid, 'logo' => 1]))->out(false);
+$fuentes = [
+    'normal' => (new moodle_url('/grade/export/acta/generador.php', ['id' => $courseid, 'fuente' => 'normal']))->out(false),
+    'negrita' => (new moodle_url('/grade/export/acta/generador.php', ['id' => $courseid, 'fuente' => 'negrita']))->out(false),
+];
 
 $html = file_get_contents(__DIR__ . '/templates/generador.html');
 // Modo directo: la interfaz del generador queda oculta; index.php maneja el botón y la descarga.
 $inyeccion = '<style>#acta-app{display:none!important}</style>'
     . '<script>window.ACTA_DIRECTO = true;window.ACTA_DATOS = ' . json_encode($datos, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) . ';'
-    . 'window.ACTA_LOGO_URL = ' . json_encode($logourl, JSON_HEX_TAG | JSON_HEX_AMP) . ';</script>';
+    . 'window.ACTA_LOGO_URL = ' . json_encode($logourl, JSON_HEX_TAG | JSON_HEX_AMP) . ';'
+    . 'window.ACTA_FUENTES = ' . json_encode($fuentes, JSON_HEX_TAG | JSON_HEX_AMP) . ';</script>';
 $html = str_replace('<body>', '<body>' . $inyeccion, $html);
 // La lectura de CSV/XLSX no se usa en modo directo: no se carga la librería XLSX (900 KB de terceros en el sitio).
 $html = preg_replace('#<script src="[^"]*xlsx[^"]*"></script>#i', '', $html);

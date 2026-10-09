@@ -862,6 +862,9 @@
     logoDataUrl: null,
     logoCargando: false,
     logoError: false,
+    fuentes: null,
+    fuentesCargando: false,
+    fuentesError: false,
     firmaDataUrl: null,
     firmaWidth: 0,
     firmaHeight: 0,
@@ -910,6 +913,7 @@
     dom.fecha.value = obtenerFechaFormateada();
     cargarCatalogo();
     precargarLogo();
+    precargarFuentes();
     if (window.ACTA_DIRECTO) return; // modo directo: sin pantallas, lo maneja window.ActaDirecto
     if (window.ACTA_DATOS) cargarDesdeMoodle();
 
@@ -1011,6 +1015,31 @@
       estado.logoCargando = false;
     };
     img.src = LOGO_URL;
+  }
+
+  // Tipografía de la plantilla (Work Sans, normal y negrita): en el campus la entrega el propio plugin (window.ACTA_FUENTES);
+  // sin ella el acta sale igual, en Helvetica.
+  function precargarFuentes() {
+    var urls = window.ACTA_FUENTES;
+    if (!urls || !urls.normal || !urls.negrita || estado.fuentes || estado.fuentesCargando || estado.fuentesError) return;
+    estado.fuentesCargando = true;
+    function bajar(url) {
+      return fetch(url, { credentials: 'same-origin' }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.arrayBuffer();
+      }).then(function (buf) {
+        var bytes = new Uint8Array(buf), s = '', paso = 0x8000;
+        if (bytes.length < 1000) throw new Error('archivo de fuente vacío');
+        for (var i = 0; i < bytes.length; i += paso) s += String.fromCharCode.apply(null, bytes.subarray(i, i + paso));
+        return btoa(s);
+      });
+    }
+    Promise.all([bajar(urls.normal), bajar(urls.negrita)]).then(function (r) {
+      estado.fuentes = { normal: r[0], negrita: r[1] };
+    }).catch(function (e) {
+      if (window.console) console.warn('No se pudo cargar la tipografía del acta:', e);
+      estado.fuentesError = true;
+    }).then(function () { estado.fuentesCargando = false; });
   }
 
   function irAPaso(num) {
@@ -1699,146 +1728,245 @@
     return nombre;
   }
 
+  // ---------------------------------------------------------------------------
+  // PDF del acta con la plantilla institucional (Acta de calificaciones.ai): carta vertical, medidas en puntos
+  // tomadas de la plantilla y tipografía Work Sans (si no cargó, Helvetica con las mismas medidas).
+  // ---------------------------------------------------------------------------
+  var PDF_AZUL = [0, 34, 105];
+  var PDF_DORADO = [198, 172, 111];
+  var PDF_CEBRA = [237, 239, 242];
+  var PDF_FILETE = [207, 216, 230];
+  // Trazos de la plantilla (coordenadas PDF: origen abajo a la izquierda, relativas a su punto de inserción).
+  var PDF_ROMBO = [['m', 0, 0], ['l', -4.043, -4.043], ['c', -4.122, -4.122, -4.122, -4.25, -4.043, -4.33], ['l', 0, -8.373],
+    ['c', 0.04, -8.412, 0.091, -8.432, 0.143, -8.432], ['c', 0.195, -8.432, 0.246, -8.412, 0.286, -8.373], ['l', 4.33, -4.33],
+    ['c', 4.408, -4.25, 4.408, -4.122, 4.33, -4.043], ['l', 0.286, 0], ['c', 0.207, 0.079, 0.079, 0.079, 0, 0]];
+  var PDF_ESTRELLA = [['m', 0, 0], ['c', -2.389, 0.394, -4.259, 2.263, -4.651, 4.651], ['c', -4.664, 4.729, -4.731, 4.785, -4.809, 4.785],
+    ['c', -4.887, 4.785, -4.953, 4.729, -4.966, 4.652], ['c', -5.36, 2.263, -7.23, 0.394, -9.618, 0],
+    ['c', -9.695, -0.013, -9.752, -0.08, -9.752, -0.157], ['c', -9.752, -0.235, -9.695, -0.302, -9.618, -0.315],
+    ['c', -7.23, -0.708, -5.36, -2.577, -4.966, -4.966], ['c', -4.953, -5.043, -4.887, -5.1, -4.809, -5.1],
+    ['c', -4.731, -5.1, -4.664, -5.043, -4.651, -4.966], ['c', -4.259, -2.577, -2.389, -0.708, 0, -0.315],
+    ['c', 0.077, -0.302, 0.133, -0.235, 0.133, -0.157], ['c', 0.133, -0.08, 0.077, -0.013, 0, 0]];
+  var PDF_PESTANA = [['m', 0, 0], ['l', -110.637, 0], ['c', -112.45, 0, -114.22, 0.548, -115.716, 1.572], ['l', -124.293, 7.441],
+    ['l', 13.656, 7.441], ['l', 5.079, 1.572], ['c', 3.583, 0.548, 1.813, 0, 0, 0]];
+  var LOGO_RELACION = 2.71509009009009;
+
+  function registrarFuentes(doc) {
+    var f = estado.fuentes;
+    if (f && f.normal && f.negrita) {
+      try {
+        doc.addFileToVFS('WorkSans-Regular.ttf', f.normal);
+        doc.addFont('WorkSans-Regular.ttf', 'WorkSans', 'normal');
+        doc.addFileToVFS('WorkSans-Bold.ttf', f.negrita);
+        doc.addFont('WorkSans-Bold.ttf', 'WorkSans', 'bold');
+        doc.setFont('WorkSans', 'bold');
+        doc.getTextWidth('Acta');
+        doc.setFont('WorkSans', 'normal');
+        doc.getTextWidth('Acta');
+        return 'WorkSans';
+      } catch (e) {
+        if (window.console) console.warn('No se pudo usar la tipografía Work Sans; se usa Helvetica:', e);
+      }
+    }
+    doc.setFont('helvetica', 'normal');
+    return 'helvetica';
+  }
+
   function generarPDFBlob(datosRaw, actividades, calificacionFinal, config) {
     var jsPDF = window.jspdf.jsPDF;
-    var doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait', compress: true });
+    var doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait', compress: true });
+    var fuente = registrarFuentes(doc);
 
-    var pageWidth = 216, pageHeight = 279, margin = 8;
-    var contentWidth = pageWidth - 2 * margin;
-    var bottomLimit = pageHeight - margin;
-    var y = margin;
+    var PH = 792, MX = 32.973, CW = 546.054, DER = MX + CW;
+    var CENTRO = 306;
+    var FILA_TOP = 32.44;                  // encabezado de la tabla en las hojas de continuación
+    var ALTO_ENC = 23.424;                 // alto de la franja azul de la tabla
+    var LIMITE_FILAS = 768;                // las filas no pasan de aquí (la franja del pie empieza en 782.6)
+    var LIMITE_FIRMA = 772;
 
-    if (estado.logoDataUrl) {
+    function relleno(c) { doc.setFillColor(c[0], c[1], c[2]); }
+    function tinta(c) { doc.setTextColor(c[0], c[1], c[2]); }
+    function texto(t, x, y, tam, estilo, color, opc) {
+      doc.setFont(fuente, estilo);
+      doc.setFontSize(tam);
+      tinta(color);
+      doc.text(String(t), x, y, opc);
+    }
+    function ancho(t, tam, estilo) {
+      doc.setFont(fuente, estilo);
+      doc.setFontSize(tam);
+      return doc.getTextWidth(String(t));
+    }
+    // Rellena un trazo de la plantilla: ox, oy = punto de inserción en coordenadas PDF.
+    function trazo(ops, ox, oy, color) {
+      var segs = [], ini = null, cx = 0, cy = 0;
+      function X(x) { return ox + x; }
+      function Y(y) { return PH - (oy + y); }
+      ops.forEach(function (o) {
+        if (o[0] === 'm') { ini = [X(o[1]), Y(o[2])]; cx = ini[0]; cy = ini[1]; }
+        else if (o[0] === 'l') { var lx = X(o[1]), ly = Y(o[2]); segs.push([lx - cx, ly - cy]); cx = lx; cy = ly; }
+        else if (o[0] === 'c') {
+          var x1 = X(o[1]), y1 = Y(o[2]), x2 = X(o[3]), y2 = Y(o[4]), x3 = X(o[5]), y3 = Y(o[6]);
+          segs.push([x1 - cx, y1 - cy, x2 - cx, y2 - cy, x3 - cx, y3 - cy]); cx = x3; cy = y3;
+        }
+      });
+      relleno(color);
+      doc.lines(segs, ini[0], ini[1], [1, 1], 'F', true);
+    }
+    function filete(x, y, w) {
+      doc.setDrawColor(PDF_FILETE[0], PDF_FILETE[1], PDF_FILETE[2]);
+      doc.setLineWidth(0.651);
+      doc.line(x, y, x + w, y);
+    }
+    function logoEn(x, y, w) {
+      if (!estado.logoDataUrl) return;
       try {
-        var logoW = 38;
-        var logoH = logoW / 2.71509009009009;
-        var logoX = (pageWidth - logoW) / 2;
-        doc.addImage(estado.logoDataUrl, 'PNG', logoX, y, logoW, logoH, undefined, 'FAST');
-        y += logoH + 3;
+        doc.addImage(estado.logoDataUrl, 'PNG', x, y, w, w / LOGO_RELACION, undefined, 'FAST');
       } catch (e) {
-        console.warn('No se pudo insertar el logo en el PDF:', e);
+        if (window.console) console.warn('No se pudo insertar el logo en el PDF:', e);
       }
     }
-
-    doc.setFillColor(11, 37, 112);
-    doc.rect(margin, y, contentWidth, 9, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(13);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ACTA DE CALIFICACIONES', pageWidth / 2, y + 6, { align: 'center' });
-    y += 15;
-
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    var infoLineas = [
-      ['Actividad:', config.actividad],
-      ['Nombre del docente:', config.docente],
-      ['Módulo:', config.modulo],
-      ['Fecha de elaboración:', config.fecha]
-    ];
-    infoLineas = infoLineas.filter(function (l) { return String(l[1] == null ? '' : l[1]).trim() !== ''; });
-    var infoRowHeight = 7;
-    for (var k = 0; k < infoLineas.length; k++) {
-      doc.setFont('helvetica', 'bold');
-      doc.text(String(infoLineas[k][0]), margin, y);
-      doc.setFont('helvetica', 'normal');
-      var valorTxt = String(infoLineas[k][1]);
-      var maxWidth = contentWidth - 45;
-      var lineasValor = doc.splitTextToSize(valorTxt, maxWidth);
-      if (lineasValor.length > 2) {
-        lineasValor = lineasValor.slice(0, 2);
-        var ultima = lineasValor[1];
-        lineasValor[1] = (ultima.length > 2 ? ultima.substring(0, ultima.length - 2) : ultima) + '..';
-      }
-      for (var lv = 0; lv < lineasValor.length; lv++) {
-        doc.text(lineasValor[lv], margin + 45, y);
-        if (lv < lineasValor.length - 1) y += 5;
-      }
-      y += infoRowHeight;
-      if (k < infoLineas.length - 1) {
-        doc.setDrawColor(220, 220, 220);
-        doc.setLineWidth(0.2);
-        doc.line(margin, y - infoRowHeight / 2, margin + contentWidth, y - infoRowHeight / 2);
-      }
+    // Barra inferior (dorada y azul) de todas las hojas.
+    function pie() {
+      relleno(PDF_DORADO); doc.rect(0, 782.56, 140.42, PH - 782.56, 'F');
+      relleno(PDF_AZUL); doc.rect(140.42, 782.56, 612 - 140.42, PH - 782.56, 'F');
     }
-    y += 6;
+    // Texto de valor en a lo más 2 renglones; si no cabe, el segundo termina en "..".
+    function renglones(valor, maxAncho, tam, estilo) {
+      var t = String(valor == null ? '' : valor).replace(/\s+/g, ' ').trim();
+      if (t === '') return [];
+      doc.setFont(fuente, estilo);
+      doc.setFontSize(tam);
+      var l = doc.splitTextToSize(t, maxAncho);
+      if (l.length > 2) {
+        l = l.slice(0, 2);
+        var u = l[1];
+        while (u.length > 1 && doc.getTextWidth(u + '..') > maxAncho) u = u.substring(0, u.length - 1);
+        l[1] = u + '..';
+      }
+      return l;
+    }
+
+    // Texto en un solo renglón; si no cabe, se corta y termina en "..".
+    function recortar(t, maxAncho, tam, estilo) {
+      t = String(t == null ? '' : t).replace(/\s+/g, ' ').trim();
+      if (ancho(t, tam, estilo) <= maxAncho) return t;
+      while (t.length > 1 && ancho(t + '..', tam, estilo) > maxAncho) t = t.substring(0, t.length - 1);
+      return t + '..';
+    }
+
+    // Encabezado de la primera hoja: franja, título, logo, filete y datos del acta. Devuelve la ordenada donde termina.
+    function encabezadoActa() {
+      relleno(PDF_AZUL); doc.rect(0, 0, 471.19, 16.757, 'F');
+      relleno(PDF_DORADO); doc.rect(471.19, 0, 612 - 471.19, 16.757, 'F');
+      relleno(PDF_DORADO);
+      doc.circle(38.077, 64.865, 3.119, 'F');
+      trazo(PDF_ROMBO, 52.6991, 731.3216, PDF_DORADO);
+      trazo(PDF_ESTRELLA, 72.4161, 727.2925, PDF_DORADO);
+      doc.setCharSpace(-0.18);              // el título de la plantilla va con interletrado -0.006 em
+      texto('Acta de calificaciones', 90.233, 73.237, 30.454, 'bold', PDF_AZUL);
+      doc.setCharSpace(0);
+      logoEn(483.11, 42.64, 96.1);
+      trazo(PDF_PESTANA, 565.5534, 682.7421, PDF_CEBRA);
+      relleno(PDF_AZUL); doc.rect(32.972, 98.979, 546.24, 2.838, 'F');
+
+      var y = 122.756;                      // ordenada del filete anterior a la primera fila
+      var VX = MX + 76.3;                   // columna de los valores (109.27)
+      function filaCompleta(etiqueta, valor) {
+        var vals = renglones(valor, DER - VX - 4, 10, 'normal');
+        if (!vals.length) return;
+        var n = vals.length, b0 = y + 17.04;
+        texto(etiqueta, MX, b0, 10, 'bold', PDF_AZUL);
+        for (var k = 0; k < n; k++) texto(vals[k], VX, b0 + 12 * k, 10, 'normal', PDF_AZUL);
+        y = b0 + 12 * (n - 1) + (n > 1 ? 10.6 : 12.1);
+        filete(MX, y, CW);
+      }
+      filaCompleta('Actividad:', config.actividad);
+      filaCompleta('Módulo:', config.modulo);
+
+      var MX2 = 357.291, VX2 = 406.0;
+      doc.setFont(fuente, 'bold'); doc.setFontSize(10);
+      var etiqDoc = doc.splitTextToSize('Nombre del docente:', 70);
+      var valDoc = renglones(config.docente, 343.68 - VX - 6, 10, 'normal');
+      var valFecha = renglones(config.fecha, DER - VX2, 10, 'normal');
+      var nf = Math.max(etiqDoc.length, valDoc.length, valFecha.length, 1);
+      var b1 = y + 17.04;
+      for (var e = 0; e < etiqDoc.length; e++) texto(etiqDoc[e], MX, b1 + 12 * e, 10, 'bold', PDF_AZUL);
+      for (var d = 0; d < valDoc.length; d++) texto(valDoc[d], VX, b1 + 6 * (nf - valDoc.length) + 12 * d, 10, 'normal', PDF_AZUL);
+      texto('Fecha:', MX2, b1 + 6 * (nf - 1), 10, 'bold', PDF_AZUL);
+      for (var f = 0; f < valFecha.length; f++) texto(valFecha[f], VX2, b1 + 6 * (nf - valFecha.length) + 12 * f, 10, 'normal', PDF_AZUL);
+      y = b1 + 12 * (nf - 1) + (nf > 1 ? 10.6 : 12.1);
+      filete(MX, y, 310.708);
+      filete(MX2, y, 221.736);
+      return y;
+    }
+
+    pie();
+    var yInfo = encabezadoActa();
+    var y = yInfo + 7.79;                   // arriba de la franja azul de la tabla
 
     var tieneCalificacionFinal = calificacionFinal !== null;
     var numAct = actividades.length;
     var numColsCalif = numAct + (tieneCalificacionFinal ? 1 : 0);
-    var colNumWidth = contentWidth * 0.04;
-    var colNombreWidth = contentWidth * 0.28;
-    var colFinalWidth = tieneCalificacionFinal ? contentWidth * 0.08 : 0;
+    var colNumWidth = 33;
+    // Con pocas columnas el nombre del alumno tiene más lugar (los apellidos largos no se cortan); con muchas, las notas.
+    var colNombreWidth = CW * (numColsCalif <= 4 ? 0.36 : numColsCalif <= 6 ? 0.32 : numColsCalif <= 8 ? 0.30 : 0.27);
+    var colFinalWidth = tieneCalificacionFinal ? CW * (numColsCalif <= 4 ? 0.16 : numColsCalif <= 6 ? 0.14 : numColsCalif <= 8 ? 0.13 : numColsCalif <= 12 ? 0.12 : 0.1) : 0;
     if (numAct === 0 && tieneCalificacionFinal) {
       // Sin columnas de actividad (p. ej. solo el total de un módulo): la tabla ocupa todo el ancho en vez de quedar a medias.
-      colFinalWidth = contentWidth * 0.2;
-      colNombreWidth = contentWidth - colNumWidth - colFinalWidth;
+      colFinalWidth = CW * 0.2;
+      colNombreWidth = CW - colNumWidth - colFinalWidth;
     }
-    var totalCalifWidth = contentWidth - colNumWidth - colNombreWidth - colFinalWidth;
-    var colCalifWidth = numAct > 0 ? totalCalifWidth / numAct : 0;
+    var colCalifWidth = numAct > 0 ? (CW - colNumWidth - colNombreWidth - colFinalWidth) / numAct : 0;
+    var xNombre = MX + colNumWidth;
+    var xNombreTexto = xNombre + 10.1;
+    var xActs = xNombre + colNombreWidth;
+    var xFinal = xActs + colCalifWidth * numAct;
 
-    var fontSizeHeader, fontSizeBody, rowHeight;
-    if (numColsCalif > 16)      { fontSizeHeader = 6.5; fontSizeBody = 6.5; rowHeight = 4.5; }
-    else if (numColsCalif > 12) { fontSizeHeader = 7.5; fontSizeBody = 7.5; rowHeight = 4.5; }
-    else if (numColsCalif > 8)  { fontSizeHeader = 8;   fontSizeBody = 8;   rowHeight = 5; }
-    else                        { fontSizeHeader = 9;   fontSizeBody = 9;   rowHeight = 5; }
+    var tamEnc, tamCuerpo, rowHeight;
+    if (numColsCalif > 16)      { tamEnc = 6.5; tamCuerpo = 6.5; rowHeight = 12.75; }
+    else if (numColsCalif > 12) { tamEnc = 7;   tamCuerpo = 7;   rowHeight = 12.75; }
+    else if (numColsCalif > 8)  { tamEnc = 8;   tamCuerpo = 8;   rowHeight = 14.166; }
+    else if (numColsCalif > 6)  { tamEnc = 9;   tamCuerpo = 8;   rowHeight = 14.166; }
+    else                        { tamEnc = 10;  tamCuerpo = 8;   rowHeight = 14.166; }
 
-    var headerHeight = 9;
+    // Encabezados de las columnas de calificación, todos del mismo tamaño: el mayor en el que caben en un renglón (mínimo 6.5);
+    // si ni así caben, se parten en dos renglones.
+    var encabezados = actividades.map(function (a, i) { return { texto: simplificarNombre(a.nombre, i + 1), ancho: colCalifWidth }; });
+    if (tieneCalificacionFinal) encabezados.push({ texto: 'Calificación', ancho: colFinalWidth });
+    function desborda(tam) {
+      return encabezados.some(function (h) { return ancho(h.texto, tam, 'bold') > h.ancho - 4; });
+    }
+    var tEnc = tamEnc;
+    while (tEnc > 6.5 && desborda(tEnc)) tEnc -= 0.5;
+    var dosRenglones = desborda(tEnc);
 
-    function dibujarEncabezadoTabla() {
-      var x = margin;
-      doc.setDrawColor(120, 120, 120);
-      doc.setLineWidth(0.2);
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(fontSizeHeader);
-      doc.setFont('helvetica', 'bold');
-
-      doc.setFillColor(199, 174, 111);
-      doc.rect(x, y, colNumWidth, headerHeight, 'FD');
-      doc.text('N°', x + colNumWidth / 2, y + headerHeight / 2 + 1, { align: 'center' });
-      x += colNumWidth;
-
-      doc.setFillColor(199, 174, 111);
-      doc.rect(x, y, colNombreWidth, headerHeight, 'FD');
-      doc.text('Nombre(s)', x + 2, y + headerHeight / 2 + 1);
-      x += colNombreWidth;
-
-      for (var i = 0; i < actividades.length; i++) {
-        doc.setFillColor(199, 174, 111);
-        doc.rect(x, y, colCalifWidth, headerHeight, 'FD');
-        var nombreSimpl = simplificarNombre(actividades[i].nombre, i + 1);
-        var lineas = doc.splitTextToSize(String(nombreSimpl), colCalifWidth - 1);
-        if (lineas.length > 2) lineas = lineas.slice(0, 2);
-        var lineH = fontSizeHeader * 0.42;
-        var startY = y + headerHeight / 2 - (lineas.length - 1) * lineH / 2 + 1;
-        for (var li = 0; li < lineas.length; li++) {
-          doc.text(lineas[li], x + colCalifWidth / 2, startY + li * lineH, { align: 'center' });
+    function encabezadoTabla() {
+      relleno(PDF_AZUL);
+      doc.rect(MX, y, CW, ALTO_ENC, 'F');
+      var centro = y + ALTO_ENC / 2;
+      texto('Nº', MX + colNumWidth / 2, centro + 0.33 * tamEnc + 0.8, tamEnc, 'bold', [255, 255, 255], { align: 'center' });
+      texto('Nombre', xNombreTexto, centro + 0.33 * tamEnc + 0.8, tamEnc, 'bold', [255, 255, 255]);
+      var x = xActs;
+      encabezados.forEach(function (h, i) {
+        var esFinal = tieneCalificacionFinal && i === encabezados.length - 1;
+        var cx = (esFinal ? xFinal : x) + h.ancho / 2;
+        var lineas = [h.texto];
+        if (dosRenglones) {
+          doc.setFont(fuente, 'bold'); doc.setFontSize(tEnc);
+          lineas = doc.splitTextToSize(String(h.texto), h.ancho - 3);
+          if (lineas.length > 2) lineas = lineas.slice(0, 2);
         }
-        x += colCalifWidth;
-      }
-
-      if (tieneCalificacionFinal) {
-        doc.setFillColor(199, 174, 111);
-        doc.rect(x, y, colFinalWidth, headerHeight, 'FD');
-        // Con pocas columnas la letra es grande y "Calificación" no cabe en una línea (se partía en "Calificaci-ón"): se achica solo este encabezado.
-        var tamFin = fontSizeHeader;
-        while (tamFin > 5.5 && doc.getTextWidth('Calificación') > colFinalWidth - 1) { tamFin -= 0.5; doc.setFontSize(tamFin); }
-        var lineasFin = doc.splitTextToSize('Calificación', colFinalWidth - 1);
-        if (lineasFin.length > 2) lineasFin = lineasFin.slice(0, 2);
-        var lineHFin = tamFin * 0.42;
-        var startYFin = y + headerHeight / 2 - (lineasFin.length - 1) * lineHFin / 2 + 1;
-        for (var lf = 0; lf < lineasFin.length; lf++) {
-          doc.text(lineasFin[lf], x + colFinalWidth / 2, startYFin + lf * lineHFin, { align: 'center' });
+        var paso = tEnc * 1.15;
+        for (var k = 0; k < lineas.length; k++) {
+          var base = centro + (k - (lineas.length - 1) / 2) * paso + 0.33 * tEnc + 0.8;
+          texto(lineas[k], cx, base, tEnc, 'bold', [255, 255, 255], { align: 'center' });
         }
-        doc.setFontSize(fontSizeHeader);
-      }
-      y += headerHeight;
+        if (!esFinal) x += h.ancho;
+      });
+      y += ALTO_ENC;
     }
 
-    dibujarEncabezadoTabla();
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(fontSizeBody);
+    encabezadoTabla();
 
     var numEstudiante = 1;
     for (var i = 1; i < datosRaw.length; i++) {
@@ -1847,72 +1975,47 @@
       var apellido = filaDatos[1];
       if (!nombre && !apellido) continue;
 
-      if (y + rowHeight > bottomLimit) {
+      if (y + rowHeight > LIMITE_FILAS) {
         doc.addPage();
-        y = margin;
-        dibujarEncabezadoTabla();
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(fontSizeBody);
+        pie();
+        y = FILA_TOP;
+        encabezadoTabla();
       }
 
       var nombreCompleto = ((nombre || '') + ' ' + (apellido || '')).trim();
-      var esPar = (numEstudiante % 2 === 0);
-      var bgR = esPar ? 255 : 242;
-      var bgG = esPar ? 255 : 242;
-      var bgB = esPar ? 255 : 242;
-
-      var x = margin;
-      doc.setFillColor(bgR, bgG, bgB);
-      doc.setDrawColor(120, 120, 120);
-      doc.setLineWidth(0.2);
-      doc.rect(margin, y, contentWidth, rowHeight, 'F');
-
-      doc.rect(x, y, colNumWidth, rowHeight, 'S');
-      doc.text(String(numEstudiante), x + colNumWidth / 2, y + rowHeight / 2 + 1, { align: 'center' });
-      x += colNumWidth;
-
-      doc.rect(x, y, colNombreWidth, rowHeight, 'S');
-      var nombreMostrar = nombreCompleto;
-      var nombreMaxWidth = colNombreWidth - 3;
-      if (doc.getTextWidth(nombreMostrar) > nombreMaxWidth) {
-        while (doc.getTextWidth(nombreMostrar + '..') > nombreMaxWidth && nombreMostrar.length > 1) {
-          nombreMostrar = nombreMostrar.substring(0, nombreMostrar.length - 1);
-        }
-        nombreMostrar = nombreMostrar + '..';
+      if (numEstudiante % 2 === 0) {
+        relleno(PDF_CEBRA);
+        doc.rect(MX, y, CW, rowHeight, 'F');
       }
-      doc.text(nombreMostrar, x + 1.5, y + rowHeight / 2 + 1);
-      x += colNombreWidth;
+      var base = y + rowHeight / 2 + 0.34 * tamCuerpo;
 
+      texto(String(numEstudiante), MX + colNumWidth / 2, base, tamCuerpo, 'normal', [0, 0, 0], { align: 'center' });
+
+      texto(recortar(nombreCompleto, colNombreWidth - 10.1 - 3, tamCuerpo, 'normal'), xNombreTexto, base, tamCuerpo, 'normal', [0, 0, 0]);
+
+      var x = xActs;
       for (var j = 0; j < actividades.length; j++) {
-        var valor = filaDatos[actividades[j].indice];
-        var calif = formatearCalificacion(valor);
-        doc.rect(x, y, colCalifWidth, rowHeight, 'S');
-        if (calif && calif !== '-') {
-          doc.text(calif, x + colCalifWidth / 2, y + rowHeight / 2 + 1, { align: 'center' });
-        }
+        var calif = formatearCalificacion(filaDatos[actividades[j].indice]);
+        if (calif && calif !== '-') texto(calif, x + colCalifWidth / 2, base, tamCuerpo, 'normal', [0, 0, 0], { align: 'center' });
         x += colCalifWidth;
       }
-
       if (tieneCalificacionFinal) {
-        var valorFinal = filaDatos[calificacionFinal.indice];
-        var califFinal = formatearCalificacion(valorFinal);
-        doc.rect(x, y, colFinalWidth, rowHeight, 'S');
-        doc.setFont('helvetica', 'bold');
-        if (califFinal && califFinal !== '-') {
-          doc.text(califFinal, x + colFinalWidth / 2, y + rowHeight / 2 + 1, { align: 'center' });
-        }
-        doc.setFont('helvetica', 'normal');
+        var califFinal = formatearCalificacion(filaDatos[calificacionFinal.indice]);
+        if (califFinal && califFinal !== '-') texto(califFinal, xFinal + colFinalWidth / 2, base, tamCuerpo, 'bold', PDF_AZUL, { align: 'center' });
       }
 
       y += rowHeight;
       numEstudiante++;
     }
 
+    // Firma: línea dorada centrada, "Firma", nombre del docente y logo. La plantilla deja 69.4 pt entre la última fila y la línea
+    // (ahí va la firma, impresa o a mano). Si el bloque no cabe en la hoja de la tabla pasa a una hoja nueva que repite el
+    // encabezado (título, actividad, módulo, docente y fecha), para que la firma nunca quede sin saber a qué acta pertenece.
     var tieneFirma = estado.firmaDataUrl && estado.firmaWidth > 0 && estado.firmaHeight > 0;
     var firmaH = 0, firmaW = 0;
     if (tieneFirma) {
-      var firmaMaxH = 22;
-      var firmaMaxW = 60;
+      var firmaMaxH = 62;
+      var firmaMaxW = 170;
       var aspect = estado.firmaWidth / estado.firmaHeight;
       firmaH = firmaMaxH;
       firmaW = firmaH * aspect;
@@ -1921,44 +2024,32 @@
         firmaH = firmaW / aspect;
       }
     }
-    // Espacio total necesario: 18mm (separación) + firma (si hay) + 22mm (línea + textos)
-    var bloqueFirmaAlto = 18 + firmaH + 22;
-    if (y + bloqueFirmaAlto > bottomLimit) { doc.addPage(); y = margin + 10; }
-    else { y += 18; }
-
+    var HUECO = 69.4;
+    var nombreFirma = renglones(config.docente, 340, 10, 'normal');   // hasta 2 renglones, centrados bajo la línea
+    var extra = 12 * Math.max(0, nombreFirma.length - 1);
+    var bajoLinea = (estado.logoDataUrl ? 50.44 + 108.8 / LOGO_RELACION : 36) + extra;
+    var lineaY = y + HUECO;
+    if (lineaY + bajoLinea > LIMITE_FIRMA) {
+      doc.addPage();
+      pie();
+      lineaY = encabezadoActa() + 30 + HUECO;
+    }
     if (tieneFirma) {
-      // Reservamos espacio extra para la imagen ANTES de la línea,
-      // de modo que la imagen no retroceda dentro de la tabla.
-      var firmaX = (pageWidth - firmaW) / 2;
-      var firmaY = y; // parte superior de la imagen
       try {
-        doc.addImage(estado.firmaDataUrl, estado.firmaFormato, firmaX, firmaY, firmaW, firmaH, undefined, 'FAST');
+        doc.addImage(estado.firmaDataUrl, estado.firmaFormato, CENTRO - firmaW / 2, lineaY - 3 - firmaH, firmaW, firmaH, undefined, 'FAST');
       } catch (e) {
         if (window.console) console.warn('No se pudo incrustar la firma en el PDF:', e);
       }
-      // Avanzar y hasta dejar la línea justo debajo de la imagen
-      y += firmaH + 2;
     }
-
-    var lineaWidth = contentWidth * 0.6;
-    var lineaX = margin + (contentWidth - lineaWidth) / 2;
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.4);
-    doc.line(lineaX, y, lineaX + lineaWidth, y);
-
-    y += 5;
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('FIRMA', pageWidth / 2, y, { align: 'center' });
-
-    y += 5;
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 80);
-    doc.text(String(config.docente || ''), pageWidth / 2, y, { align: 'center' });
+    doc.setDrawColor(PDF_DORADO[0], PDF_DORADO[1], PDF_DORADO[2]);
+    doc.setLineWidth(0.651);
+    doc.line(CENTRO - 115.625, lineaY, CENTRO + 115.625, lineaY);
+    texto('Firma', CENTRO, lineaY + 16.2, 10, 'bold', PDF_AZUL, { align: 'center' });
+    for (var nf = 0; nf < nombreFirma.length; nf++) texto(nombreFirma[nf], CENTRO, lineaY + 31.24 + 12 * nf, 10, 'normal', PDF_AZUL, { align: 'center' });
+    logoEn(CENTRO - 54.4, lineaY + 50.44 + extra, 108.8);
 
     var nombreLimpio = (config.docente || 'calificaciones')
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/[^a-zA-Z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '')
       .substring(0, 40);
@@ -2074,7 +2165,8 @@
     var r = { pdf: false, logo: false, catalogo: false, estudiantes: contarEstudiantes(window.ACTA_DATOS) };
     preparacionDirecta = esperar(function () { return window.jspdf && window.jspdf.jsPDF; }, 10000)
       .then(function (ok) { r.pdf = ok; return esperar(function () { return estado.logoDataUrl || estado.logoError; }, 6000); })
-      .then(function (ok) { r.logo = !!estado.logoDataUrl; return esperar(function () { return estado.catalogoCargado || estado.catalogoError; }, 6000); })
+      .then(function (ok) { r.logo = !!estado.logoDataUrl; return esperar(function () { return estado.fuentes || estado.fuentesError || !window.ACTA_FUENTES; }, 6000); })
+      .then(function () { return esperar(function () { return estado.catalogoCargado || estado.catalogoError; }, 6000); })
       .then(function () { r.catalogo = !!estado.catalogoCargado; return r; });
     return preparacionDirecta;
   }
@@ -2140,6 +2232,7 @@
     return prepararDirecto().then(function () {
       // Si el logo o el catálogo seguían en camino cuando venció la espera inicial, se les da unos segundos más.
       return esperar(function () { return estado.logoDataUrl || estado.logoError; }, 3000)
+        .then(function () { return esperar(function () { return estado.fuentes || estado.fuentesError || !window.ACTA_FUENTES; }, 3000); })
         .then(function () { return esperar(function () { return estado.catalogoCargado || estado.catalogoError; }, 3000); });
     }).then(function () {
       var listo = { pdf: !!(window.jspdf && window.jspdf.jsPDF) };

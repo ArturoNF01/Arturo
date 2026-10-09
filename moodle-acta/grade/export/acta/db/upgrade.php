@@ -9,5 +9,9 @@ function xmldb_gradeexport_acta_upgrade($oldversion) {
         gradeexport_acta_otorgar_permiso();
         upgrade_plugin_savepoint(true, 2026100506, 'gradeexport', 'acta');
     }
+    if ($oldversion < 2026100507) {
+        // 0.4.1: el acta usa la plantilla institucional (tipografía Work Sans en fonts/); no hay cambios en la base de datos.
+        upgrade_plugin_savepoint(true, 2026100507, 'gradeexport', 'acta');
+    }
     return true;
 }
