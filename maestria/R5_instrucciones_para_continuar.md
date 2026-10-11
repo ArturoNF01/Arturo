@@ -1,7 +1,7 @@
 # Reto 5 — Propiedad intelectual: avance e instrucciones para continuar en otra IA
 
 Fecha límite: hoy. Este archivo resume todo lo necesario para terminar el reto aunque se corte la sesión.
-El borrador del Word (`Navarrete_Arturo_R5_U3.docx`) se sube a esta misma carpeta en cuanto esté listo; si no aparece, usa este archivo para pedirle a otra IA que lo redacte.
+**ACTUALIZACIÓN:** el borrador completo del Word ya está en esta carpeta (`Navarrete_Arturo_R5_U3.docx`, 18 páginas, con Uceda Carrillo integrado). Solo falta que lo revises con la lista de verificación de la sección 6; este archivo queda como respaldo.
 
 ## 1. Datos fijos
 - Universidad: Universidad Virtual del Estado de Guanajuato (UVEG). Maestría en Inteligencia Artificial.
