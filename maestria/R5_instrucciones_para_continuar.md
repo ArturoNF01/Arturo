@@ -1,7 +1,7 @@
 # Reto 5 — Propiedad intelectual: avance e instrucciones para continuar en otra IA
 
 Fecha límite: hoy. Este archivo resume todo lo necesario para terminar el reto aunque se corte la sesión.
-**ACTUALIZACIÓN:** el borrador completo del Word ya está en esta carpeta (`Navarrete_Arturo_R5_U3.docx`, 18 páginas, con Uceda Carrillo integrado). Solo falta que lo revises con la lista de verificación de la sección 6; este archivo queda como respaldo.
+**ACTUALIZACIÓN:** el borrador completo del Word ya está en esta carpeta (`Navarrete_Arturo_R5_U3.docx`, versión 2, 20 páginas, con Uceda Carrillo y Bernal Guzmán integrados). Solo falta que lo revises con la lista de verificación de la sección 6; este archivo queda como respaldo.
 
 ## 1. Datos fijos
 - Universidad: Universidad Virtual del Estado de Guanajuato (UVEG). Maestría en Inteligencia Artificial.
@@ -95,6 +95,11 @@ Ideas clave para integrar en el plan (cita en cada una):
 - Los intangibles pesan mucho (≈ 90 % del valor de las empresas del S&P 500); las marcas sobreviven a las empresas (casos Victorio & Lucchino, Toys "R" Us, Fagor, Coca-Cola).
 - Proteger según valor y recursos; vigilar (boletines al menos mensual) y renovar a tiempo; ante una infracción: carta o burofax, luego juzgado o mediación.
 - No registrar es mala opción: los derechos de marca nacen con el registro; confiar en la marca notoria no registrada es un atajo temerario. Que te copien es señal de éxito, pero hay que defender.
+
+## 5c. ACTUALIZACIÓN (versión 2 del Word) — material nuevo de la asesora
+- Lectura adicional: Bernal Guzmán, J. M. (2025). La protección de las bases de datos a la luz de la propiedad intelectual en el marco de la Cuarta Revolución Industrial. *Revista e-Mercatoria*, *24*(1), 3–35. https://doi.org/10.18601/16923960.v24n1.01 (la autora es Juliana María Bernal Guzmán; el título de la base de datos "Herramientas para…" no coincide con el del artículo). Ideas usadas: el derecho de autor protege la selección y disposición de una base de datos, no los datos; Berna art. 2.5, ADPIC art. 10.2 y WCT art. 5; derecho sui generis de la Directiva 96/9/CE (15 años); los modelos de datos no tienen protección propia (secreto industrial como alternativa); IA y bases de datos sin licencia.
+- Diapositivas de la asesora: citar LFDA (2026), LFPPI (2026), INDAUTOR (2025) e IMPI (2025); incluir Berna, OMPI, RGPD (UE) y ADPIC; cubrir los 7 tipos (derechos de autor, patentes, modelos de utilidad, marcas, diseños industriales, secretos industriales, indicaciones geográficas); mencionar DRM y DLP; párrafos de máximo 10 a 12 renglones; ejemplos de la experiencia laboral; cada referencia debe tener al menos una cita; contexto de la organización desde la introducción.
+- Lista de verificación de la asesora: contexto y activos concretos; justificar la aplicabilidad de cada norma y figura; riesgos con probabilidad e impacto explícitos; controles, responsables, plazos, indicadores y riesgo residual; cada afirmación con cita y referencia APA. La versión 2 del Word ya lo cumple.
 
 ## 6. Qué falta para terminar (checklist)
 1. Redactar el plan con la estructura de la sección 4 (idealmente con la plantilla de R4: portada Arial 16 azul negrita 1.15 + declaratoria firmada en la página 2).
