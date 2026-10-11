@@ -79,12 +79,30 @@ ADICIONALES (fuera de la Lección; usa al menos 3 y verifica cada URL antes de e
 - Creative Commons. (s.f.). Atribución-NoComercial-SinDerivadas 4.0 Internacional (CC BY-NC-ND 4.0). https://creativecommons.org/licenses/by-nc-nd/4.0/deed.es
 - Fuentes del propio CIESS, si quieres citarlas (todas con autor Centro Interamericano de Estudios de Seguridad Social y s.f.-a, -b, -c por orden de título): https://congreso-dss.ciess.org/, https://home.ciess.org/ y https://home.ciess.org/riuss/.
 
+## 5b. LECTURA OBLIGATORIA (integrar sí o sí): Uceda Carrillo (2025), cap. 1
+Referencia: Uceda Carrillo, P. P. (2025). *Manual práctico de propiedad industrial: cómo proteger la innovación sin perder la paciencia*. FC Editorial. https://elibro.net/es/ereader/bibliotecauveg/294209?page=18 (capítulo 1, "¿Por qué proteger la innovación?"). Citar como (Uceda Carrillo, 2025).
+Ideas clave para integrar en el plan (cita en cada una):
+- Propiedad industrial = derecho exclusivo sobre una invención, un signo distintivo o un diseño industrial. Tres pilares: marcas y nombres comerciales; diseños industriales; patentes y modelos de utilidad. Indicaciones geográficas y denominaciones de origen protegen a colectivos.
+- "Patentar" no es "registrar": las marcas se registran, no se patentan. No existe "patente mundial": el PCT lleva a patentes nacionales o regionales.
+- Una patente no garantiza libertad para comercializar ni impide la copia: solo da herramientas para defenderse.
+- Derechos de autor: requieren originalidad y fijación en un medio tangible; nacen sin registro (el registro es recomendable como prueba). Plataformas privadas (p. ej. Safe Creative) solo prueban el momento, no la autoría. En propiedad industrial el registro es imprescindible.
+- Territorialidad: Berna (>180 Estados) da alcance internacional a los derechos de autor; la propiedad industrial es territorial (una marca registrada en España no protege en Francia ni en México). Duración: UE vida + 70 años; EE. UU. 95 años desde publicación en obras antiguas o anónimas. Marca "Mickey Mouse" sigue protegida aunque Steamboat Willie entró a dominio público en 2024 (la marca se renueva cada 10 años).
+- Las ideas no se protegen, solo su expresión.
+- Un mismo producto puede tener varias protecciones (Trivial Pursuit: marca + diseño industrial + base de datos + texto).
+- El autor siempre es una persona física: si una empresa contrata a un diseñador o programador, la titularidad es del creador salvo cesión expresa de los derechos de explotación en el contrato.
+- Aviso de copyright: ©, año y "Todos los derechos reservados".
+- "Intellectual property" en inglés incluye propiedad industrial + derechos de autor (error de traducción frecuente).
+- Los intangibles pesan mucho (≈ 90 % del valor de las empresas del S&P 500); las marcas sobreviven a las empresas (casos Victorio & Lucchino, Toys "R" Us, Fagor, Coca-Cola).
+- Proteger según valor y recursos; vigilar (boletines al menos mensual) y renovar a tiempo; ante una infracción: carta o burofax, luego juzgado o mediación.
+- No registrar es mala opción: los derechos de marca nacen con el registro; confiar en la marca notoria no registrada es un atajo temerario. Que te copien es señal de éxito, pero hay que defender.
+
 ## 6. Qué falta para terminar (checklist)
 1. Redactar el plan con la estructura de la sección 4 (idealmente con la plantilla de R4: portada Arial 16 azul negrita 1.15 + declaratoria firmada en la página 2).
 2. Verificar cada dato jurídico y cada URL de la sección 5 (artículos de la LFDA, número de partes de Berna, URL de ADPIC y de secretos comerciales).
 3. Tabla de países/organizaciones (Berna, OMC, Madrid) con datos verificados.
 4. Revisar ortografía y sintaxis (cero errores) y que cada cita tenga su referencia y viceversa.
-5. Guardar como `Navarrete_Arturo_R5_U3.docx` y entregar.
+5. Verificar que Uceda Carrillo (2025) esté citado en el texto y en las referencias.
+6. Guardar como `Navarrete_Arturo_R5_U3.docx` y entregar.
 
 ## 7. Prompt sugerido para otra IA
 "Con el archivo adjunto (R5_instrucciones_para_continuar.md), redacta el plan de gestión de riesgos informáticos del Reto 5 en español, primera persona, tono claro y no experto pero técnico, 12 a 14 páginas, con la estructura de la sección 4, dos tablas de riesgos (proteger lo propio y no usar lo ajeno), tabla de tipos de PI con superposiciones, tabla de países y organizaciones verificada, tabla de relación con mi trabajo, y referencias APA 7 de la guía UVEG con al menos 3 fuentes adicionales a la Lección 10. No inventes datos jurídicos: marca como 'verificar' lo que no puedas comprobar."
