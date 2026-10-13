@@ -18,6 +18,17 @@ import { cargarEntorno } from './entorno';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+/**
+ * Cuántos registros van en cada escritura a la hoja.
+ *
+ * Google acepta miles de filas en una sola llamada y corta a las sesenta
+ * llamadas por minuto, así que lo caro es el número de llamadas, no el
+ * tamaño. Se agrupan de doscientos en doscientos para que un fallo —si lo
+ * hay— no se lleve por delante toda la cola, y para poder decir por dónde
+ * iba.
+ */
+const POR_TANDA = 200;
+
 cargarEntorno(resolve(RAIZ, '.env'));
 
 function faltante(configurado: boolean): string | null {
@@ -33,7 +44,7 @@ async function principal() {
   // Se importan aquí, ya cargado el entorno: el módulo de la base abre la
   // conexión con lo que encuentre en el momento de cargarse.
   const { consultar } = await import('../src/lib/bd/conexion');
-  const { revisarLibro, sincronizarRegistro, vaciarHojas } = await import('../src/lib/servidor/sheets');
+  const { revisarLibro, sincronizarRegistros, vaciarHojas } = await import('../src/lib/servidor/sheets');
   const { googleConfigurado } = await import('../src/lib/servidor/google');
 
   const problema = faltante(googleConfigurado());
@@ -89,34 +100,41 @@ async function principal() {
   let copiados = 0;
   const fallidos: { folio: string; motivo: string }[] = [];
 
-  for (const registro of pendientes) {
+  for (let desde = 0; desde < pendientes.length; desde += POR_TANDA) {
+    const tanda = pendientes.slice(desde, desde + POR_TANDA);
     try {
-      await sincronizarRegistro(registro);
+      await sincronizarRegistros(tanda);
       await consultar(
-        `update registros set sheets_sincronizado_en = now(), sheets_error = null where id = $1`,
-        [registro.id],
+        `update registros
+            set sheets_sincronizado_en = now(), sheets_error = null
+          where id = any($1::uuid[])`,
+        [tanda.map((r) => r.id)],
       );
-      copiados += 1;
-      if (copiados % 25 === 0 || copiados === pendientes.length) {
-        decir(`Copiados ${copiados} de ${pendientes.length}…`);
-      }
+      copiados += tanda.length;
+      if (copiados < pendientes.length) decir(`Copiados ${copiados} de ${pendientes.length}…`);
     } catch (fallo) {
       const motivo = fallo instanceof Error ? fallo.message : String(fallo);
-      await consultar('update registros set sheets_error = $2 where id = $1', [
-        registro.id,
+      await consultar('update registros set sheets_error = $2 where id = any($1::uuid[])', [
+        tanda.map((r) => r.id),
         motivo,
       ]);
-      fallidos.push({ folio: registro.folio, motivo });
-      // Si el primero ya falla, el resto fallará igual: no tiene sentido
-      // insistir 100 veces contra la misma puerta cerrada.
-      if (fallidos.length >= 3 && copiados === 0) break;
+      for (const r of tanda) fallidos.push({ folio: r.folio, motivo });
+      // Si la primera tanda ya falla, el resto fallará igual: el motivo es el
+      // mismo para todas —la hoja, el permiso, la conexión—, y no tiene
+      // sentido insistir contra la misma puerta cerrada.
+      if (copiados === 0) break;
     }
   }
 
   decir(`Copiados ${copiados} registros a la hoja.`);
   if (fallidos.length > 0) {
+    const motivos = [...new Set(fallidos.map((f) => f.motivo))];
     console.error(`\nNo se pudieron copiar ${fallidos.length}:`);
-    for (const f of fallidos.slice(0, 5)) console.error(`  ${f.folio}: ${f.motivo}`);
+    for (const motivo of motivos) {
+      const folios = fallidos.filter((f) => f.motivo === motivo).map((f) => f.folio);
+      console.error(`  ${motivo}`);
+      console.error(`    ${folios.slice(0, 5).join(', ')}${folios.length > 5 ? ` … y ${folios.length - 5} más` : ''}`);
+    }
     process.exit(1);
   }
 }

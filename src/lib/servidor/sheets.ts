@@ -5,20 +5,89 @@ import { leerDatosCongreso, leerEjes } from './contenido';
 import { traducir } from '@/lib/contenido';
 
 type Registro = Record<string, unknown>;
+type Eje = { clave: string; nombre: unknown };
 
 /**
  * El libro de seguimiento se lleva en español y con nombres legibles: aquí se
  * resuelve la clave del eje temático y se fija el límite de semblanza vigente.
+ *
+ * Recibe los ejes y los datos del congreso ya leídos porque esto se llama una
+ * vez por registro: con cuarenta pendientes eran ochenta consultas a la base
+ * para traer ochenta veces la misma tabla de ejes.
  */
-async function prepararParaHoja(registro: Registro): Promise<Registro> {
-  const [{ filas: ejes }, congreso] = await Promise.all([leerEjes(), leerDatosCongreso()]);
+function prepararParaHoja(registro: Registro, ejes: Eje[], limiteSemblanza: unknown): Registro {
   const eje = ejes.find((e) => e.clave === registro.eje_tematico);
 
   return {
     ...registro,
-    eje_tematico: eje ? traducir(eje.nombre, 'es') : registro.eje_tematico,
-    limite_semblanza_palabras: congreso.limite_semblanza_palabras,
+    eje_tematico: eje ? traducir(eje.nombre as never, 'es') : registro.eje_tematico,
+    limite_semblanza_palabras: limiteSemblanza,
   };
+}
+
+/**
+ * Google corta a las sesenta escrituras por minuto y por cuenta, y no avisa
+ * antes: devuelve «Quota exceeded for quota metric 'Write requests'» y tira la
+ * llamada. Es un límite por ventana de un minuto, así que no es un fallo del
+ * que haya que salir corriendo —es uno que se cura esperando.
+ *
+ * Las esperas suman más de un minuto a propósito: si se agotó la cuota en el
+ * segundo 1 de la ventana, hay que llegar al segundo 61 para que se renueve.
+ */
+const ESPERAS_MS = [2_000, 8_000, 20_000, 45_000];
+
+/** ¿Es de los fallos que se curan esperando? */
+export function esCupoAgotado(fallo: unknown): boolean {
+  const e = fallo as { code?: number | string; status?: number; message?: string };
+  const codigo = Number(e?.code ?? e?.status ?? 0);
+  if (codigo === 429 || codigo === 503) return true;
+  return /quota exceeded|rate limit|resource[_ ]?exhausted|try again later/i.test(
+    String(e?.message ?? ''),
+  );
+}
+
+/** Repite la llamada mientras Google diga que vamos demasiado rápido. */
+async function conEspera<T>(operacion: () => Promise<T>): Promise<T> {
+  for (let intento = 0; ; intento += 1) {
+    try {
+      return await operacion();
+    } catch (fallo) {
+      if (intento >= ESPERAS_MS.length || !esCupoAgotado(fallo)) throw fallo;
+      await new Promise((seguir) => setTimeout(seguir, ESPERAS_MS[intento]));
+    }
+  }
+}
+
+/** La primera fila de cada pestaña pedida, tal como está hoy en la hoja. */
+async function leerPrimeraFila(idLibro: string, nombres: string[]): Promise<Map<string, string[]>> {
+  const sheets = clienteSheets();
+  const leidos = await conEspera(() =>
+    sheets.spreadsheets.values.batchGet({
+      spreadsheetId: idLibro,
+      ranges: nombres.map((n) => `${n}!1:1`),
+    }),
+  );
+  return new Map(
+    nombres.map((nombre, i) => [
+      nombre,
+      (leidos.data.valueRanges?.[i]?.values?.[0] ?? []) as string[],
+    ]),
+  );
+}
+
+/** Escribe los encabezados de ahora en la primera fila de cada pestaña. */
+async function escribirEncabezados(idLibro: string, nombres: string[]): Promise<void> {
+  if (nombres.length === 0) return;
+  const sheets = clienteSheets();
+  await conEspera(() =>
+    sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: idLibro,
+      requestBody: {
+        valueInputOption: 'RAW',
+        data: nombres.map((nombre) => ({ range: `${nombre}!A1`, values: [HOJAS[nombre]] })),
+      },
+    }),
+  );
 }
 
 /**
@@ -31,21 +100,29 @@ async function prepararParaHoja(registro: Registro): Promise<Registro> {
  *
  * Así que no se sigue adelante: se para con un aviso que dice qué hacer. Una
  * fila que no llega se recupera; cien filas descolocadas, no.
+ *
+ * Una pestaña con la primera fila en blanco no es una pestaña «sin estrenar»
+ * que se pueda dejar pasar: cuando Google añade una fila, busca la tabla que
+ * empieza en A1, y si no encuentra ninguna escribe en A1 mismo. El primer
+ * registro ocupa entonces la fila de los encabezados y el segundo lo empuja
+ * hacia abajo —de ahí los encabezados apareciendo al final de la hoja, debajo
+ * de los datos—. Se le escriben los encabezados antes de tocar nada.
  */
-async function comprobarEncabezados(idLibro: string) {
-  const sheets = clienteSheets();
-  const nombres = Object.keys(HOJAS);
-  const leidos = await sheets.spreadsheets.values.batchGet({
-    spreadsheetId: idLibro,
-    ranges: nombres.map((n) => `${n}!1:1`),
-  });
+async function comprobarEncabezados(
+  idLibro: string,
+  nombres: string[] = Object.keys(HOJAS),
+  reparar = true,
+) {
+  const primeras = await leerPrimeraFila(idLibro, nombres);
 
   const desfasadas: string[] = [];
-  for (const [i, nombre] of nombres.entries()) {
-    const fila = (leidos.data.valueRanges?.[i]?.values?.[0] ?? []) as string[];
-    // Una pestaña recién creada no tiene encabezados todavía; los escribe
-    // `asegurarHojas`. Sólo se compara lo que ya tiene algo.
-    if (fila.length === 0) continue;
+  const vacias: string[] = [];
+  for (const nombre of nombres) {
+    const fila = primeras.get(nombre) ?? [];
+    if (fila.length === 0) {
+      vacias.push(nombre);
+      continue;
+    }
     const esperados = HOJAS[nombre];
     if (fila.length !== esperados.length || esperados.some((e, j) => fila[j] !== e)) {
       desfasadas.push(nombre);
@@ -58,6 +135,15 @@ async function comprobarEncabezados(idLibro: string) {
         'Reescríbala con: npm run sincronizar -- --rehacer',
     );
   }
+
+  if (vacias.length === 0) return;
+  if (!reparar) {
+    throw new Error(
+      `La primera fila de ${vacias.join(', ')} se quedó sin encabezados. ` +
+        'Reescriba la hoja con: npm run sincronizar -- --rehacer',
+    );
+  }
+  await escribirEncabezados(idLibro, vacias);
 }
 
 /**
@@ -97,35 +183,23 @@ async function asegurarHojas(idLibro: string) {
   }
 
   const sheets = clienteSheets();
-  const libro = await sheets.spreadsheets.get({ spreadsheetId: idLibro });
+  const libro = await conEspera(() => sheets.spreadsheets.get({ spreadsheetId: idLibro }));
   const existentes = new Set(
     (libro.data.sheets ?? []).map((h) => h.properties?.title).filter(Boolean) as string[],
   );
 
   const faltantes = Object.keys(HOJAS).filter((nombre) => !existentes.has(nombre));
-  if (faltantes.length === 0) {
-    await comprobarEncabezados(idLibro);
-    libroRevisado = { id: idLibro, cuando: Date.now() };
-    return;
+  if (faltantes.length > 0) {
+    await conEspera(() =>
+      sheets.spreadsheets.batchUpdate({
+        spreadsheetId: idLibro,
+        requestBody: {
+          requests: faltantes.map((title) => ({ addSheet: { properties: { title } } })),
+        },
+      }),
+    );
+    await escribirEncabezados(idLibro, faltantes);
   }
-
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: idLibro,
-    requestBody: {
-      requests: faltantes.map((title) => ({ addSheet: { properties: { title } } })),
-    },
-  });
-
-  await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId: idLibro,
-    requestBody: {
-      valueInputOption: 'RAW',
-      data: faltantes.map((nombre) => ({
-        range: `${nombre}!A1`,
-        values: [HOJAS[nombre]],
-      })),
-    },
-  });
 
   await comprobarEncabezados(idLibro);
   libroRevisado = { id: idLibro, cuando: Date.now() };
@@ -176,34 +250,76 @@ export async function revisarLibro(): Promise<void> {
   await asegurarHojas(idLibro);
 }
 
-/** Añade un registro a todas las pestañas que le corresponden. */
-export async function sincronizarRegistro(registro: Registro): Promise<void> {
+/**
+ * Añade varios registros a la hoja: una sola escritura por pestaña.
+ *
+ * Antes se escribía registro por registro, y cada registro son dos o tres
+ * escrituras —una por pestaña—. Copiar cuarenta y dos pendientes eran más de
+ * noventa llamadas seguidas contra un límite de sesenta por minuto: pasaban
+ * veintitrés y el resto moría con «Quota exceeded», que es exactamente lo que
+ * ocurrió al rehacer la hoja. Agrupadas, esos mismos cuarenta y dos registros
+ * son tres llamadas, y cinco mil también.
+ */
+export async function sincronizarRegistros(registros: Registro[]): Promise<void> {
   const idLibro = process.env.GOOGLE_SHEETS_ID;
   if (!googleConfigurado() || !idLibro) {
     throw new Error('Google Sheets no está configurado.');
   }
+  if (registros.length === 0) return;
 
   await asegurarHojas(idLibro);
   const sheets = clienteSheets();
-  const filas = filasDeRegistro(await prepararParaHoja(registro));
 
-  for (const [hoja, valores] of Object.entries(filas)) {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: idLibro,
-      range: `${hoja}!A1`,
-      valueInputOption: 'USER_ENTERED',
-      insertDataOption: 'INSERT_ROWS',
-      requestBody: { values: valores.map((fila) => fila.map(blindar)) },
-    });
+  const [{ filas: ejes }, congreso] = await Promise.all([leerEjes(), leerDatosCongreso()]);
+  const porPestana = new Map<string, (string | number)[][]>();
+  for (const registro of registros) {
+    const preparado = prepararParaHoja(registro, ejes as Eje[], congreso.limite_semblanza_palabras);
+    for (const [hoja, valores] of Object.entries(filasDeRegistro(preparado))) {
+      const juntas = porPestana.get(hoja) ?? [];
+      juntas.push(...valores.map((fila) => fila.map(blindar)));
+      porPestana.set(hoja, juntas);
+    }
+  }
+
+  for (const [hoja, valores] of porPestana) {
+    await conEspera(() =>
+      sheets.spreadsheets.values.append({
+        spreadsheetId: idLibro,
+        range: `${hoja}!A1`,
+        valueInputOption: 'USER_ENTERED',
+        insertDataOption: 'INSERT_ROWS',
+        requestBody: { values: valores },
+      }),
+    );
+  }
+
+  // Tras una escritura grande, mirar que los encabezados sigan en la fila 1.
+  // Si una pestaña se quedó sin ellos, Google empieza a escribir en A1 y los
+  // datos van empujando la fila de títulos hacia abajo. Aquí ya está escrito
+  // —no se deshace—, pero se dice en voz alta en vez de descubrirlo meses
+  // después. En el alta de una persona no se gasta esta lectura: ahí la
+  // comprobación previa es la que manda.
+  if (registros.length > 1) {
+    await comprobarEncabezados(idLibro, [...porPestana.keys()], false);
   }
 }
 
+/** Añade un registro a todas las pestañas que le corresponden. */
+export async function sincronizarRegistro(registro: Registro): Promise<void> {
+  await sincronizarRegistros([registro]);
+}
+
 /**
- * Borra el contenido de todas las pestañas, dejando los encabezados.
+ * Deja cada pestaña con una sola fila: la de los encabezados de ahora.
  *
  * Hace falta cuando lo que cambia es *cómo* se escribe una celda —y no el
  * registro— y hay que volver a volcarlo todo: reenviar sin más añadiría
  * cien filas repetidas debajo de las cien que ya están.
+ *
+ * Borra las filas, no sólo su contenido. Vaciar las celdas dejaba atrás
+ * cientos de filas en blanco y, sobre todo, dejaba a Google decidiendo dónde
+ * empieza la tabla; borrándolas no queda nada que interpretar: la fila 1 son
+ * los encabezados y la 2 es la primera que se escriba.
  */
 export async function vaciarHojas(): Promise<void> {
   const idLibro = process.env.GOOGLE_SHEETS_ID;
@@ -211,22 +327,36 @@ export async function vaciarHojas(): Promise<void> {
 
   const sheets = clienteSheets();
   // Sin `asegurarHojas`: eso comprueba los encabezados y aquí venimos
-  // justamente a arreglarlos. Se vacía todo, encabezados incluidos, y se
-  // vuelven a escribir los de ahora.
-  await sheets.spreadsheets.values.batchClear({
-    spreadsheetId: idLibro,
-    requestBody: { ranges: Object.keys(HOJAS).map((hoja) => `${hoja}!A:ZZ`) },
+  // justamente a arreglarlos.
+  const libro = await conEspera(() => sheets.spreadsheets.get({ spreadsheetId: idLibro }));
+  const propiedades = new Map(
+    (libro.data.sheets ?? []).map((h) => [h.properties?.title ?? '', h.properties]),
+  );
+  const presentes = Object.keys(HOJAS).filter((nombre) => propiedades.has(nombre));
+
+  const borrados = presentes.flatMap((nombre) => {
+    const props = propiedades.get(nombre);
+    const filas = props?.gridProperties?.rowCount ?? 0;
+    if (filas <= 1) return [];
+    return [
+      {
+        deleteDimension: {
+          range: { sheetId: props?.sheetId, dimension: 'ROWS', startIndex: 1, endIndex: filas },
+        },
+      },
+    ];
   });
-  await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId: idLibro,
-    requestBody: {
-      valueInputOption: 'RAW',
-      data: Object.entries(HOJAS).map(([nombre, encabezados]) => ({
-        range: `${nombre}!A1`,
-        values: [encabezados],
-      })),
-    },
-  });
+
+  if (borrados.length > 0) {
+    await conEspera(() =>
+      sheets.spreadsheets.batchUpdate({
+        spreadsheetId: idLibro,
+        requestBody: { requests: borrados },
+      }),
+    );
+  }
+  await escribirEncabezados(idLibro, presentes);
+
   // El libro acaba de cambiar por debajo: lo que se hubiera comprobado antes
   // ya no describe lo que hay.
   olvidarRevisionDelLibro();
@@ -243,37 +373,38 @@ export async function resincronizarRegistro(registro: Registro): Promise<void> {
   await asegurarHojas(idLibro);
   const sheets = clienteSheets();
   const folio = String(registro.folio ?? '');
-  const libro = await sheets.spreadsheets.get({ spreadsheetId: idLibro });
+  const libro = await conEspera(() => sheets.spreadsheets.get({ spreadsheetId: idLibro }));
   const idsHoja = new Map(
     (libro.data.sheets ?? []).map((h) => [h.properties?.title ?? '', h.properties?.sheetId ?? 0]),
   );
 
   for (const hoja of Object.keys(HOJAS)) {
-    const columnaA = await sheets.spreadsheets.values.get({
-      spreadsheetId: idLibro,
-      range: `${hoja}!A2:A`,
-    });
+    const columnaA = await conEspera(() =>
+      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: `${hoja}!A2:A` }),
+    );
     const indices = (columnaA.data.values ?? [])
       .map((fila, i) => (fila[0] === folio ? i + 1 : -1)) // +1: la fila 1 es encabezado
       .filter((i) => i >= 0)
       .sort((a, b) => b - a);
 
     if (indices.length === 0) continue;
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: idLibro,
-      requestBody: {
-        requests: indices.map((indice) => ({
-          deleteDimension: {
-            range: {
-              sheetId: idsHoja.get(hoja),
-              dimension: 'ROWS',
-              startIndex: indice,
-              endIndex: indice + 1,
+    await conEspera(() =>
+      sheets.spreadsheets.batchUpdate({
+        spreadsheetId: idLibro,
+        requestBody: {
+          requests: indices.map((indice) => ({
+            deleteDimension: {
+              range: {
+                sheetId: idsHoja.get(hoja),
+                dimension: 'ROWS',
+                startIndex: indice,
+                endIndex: indice + 1,
+              },
             },
-          },
-        })),
-      },
-    });
+          })),
+        },
+      }),
+    );
   }
 
   await sincronizarRegistro(registro);

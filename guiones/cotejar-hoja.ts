@@ -49,21 +49,44 @@ async function principal() {
   // ---- 1. Los encabezados --------------------------------------------
   titulo('Encabezados de la hoja');
   const nombres = Object.keys(HOJAS);
+  // En la misma llamada va la primera columna entera: con ella se sabe no
+  // sólo si los títulos son los de ahora, sino *dónde* están. Una pestaña a
+  // la que se le borraron los encabezados recibe la primera fila de datos en
+  // A1 y las siguientes la van empujando hacia abajo, hasta que los títulos
+  // acaban al final de la hoja, debajo de todo.
   const primeras = await sheets.spreadsheets.values.batchGet({
     spreadsheetId: idLibro,
-    ranges: nombres.map((n) => `${n}!1:1`),
+    ranges: [...nombres.map((n) => `${n}!1:1`), ...nombres.map((n) => `${n}!A:A`)],
   });
 
   const enLaHoja: Record<string, string[]> = {};
+  const columnaA: Record<string, string[]> = {};
   for (const [i, nombre] of nombres.entries()) {
     enLaHoja[nombre] = (primeras.data.valueRanges?.[i]?.values?.[0] ?? []) as string[];
+    columnaA[nombre] = ((primeras.data.valueRanges?.[nombres.length + i]?.values ?? []) as string[][])
+      .map((f) => String(f?.[0] ?? ''));
   }
   const desfases = cotejarEncabezados(enLaHoja);
 
+  /** En qué fila está la de títulos, si no es la primera. 0 = no aparece. */
+  const filaDeTitulos = (nombre: string): number => {
+    const primera = HOJAS[nombre][0];
+    const indice = columnaA[nombre].findIndex((celda) => celda === primera);
+    return indice + 1;
+  };
+
+  const sueltos: string[] = [];
   for (const nombre of nombres) {
     const desfase = desfases.find((d) => d.pestana === nombre);
+    const fila = filaDeTitulos(nombre);
     if (!desfase) {
       const vacia = enLaHoja[nombre].length === 0;
+      if (vacia && fila > 1) {
+        console.log(`  \x1b[33m${nombre}: los títulos están en la fila ${fila}, debajo de los datos\x1b[0m`);
+        console.log('     la primera fila se quedó en blanco y Google fue escribiendo encima');
+        sueltos.push(nombre);
+        continue;
+      }
       console.log(`  ${nombre}: ${vacia ? 'vacía, se escribirá sola' : `al día (${HOJAS[nombre].length} columnas)`}`);
       continue;
     }
@@ -71,7 +94,7 @@ async function principal() {
     if (desfase.faltan.length) console.log(`     le faltan: ${desfase.faltan.join(', ')}`);
     if (desfase.sobran.length) console.log(`     le sobran: ${desfase.sobran.join(', ')}`);
   }
-  const desfasadas = desfases.length;
+  const desfasadas = desfases.length + sueltos.length;
 
   // ---- 2. Qué dice el propio sistema ----------------------------------
   titulo('Lo que el sistema anotó de cada registro');
@@ -165,7 +188,12 @@ async function principal() {
 
   // ---- 5. Qué hacer ----------------------------------------------------
   titulo('Qué hacer');
-  if (desfasadas > 0) {
+  if (sueltos.length > 0) {
+    console.log(`  Los títulos de ${sueltos.join(', ')} no están en la primera fila: quedaron`);
+    console.log('  debajo de los datos. Esa hoja no se puede leer ni arreglar a mano fila a');
+    console.log('  fila. Se reescribe entera, que es un minuto:');
+    console.log('    sudo bash /opt/congreso/guiones/servidor/poner-al-dia.sh --rehacer');
+  } else if (desfasadas > 0) {
     console.log('  La hoja tiene las columnas de una versión anterior. Mientras sigan así,');
     console.log('  el sistema se niega a escribir: una fila con las columnas corridas se lee');
     console.log('  como buena y no hay forma de notarlo meses después.');
