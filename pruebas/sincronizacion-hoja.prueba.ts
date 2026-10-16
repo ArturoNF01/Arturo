@@ -431,3 +431,47 @@ describe('rehacer la hoja la deja con una sola fila', () => {
     expect(llamadas.orden.at(-1)).toBe('encabezados');
   });
 });
+
+/**
+ * La secuencia que se ejecuta de verdad al reparar la hoja: rehacerla y, acto
+ * seguido, dar de alta a alguien. Es donde se vería un fallo que las pruebas
+ * por partes no ven —una pestaña que queda sin encabezados, o sin sitio donde
+ * escribir— y es justo el momento en que nadie está mirando la consola.
+ */
+describe('rehacer la hoja y, a continuación, un alta normal', () => {
+  beforeEach(async () => {
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'cuenta@ejemplo.iam.gserviceaccount.com';
+    process.env.GOOGLE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\\nx\\n-----END PRIVATE KEY-----\\n';
+    process.env.GOOGLE_SHEETS_ID = 'hoja-de-prueba';
+    llamadas.append = [];
+    llamadas.batchUpdate = [];
+    llamadas.orden = [];
+    fallosPendientes = [];
+    const { HOJAS } = await import('@/lib/normalizacion');
+    encabezadosDeLaHoja = (nombre) => HOJAS[nombre] ?? [];
+    const { olvidarRevisionDelLibro } = await import('@/lib/servidor/sheets');
+    olvidarRevisionDelLibro();
+  });
+
+  it('la pestaña recién vaciada conserva filas donde escribir', async () => {
+    // Borrar las filas la dejaba con una sola —la de los títulos—, y cada
+    // escritura pasaba a depender de que Google agrandase la cuadrícula por
+    // su cuenta. Se le devuelven en la misma llamada.
+    const { vaciarHojas } = await import('@/lib/servidor/sheets');
+    await vaciarHojas();
+
+    const pedidas = llamadas.batchUpdate
+      .flatMap((p) => (p as { requestBody: { requests?: { appendDimension?: { length: number } }[] } }).requestBody.requests ?? [])
+      .filter((r) => r.appendDimension);
+    expect(pedidas.length, 'una por pestaña del sistema').toBe(3);
+    for (const { appendDimension } of pedidas) expect(appendDimension!.length).toBe(1000);
+  });
+
+  it('y el primer registro que llega después entra sin tropiezos', async () => {
+    const { sincronizarRegistro, vaciarHojas } = await import('@/lib/servidor/sheets');
+    await vaciarHojas();
+    llamadas.append = [];
+    await expect(sincronizarRegistro(ponente())).resolves.toBeUndefined();
+    expect(llamadas.append.length, 'sus tres filas').toBe(3);
+  });
+});

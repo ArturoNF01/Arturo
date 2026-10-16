@@ -321,6 +321,8 @@ export async function sincronizarRegistro(registro: Registro): Promise<void> {
  * empieza la tabla; borrándolas no queda nada que interpretar: la fila 1 son
  * los encabezados y la 2 es la primera que se escriba.
  */
+const FILAS_EN_BLANCO = 1000;
+
 export async function vaciarHojas(): Promise<void> {
   const idLibro = process.env.GOOGLE_SHEETS_ID;
   if (!googleConfigurado() || !idLibro) throw new Error('Google Sheets no está configurado.');
@@ -334,24 +336,32 @@ export async function vaciarHojas(): Promise<void> {
   );
   const presentes = Object.keys(HOJAS).filter((nombre) => propiedades.has(nombre));
 
-  const borrados = presentes.flatMap((nombre) => {
+  const peticiones = presentes.flatMap((nombre) => {
     const props = propiedades.get(nombre);
+    const sheetId = props?.sheetId;
     const filas = props?.gridProperties?.rowCount ?? 0;
-    if (filas <= 1) return [];
-    return [
-      {
+    const lista: Record<string, unknown>[] = [];
+    if (filas > 1) {
+      lista.push({
         deleteDimension: {
-          range: { sheetId: props?.sheetId, dimension: 'ROWS', startIndex: 1, endIndex: filas },
+          range: { sheetId, dimension: 'ROWS', startIndex: 1, endIndex: filas },
         },
-      },
-    ];
+      });
+    }
+    // Y se le devuelven las filas en blanco. Borrándolas sin más, la pestaña
+    // queda con una sola fila —la de los títulos— y cada escritura depende
+    // de que Google agrande la cuadrícula sola. Lo hace, pero no hay por qué
+    // apoyarse en ello cuando pedirlas cuesta nada y van en la misma llamada.
+    // Además, una hoja de una sola fila parece rota a quien la abre.
+    lista.push({ appendDimension: { sheetId, dimension: 'ROWS', length: FILAS_EN_BLANCO } });
+    return lista;
   });
 
-  if (borrados.length > 0) {
+  if (peticiones.length > 0) {
     await conEspera(() =>
       sheets.spreadsheets.batchUpdate({
         spreadsheetId: idLibro,
-        requestBody: { requests: borrados },
+        requestBody: { requests: peticiones },
       }),
     );
   }
