@@ -91,6 +91,41 @@ async function escribirEncabezados(idLibro: string, nombres: string[]): Promise<
 }
 
 /**
+ * Deja la fila 1 como lo que es: una fila de títulos.
+ *
+ * Inmovilizada, para que siga a la vista al bajar por las cuatrocientas
+ * filas de registros —quien abre la hoja en noviembre no tiene por qué
+ * recordar qué columna era «Procedencia»—, y en negrita sobre gris, para
+ * distinguirla de un dato de un vistazo.
+ *
+ * Inmovilizarla no es sólo comodidad: le dice a Google, de forma explícita,
+ * dónde acaban los títulos y dónde empiezan los datos. Una fila añadida ya
+ * no depende de que adivine la forma de la tabla.
+ */
+function peticionesDeTitulos(sheetId: number | null | undefined) {
+  return [
+    {
+      updateSheetProperties: {
+        properties: { sheetId, gridProperties: { frozenRowCount: 1 } },
+        fields: 'gridProperties.frozenRowCount',
+      },
+    },
+    {
+      repeatCell: {
+        range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
+        cell: {
+          userEnteredFormat: {
+            textFormat: { bold: true },
+            backgroundColor: { red: 0.93, green: 0.94, blue: 0.95 },
+          },
+        },
+        fields: 'userEnteredFormat(textFormat,backgroundColor)',
+      },
+    },
+  ];
+}
+
+/**
  * Comprueba que la hoja tenga las columnas que este código escribe.
  *
  * Cuando el formulario cambia, cambian las columnas. Si la hoja se quedó con
@@ -190,15 +225,31 @@ async function asegurarHojas(idLibro: string) {
 
   const faltantes = Object.keys(HOJAS).filter((nombre) => !existentes.has(nombre));
   if (faltantes.length > 0) {
-    await conEspera(() =>
+    const creadas = await conEspera(() =>
       sheets.spreadsheets.batchUpdate({
         spreadsheetId: idLibro,
         requestBody: {
-          requests: faltantes.map((title) => ({ addSheet: { properties: { title } } })),
+          requests: faltantes.map((title) => ({
+            addSheet: { properties: { title, gridProperties: { frozenRowCount: 1 } } },
+          })),
         },
       }),
     );
     await escribirEncabezados(idLibro, faltantes);
+
+    // Una pestaña recién creada estrena sus títulos con el mismo aspecto que
+    // las demás, sin esperar a que alguien rehaga el libro.
+    const nuevas = (creadas.data.replies ?? [])
+      .map((r) => r.addSheet?.properties?.sheetId)
+      .filter((id) => id !== null && id !== undefined);
+    if (nuevas.length > 0) {
+      await conEspera(() =>
+        sheets.spreadsheets.batchUpdate({
+          spreadsheetId: idLibro,
+          requestBody: { requests: nuevas.flatMap((id) => peticionesDeTitulos(id)) },
+        }),
+      );
+    }
   }
 
   await comprobarEncabezados(idLibro);
@@ -371,6 +422,7 @@ export async function vaciarHojas(): Promise<void> {
         rows: [],
       },
     });
+    lista.push(...peticionesDeTitulos(sheetId));
     return lista;
   });
 

@@ -40,6 +40,9 @@ let encabezadosDeLaHoja: (nombre: string) => string[] = () => [];
  */
 let hojaConMemoria: Record<string, string[]> | null = null;
 
+/** Cuando se fija, el libro simulado sólo tiene estas pestañas. */
+let librosConPestanas: string[] | null = null;
+
 /** Las pestañas del libro simulado. El sheetId de cada una es su posición. */
 const PESTANAS = [
   'REG_Respuestas', 'PAR_Participantes', 'ALO_Alojamiento',
@@ -57,7 +60,10 @@ vi.mock('googleapis', () => ({
       spreadsheets: {
         get: async () => ({
           data: {
-            sheets: (llamadas.estructura += 1, PESTANAS).map((title, i) => ({
+            sheets: (llamadas.estructura += 1, PESTANAS)
+              .map((title, i) => ({ title, i }))
+              .filter(({ title }) => !librosConPestanas || librosConPestanas.includes(title))
+              .map(({ title, i }) => ({
               // La hoja simulada trae cincuenta filas: al rehacerla hay que
               // borrarlas, y para eso hace falta saber cuántas son.
               properties: { title, sheetId: i + 1, gridProperties: { rowCount: 50 } },
@@ -66,6 +72,11 @@ vi.mock('googleapis', () => ({
         }),
         batchUpdate: async (p: unknown) => {
           llamadas.batchUpdate.push(p);
+          const creadas = ((p as { requestBody: { requests: { addSheet?: unknown }[] } })
+            .requestBody.requests ?? []).filter((r) => r.addSheet);
+          if (creadas.length > 0) {
+            return { data: { replies: creadas.map((_, i) => ({ addSheet: { properties: { sheetId: 90 + i } } })) } };
+          }
           if (hojaConMemoria) {
             const { requests } = (p as { requestBody: { requests: { updateCells?: { range: { sheetId: number } } }[] } }).requestBody;
             for (const peticion of requests) {
@@ -160,6 +171,7 @@ describe('un registro llega a la hoja', () => {
     llamadas.batchClear = [];
     llamadas.orden = [];
     fallosPendientes = [];
+    librosConPestanas = null;
     const { HOJAS } = await import('@/lib/normalizacion');
     encabezadosDeLaHoja = (nombre) => HOJAS[nombre] ?? [];
     process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'cuenta@ejemplo.iam.gserviceaccount.com';
@@ -376,6 +388,7 @@ describe('copiar muchos registros de una vez', () => {
     llamadas.batchUpdate = [];
     llamadas.orden = [];
     fallosPendientes = [];
+    librosConPestanas = null;
     const { HOJAS } = await import('@/lib/normalizacion');
     encabezadosDeLaHoja = (nombre) => HOJAS[nombre] ?? [];
     const { olvidarRevisionDelLibro } = await import('@/lib/servidor/sheets');
@@ -453,6 +466,7 @@ describe('rehacer la hoja la deja con una sola fila', () => {
     llamadas.batchUpdate = [];
     llamadas.orden = [];
     fallosPendientes = [];
+    librosConPestanas = null;
   });
 
   it('borra las filas de debajo y deja los encabezados arriba', async () => {
@@ -488,6 +502,7 @@ describe('rehacer la hoja y, a continuación, un alta normal', () => {
     llamadas.batchUpdate = [];
     llamadas.orden = [];
     fallosPendientes = [];
+    librosConPestanas = null;
     const { HOJAS } = await import('@/lib/normalizacion');
     encabezadosDeLaHoja = (nombre) => HOJAS[nombre] ?? [];
     const { olvidarRevisionDelLibro } = await import('@/lib/servidor/sheets');
@@ -574,5 +589,66 @@ describe('una hoja con más columnas que el formulario de ahora', () => {
       sincronizarRegistros([ponente({ folio: 'REG-A' }), ponente({ folio: 'REG-B' })]),
     ).resolves.toBeUndefined();
     expect(llamadas.append).toHaveLength(3);
+  });
+});
+
+/**
+ * La fila 1 es la de los títulos, y tiene que parecerlo y comportarse como
+ * tal: inmovilizada, para que siga a la vista al bajar por los registros, y
+ * en negrita para distinguirla de un dato. Inmovilizarla, además, le dice a
+ * Google dónde acaban los títulos, en vez de dejar que lo adivine.
+ */
+describe('la fila de títulos queda fija', () => {
+  beforeEach(() => {
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'cuenta@ejemplo.iam.gserviceaccount.com';
+    process.env.GOOGLE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\\nx\\n-----END PRIVATE KEY-----\\n';
+    process.env.GOOGLE_SHEETS_ID = 'hoja-de-prueba';
+    llamadas.batchUpdate = [];
+    llamadas.orden = [];
+    fallosPendientes = [];
+    librosConPestanas = null;
+  });
+
+  it('rehacer la hoja la inmoviliza y la pone en negrita', async () => {
+    const { vaciarHojas } = await import('@/lib/servidor/sheets');
+    await vaciarHojas();
+
+    const peticiones = llamadas.batchUpdate.flatMap(
+      (p) => (p as { requestBody: { requests?: Record<string, never>[] } }).requestBody.requests ?? [],
+    );
+
+    const fijadas = peticiones
+      .map((r) => (r as { updateSheetProperties?: { properties: { gridProperties: { frozenRowCount: number } } } }).updateSheetProperties)
+      .filter(Boolean);
+    expect(fijadas.length, 'una por pestaña del sistema').toBe(3);
+    for (const f of fijadas) expect(f!.properties.gridProperties.frozenRowCount).toBe(1);
+
+    const negritas = peticiones
+      .map((r) => (r as { repeatCell?: { range: { startRowIndex: number; endRowIndex: number }; cell: { userEnteredFormat: { textFormat: { bold: boolean } } } } }).repeatCell)
+      .filter(Boolean);
+    expect(negritas.length).toBe(3);
+    for (const n of negritas) {
+      expect(n!.cell.userEnteredFormat.textFormat.bold).toBe(true);
+      expect(n!.range.startRowIndex, 'sólo la fila 1').toBe(0);
+      expect(n!.range.endRowIndex).toBe(1);
+    }
+  });
+
+  it('y una pestaña recién creada nace ya con la fila fija', async () => {
+    // Sin esto estrenaría sin inmovilizar hasta que alguien rehaga el libro.
+    const { HOJAS } = await import('@/lib/normalizacion');
+    encabezadosDeLaHoja = (nombre) => HOJAS[nombre] ?? [];
+    librosConPestanas = ['REG_Respuestas'];
+    const { olvidarRevisionDelLibro, revisarLibro } = await import('@/lib/servidor/sheets');
+    olvidarRevisionDelLibro();
+
+    await revisarLibro();
+
+    const creadas = llamadas.batchUpdate
+      .flatMap((p) => (p as { requestBody: { requests?: { addSheet?: { properties: { gridProperties?: { frozenRowCount: number } } } }[] } }).requestBody.requests ?? [])
+      .map((r) => r.addSheet)
+      .filter(Boolean);
+    expect(creadas.length, 'las dos que faltaban').toBe(2);
+    for (const c of creadas) expect(c!.properties.gridProperties?.frozenRowCount).toBe(1);
   });
 });
