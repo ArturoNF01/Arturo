@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * El camino completo de un registro hasta Google Sheets, con la API de Google
@@ -31,6 +31,25 @@ function quizaFallar() {
 /** Los encabezados que la hoja simulada dice tener. Por omisión, los buenos. */
 let encabezadosDeLaHoja: (nombre: string) => string[] = () => [];
 
+/**
+ * Una hoja con memoria: la fila 1 de cada pestaña, que las escrituras cambian
+ * como las cambiaría Google. Sin estado no se puede ver el fallo que importa
+ * aquí —escribir treinta valores sobre una fila de treinta y seis deja seis
+ * en pie—, porque un doble que sólo apunta lo que se le pide siempre dice
+ * que sí. Las pruebas que no la necesitan la dejan en null.
+ */
+let hojaConMemoria: Record<string, string[]> | null = null;
+
+/** Las pestañas del libro simulado. El sheetId de cada una es su posición. */
+const PESTANAS = [
+  'REG_Respuestas', 'PAR_Participantes', 'ALO_Alojamiento',
+  'TRA_Traslados', 'PSE_Personificadores_Semblanzas', 'ALI_Restricciones',
+];
+
+function filaUno(nombre: string): string[] {
+  return hojaConMemoria ? hojaConMemoria[nombre] ?? [] : encabezadosDeLaHoja(nombre);
+}
+
 vi.mock('googleapis', () => ({
   google: {
     auth: { JWT: class { constructor(_: unknown) {} } },
@@ -38,25 +57,47 @@ vi.mock('googleapis', () => ({
       spreadsheets: {
         get: async () => ({
           data: {
-            sheets: (llamadas.estructura += 1, [
-              'REG_Respuestas', 'PAR_Participantes', 'ALO_Alojamiento',
-              'TRA_Traslados', 'PSE_Personificadores_Semblanzas', 'ALI_Restricciones',
-            ].map((title, i) => ({
+            sheets: (llamadas.estructura += 1, PESTANAS).map((title, i) => ({
               // La hoja simulada trae cincuenta filas: al rehacerla hay que
               // borrarlas, y para eso hace falta saber cuántas son.
               properties: { title, sheetId: i + 1, gridProperties: { rowCount: 50 } },
-            }))),
+            })),
           },
         }),
-        batchUpdate: async (p: unknown) => { llamadas.batchUpdate.push(p); return { data: {} }; },
+        batchUpdate: async (p: unknown) => {
+          llamadas.batchUpdate.push(p);
+          if (hojaConMemoria) {
+            const { requests } = (p as { requestBody: { requests: { updateCells?: { range: { sheetId: number } } }[] } }).requestBody;
+            for (const peticion of requests) {
+              if (!peticion.updateCells) continue;
+              const nombre = PESTANAS[peticion.updateCells.range.sheetId - 1];
+              if (nombre) hojaConMemoria[nombre] = [];
+            }
+          }
+          return { data: {} };
+        },
         values: {
           append: async (p: unknown) => { llamadas.orden.push('append'); quizaFallar(); llamadas.append.push(p); return { data: {} }; },
-          batchUpdate: async (p: unknown) => { llamadas.orden.push('encabezados'); llamadas.batchUpdate.push(p); return { data: {} }; },
+          batchUpdate: async (p: unknown) => {
+            llamadas.orden.push('encabezados');
+            llamadas.batchUpdate.push(p);
+            if (hojaConMemoria) {
+              const { data } = (p as { requestBody: { data: { range: string; values: string[][] }[] } }).requestBody;
+              for (const { range, values } of data) {
+                const nombre = range.split('!')[0];
+                const antes = hojaConMemoria[nombre] ?? [];
+                // Sheets sustituye celda a celda: lo que caiga más allá de
+                // lo escrito se queda donde estaba.
+                hojaConMemoria[nombre] = [...values[0], ...antes.slice(values[0].length)];
+              }
+            }
+            return { data: {} };
+          },
           batchClear: async (p: unknown) => { llamadas.batchClear.push(p); return { data: {} }; },
           batchGet: async ({ ranges }: { ranges: string[] }) => ({
             data: (llamadas.encabezados += 1, {
               valueRanges: (llamadas.orden.push('leer'), ranges).map((r) => {
-                const fila = encabezadosDeLaHoja(r.split('!')[0]);
+                const fila = filaUno(r.split('!')[0]);
                 return { values: fila.length ? [fila] : [] };
               }),
             }),
@@ -473,5 +514,65 @@ describe('rehacer la hoja y, a continuación, un alta normal', () => {
     llamadas.append = [];
     await expect(sincronizarRegistro(ponente())).resolves.toBeUndefined();
     expect(llamadas.append.length, 'sus tres filas').toBe(3);
+  });
+});
+
+/**
+ * El fallo que dejó la hoja sin poder arreglarse.
+ *
+ * La hoja venía de un formulario más grande: REG_Respuestas tenía treinta y
+ * seis columnas —semblanza, fotografía, autorizaciones— y ahora son treinta.
+ * Rehacerla escribía los treinta encabezados nuevos sobre esa fila, y Sheets
+ * hace lo que se le pide: sustituye las treinta primeras celdas y deja las
+ * seis últimas donde estaban. La comprobación leía la fila entera, contaba
+ * treinta y seis, y decía «la hoja tiene las columnas anteriores;
+ * reescríbala con --rehacer» —que es justo lo que se acababa de hacer—.
+ *
+ * Cincuenta y dos registros se quedaron fuera por esto, y ninguna orden los
+ * habría metido: el remedio se acusaba a sí mismo.
+ */
+describe('una hoja con más columnas que el formulario de ahora', () => {
+  beforeEach(async () => {
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'cuenta@ejemplo.iam.gserviceaccount.com';
+    process.env.GOOGLE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\\nx\\n-----END PRIVATE KEY-----\\n';
+    process.env.GOOGLE_SHEETS_ID = 'hoja-de-prueba';
+    llamadas.append = [];
+    llamadas.batchUpdate = [];
+    llamadas.orden = [];
+    fallosPendientes = [];
+
+    const { HOJAS } = await import('@/lib/normalizacion');
+    hojaConMemoria = {
+      // La de antes: los encabezados de ahora y, detrás, los que se retiraron.
+      REG_Respuestas: [...HOJAS.REG_Respuestas, 'Semblanza', 'Fotografía', 'Autoriza publicación'],
+      PAR_Participantes: [...HOJAS.PAR_Participantes],
+      PSE_Personificadores_Semblanzas: [...HOJAS.PSE_Personificadores_Semblanzas],
+    };
+    const { olvidarRevisionDelLibro } = await import('@/lib/servidor/sheets');
+    olvidarRevisionDelLibro();
+  });
+
+  afterEach(() => {
+    hojaConMemoria = null;
+  });
+
+  it('antes de arreglarla, el sistema se niega a escribir', async () => {
+    const { sincronizarRegistro } = await import('@/lib/servidor/sheets');
+    await expect(sincronizarRegistro(ponente())).rejects.toThrow(/columnas anteriores/);
+  });
+
+  it('y rehacerla la deja escribible: ésa es la que fallaba', async () => {
+    const { sincronizarRegistros, vaciarHojas } = await import('@/lib/servidor/sheets');
+    await vaciarHojas();
+
+    const { HOJAS } = await import('@/lib/normalizacion');
+    expect(hojaConMemoria!.REG_Respuestas, 'sin rastro de las columnas retiradas')
+      .toEqual(HOJAS.REG_Respuestas);
+
+    // Y los registros entran, que es lo único que se le pedía.
+    await expect(
+      sincronizarRegistros([ponente({ folio: 'REG-A' }), ponente({ folio: 'REG-B' })]),
+    ).resolves.toBeUndefined();
+    expect(llamadas.append).toHaveLength(3);
   });
 });

@@ -354,6 +354,23 @@ export async function vaciarHojas(): Promise<void> {
     // apoyarse en ello cuando pedirlas cuesta nada y van en la misma llamada.
     // Además, una hoja de una sola fila parece rota a quien la abre.
     lista.push({ appendDimension: { sheetId, dimension: 'ROWS', length: FILAS_EN_BLANCO } });
+    // Y se borra la fila 1 entera antes de volver a escribirla.
+    //
+    // Sin esto, rehacer la hoja no la arreglaba: escribir treinta
+    // encabezados sobre una fila que tenía treinta y seis —la forma del
+    // formulario anterior, con semblanza, fotografía y autorizaciones—
+    // sustituye los treinta primeros y deja los seis últimos intactos. La
+    // comprobación lee la fila entera, cuenta treinta y seis donde espera
+    // treinta, y concluye que la hoja sigue con las columnas de antes. Y
+    // como la salida de eso es «reescríbala con --rehacer», el remedio se
+    // acusaba a sí mismo: ninguna fila volvía a entrar nunca.
+    lista.push({
+      updateCells: {
+        range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
+        fields: 'userEnteredValue',
+        rows: [],
+      },
+    });
     return lista;
   });
 
