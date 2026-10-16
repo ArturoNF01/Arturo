@@ -421,11 +421,27 @@ export async function vaciarHojas(): Promise<void> {
   );
   const presentes = Object.keys(HOJAS).filter((nombre) => propiedades.has(nombre));
 
+  // El orden de estas peticiones no es decorativo; Google aplica la tanda en
+  // el orden en que va y rechaza la tanda entera si una no vale.
   const peticiones = presentes.flatMap((nombre) => {
     const props = propiedades.get(nombre);
     const sheetId = props?.sheetId;
     const filas = props?.gridProperties?.rowCount ?? 0;
     const lista: Record<string, unknown>[] = [];
+
+    // 1. Los paneles inmovilizados, antes que nada. Una hoja con medio libro
+    //    congelado no deja desplazarse, y hay que dejarla en uno/cero antes
+    //    de tocar las filas para saber contra qué se está borrando.
+    lista.push(...peticionesDeTitulos(sheetId).filter((p) => 'updateSheetProperties' in p));
+
+    // 2. Las filas en blanco, antes de borrar y no después: Google no deja
+    //    «borrar todas las filas no inmovilizadas», y con la fila 1 congelada
+    //    quitar de la 2 a la última es justo eso. Pidiéndolas antes siempre
+    //    quedan supervivientes y el borrado es legal. Se añaden al final, así
+    //    que no mueven de sitio a las que vamos a borrar.
+    lista.push({ appendDimension: { sheetId, dimension: 'ROWS', length: FILAS_EN_BLANCO } });
+
+    // 3. Ahora sí, fuera los datos de antes.
     if (filas > 1) {
       lista.push({
         deleteDimension: {
@@ -433,22 +449,17 @@ export async function vaciarHojas(): Promise<void> {
         },
       });
     }
-    // Y se le devuelven las filas en blanco. Borrándolas sin más, la pestaña
-    // queda con una sola fila —la de los títulos— y cada escritura depende
-    // de que Google agrande la cuadrícula sola. Lo hace, pero no hay por qué
-    // apoyarse en ello cuando pedirlas cuesta nada y van en la misma llamada.
-    // Además, una hoja de una sola fila parece rota a quien la abre.
-    lista.push({ appendDimension: { sheetId, dimension: 'ROWS', length: FILAS_EN_BLANCO } });
-    // Y se borra la fila 1 entera antes de volver a escribirla.
+
+    // 4. Y la fila 1 entera, que se reescribe a continuación.
     //
-    // Sin esto, rehacer la hoja no la arreglaba: escribir treinta
-    // encabezados sobre una fila que tenía treinta y seis —la forma del
-    // formulario anterior, con semblanza, fotografía y autorizaciones—
-    // sustituye los treinta primeros y deja los seis últimos intactos. La
-    // comprobación lee la fila entera, cuenta treinta y seis donde espera
-    // treinta, y concluye que la hoja sigue con las columnas de antes. Y
-    // como la salida de eso es «reescríbala con --rehacer», el remedio se
-    // acusaba a sí mismo: ninguna fila volvía a entrar nunca.
+    //    Sin esto, rehacer la hoja no la arreglaba: escribir treinta
+    //    encabezados sobre una fila que tenía treinta y seis —la forma del
+    //    formulario anterior, con semblanza, fotografía y autorizaciones—
+    //    sustituye los treinta primeros y deja los seis últimos intactos. La
+    //    comprobación lee la fila entera, cuenta treinta y seis donde espera
+    //    treinta, y concluye que la hoja sigue con las columnas de antes. Y
+    //    como la salida de eso es «reescríbala con --rehacer», el remedio se
+    //    acusaba a sí mismo: ninguna fila volvía a entrar nunca.
     lista.push({
       updateCells: {
         range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
@@ -456,7 +467,9 @@ export async function vaciarHojas(): Promise<void> {
         rows: [],
       },
     });
-    lista.push(...peticionesDeTitulos(sheetId));
+
+    // 5. El aspecto de la fila de títulos, que no depende de lo que diga.
+    lista.push(...peticionesDeTitulos(sheetId).filter((p) => 'repeatCell' in p));
     return lista;
   });
 

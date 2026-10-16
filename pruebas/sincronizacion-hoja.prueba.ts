@@ -24,6 +24,20 @@ const llamadas: {
 /** Los folios que la hoja simulada tiene ya escritos, en orden. */
 let foliosEnLaHoja: string[] = [];
 
+/**
+ * La cuadrícula de cada pestaña: cuántas filas tiene y cuántas están
+ * inmovilizadas. Hace falta para reproducir una regla de Google que no se ve
+ * hasta que se choca con ella: no se pueden borrar todas las filas no
+ * inmovilizadas. Con la fila 1 congelada, quitar de la 2 a la última es justo
+ * eso, y la tanda entera se rechaza.
+ */
+let cuadricula: Record<string, { filas: number; congeladas: number }> = {};
+function rejilla(sheetId: number) {
+  const nombre = PESTANAS[sheetId - 1] ?? `hoja-${sheetId}`;
+  cuadricula[nombre] ??= { filas: 50, congeladas: 1 };
+  return cuadricula[nombre];
+}
+
 /** Lo que la hoja simulada devolverá la próxima vez que se le escriba. */
 let fallosPendientes: unknown[] = [];
 function quizaFallar() {
@@ -75,6 +89,33 @@ vi.mock('googleapis', () => ({
         }),
         batchUpdate: async (p: unknown) => {
           llamadas.batchUpdate.push(p);
+          for (const peticion of ((p as { requestBody: { requests: Record<string, {
+            properties?: { sheetId: number; gridProperties?: { frozenRowCount?: number } };
+            sheetId?: number; length?: number;
+            range?: { sheetId: number; startIndex?: number; endIndex?: number };
+          }>[] } }).requestBody.requests ?? [])) {
+            const { updateSheetProperties, appendDimension, deleteDimension } = peticion;
+            if (updateSheetProperties?.properties) {
+              const { sheetId, gridProperties } = updateSheetProperties.properties;
+              if (gridProperties?.frozenRowCount !== undefined) {
+                rejilla(sheetId).congeladas = gridProperties.frozenRowCount;
+              }
+            }
+            if (appendDimension?.sheetId !== undefined) {
+              rejilla(appendDimension.sheetId).filas += appendDimension.length ?? 0;
+            }
+            if (deleteDimension?.range) {
+              const { sheetId, startIndex = 0, endIndex = 0 } = deleteDimension.range;
+              const estado = rejilla(sheetId);
+              const borradas = endIndex - startIndex;
+              if (borradas >= estado.filas - estado.congeladas) {
+                throw new Error(
+                  'Invalid requests[0].deleteDimension: Sorry, it is not possible to delete all non-frozen rows.',
+                );
+              }
+              estado.filas -= borradas;
+            }
+          }
           const creadas = ((p as { requestBody: { requests: { addSheet?: unknown }[] } })
             .requestBody.requests ?? []).filter((r) => r.addSheet);
           if (creadas.length > 0) {
@@ -717,5 +758,44 @@ describe('un registro corregido se queda en su sitio', () => {
 
     expect(llamadas.update, 'nada que sobrescribir').toHaveLength(0);
     expect(llamadas.append.length, 'sus tres filas, al final').toBe(3);
+  });
+});
+
+/**
+ * Inmovilizar la fila 1 y vaciar la hoja se pisaban entre sí.
+ *
+ * Google no deja «borrar todas las filas no inmovilizadas», y con la fila 1
+ * congelada, quitar de la 2 a la última es exactamente eso: rechaza la tanda
+ * entera y la hoja se queda como estaba. Se arregla pidiendo las filas en
+ * blanco *antes* de borrar, no después, para que siempre queden
+ * supervivientes.
+ */
+describe('vaciar una hoja que ya tiene la fila 1 inmovilizada', () => {
+  beforeEach(() => {
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'cuenta@ejemplo.iam.gserviceaccount.com';
+    process.env.GOOGLE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\\nx\\n-----END PRIVATE KEY-----\\n';
+    process.env.GOOGLE_SHEETS_ID = 'hoja-de-prueba';
+    llamadas.batchUpdate = [];
+    llamadas.orden = [];
+    fallosPendientes = [];
+    librosConPestanas = null;
+    cuadricula = {};
+  });
+
+  it('no la deja sin filas: pide las nuevas antes de quitar las viejas', async () => {
+    const { vaciarHojas } = await import('@/lib/servidor/sheets');
+    await expect(vaciarHojas()).resolves.toBeUndefined();
+
+    const porPestana = llamadas.batchUpdate.flatMap(
+      (p) => (p as { requestBody: { requests?: Record<string, unknown>[] } }).requestBody.requests ?? [],
+    );
+    const pedir = porPestana.findIndex((r) => 'appendDimension' in r);
+    const borrar = porPestana.findIndex((r) => 'deleteDimension' in r);
+    expect(pedir, 'se piden filas').toBeGreaterThanOrEqual(0);
+    expect(borrar, 'y se borran las de antes').toBeGreaterThan(pedir);
+
+    // Y la pestaña queda con sitio de sobra, no al borde.
+    expect(cuadricula.REG_Respuestas.filas).toBeGreaterThan(900);
+    expect(cuadricula.REG_Respuestas.congeladas, 'la fila de títulos').toBe(1);
   });
 });
