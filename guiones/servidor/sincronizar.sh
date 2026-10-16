@@ -19,4 +19,14 @@ PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export PATH
 
 cd "$RAIZ"
+
+# Una marca de que esto corrió, haya habido algo que copiar o no.
+#
+# El registro de al lado sólo se escribe cuando hay algo que decir —la
+# tarea calla cuando no hay rezagados—, así que no sirve para saber si
+# sigue viva: un fichero que lleva tres días sin crecer es exactamente lo
+# que se ve cuando todo va bien y cuando cron dejó de arrancarla. Esta
+# marca distingue las dos cosas.
+date -Is > /var/log/congreso/ultima-recogida 2>/dev/null || true
+
 exec npm run --silent sincronizar -- --callado

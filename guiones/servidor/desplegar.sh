@@ -143,14 +143,38 @@ if [ -f "$RAIZ/guiones/servidor/sincronizar.sh" ]; then
   # Los servidores instalados antes de que existiera esta tarea no la
   # tienen en su cron: se añade aquí, y sólo si falta, para no duplicarla
   # en cada despliegue.
-  if [ -f /etc/cron.d/congreso ] && ! grep -q 'sincronizar-congreso' /etc/cron.d/congreso; then
+  #
+  # Y si el fichero de cron no existe, se escribe entero. Antes esto se
+  # saltaba en silencio —la condición pedía que el fichero ya estuviera— y
+  # aun así se anunciaba que la copia a la hoja quedaba al día. En un
+  # servidor sin ese fichero, la recogida automática no se ponía nunca y
+  # nada lo decía: los registros que no llegaran a la hoja en el momento del
+  # alta se quedaban esperando a que alguien los copiara a mano.
+  if [ ! -f /etc/cron.d/congreso ]; then
+    {
+      if [ -x /usr/local/bin/respaldar-congreso ]; then
+        echo '# Respaldo de la base, todas las noches a las 03:15'
+        echo '15 3 * * * postgres /usr/local/bin/respaldar-congreso >> /var/respaldos/congreso/respaldo.log 2>&1'
+      fi
+      echo '# Rezagados de la hoja de Google: lo normal es que no haya ninguno'
+      echo "*/10 * * * * $USUARIO /usr/local/bin/sincronizar-congreso >> /var/log/congreso/hoja.log 2>&1"
+    } > /etc/cron.d/congreso
+    chmod 644 /etc/cron.d/congreso
+    aviso "Puesta la recogida automática de la hoja; no estaba."
+  elif ! grep -q 'sincronizar-congreso' /etc/cron.d/congreso; then
     printf '%s\n%s\n' \
       '# Rezagados de la hoja de Google: lo normal es que no haya ninguno' \
       "*/10 * * * * $USUARIO /usr/local/bin/sincronizar-congreso >> /var/log/congreso/hoja.log 2>&1" \
       >> /etc/cron.d/congreso
     aviso "Añadida la recogida de rezagados de la hoja, cada diez minutos."
   fi
-  aviso "Copia a la hoja de Google al día."
+
+  # Y se dice lo que hay, no lo que debería haber.
+  if grep -q 'sincronizar-congreso' /etc/cron.d/congreso 2>/dev/null; then
+    aviso "Copia a la hoja de Google: automática, cada diez minutos."
+  else
+    aviso "ATENCIÓN: la recogida automática de la hoja no quedó puesta."
+  fi
 fi
 
 # ---------------------------------------------------------------------

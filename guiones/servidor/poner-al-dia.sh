@@ -151,8 +151,23 @@ pendientes=$(sudo -u "$USUARIO" psql "$DATABASE_URL" -tAc \
 # orden de copiar no haya devuelto error: puede haberse quedado corta, o
 # haberse saltado el paso. Si ni siquiera se pudo contar —«?»— tampoco se
 # canta victoria.
+# La recogida automática es lo que mantiene la hoja al día entre despliegues:
+# cada alta se copia en el momento, y lo que no llegue —Google caído, un
+# límite de peticiones, la llave recién rotada— lo recoge esta tarea unos
+# minutos después. Falla por tres sitios distintos y hay que mirar los tres:
+# que esté puesta en el cron, que cron la esté llamando, y cuándo corrió por
+# última vez.
+recogida=puesta
+if ! grep -q 'sincronizar-congreso' /etc/cron.d/congreso 2>/dev/null; then
+  recogida="sin poner"
+elif ! systemctl is-active --quiet cron 2>/dev/null && ! systemctl is-active --quiet crond 2>/dev/null; then
+  recogida="puesta, pero cron no está corriendo"
+fi
+ultima_recogida=$(cat /var/log/congreso/ultima-recogida 2>/dev/null || true)
+
 hoja_al_dia=sí
 [ "$fallo_copia" = "sí" ] && hoja_al_dia=no
+[ "$recogida" = "puesta" ] || hoja_al_dia=no
 [ "$fallo_google" = "sí" ] && hoja_al_dia=no
 [ "$pendientes" = "0" ] || hoja_al_dia=no
 
@@ -170,6 +185,12 @@ if [ "$pendientes" = "0" ]; then
   aviso "Pendientes de copiar a la hoja: 0"
 else
   printf '   \033[33mPendientes de copiar a la hoja: %s\033[0m\n' "$pendientes"
+fi
+if [ "$recogida" = "puesta" ]; then
+  aviso "Registros nuevos: se copian al darse de alta, y cada 10 minutos lo rezagado."
+  [ -n "$ultima_recogida" ] && aviso "Última recogida automática: $ultima_recogida"
+else
+  printf '   \033[33mRecogida automática de rezagados: %s\033[0m\n' "$recogida"
 fi
 printf '\n'
 if [ "$fallo_copia" = "sí" ]; then
@@ -190,6 +211,15 @@ elif [ "$pendientes" != "0" ]; then
   aviso "Quedan registros sin copiar aunque la orden de copiar no dio error."
   aviso "Para ver cuáles y por qué, fila por fila:"
   aviso "  cd $RAIZ && sudo -u $USUARIO npm run cotejar-hoja"
+elif [ "$recogida" != "puesta" ]; then
+  aviso "La hoja está al día, pero lo que no llegue en el momento del alta se"
+  aviso "quedará esperando: la tarea que recoge rezagados no está funcionando."
+  if [ "$recogida" = "sin poner" ]; then
+    aviso "Falta su línea en /etc/cron.d/congreso. Este guion la pone al desplegar;"
+    aviso "si sigue sin aparecer, revise que /etc/cron.d/congreso sea legible."
+  else
+    aviso "Arránquelo con: sudo systemctl enable --now cron"
+  fi
 else
   aviso "La hoja está al día."
   if [ "$rehacer" = "no" ]; then
