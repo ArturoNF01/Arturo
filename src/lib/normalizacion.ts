@@ -16,6 +16,7 @@ import { etiquetaEs, etiquetasEs } from './opciones';
  */
 export const HOJAS: Record<string, string[]> = {
   REG_Respuestas: [
+    'N.º',
     'Folio', 'ID', 'Marca temporal', 'Perfil', 'Grupo', 'Modalidad', 'Idioma',
     'Apellidos', 'Nombre(s)', 'Nombre para constancia', 'Correo', 'Teléfono',
     'Institución', 'Cargo', 'Procedencia', 'País',
@@ -27,11 +28,13 @@ export const HOJAS: Record<string, string[]> = {
     'Consentimiento', 'Estado',
   ],
   PAR_Participantes: [
+    'N.º',
     'ID', 'Marca temporal', 'Apellidos y nombre', 'Institución', 'Procedencia',
     'Estado o país de origen', 'Rol', 'Correo', 'Teléfono / WhatsApp',
     'Llegada', 'Salida', 'Requiere hospedaje', 'Estado confirmación',
   ],
   PSE_Personificadores_Semblanzas: [
+    'N.º',
     'ID', 'Día', 'Bloque', 'Apellidos y nombre', 'Cargo o función', 'Institución', 'País',
     'Fotografía', 'Semblanza', 'Semblanza recibida', 'Personificador impreso',
     'Responsable de edición', 'Responsable de impresión', 'Plazo recomendado',
@@ -95,6 +98,24 @@ export function contarPalabras(texto: string | null | undefined): number {
   return limpio ? limpio.split(' ').length : 0;
 }
 
+/**
+ * El número de orden del registro: el primero que entró es el 1.
+ *
+ * Va como número, no como texto, para que la hoja lo sume y lo ordene. Sin
+ * él, saber si la hoja tiene todos los registros exigía contar filas a mano
+ * y compararlas con el panel. Con él se lee de un vistazo: el último número
+ * de la columna A es cuántos hay, y si el sistema dice cincuenta y dos, la
+ * última fila dice cincuenta y dos.
+ *
+ * En la pestaña del personificador el número salta —sólo entra quien sale en
+ * el programa—, y eso es información, no un hueco: dice de qué registro del
+ * sistema viene cada ficha.
+ */
+function numeroDeOrden(r: Registro): string | number {
+  const numero = Number(r.numero_en_hoja);
+  return Number.isFinite(numero) && numero > 0 ? numero : '';
+}
+
 /** Filas normalizadas que corresponden a un registro. */
 export function filasDeRegistro(r: Registro): Record<string, (string | number)[][]> {
   const persona = `${r.apellidos ?? ''}, ${r.nombres ?? ''}`;
@@ -111,6 +132,7 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
   const s = (v: unknown) => (v === null || v === undefined ? '' : Array.isArray(v) ? v.join('; ') : String(v));
 
   filas.REG_Respuestas = [[
+    numeroDeOrden(r),
     s(r.folio), s(r.id), marca, rol, s(r.grupo), nombreDeModalidad(r.modalidad), s(r.idioma),
     s(r.apellidos), s(r.nombres), s(r.nombre_constancia), s(r.correo), s(r.telefono_whatsapp),
     s(r.institucion), s(r.cargo), etiquetaEs('procedencia', r.procedencia), s(r.pais_residencia),
@@ -124,6 +146,7 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
   ]];
 
   filas.PAR_Participantes = [[
+    numeroDeOrden(r),
     s(r.folio), marca, persona, s(r.institucion), ambito, origen, rol, s(r.correo),
     s(r.telefono_whatsapp), s(r.fecha_llegada), s(r.fecha_salida),
     r.requiere_alojamiento ? 'Sí' : 'No', 'En proceso',
@@ -135,6 +158,7 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
   // fila, y nadie lo notó porque no falla, simplemente no escribe.
   if (PERFILES_EN_PROGRAMA.has(String(r.perfil))) {
     filas.PSE_Personificadores_Semblanzas = [[
+      numeroDeOrden(r),
       s(r.folio), '', '', persona,
       r.cargo || rol, s(r.institucion), s(r.pais_residencia),
       enlaceDescarga(r.foto_url), enlaceDescarga(r.semblanza_url),

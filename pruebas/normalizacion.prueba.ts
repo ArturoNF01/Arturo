@@ -66,21 +66,46 @@ describe('las pestañas del libro', () => {
   });
 });
 
+/** La celda de una columna, buscada por su título. */
+function celda(fila: (string | number)[], hoja: keyof typeof HOJAS | string, columna: string) {
+  const i = HOJAS[hoja].indexOf(columna);
+  if (i < 0) throw new Error(`${hoja} no tiene la columna «${columna}»`);
+  return fila[i];
+}
+
 describe('filasDeRegistro', () => {
   it('siempre produce la respuesta completa y la fila de participantes', () => {
     const filas = filasDeRegistro(registro({ perfil: 'publico_general' }));
     expect(Object.keys(filas)).toEqual(['REG_Respuestas', 'PAR_Participantes']);
   });
 
-  it('coloca el folio en la primera columna de cada pestaña, que es la clave de resincronización', () => {
-    // De ahí se parte para volver a escribir una fila: si el folio no está
-    // primero, resincronizar un registro escribe encima de otro.
+  it('lleva el folio en la columna B de todas las pestañas, sea cual sea su título', () => {
+    // De ahí se parte para volver a escribir la fila de un registro editado.
+    // El título cambia de pestaña a pestaña —«Folio» en una, «ID» en las
+    // otras—, pero el sitio es siempre el mismo, y es el sitio lo que busca
+    // `resincronizarRegistro`.
     const filas = filasDeRegistro(registro());
     for (const [hoja, valores] of Object.entries(filas)) {
       for (const fila of valores) {
-        expect(fila[0], hoja).toBe('REG-20260401-AB12');
+        expect(fila[1], hoja).toBe('REG-20260401-AB12');
       }
     }
+  });
+
+  it('y delante de él, el número de orden, que es por donde se cuenta la hoja', () => {
+    const filas = filasDeRegistro(registro({ numero_en_hoja: 52 }));
+    for (const [hoja, valores] of Object.entries(filas)) {
+      for (const fila of valores) {
+        // Como número, no como texto: la hoja tiene que poder ordenarlo.
+        expect(fila[0], hoja).toBe(52);
+        expect(HOJAS[hoja][0], hoja).toBe('N.º');
+      }
+    }
+  });
+
+  it('sin número, la celda queda vacía en vez de con un cero o un NaN', () => {
+    const [fila] = filasDeRegistro(registro()).REG_Respuestas;
+    expect(fila[0]).toBe('');
   });
 
   it('cada fila tiene tantas celdas como encabezados declara su pestaña', () => {
@@ -115,8 +140,8 @@ describe('filasDeRegistro', () => {
 
   it('el libro se lleva en español: perfil y procedencia van traducidos', () => {
     const [fila] = filasDeRegistro(registro()).REG_Respuestas;
-    expect(fila[3]).toBe('Ponente');
-    expect(fila[14]).toMatch(/^Internacional/);
+    expect(celda(fila, 'REG_Respuestas', 'Perfil')).toBe('Ponente');
+    expect(celda(fila, 'REG_Respuestas', 'Procedencia')).toMatch(/^Internacional/);
   });
 
   it('escribe las fechas de llegada y salida, que es lo que queda del viaje', () => {
@@ -174,13 +199,14 @@ describe('filasDeRegistro', () => {
         foto_url: 'https://drive.google.com/file/d/xyz/view',
       }),
     ).PSE_Personificadores_Semblanzas;
-    expect(fila[7]).toBe('=HYPERLINK("https://drive.google.com/file/d/xyz/view";"Descargar")');
-    expect(fila[8]).toBe('=HYPERLINK("https://drive.google.com/file/d/abc/view";"Descargar")');
+    const pse = 'PSE_Personificadores_Semblanzas';
+    expect(celda(fila, pse, 'Fotografía')).toBe('=HYPERLINK("https://drive.google.com/file/d/xyz/view";"Descargar")');
+    expect(celda(fila, pse, 'Semblanza')).toBe('=HYPERLINK("https://drive.google.com/file/d/abc/view";"Descargar")');
   });
 
   it('sin archivos, esas celdas quedan vacías en vez de con una fórmula rota', () => {
     const [fila] = filasDeRegistro(registro({})).PSE_Personificadores_Semblanzas;
-    expect(fila[7]).toBe('');
-    expect(fila[8]).toBe('');
+    expect(celda(fila, 'PSE_Personificadores_Semblanzas', 'Fotografía')).toBe('');
+    expect(celda(fila, 'PSE_Personificadores_Semblanzas', 'Semblanza')).toBe('');
   });
 });

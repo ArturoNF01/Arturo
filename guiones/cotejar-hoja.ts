@@ -90,11 +90,22 @@ async function principal() {
       console.log(`  ${nombre}: ${vacia ? 'vacía, se escribirá sola' : `al día (${HOJAS[nombre].length} columnas)`}`);
       continue;
     }
+    // Si los títulos aparecen más abajo, el problema no es que las columnas
+    // sean otras: es que la fila 1 dejó de ser la de los títulos y lo que
+    // hay en ella es un registro. Decirlo así ahorra media hora de
+    // desconcierto —«tiene 30 columnas y el sistema espera 30»—.
+    if (fila > 1) {
+      console.log(`  \x1b[33m${nombre}: los títulos están en la fila ${fila}, no en la 1\x1b[0m`);
+      console.log(`     lo que hay en la fila 1 es un registro: ${desfase.sobran.slice(0, 3).join(', ')}…`);
+      sueltos.push(nombre);
+      continue;
+    }
     console.log(`  \x1b[33m${nombre}: desfasada\x1b[0m — la hoja tiene ${desfase.tiene} columnas y el sistema espera ${desfase.espera}`);
     if (desfase.faltan.length) console.log(`     le faltan: ${desfase.faltan.join(', ')}`);
     if (desfase.sobran.length) console.log(`     le sobran: ${desfase.sobran.join(', ')}`);
   }
-  const desfasadas = desfases.length + sueltos.length;
+  // Los que ya se contaron como «títulos fuera de sitio» no se repiten.
+  const desfasadas = desfases.filter((d) => !sueltos.includes(d.pestana)).length + sueltos.length;
 
   // ---- 2. Qué dice el propio sistema ----------------------------------
   titulo('Lo que el sistema anotó de cada registro');
@@ -141,7 +152,8 @@ async function principal() {
   );
   const columnaFolio = await sheets.spreadsheets.values.get({
     spreadsheetId: idLibro,
-    range: 'REG_Respuestas!A2:A',
+    // La columna B: la A lleva el número de orden.
+    range: 'REG_Respuestas!B2:B',
   });
   const foliosHoja = (columnaFolio.data.values ?? []).map((f) => String(f?.[0] ?? ''));
 
@@ -168,7 +180,7 @@ async function principal() {
     });
     const porFolio = new Map<string, string[]>();
     for (const fila of (completa.data.values ?? []) as string[][]) {
-      const folio = String(fila[0] ?? '').trim();
+      const folio = String(fila[1] ?? '').trim();
       if (folio && !porFolio.has(folio)) porFolio.set(folio, fila);
     }
 

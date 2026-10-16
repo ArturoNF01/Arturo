@@ -1,5 +1,6 @@
 import 'server-only';
 import { clienteSheets, googleConfigurado } from './google';
+import { consultar } from '@/lib/bd/conexion';
 import { HOJAS, filasDeRegistro } from '@/lib/normalizacion';
 import { leerDatosCongreso, leerEjes } from './contenido';
 import { traducir } from '@/lib/contenido';
@@ -23,6 +24,31 @@ function prepararParaHoja(registro: Registro, ejes: Eje[], limiteSemblanza: unkn
     eje_tematico: eje ? traducir(eje.nombre as never, 'es') : registro.eje_tematico,
     limite_semblanza_palabras: limiteSemblanza,
   };
+}
+
+/**
+ * El número de orden de cada registro: su puesto por fecha de alta entre
+ * todos los de la base.
+ *
+ * Se calcula aquí y no se guarda en una columna porque es una posición, no
+ * un dato del registro: si mañana se borra el número siete, los que venían
+ * detrás corren un puesto, y una columna guardada se quedaría mintiendo. La
+ * base es la que manda, y la hoja la copia.
+ *
+ * Es una consulta por escritura, no por registro: copiar cincuenta y dos
+ * pendientes la hace una vez.
+ */
+async function numerosDeOrden(ids: string[]): Promise<Map<string, number>> {
+  if (ids.length === 0) return new Map();
+  const filas = await consultar<{ id: string; numero: string }>(
+    `select id, numero from (
+          select id, row_number() over (order by creado_en, id) as numero
+            from registros
+        ) as ordenados
+      where id = any($1::uuid[])`,
+    [ids],
+  );
+  return new Map(filas.map((f) => [String(f.id), Number(f.numero)]));
 }
 
 /**
@@ -106,8 +132,8 @@ function peticionesDeTitulos(sheetId: number | null | undefined) {
   return [
     {
       updateSheetProperties: {
-        properties: { sheetId, gridProperties: { frozenRowCount: 1 } },
-        fields: 'gridProperties.frozenRowCount',
+        properties: { sheetId, gridProperties: { frozenRowCount: 1, frozenColumnCount: 0 } },
+        fields: 'gridProperties(frozenRowCount,frozenColumnCount)',
       },
     },
     {
@@ -321,10 +347,18 @@ export async function sincronizarRegistros(registros: Registro[]): Promise<void>
   await asegurarHojas(idLibro);
   const sheets = clienteSheets();
 
-  const [{ filas: ejes }, congreso] = await Promise.all([leerEjes(), leerDatosCongreso()]);
+  const [{ filas: ejes }, congreso, numeros] = await Promise.all([
+    leerEjes(),
+    leerDatosCongreso(),
+    numerosDeOrden(registros.map((r) => String(r.id))),
+  ]);
   const porPestana = new Map<string, (string | number)[][]>();
   for (const registro of registros) {
-    const preparado = prepararParaHoja(registro, ejes as Eje[], congreso.limite_semblanza_palabras);
+    const preparado = prepararParaHoja(
+      { ...registro, numero_en_hoja: numeros.get(String(registro.id)) },
+      ejes as Eje[],
+      congreso.limite_semblanza_palabras,
+    );
     for (const [hoja, valores] of Object.entries(filasDeRegistro(preparado))) {
       const juntas = porPestana.get(hoja) ?? [];
       juntas.push(...valores.map((fila) => fila.map(blindar)));
@@ -442,8 +476,17 @@ export async function vaciarHojas(): Promise<void> {
 }
 
 /**
- * Reemplaza en Sheets las filas de un registro editado: borra las que llevan
- * su folio en la columna A y vuelve a insertarlas con los datos nuevos.
+ * Actualiza en la hoja las filas de un registro editado, en su sitio.
+ *
+ * Antes borraba las filas del registro y las volvía a añadir al final. Con
+ * una columna de orden eso se nota: el registro siete reaparecía abajo del
+ * todo, con un siete al lado y el cincuenta y tres encima. Ahora se escribe
+ * encima de la fila que ya tenía, así que corregir un correo en el panel no
+ * reordena la hoja ni gasta dos llamadas donde basta una.
+ *
+ * Si el registro deja de corresponderle a una pestaña —cambia de perfil y ya
+ * no sale en el programa—, su fila se borra de ahí. Y si no estaba, se añade
+ * al final, que es donde le toca.
  */
 export async function resincronizarRegistro(registro: Registro): Promise<void> {
   const idLibro = process.env.GOOGLE_SHEETS_ID;
@@ -452,39 +495,82 @@ export async function resincronizarRegistro(registro: Registro): Promise<void> {
   await asegurarHojas(idLibro);
   const sheets = clienteSheets();
   const folio = String(registro.folio ?? '');
+
+  const [{ filas: ejes }, congreso, numeros] = await Promise.all([
+    leerEjes(),
+    leerDatosCongreso(),
+    numerosDeOrden([String(registro.id)]),
+  ]);
+  const filas = filasDeRegistro(
+    prepararParaHoja(
+      { ...registro, numero_en_hoja: numeros.get(String(registro.id)) },
+      ejes as Eje[],
+      congreso.limite_semblanza_palabras,
+    ),
+  );
+
   const libro = await conEspera(() => sheets.spreadsheets.get({ spreadsheetId: idLibro }));
   const idsHoja = new Map(
     (libro.data.sheets ?? []).map((h) => [h.properties?.title ?? '', h.properties?.sheetId ?? 0]),
   );
 
   for (const hoja of Object.keys(HOJAS)) {
-    const columnaA = await conEspera(() =>
-      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: `${hoja}!A2:A` }),
+    // El folio vive en la columna B: la A lleva el número de orden.
+    const columnaFolio = await conEspera(() =>
+      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: `${hoja}!B2:B` }),
     );
-    const indices = (columnaA.data.values ?? [])
-      .map((fila, i) => (fila[0] === folio ? i + 1 : -1)) // +1: la fila 1 es encabezado
-      .filter((i) => i >= 0)
-      .sort((a, b) => b - a);
+    const suyas = (columnaFolio.data.values ?? [])
+      .map((fila, i) => (String(fila[0] ?? '') === folio ? i + 2 : -1)) // +2: la 1 es encabezado
+      .filter((n) => n > 0);
 
-    if (indices.length === 0) continue;
-    await conEspera(() =>
-      sheets.spreadsheets.batchUpdate({
-        spreadsheetId: idLibro,
-        requestBody: {
-          requests: indices.map((indice) => ({
-            deleteDimension: {
-              range: {
-                sheetId: idsHoja.get(hoja),
-                dimension: 'ROWS',
-                startIndex: indice,
-                endIndex: indice + 1,
+    const valores = filas[hoja]?.map((fila) => fila.map(blindar));
+
+    if (valores && suyas.length > 0) {
+      await conEspera(() =>
+        sheets.spreadsheets.values.update({
+          spreadsheetId: idLibro,
+          range: `${hoja}!A${suyas[0]}`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: valores },
+        }),
+      );
+    }
+
+    // Lo que sobre —filas repetidas de otras veces, o la pestaña entera si
+    // el registro ya no le corresponde— se borra de abajo arriba, para que
+    // borrar una no mueva de sitio a la siguiente.
+    const sobrantes = (valores ? suyas.slice(1) : suyas).sort((a, b) => b - a);
+    if (sobrantes.length > 0) {
+      await conEspera(() =>
+        sheets.spreadsheets.batchUpdate({
+          spreadsheetId: idLibro,
+          requestBody: {
+            requests: sobrantes.map((fila) => ({
+              deleteDimension: {
+                range: {
+                  sheetId: idsHoja.get(hoja),
+                  dimension: 'ROWS',
+                  startIndex: fila - 1,
+                  endIndex: fila,
+                },
               },
-            },
-          })),
-        },
-      }),
-    );
-  }
+            })),
+          },
+        }),
+      );
+    }
 
-  await sincronizarRegistro(registro);
+    // Y si no estaba, entra al final.
+    if (valores && suyas.length === 0) {
+      await conEspera(() =>
+        sheets.spreadsheets.values.append({
+          spreadsheetId: idLibro,
+          range: `${hoja}!A1`,
+          valueInputOption: 'USER_ENTERED',
+          insertDataOption: 'INSERT_ROWS',
+          requestBody: { values: valores },
+        }),
+      );
+    }
+  }
 }

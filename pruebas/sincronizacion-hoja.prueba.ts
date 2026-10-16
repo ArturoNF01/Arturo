@@ -12,14 +12,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const llamadas: {
-  append: unknown[]; batchUpdate: unknown[]; batchClear: unknown[];
+  append: unknown[]; batchUpdate: unknown[]; batchClear: unknown[]; update: unknown[];
   /** Cuentas de las dos llamadas que comprueban el libro antes de escribir. */
   estructura: number; encabezados: number;
   /** El orden en que se llamó a cada cosa, que a veces es lo que importa. */
   orden: string[];
 } = {
-  append: [], batchUpdate: [], batchClear: [], estructura: 0, encabezados: 0, orden: [],
+  append: [], batchUpdate: [], batchClear: [], update: [], estructura: 0, encabezados: 0, orden: [],
 };
+
+/** Los folios que la hoja simulada tiene ya escritos, en orden. */
+let foliosEnLaHoja: string[] = [];
 
 /** Lo que la hoja simulada devolverá la próxima vez que se le escriba. */
 let fallosPendientes: unknown[] = [];
@@ -113,12 +116,24 @@ vi.mock('googleapis', () => ({
               }),
             }),
           }),
-          get: async () => ({ data: { values: [] } }),
+          update: async (p: unknown) => { llamadas.update.push(p); return { data: {} }; },
+          // La columna que se pida de B2 hacia abajo: los folios que la hoja
+          // simulada dice tener, uno por fila.
+          get: async () => ({ data: { values: foliosEnLaHoja.map((f) => [f]) } }),
         },
       },
     }),
     drive: () => ({ files: {} }),
   },
+}));
+
+/**
+ * El número de orden sale de la base: aquí se numeran por el orden en que se
+ * piden, que es lo que hace la consulta de verdad.
+ */
+vi.mock('@/lib/bd/conexion', () => ({
+  consultar: async (_texto: string, valores: unknown[] = []) =>
+    ((valores[0] ?? []) as string[]).map((id, i) => ({ id, numero: String(i + 1) })),
 }));
 
 // El contenido sale de la base; aquí se sirve fijo para no necesitarla.
@@ -407,18 +422,20 @@ describe('copiar muchos registros de una vez', () => {
     expect(llamadas.append).toHaveLength(3);
   });
 
-  it('y las filas van todas, en el orden en que llegaron', async () => {
+  it('y las filas van todas, en el orden en que llegaron y numeradas', async () => {
     const { sincronizarRegistros } = await import('@/lib/servidor/sheets');
     await sincronizarRegistros([
-      ponente({ folio: 'REG-A' }),
-      ponente({ folio: 'REG-B' }),
-      ponente({ folio: 'REG-C' }),
+      ponente({ folio: 'REG-A', id: '00000000-0000-4000-8000-00000000000a' }),
+      ponente({ folio: 'REG-B', id: '00000000-0000-4000-8000-00000000000b' }),
+      ponente({ folio: 'REG-C', id: '00000000-0000-4000-8000-00000000000c' }),
     ]);
 
     const reg = llamadas.append.find(
       (p) => (p as { range: string }).range.startsWith('REG_Respuestas'),
-    ) as { requestBody: { values: string[][] } };
-    expect(reg.requestBody.values.map((f) => f[0])).toEqual(['REG-A', 'REG-B', 'REG-C']);
+    ) as { requestBody: { values: (string | number)[][] } };
+    expect(reg.requestBody.values.map((f) => f[1])).toEqual(['REG-A', 'REG-B', 'REG-C']);
+    // La columna A: el puesto de cada uno, que es lo que se lee de un vistazo.
+    expect(reg.requestBody.values.map((f) => f[0])).toEqual([1, 2, 3]);
   });
 
   it('si Google dice que vamos deprisa, espera y vuelve a intentarlo', async () => {
@@ -650,5 +667,55 @@ describe('la fila de títulos queda fija', () => {
       .filter(Boolean);
     expect(creadas.length, 'las dos que faltaban').toBe(2);
     for (const c of creadas) expect(c!.properties.gridProperties?.frozenRowCount).toBe(1);
+  });
+});
+
+/**
+ * Corregir un registro desde el panel no debe reordenar la hoja.
+ *
+ * Antes se borraba su fila y se volvía a añadir al final. Con una columna de
+ * orden eso canta: el registro siete reaparecía abajo del todo, con un siete
+ * al lado y el cincuenta y tres encima.
+ */
+describe('un registro corregido se queda en su sitio', () => {
+  beforeEach(async () => {
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'cuenta@ejemplo.iam.gserviceaccount.com';
+    process.env.GOOGLE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\\nx\\n-----END PRIVATE KEY-----\\n';
+    process.env.GOOGLE_SHEETS_ID = 'hoja-de-prueba';
+    llamadas.append = [];
+    llamadas.batchUpdate = [];
+    llamadas.update = [];
+    fallosPendientes = [];
+    librosConPestanas = null;
+    const { HOJAS } = await import('@/lib/normalizacion');
+    encabezadosDeLaHoja = (nombre) => HOJAS[nombre] ?? [];
+    const { olvidarRevisionDelLibro } = await import('@/lib/servidor/sheets');
+    olvidarRevisionDelLibro();
+  });
+
+  afterEach(() => {
+    foliosEnLaHoja = [];
+  });
+
+  it('se escribe encima de la fila que ya tenía, sin moverla al final', async () => {
+    // Tercera fila de datos, es decir, la 4 de la hoja.
+    foliosEnLaHoja = ['REG-OTRO-1', 'REG-OTRO-2', 'REG-20260916-AB12', 'REG-OTRO-3'];
+    const { resincronizarRegistro } = await import('@/lib/servidor/sheets');
+    await resincronizarRegistro(ponente());
+
+    const reg = llamadas.update.find(
+      (p) => (p as { range: string }).range.startsWith('REG_Respuestas'),
+    ) as { range: string };
+    expect(reg.range, 'su fila de siempre').toBe('REG_Respuestas!A4');
+    expect(llamadas.append, 'y no se añade nada al final').toHaveLength(0);
+  });
+
+  it('y si no estaba, entra al final', async () => {
+    foliosEnLaHoja = ['REG-OTRO-1', 'REG-OTRO-2'];
+    const { resincronizarRegistro } = await import('@/lib/servidor/sheets');
+    await resincronizarRegistro(ponente());
+
+    expect(llamadas.update, 'nada que sobrescribir').toHaveLength(0);
+    expect(llamadas.append.length, 'sus tres filas, al final').toBe(3);
   });
 });
