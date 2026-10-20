@@ -87,7 +87,6 @@ export function PanelCupos({
     fecha_limite_registro: configuracion.fecha_limite_registro,
     url_agenda: configuracion.url_agenda,
     url_video_login: configuracion.url_video_login,
-    url_registro_zoom: configuracion.url_registro_zoom,
     url_sesion_zoom: configuracion.url_sesion_zoom,
     correo_contacto: configuracion.correo_contacto,
     limite_registros_por_huella: limiteHuella.toString(),
@@ -117,7 +116,6 @@ export function PanelCupos({
         fecha_limite_registro: valores.fecha_limite_registro,
         url_agenda: valores.url_agenda,
         url_video_login: valores.url_video_login,
-        url_registro_zoom: valores.url_registro_zoom,
         url_sesion_zoom: valores.url_sesion_zoom,
         correo_contacto: valores.correo_contacto,
         limite_registros_por_huella: Number(valores.limite_registros_por_huella),
@@ -294,20 +292,6 @@ export function PanelCupos({
             />
           </label>
           <label className="block sm:col-span-2">
-            <span className="etiqueta">Registro en Zoom (público en línea)</span>
-            <input
-              type="url" className="campo"
-              value={valores.url_registro_zoom}
-              onChange={(e) => setValores({ ...valores, url_registro_zoom: e.target.value })}
-            />
-            <span className="ayuda">
-              A quien se registra como público general en línea se le manda aquí en cuanto
-              termina, y el enlace va también en su acuse. Zoom le devuelve un enlace
-              personal; nosotros no lo generamos ni lo guardamos. Si se deja vacío, no se
-              muestra el aviso y esas personas se quedan sin saber cómo conectarse.
-            </span>
-          </label>
-          <label className="block sm:col-span-2">
             <span className="etiqueta">Sala del seminario web (enlace directo)</span>
             <input
               type="url" className="campo"
@@ -315,11 +299,10 @@ export function PanelCupos({
               onChange={(e) => setValores({ ...valores, url_sesion_zoom: e.target.value })}
             />
             <span className="ayuda">
-              El de arriba es el formulario de registro de Zoom; éste es la sala. Se enseña
-              debajo del botón de registro, y va en el acuse, porque el día del congreso lo
-              que la gente busca es la puerta, no el formulario que llenó hace un mes —y el
-              correo con su enlace personal rara vez aparece cuando hace falta—. Si se deja
-              vacío, sólo se ofrece el registro.
+              El enlace con el que el público en línea entra a las sesiones. Se le enseña al
+              terminar su registro y va también en su acuse. Es el mismo para todos: hubo un
+              registro aparte en Zoom que mandaba un enlace personal y se retiró. Si se deja
+              vacío, esas personas se quedan sin saber cómo conectarse.
             </span>
           </label>
           <label className="block sm:col-span-2">

@@ -295,10 +295,9 @@ export function FormularioRegistro({
         {pasoActual === 'identificacion' && (
           <section className="space-y-5">
             <Cabecera titulo={t.formulario.secciones.identificacion} ayuda={t.formulario.secciones.identificacionAyuda} />
-            {/* Quien sigue la transmisión tiene que saber, antes de terminar,
-                que el enlace no se lo damos nosotros: se lo manda Zoom cuando
-                se registre allá. Dicho sólo al final, se lee como un trámite
-                sorpresa. */}
+            {/* Quien sigue la transmisión tiene que saber, antes de
+                terminar, que de aquí sale con el enlace para conectarse.
+                Dicho sólo al final, deja la duda de si falta algún paso. */}
             {registroMinimo(perfil, modalidad) && (
               <p className="rounded-lg border-l-4 border-ciess-500 py-2 pl-4 text-sm font-medium">
                 {t.formulario.secciones.zoomAviso}

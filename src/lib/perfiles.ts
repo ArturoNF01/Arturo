@@ -84,8 +84,8 @@ export type PasoFormulario =
 /**
  * ¿A esta persona sólo se le pide el nombre y el correo?
  *
- * Es el caso del público que sigue la transmisión: no pisa la sede, no sale
- * en el programa y el enlace se lo da Zoom, no nosotros. Pedirle institución,
+ * Es el caso del público que sigue la transmisión: no pisa la sede ni sale
+ * en el programa, y sólo necesita el enlace de la sala. Pedirle institución,
  * cargo, país y teléfono era cobrarle diez campos por ver un video, y cada
  * campo de más es gente que abandona el formulario a medias.
  */

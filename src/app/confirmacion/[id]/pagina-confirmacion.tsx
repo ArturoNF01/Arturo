@@ -29,14 +29,15 @@ export function PaginaConfirmacion({
   const { t } = useApp();
   const [editando, setEditando] = useState(false);
 
-  // A quien sigue la transmisión le falta el paso que no depende de nosotros:
-  // el enlace se lo da Zoom al registrarse ahí. Si no se le dice aquí —y en
-  // el acuse— se queda con un folio y sin manera de conectarse.
+  // Quien sigue la transmisión necesita saber por dónde entra. Si no se le
+  // dice aquí —y en el acuse— se queda con un folio y sin manera de
+  // conectarse. Antes había un registro aparte en Zoom que le mandaba un
+  // enlace personal; se retiró, y ahora la sala es la misma para todos.
   const vaAZoom =
     registroMinimo(
       perfilPorClave(String(registro.perfil)),
       registro.modalidad === 'en_linea' ? 'en_linea' : ('presencial' as Modalidad),
-    ) && Boolean(configuracion.url_registro_zoom);
+    ) && Boolean(configuracion.url_sesion_zoom);
 
   if (editando) {
     return (
@@ -85,32 +86,17 @@ export function PaginaConfirmacion({
               <p className="font-semibold">{t.confirmacion.zoomTitulo}</p>
               <p className="mt-1 text-sm">{t.confirmacion.zoomTexto}</p>
               <a
-                href={configuracion.url_registro_zoom}
+                href={configuracion.url_sesion_zoom}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="boton-primario mt-4 inline-flex"
               >
                 {t.confirmacion.zoomBoton}
               </a>
+              {/* La dirección a la vista, además del botón: este acuse se
+                  imprime y se guarda, y de un botón impreso no se copia nada. */}
+              <p className="ayuda mt-2 break-all">{configuracion.url_sesion_zoom}</p>
               <p className="ayuda mt-3">{t.confirmacion.zoomNota}</p>
-
-              {/* La puerta, debajo del formulario. El registro de Zoom
-                  devuelve un enlace personal por correo, pero el día del
-                  congreso ese correo lleva un mes enterrado y lo que se
-                  busca es por dónde se entra. */}
-              {configuracion.url_sesion_zoom && (
-                <p className="mt-4 border-t pt-3 text-sm" style={{ borderColor: 'var(--borde)' }}>
-                  {t.confirmacion.zoomDirectoTexto}{' '}
-                  <a
-                    href={configuracion.url_sesion_zoom}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold underline"
-                  >
-                    {t.confirmacion.zoomDirectoBoton}
-                  </a>
-                </p>
-              )}
             </div>
           )}
 

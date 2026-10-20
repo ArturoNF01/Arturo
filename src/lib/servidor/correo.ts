@@ -26,9 +26,7 @@ export interface DatosCorreo {
   correoContacto: string;
   fechaLimite: string;
   urlAgenda: string;
-  /** Registro del seminario web. De ahí sale el enlace de quien sigue la transmisión. */
-  urlRegistroZoom?: string;
-  /** La sala del seminario web, para quien ya pasó por ese registro. */
+  /** La sala del seminario web: el enlace con el que se entra a las sesiones. */
   urlSesionZoom?: string;
 }
 
@@ -63,15 +61,17 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
     fechas: String(r.fechas ?? ''),
     fecha_limite: datos.fechaLimite,
     url_edicion: `${urlSitio()}/confirmacion/${r.id}?token=${r.token_edicion}`,
-    url_zoom: datos.urlRegistroZoom ?? '',
-    url_sesion_zoom: datos.urlSesionZoom ?? '',
-    // El enlace de conexión no lo damos nosotros: lo manda Zoom cuando la
-    // persona se registra en el seminario web. Quien sigue la transmisión
-    // tiene que saberlo o se queda con un folio y sin manera de entrar. Va
-    // como bloque ya formateado, no como variable suelta, porque sólo debe
-    // aparecer en el acuse de esas personas y no en el de todo el mundo.
+    url_zoom: datos.urlSesionZoom ?? '',
+    // El enlace de la sala va en el acuse de quien sigue la transmisión y en
+    // el de nadie más: a quien viaja a la sede, un botón de Zoom en mitad de
+    // su acuse le hace dudar de si tiene que conectarse o presentarse. Va
+    // como bloque ya formateado, y no como variable suelta, por eso mismo.
+    //
+    // Hubo un registro previo en Zoom —era él quien mandaba un enlace
+    // personal— y se retiró: ahora la sala es la misma para todos y se
+    // entrega aquí mismo, al terminar el registro del congreso.
     zoom_bloque:
-      datos.urlRegistroZoom &&
+      datos.urlSesionZoom &&
       registroMinimo(
         perfilPorClave(String(r.perfil ?? '')),
         r.modalidad === 'en_linea' ? 'en_linea' : ('presencial' as Modalidad),
@@ -79,12 +79,8 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
         ? `<div style="margin:20px 0;padding:16px;border-radius:8px;background:#eef3f9;border:1px solid #cfdcea;">
 <p style="margin:0 0 8px;font-weight:bold;color:#16283d;">${t.confirmacion.zoomTitulo}</p>
 <p style="margin:0 0 12px;">${t.confirmacion.zoomTexto}</p>
-<p style="margin:0;"><a href="${datos.urlRegistroZoom}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#2e5c8a;color:#ffffff;text-decoration:none;font-weight:bold;">${t.confirmacion.zoomBoton}</a></p>${
-            datos.urlSesionZoom
-              ? `
-<p style="margin:12px 0 0;padding-top:12px;border-top:1px solid #cfdcea;font-size:14px;">${t.confirmacion.zoomDirectoTexto} <a href="${datos.urlSesionZoom}" style="color:#2e5c8a;font-weight:bold;">${t.confirmacion.zoomDirectoBoton}</a></p>`
-              : ''
-          }
+<p style="margin:0;"><a href="${datos.urlSesionZoom}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#2e5c8a;color:#ffffff;text-decoration:none;font-weight:bold;">${t.confirmacion.zoomBoton}</a></p>
+<p style="margin:12px 0 0;font-size:13px;color:#4a5b6e;word-break:break-all;">${datos.urlSesionZoom}</p>
 </div>`
         : '',
     url_agenda: datos.urlAgenda,

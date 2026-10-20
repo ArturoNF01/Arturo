@@ -79,24 +79,28 @@ update faqs
          'pt', 'De 11 a 13 de novembro de 2026, na sede do CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Cidade do México. A agenda detalhada será publicada antes do início do congresso.')
  where clave = 'sede-fechas';
 
--- El público que sigue la transmisión recibe su enlace de Zoom, no nuestro:
--- el registro del congreso sólo recoge su nombre y su correo, y de ahí se le
--- manda al formulario del seminario web. Se guarda en la configuración para
--- que el comité pueda cambiarlo desde el panel si Zoom le da otro.
-insert into configuracion (clave, valor, descripcion) values
-  ('url_registro_zoom', '"https://us02web.zoom.us/webinar/register/WN_LMCy6fENTOiR2dSOvb_jDg"'::jsonb,
-   'Registro en Zoom para quien sigue la transmisión; de ahí sale el enlace personal')
-on conflict (clave) do nothing;
-
--- Y el enlace directo al seminario web, para quien ya pasó por el registro de
--- Zoom. El de registro da el enlace personal por correo; éste es el de la sala,
--- que es lo que la gente busca el día del congreso cuando no encuentra aquel
--- correo. También en la configuración: si Zoom cambia la sala, se cambia desde
--- el panel y no hace falta desplegar.
+-- La sala del seminario web: el enlace con el que entra el público en línea.
+--
+-- Hubo un registro previo en Zoom —un formulario aparte que devolvía a cada
+-- persona un enlace personal por correo— y se retiró: eran dos pasos y dos
+-- correos para ver una transmisión, y el enlace personal se perdía entre el
+-- registro y el congreso. Ahora la sala es la misma para todos y se entrega
+-- al terminar el registro, en pantalla y en el acuse.
+--
+-- Va en la configuración para que el comité pueda cambiarla desde el panel si
+-- Zoom le da otra sala.
 insert into configuracion (clave, valor, descripcion) values
   ('url_sesion_zoom', '"https://us02web.zoom.us/j/83396553628"'::jsonb,
-   'Enlace directo al seminario web, para quien ya se registró en Zoom')
+   'Sala del seminario web: el enlace con el que entra el público en línea')
 on conflict (clave) do nothing;
+
+update configuracion
+   set descripcion = 'Sala del seminario web: el enlace con el que entra el público en línea'
+ where clave = 'url_sesion_zoom' and descripcion <> 'Sala del seminario web: el enlace con el que entra el público en línea';
+
+-- Y fuera la del registro, que ya no lee nadie. Dejarla sería peor que
+-- borrarla: un campo en el panel que no hace nada acaba usándose.
+delete from configuracion where clave = 'url_registro_zoom';
 
 -- Los perfiles bajaron de seis a dos. Los otros cuatro son por invitación del
 -- comité y se resuelven por correo; dejarlos elegibles obligaba a sostener
