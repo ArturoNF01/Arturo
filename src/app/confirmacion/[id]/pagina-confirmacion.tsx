@@ -93,6 +93,24 @@ export function PaginaConfirmacion({
                 {t.confirmacion.zoomBoton}
               </a>
               <p className="ayuda mt-3">{t.confirmacion.zoomNota}</p>
+
+              {/* La puerta, debajo del formulario. El registro de Zoom
+                  devuelve un enlace personal por correo, pero el día del
+                  congreso ese correo lleva un mes enterrado y lo que se
+                  busca es por dónde se entra. */}
+              {configuracion.url_sesion_zoom && (
+                <p className="mt-4 border-t pt-3 text-sm" style={{ borderColor: 'var(--borde)' }}>
+                  {t.confirmacion.zoomDirectoTexto}{' '}
+                  <a
+                    href={configuracion.url_sesion_zoom}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline"
+                  >
+                    {t.confirmacion.zoomDirectoBoton}
+                  </a>
+                </p>
+              )}
             </div>
           )}
 

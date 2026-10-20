@@ -314,6 +314,8 @@ export const es = {
     zoomTexto: 'El enlace para conectarse se lo envía Zoom, no nosotros. Regístrese ahí y recibirá su enlace personal por correo.',
     zoomBoton: 'Registrarme en Zoom',
     zoomNota: 'También le mandamos este enlace en el correo de confirmación, por si prefiere hacerlo después.',
+    zoomDirectoTexto: '¿Ya se registró en Zoom? El día del congreso puede entrar al seminario web desde aquí:',
+    zoomDirectoBoton: 'Entrar al seminario web',
   },
   faq: {
     titulo: 'Preguntas frecuentes',

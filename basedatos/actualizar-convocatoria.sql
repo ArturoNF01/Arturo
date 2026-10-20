@@ -59,8 +59,15 @@ update aviso_privacidad
 -- como un borrador. La casilla sigue en el panel para cuando haga falta.
 update faqs set provisional = false where provisional;
 
--- El aforo presencial baja de 300 a 60.
-update configuracion set valor = '60'::jsonb where clave = 'cupos_presenciales';
+-- El aforo presencial sube de 60 a 100.
+--
+-- Con condición, y no como estaba. Esto corre en cada despliegue, y mientras
+-- fue una orden sin condición el número del panel era decorativo: el comité lo
+-- cambiaba, el despliegue siguiente lo devolvía a 60 y nadie ataba una cosa
+-- con la otra. Así se aplica una sola vez —desde el valor que había— y a
+-- partir de ahí manda el panel, que es donde se decide un aforo.
+update configuracion set valor = '100'::jsonb
+ where clave = 'cupos_presenciales' and valor = '60'::jsonb;
 
 -- La sede y las fechas ya están decididas. Las filas de la base no se tocan
 -- al desplegar —se insertan sólo si faltan— así que el texto nuevo se aplica
@@ -79,6 +86,16 @@ update faqs
 insert into configuracion (clave, valor, descripcion) values
   ('url_registro_zoom', '"https://us02web.zoom.us/webinar/register/WN_LMCy6fENTOiR2dSOvb_jDg"'::jsonb,
    'Registro en Zoom para quien sigue la transmisión; de ahí sale el enlace personal')
+on conflict (clave) do nothing;
+
+-- Y el enlace directo al seminario web, para quien ya pasó por el registro de
+-- Zoom. El de registro da el enlace personal por correo; éste es el de la sala,
+-- que es lo que la gente busca el día del congreso cuando no encuentra aquel
+-- correo. También en la configuración: si Zoom cambia la sala, se cambia desde
+-- el panel y no hace falta desplegar.
+insert into configuracion (clave, valor, descripcion) values
+  ('url_sesion_zoom', '"https://us02web.zoom.us/j/83396553628"'::jsonb,
+   'Enlace directo al seminario web, para quien ya se registró en Zoom')
 on conflict (clave) do nothing;
 
 -- Los perfiles bajaron de seis a dos. Los otros cuatro son por invitación del

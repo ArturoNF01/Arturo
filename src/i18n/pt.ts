@@ -277,6 +277,8 @@ export const pt: Diccionario = {
     zoomTexto: 'O link de acesso é enviado pelo Zoom, não por nós. Inscreva-se lá e receberá o seu link pessoal por e-mail.',
     zoomBoton: 'Inscrever-me no Zoom',
     zoomNota: 'Também enviamos este link no e-mail de confirmação, caso prefira fazê-lo depois.',
+    zoomDirectoTexto: 'Já se inscreveu no Zoom? Durante o congresso pode entrar no seminário web por aqui:',
+    zoomDirectoBoton: 'Entrar no seminário web',
   },
   faq: {
     titulo: 'Perguntas frequentes',

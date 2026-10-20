@@ -466,7 +466,7 @@ create table if not exists configuracion (
   actualizado_por uuid references usuarios_panel(id)
 );
 insert into configuracion (clave, valor, descripcion) values
-  ('cupos_presenciales', '60'::jsonb, 'Lugares disponibles en modalidad presencial'),
+  ('cupos_presenciales', '100'::jsonb, 'Lugares disponibles en modalidad presencial'),
   ('cupos_en_linea',     'null'::jsonb, 'Lugares en línea;
 null = sin límite'),
   ('registro_abierto',   'true'::jsonb, 'Permite recibir nuevos registros'),
@@ -474,7 +474,8 @@ null = sin límite'),
   ('url_agenda',  '"https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf"'::jsonb, 'PDF de agenda/convocatoria'),
   ('url_video_login', '"https://home.ciess.org/wp-content/uploads/2026/03/1er-Congreso-de-Estudios-Interamericanos-de-Seguridad-Social-B.mp4"'::jsonb, 'Video de fondo del login'),
   ('correo_contacto', '"ciess.cooperacion@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador'),
-  ('url_registro_zoom', '"https://us02web.zoom.us/webinar/register/WN_LMCy6fENTOiR2dSOvb_jDg"'::jsonb, 'Registro en Zoom para quien sigue la transmisión; de ahí sale el enlace personal')
+  ('url_registro_zoom', '"https://us02web.zoom.us/webinar/register/WN_LMCy6fENTOiR2dSOvb_jDg"'::jsonb, 'Registro en Zoom para quien sigue la transmisión; de ahí sale el enlace personal'),
+  ('url_sesion_zoom', '"https://us02web.zoom.us/j/83396553628"'::jsonb, 'Enlace directo al seminario web, para quien ya se registró en Zoom')
 on conflict (clave) do nothing;
 drop trigger if exists trg_config_actualizado on configuracion;
 create trigger trg_config_actualizado before update on configuracion

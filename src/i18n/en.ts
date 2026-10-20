@@ -276,6 +276,8 @@ export const en: Diccionario = {
     zoomTexto: 'Zoom sends the joining link, not us. Register there and you will receive your personal link by email.',
     zoomBoton: 'Register on Zoom',
     zoomNota: 'We also include this link in your confirmation email, in case you prefer to do it later.',
+    zoomDirectoTexto: 'Already registered on Zoom? During the congress you can join the webinar here:',
+    zoomDirectoBoton: 'Join the webinar',
   },
   faq: {
     titulo: 'Frequently asked questions',

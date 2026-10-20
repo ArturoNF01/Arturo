@@ -28,6 +28,8 @@ export interface DatosCorreo {
   urlAgenda: string;
   /** Registro del seminario web. De ahí sale el enlace de quien sigue la transmisión. */
   urlRegistroZoom?: string;
+  /** La sala del seminario web, para quien ya pasó por ese registro. */
+  urlSesionZoom?: string;
 }
 
 export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> {
@@ -62,6 +64,7 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
     fecha_limite: datos.fechaLimite,
     url_edicion: `${urlSitio()}/confirmacion/${r.id}?token=${r.token_edicion}`,
     url_zoom: datos.urlRegistroZoom ?? '',
+    url_sesion_zoom: datos.urlSesionZoom ?? '',
     // El enlace de conexión no lo damos nosotros: lo manda Zoom cuando la
     // persona se registra en el seminario web. Quien sigue la transmisión
     // tiene que saberlo o se queda con un folio y sin manera de entrar. Va
@@ -76,7 +79,12 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
         ? `<div style="margin:20px 0;padding:16px;border-radius:8px;background:#eef3f9;border:1px solid #cfdcea;">
 <p style="margin:0 0 8px;font-weight:bold;color:#16283d;">${t.confirmacion.zoomTitulo}</p>
 <p style="margin:0 0 12px;">${t.confirmacion.zoomTexto}</p>
-<p style="margin:0;"><a href="${datos.urlRegistroZoom}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#2e5c8a;color:#ffffff;text-decoration:none;font-weight:bold;">${t.confirmacion.zoomBoton}</a></p>
+<p style="margin:0;"><a href="${datos.urlRegistroZoom}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#2e5c8a;color:#ffffff;text-decoration:none;font-weight:bold;">${t.confirmacion.zoomBoton}</a></p>${
+            datos.urlSesionZoom
+              ? `
+<p style="margin:12px 0 0;padding-top:12px;border-top:1px solid #cfdcea;font-size:14px;">${t.confirmacion.zoomDirectoTexto} <a href="${datos.urlSesionZoom}" style="color:#2e5c8a;font-weight:bold;">${t.confirmacion.zoomDirectoBoton}</a></p>`
+              : ''
+          }
 </div>`
         : '',
     url_agenda: datos.urlAgenda,

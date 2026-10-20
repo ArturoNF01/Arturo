@@ -183,6 +183,7 @@ export async function POST(peticion: NextRequest) {
       fechaLimite: configuracion.fecha_limite_registro,
       urlAgenda: configuracion.url_agenda,
       urlRegistroZoom: configuracion.url_registro_zoom,
+      urlSesionZoom: configuracion.url_sesion_zoom,
     }),
   ]);
 
