@@ -543,7 +543,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 {{zoom_bloque}}
 <p>Puede consultar o modificar sus datos hasta el {{fecha_limite}} en el siguiente enlace: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>Toda la información del congreso —la convocatoria, la sede, el programa conforme se publique y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
+<p>Toda la información del Congreso —la convocatoria, la sede, el programa conforme se publique y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Cualquier corrección posterior debe solicitarse a {{correo_contacto}}.</p>
 <p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -559,7 +559,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 {{zoom_bloque}}
 <p>You may review or edit your details until {{fecha_limite}} at the following link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>All the congress information —the call for papers, the venue, the programme as it is published and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
+<p>All the Congress information —the call for papers, the venue, the programme as it is published and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Any later correction must be requested at {{correo_contacto}}.</p>
 <p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
 
@@ -575,7 +575,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 {{zoom_bloque}}
 <p>Você pode consultar ou alterar seus dados até {{fecha_limite}} no seguinte link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>Todas as informações do congresso —a convocatória, a sede, a programação conforme for publicada e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
+<p>Todas as informações do Congresso —a convocatória, a sede, a programação conforme for publicada e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Qualquer correção posterior deve ser solicitada a {{correo_contacto}}.</p>
 <p>Comitê organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -652,7 +652,7 @@ end $$;
 insert into configuracion (clave, valor, descripcion) values
   ('congreso_nombre',
    '{"es": "1er Congreso de Estudios Interamericanos de Seguridad Social", "en": "1st Congress of Inter-American Social Security Studies", "pt": "1º Congresso de Estudos Interamericanos de Seguridade Social"}'::jsonb,
-   'Nombre completo del congreso, en los tres idiomas'),
+   'Nombre completo del Congreso, en los tres idiomas'),
 
   ('congreso_nombre_corto',
    '{"es": "1er Congreso de Estudios Interamericanos de Seguridad Social", "en": "1st Congress of Inter-American Social Security Studies", "pt": "1º Congresso de Estudos Interamericanos de Seguridade Social"}'::jsonb,
@@ -660,14 +660,14 @@ insert into configuracion (clave, valor, descripcion) values
 
   ('congreso_sede',
    '{"es": "CIESS · Ciudad de México, México", "en": "CIESS · Mexico City, Mexico", "pt": "CIESS · Cidade do México, México"}'::jsonb,
-   'Sede del congreso'),
+   'Sede del Congreso'),
 
   ('congreso_fechas',
    '{"es": "11, 12 y 13 de noviembre de 2026", "en": "11-13 November 2026", "pt": "11, 12 e 13 de novembro de 2026"}'::jsonb,
-   'Fechas del congreso tal como se muestran'),
+   'Fechas del Congreso tal como se muestran'),
 
-  ('congreso_fecha_inicio', '"2026-11-11"'::jsonb, 'Primer día del congreso'),
-  ('congreso_fecha_fin',    '"2026-11-13"'::jsonb, 'Último día del congreso'),
+  ('congreso_fecha_inicio', '"2026-11-11"'::jsonb, 'Primer día del Congreso'),
+  ('congreso_fecha_fin',    '"2026-11-13"'::jsonb, 'Último día del Congreso'),
 
   ('limite_semblanza_palabras',   '60'::jsonb,   'Extensión máxima de la semblanza, en palabras'),
   ('limite_semblanza_caracteres', '420'::jsonb,  'Límite que verifica el formulario'),
@@ -1011,7 +1011,7 @@ insert into configuracion (clave, valor, descripcion) values
    '[{"clave":"t_30","dias_antes":30,"activo":true},
      {"clave":"t_7","dias_antes":7,"activo":true},
      {"clave":"t_1","dias_antes":1,"activo":true}]'::jsonb,
-   'Recordatorios antes del congreso: días de antelación y si están activos')
+   'Recordatorios antes del Congreso: días de antelación y si están activos')
 on conflict (clave) do nothing;
 -- ---------------------------------------------------------------------
 -- Plantilla del recordatorio

@@ -164,7 +164,7 @@ export function PanelCupos({
       </div>
 
       <section className="tarjeta mb-5 max-w-2xl p-5">
-        <h2 className="titulo-seccion mb-1">Datos del congreso</h2>
+        <h2 className="titulo-seccion mb-1">Datos del Congreso</h2>
         <p className="ayuda !mt-0 mb-5">
           Los valores actuales son una propuesta del equipo de desarrollo. Sustitúyalos por los
           definitivos: se reflejan de inmediato en el formulario, los correos y las páginas públicas.
@@ -172,7 +172,7 @@ export function PanelCupos({
 
         <div className="space-y-5">
           <CampoMultilingue
-            etiqueta="Nombre del congreso"
+            etiqueta="Nombre del Congreso"
             valor={datos.nombre}
             onChange={(v) => setDatos({ ...datos, nombre: v })}
             filas={2}

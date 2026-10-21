@@ -568,12 +568,7 @@ function PasoPerfil({
             type="button"
             onClick={() => elegirPerfil(p.clave)}
             aria-pressed={valores.perfil === p.clave}
-            className={`rounded-lg border p-3.5 text-left transition ${
-              valores.perfil === p.clave
-                ? 'border-ciess-400 bg-ciess-500/10'
-                : 'hover:bg-black/5 dark:hover:bg-white/5'
-            }`}
-            style={{ borderColor: valores.perfil === p.clave ? undefined : 'var(--borde)' }}
+            className={`opcion p-3.5 ${valores.perfil === p.clave ? 'opcion-activa' : ''}`}
           >
             <span className="block text-sm font-medium">{nombres[p.clave]}</span>
             <span className="mt-0.5 block text-xs tenue">{nombres[`${p.clave}Ayuda`]}</span>
@@ -596,10 +591,9 @@ function PasoPerfil({
                     type="button"
                     onClick={() => fijar('modalidad', m)}
                     aria-pressed={valores.modalidad === m}
-                    className={`rounded-lg border p-3.5 text-left text-sm font-medium transition ${
-                      valores.modalidad === m ? 'border-ciess-400 bg-ciess-500/10' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                    className={`opcion p-3.5 text-sm font-medium ${
+                      valores.modalidad === m ? 'opcion-activa' : ''
                     }`}
-                    style={{ borderColor: valores.modalidad === m ? undefined : 'var(--borde)' }}
                   >
                     {t.modalidad[m]}
                     {m === 'presencial' && (

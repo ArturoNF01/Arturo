@@ -3,7 +3,7 @@ import { PaginaInstalaciones } from './pagina-instalaciones';
 
 export const metadata: Metadata = {
   title: 'Instalaciones · 1er Congreso de Estudios Interamericanos de Seguridad Social',
-  description: 'Fotografías del campus del CIESS en la Ciudad de México, sede del congreso.',
+  description: 'Fotografías del campus del CIESS en la Ciudad de México, sede del Congreso.',
 };
 
 export default function Instalaciones() {

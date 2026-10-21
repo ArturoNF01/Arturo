@@ -212,7 +212,7 @@ export async function diagnosticar(): Promise<Informe> {
     },
     {
       clave: 'fechas',
-      titulo: 'Fechas del congreso',
+      titulo: 'Fechas del Congreso',
       estado: limitePasado || congresoPasado ? 'incompleto' : 'listo',
       resumen:
         limitePasado && congresoPasado
@@ -234,7 +234,7 @@ export async function diagnosticar(): Promise<Informe> {
         hay('NEXT_PUBLIC_URL_SITIO')
           ? 'Los enlaces de edición de los correos apuntan al dominio configurado.'
           : 'Sin NEXT_PUBLIC_URL_SITIO los enlaces de los correos pueden apuntar a localhost.',
-      siguiente: 'Poner NEXT_PUBLIC_URL_SITIO con el dominio definitivo del congreso.',
+      siguiente: 'Poner NEXT_PUBLIC_URL_SITIO con el dominio definitivo del Congreso.',
       variables: sitio,
     },
   ];

@@ -106,7 +106,7 @@ export function PaginaInicio({
         </section>
 
         {/* Ejes temáticos ----------------------------------------------- */}
-        <section className="border-y" style={{ borderColor: 'var(--borde)', backgroundColor: 'var(--fondo-alterno, transparent)' }}>
+        <section className="border-y" style={{ borderColor: 'var(--borde)', backgroundColor: 'var(--fondo-alterno)' }}>
           <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
             <h2 className="titulo-seccion">{textos.ejesTitulo}</h2>
             <p className="mt-2 tenue">{textos.ejesAyuda}</p>
@@ -115,17 +115,17 @@ export function PaginaInicio({
                 así los nueve ejes se recorren de un vistazo y los títulos
                 quedan alineados aunque midan distinto. La tarjeta entera se
                 tiñe al pasar el ratón, no sólo el borde. */}
-            <ol className="mt-10 grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-3"
+            <ol className="mt-10 grid gap-px overflow-hidden rounded-xl border shadow-sm sm:grid-cols-2 lg:grid-cols-3"
                 style={{ borderColor: 'var(--borde)', backgroundColor: 'var(--borde)' }}>
               {ejes.map((eje, i) => (
                 <li
                   key={eje.clave}
                   className="group flex gap-4 p-5 transition-colors duration-200"
-                  style={{ backgroundColor: 'var(--fondo)' }}
+                  style={{ backgroundColor: 'var(--fondo-tarjeta)' }}
                 >
                   <span
                     aria-hidden
-                    className="shrink-0 font-serif text-3xl font-bold leading-none text-ciess-600/25 transition-colors duration-200 group-hover:text-ciess-600 dark:text-ciess-300/25 dark:group-hover:text-ciess-300"
+                    className="shrink-0 font-serif text-3xl font-bold leading-none text-ciess-600/40 transition-colors duration-200 group-hover:text-ciess-600 dark:text-ciess-300/40 dark:group-hover:text-ciess-300"
                   >
                     {String(i + 1).padStart(2, '0')}
                   </span>

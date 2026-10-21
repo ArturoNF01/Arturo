@@ -5,6 +5,12 @@
 :root {
   --fondo: #f7f9fc;
   --fondo-tarjeta: #ffffff;
+  /* La banda de las secciones alternas. Sin ella, una sección que ocupa toda
+     la pantalla es del mismo color que la de arriba y que la de abajo, y la
+     página se lee como una sábana: nada dice dónde empieza un bloque. Es un
+     paso, no un salto —el contraste lo ponen el texto y las tarjetas, no el
+     fondo—. */
+  --fondo-alterno: #ecf1f8;
   --borde: #dde5ef;
   --borde-fuerte: #c3d0e0;
   --texto: #0e1c2c;
@@ -27,6 +33,9 @@
   /* La tarjeta se separa del fondo por luminancia, no por sombra: en oscuro
      las sombras no se ven. */
   --fondo-tarjeta: #152437;
+  /* En oscuro la banda va por debajo del fondo, no por encima: así las
+     tarjetas de dentro —que son más claras— se despegan de ella. */
+  --fondo-alterno: #070e18;
   --borde: #32485f;
   /* Para reglas que deben leerse como líneas, no como insinuaciones:
      cabeceras de tabla, separadores de sección. */
@@ -83,6 +92,28 @@
     background-color: var(--fondo);
     border-color: var(--borde);
     color: var(--texto);
+  }
+  /*
+   * Una opción dentro de un grupo de botones: perfil, modalidad, idioma.
+   *
+   * Va hundida respecto de la tarjeta que la contiene. Sin eso es un
+   * rectángulo blanco dentro de otro rectángulo blanco, separados por una
+   * línea de un gris que apenas se ve: hay que fijarse para saber que son
+   * botones, y más aún para saber cuál está elegido. Al pasar el ratón sube
+   * al color de la tarjeta, que es el gesto contrario y se lee solo.
+   */
+  .opcion {
+    @apply rounded-lg border text-left transition;
+    background-color: var(--fondo-alterno);
+    border-color: var(--borde);
+  }
+  .opcion:hover:not(.opcion-activa) {
+    background-color: var(--fondo-tarjeta);
+    border-color: var(--borde-fuerte);
+  }
+  .opcion-activa {
+    @apply border-ciess-500 shadow-sm dark:border-ciess-300;
+    background-color: color-mix(in srgb, var(--marca) 18%, var(--fondo-tarjeta));
   }
   .etiqueta { @apply block text-sm font-medium mb-1.5; }
   .ayuda { @apply mt-1 text-xs; color: var(--texto-tenue); }

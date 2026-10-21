@@ -31,14 +31,14 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '3. Finalidades del tratamiento',
         parrafos: [
-          'Finalidades primarias (necesarias para su participación): integrar el padrón oficial de participantes; elaborar el programa académico, los personificadores y las semblanzas de presentación; emitir constancias y cartas de invitación; gestionar alojamiento, traslados y alimentación; y comunicarle información logística y académica del congreso.',
+          'Finalidades primarias (necesarias para su participación): integrar el padrón oficial de participantes; elaborar el programa académico, los personificadores y las semblanzas de presentación; emitir constancias y cartas de invitación; gestionar alojamiento, traslados y alimentación; y comunicarle información logística y académica del Congreso.',
           'Finalidades secundarias (opcionales): difusión de futuras actividades académicas del CIESS y de la CISS, y publicación de su semblanza, fotografía, intervención o ponencia, cuando usted lo autorice de manera específica en el formulario. Puede negarse a estas finalidades sin que ello afecte su registro.',
         ],
       },
       {
         titulo: '4. Base legal',
         parrafos: [
-          'El tratamiento se sustenta en su consentimiento expreso (art. 8 de la LFPDPPP; art. 7, I y art. 11, I de la LGPD; art. 6.1.a y art. 9.2.a del RGPD) y, en lo relativo a la organización del congreso, en la ejecución de la relación derivada de su registro (art. 6.1.b del RGPD).',
+          'El tratamiento se sustenta en su consentimiento expreso (art. 8 de la LFPDPPP; art. 7, I y art. 11, I de la LGPD; art. 6.1.a y art. 9.2.a del RGPD) y, en lo relativo a la organización del Congreso, en la ejecución de la relación derivada de su registro (art. 6.1.b del RGPD).',
         ],
       },
       {
@@ -52,7 +52,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '6. Plazo de conservación',
         parrafos: [
-          'Los datos se conservarán durante la organización del congreso y hasta 24 meses después de su clausura, para efectos de emisión de constancias, memorias académicas y comprobación administrativa. Concluido ese plazo se suprimen o se anonimizan de forma irreversible para fines estadísticos.',
+          'Los datos se conservarán durante la organización del Congreso y hasta 24 meses después de su clausura, para efectos de emisión de constancias, memorias académicas y comprobación administrativa. Concluido ese plazo se suprimen o se anonimizan de forma irreversible para fines estadísticos.',
         ],
       },
       {
@@ -92,14 +92,14 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '3. Purposes of processing',
         parrafos: [
-          'Primary purposes (necessary for your participation): compiling the official roster of participants; preparing the academic programme, name plates and introductory biographies; issuing certificates and invitation letters; arranging accommodation, transfers and catering; and sending you logistical and academic information about the congress.',
+          'Primary purposes (necessary for your participation): compiling the official roster of participants; preparing the academic programme, name plates and introductory biographies; issuing certificates and invitation letters; arranging accommodation, transfers and catering; and sending you logistical and academic information about the Congress.',
           'Secondary purposes (optional): dissemination of future academic activities of CIESS and CISS, and publication of your biography, photograph, intervention or paper, where you specifically authorise it in the form. You may refuse these purposes without affecting your registration.',
         ],
       },
       {
         titulo: '4. Legal basis',
         parrafos: [
-          'Processing is based on your explicit consent (art. 8 LFPDPPP; art. 7(I) and art. 11(I) LGPD; art. 6(1)(a) and art. 9(2)(a) GDPR) and, as regards the organisation of the congress, on the performance of the relationship arising from your registration (art. 6(1)(b) GDPR).',
+          'Processing is based on your explicit consent (art. 8 LFPDPPP; art. 7(I) and art. 11(I) LGPD; art. 6(1)(a) and art. 9(2)(a) GDPR) and, as regards the organisation of the Congress, on the performance of the relationship arising from your registration (art. 6(1)(b) GDPR).',
         ],
       },
       {
@@ -113,7 +113,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '6. Retention period',
         parrafos: [
-          'Data are retained throughout the organisation of the congress and for up to 24 months after its closing, for the purpose of issuing certificates, academic proceedings and administrative verification. After that period they are deleted or irreversibly anonymised for statistical purposes.',
+          'Data are retained throughout the organisation of the Congress and for up to 24 months after its closing, for the purpose of issuing certificates, academic proceedings and administrative verification. After that period they are deleted or irreversibly anonymised for statistical purposes.',
         ],
       },
       {
@@ -153,14 +153,14 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '3. Finalidades do tratamento',
         parrafos: [
-          'Finalidades primárias (necessárias à sua participação): compor a lista oficial de participantes; elaborar o programa acadêmico, os identificadores de mesa e as apresentações biográficas; emitir certificados e cartas-convite; organizar hospedagem, traslados e alimentação; e comunicar informações logísticas e acadêmicas do congresso.',
+          'Finalidades primárias (necessárias à sua participação): compor a lista oficial de participantes; elaborar o programa acadêmico, os identificadores de mesa e as apresentações biográficas; emitir certificados e cartas-convite; organizar hospedagem, traslados e alimentação; e comunicar informações logísticas e acadêmicas do Congresso.',
           'Finalidades secundárias (opcionais): divulgação de futuras atividades acadêmicas do CIESS e da CISS e publicação da sua minibiografia, fotografia, intervenção ou trabalho, quando você autorizar de forma específica no formulário. A recusa a essas finalidades não afeta sua inscrição.',
         ],
       },
       {
         titulo: '4. Base legal',
         parrafos: [
-          'O tratamento fundamenta-se no seu consentimento (art. 7, I e art. 11, I da LGPD; art. 8 da LFPDPPP; art. 6.1.a e art. 9.2.a do RGPD) e, quanto à organização do congresso, na execução da relação decorrente da sua inscrição (art. 6.1.b do RGPD).',
+          'O tratamento fundamenta-se no seu consentimento (art. 7, I e art. 11, I da LGPD; art. 8 da LFPDPPP; art. 6.1.a e art. 9.2.a do RGPD) e, quanto à organização do Congresso, na execução da relação decorrente da sua inscrição (art. 6.1.b do RGPD).',
         ],
       },
       {
@@ -174,7 +174,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '6. Prazo de conservação',
         parrafos: [
-          'Os dados serão conservados durante a organização do congresso e por até 24 meses após o seu encerramento, para fins de emissão de certificados, anais acadêmicos e comprovação administrativa. Encerrado esse prazo, são eliminados ou anonimizados de forma irreversível para fins estatísticos.',
+          'Os dados serão conservados durante a organização do Congresso e por até 24 meses após o seu encerramento, para fins de emissão de certificados, anais acadêmicos e comprovação administrativa. Encerrado esse prazo, são eliminados ou anonimizados de forma irreversível para fins estatísticos.',
         ],
       },
       {

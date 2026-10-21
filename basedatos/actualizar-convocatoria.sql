@@ -74,9 +74,9 @@ update configuracion set valor = '100'::jsonb
 -- aquí; debajo de la respuesta, la página pinta además el mapa.
 update faqs
    set respuesta = jsonb_build_object(
-         'es', 'Del 11 al 13 de noviembre de 2026, en la sede del CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Ciudad de México. La agenda detallada se publicará antes del inicio del congreso.',
-         'en', '11-13 November 2026, at the CIESS headquarters: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Mexico City. The detailed programme will be published before the congress begins.',
-         'pt', 'De 11 a 13 de novembro de 2026, na sede do CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Cidade do México. A agenda detalhada será publicada antes do início do congresso.')
+         'es', 'Del 11 al 13 de noviembre de 2026, en la sede del CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Ciudad de México. La agenda detallada se publicará antes del inicio del Congreso.',
+         'en', '11-13 November 2026, at the CIESS headquarters: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Mexico City. The detailed programme will be published before the Congress begins.',
+         'pt', 'De 11 a 13 de novembro de 2026, na sede do CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Cidade do México. A agenda detalhada será publicada antes do início do Congresso.')
  where clave = 'sede-fechas';
 
 -- La sala del seminario web: el enlace con el que entra el público en línea.
@@ -334,19 +334,19 @@ alter table registros alter column requiere_traslado drop default;
 update plantillas_correo
    set cuerpo_html = replace(cuerpo_html,
          '<p>La convocatoria y la agenda están disponibles en <a href="{{url_agenda}}">este documento</a>.</p>',
-         '<p>Toda la información del congreso —la convocatoria, la sede, el programa conforme se publique y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
+         '<p>Toda la información del Congreso —la convocatoria, la sede, el programa conforme se publique y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
  where cuerpo_html like '%La convocatoria y la agenda están disponibles%';
 
 update plantillas_correo
    set cuerpo_html = replace(cuerpo_html,
          '<p>The call for papers and the agenda are available in <a href="{{url_agenda}}">this document</a>.</p>',
-         '<p>All the congress information —the call for papers, the venue, the programme as it is published and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
+         '<p>All the Congress information —the call for papers, the venue, the programme as it is published and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
  where cuerpo_html like '%The call for papers and the agenda are available%';
 
 update plantillas_correo
    set cuerpo_html = replace(cuerpo_html,
          '<p>A convocatória e a agenda estão disponíveis <a href="{{url_agenda}}">neste documento</a>.</p>',
-         '<p>Todas as informações do congresso —a convocatória, a sede, a programação conforme for publicada e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
+         '<p>Todas as informações do Congresso —a convocatória, a sede, a programação conforme for publicada e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
  where cuerpo_html like '%A convocatória e a agenda estão disponíveis%';
 
 commit;
