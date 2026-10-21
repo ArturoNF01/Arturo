@@ -10,6 +10,16 @@ import { CALENDARIO, GALERIA, LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from 
 import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 
+/**
+ * Los tres tonos que rotan por las tarjetas de los ejes.
+ *
+ * Escritos enteros y no armados con una plantilla: Tailwind lee el código
+ * buscando nombres de clase, y uno que sólo existe al ejecutarse no lo
+ * encuentra y lo descarta al compilar. No da error —la página sale, sin
+ * color—, que es la peor forma de fallar.
+ */
+const TONOS_EJE = ['eje-a', 'eje-b', 'eje-c'] as const;
+
 export function PaginaInicio({
   configuracion,
   congreso,
@@ -87,7 +97,7 @@ export function PaginaInicio({
                 rel="noopener noreferrer"
                 className="rounded-lg border border-white/30 px-7 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
               >
-                {textos.verConvocatoria}
+                {textos.descargarAgenda}
               </a>
             </div>
           </div>
@@ -120,13 +130,9 @@ export function PaginaInicio({
               {ejes.map((eje, i) => (
                 <li
                   key={eje.clave}
-                  className="group flex gap-4 p-5 transition-colors duration-200"
-                  style={{ backgroundColor: 'var(--fondo-tarjeta)' }}
+                  className={`eje ${TONOS_EJE[i % TONOS_EJE.length]} flex gap-4 p-5`}
                 >
-                  <span
-                    aria-hidden
-                    className="shrink-0 font-serif text-3xl font-bold leading-none text-ciess-600/40 transition-colors duration-200 group-hover:text-ciess-600 dark:text-ciess-300/40 dark:group-hover:text-ciess-300"
-                  >
+                  <span aria-hidden className="eje-numero shrink-0 font-serif text-3xl font-bold leading-none">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <div className="min-w-0">

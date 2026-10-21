@@ -79,6 +79,20 @@ update faqs
          'pt', 'De 11 a 13 de novembro de 2026, na sede do CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Cidade do México. A agenda detalhada será publicada antes do início do Congresso.')
  where clave = 'sede-fechas';
 
+-- El programa general ya está publicado, así que el botón de la portada deja
+-- de apuntar a la convocatoria y apunta a él. Es lo que busca quien entra al
+-- sitio con el registro ya abierto: a qué hora y en qué sala es cada mesa, no
+-- la invitación a mandar trabajos.
+--
+-- Con condición, para que se aplique una vez y el panel siga mandando después:
+-- si el comité sube una versión corregida del programa a otra dirección, el
+-- despliegue siguiente no debe devolverla a ésta.
+update configuracion
+   set valor = '"https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026_publico.pdf"'::jsonb,
+       descripcion = 'PDF del programa general del Congreso'
+ where clave = 'url_agenda'
+   and valor = '"https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf"'::jsonb;
+
 -- La sala del seminario web: el enlace con el que entra el público en línea.
 --
 -- Hubo un registro previo en Zoom —un formulario aparte que devolvía a cada

@@ -23,7 +23,7 @@ const RESPALDO: ConfiguracionPublica = {
   cupos_en_linea: null,
   registro_abierto: true,
   fecha_limite_registro: CONFIG.fechaLimiteRegistro,
-  url_agenda: CONFIG.urlConvocatoria,
+  url_agenda: CONFIG.urlAgenda,
   url_video_login: CONFIG.urlVideoLogin,
   url_sesion_zoom: 'https://us02web.zoom.us/j/83396553628',
   correo_contacto: process.env.CORREO_CONTACTO ?? 'congreso@ciess.org',

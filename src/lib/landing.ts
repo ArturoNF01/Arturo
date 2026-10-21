@@ -147,7 +147,7 @@ export interface TextosLanding {
   participarTitulo: string;
   participarAyuda: string;
   registrarse: string;
-  verConvocatoria: string;
+  descargarAgenda: string;
   cumplido: string;
 }
 
@@ -182,7 +182,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     participarAyuda:
       'El registro está abierto para asistir, presencialmente en la Ciudad de México o en línea desde cualquier país.',
     registrarse: 'Registrarse',
-    verConvocatoria: 'Ver la convocatoria',
+    descargarAgenda: 'Descargar el programa (PDF)',
     cumplido: 'Cumplido',
   },
   en: {
@@ -215,7 +215,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     participarAyuda:
       'Registration is open to attend, in person in Mexico City or online from anywhere.',
     registrarse: 'Register',
-    verConvocatoria: 'Read the call for papers',
+    descargarAgenda: 'Download the programme (PDF)',
     cumplido: 'Completed',
   },
   pt: {
@@ -248,7 +248,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     participarAyuda:
       'As inscrições estão abertas para participar presencialmente na Cidade do México ou online de qualquer país.',
     registrarse: 'Inscrever-se',
-    verConvocatoria: 'Ver a convocatória',
+    descargarAgenda: 'Baixar a programação (PDF)',
     cumplido: 'Concluído',
   },
 };

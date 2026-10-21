@@ -60,6 +60,38 @@
 .dark .text-red-500     { color: #f87171; }
 .dark .text-ciess-400   { color: #8fb6e4; }
 
+/*
+ * Los nueve ejes temáticos, en tres tonos que rotan.
+ *
+ * Son los del logotipo de Chrome —azul, verde, ámbar— bajados de saturación
+ * hasta donde conviven con el azul marino y el oro del sitio. A plena
+ * saturación, una rejilla de nueve tarjetas de colores es un mosaico de
+ * feria; apagados, el color hace sólo lo que tiene que hacer: separar un eje
+ * del siguiente de un vistazo y dar algo que mirar donde antes había nueve
+ * rectángulos iguales.
+ *
+ * El tono entra por una variable para que la tarjeta entera —número y
+ * fondo al pasar el ratón— se tiña sola sin repetir el color tres veces.
+ */
+.eje-a { --eje: #4a7fa8; }
+.eje-b { --eje: #52805f; }
+.eje-c { --eje: #a87a3c; }
+.dark .eje-a { --eje: #8fb6e4; }
+.dark .eje-b { --eje: #8bb597; }
+.dark .eje-c { --eje: #d2a263; }
+
+.eje {
+  background-color: var(--fondo-tarjeta);
+  @apply transition-colors duration-200;
+}
+.eje:hover { background-color: color-mix(in srgb, var(--eje) 9%, var(--fondo-tarjeta)); }
+.eje-numero {
+  color: var(--eje);
+  opacity: 0.55;
+  @apply transition-opacity duration-200;
+}
+.eje:hover .eje-numero { opacity: 1; }
+
 @layer base {
   html { scroll-behavior: smooth; }
   body {

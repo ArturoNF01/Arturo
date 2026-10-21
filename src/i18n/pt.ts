@@ -281,10 +281,10 @@ export const pt: Diccionario = {
   },
   faq: {
     titulo: 'Perguntas frequentes',
-    subtitulo: 'Informações baseadas na convocatória oficial do Congresso. Serão atualizadas quando a agenda definitiva for publicada.',
+    subtitulo: 'Respostas ao que mais se pergunta sobre a inscrição, a participação e a estadia. A programação geral já está publicada.',
     buscar: 'Buscar nas perguntas',
     sinResultados: 'Nenhuma pergunta corresponde à busca.',
-    verConvocatoria: 'Consultar a convocatória completa (PDF)',
+    verAgenda: 'Consultar a programação completa (PDF)',
   },
   login: {
     titulo: 'Painel de controle',

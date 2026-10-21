@@ -318,10 +318,10 @@ export const es = {
   },
   faq: {
     titulo: 'Preguntas frecuentes',
-    subtitulo: 'Información basada en la convocatoria oficial del Congreso. Se actualizará cuando se publique la agenda definitiva.',
+    subtitulo: 'Respuestas a lo que más se pregunta sobre el registro, la participación y la estancia. El programa general ya está publicado.',
     buscar: 'Buscar en las preguntas',
     sinResultados: 'No se encontraron preguntas que coincidan con la búsqueda.',
-    verConvocatoria: 'Consultar la convocatoria completa (PDF)',
+    verAgenda: 'Consultar el programa completo (PDF)',
   },
   login: {
     titulo: 'Panel de control',
@@ -538,7 +538,7 @@ export const es = {
         enListaEspera: '{n} persona(s) en lista de espera.',
         sinListaEspera: 'Quien se registre desde ahora entra en lista de espera.',
       },
-    agenda: { titulo: 'Agenda del Congreso', descargar: 'Descargar agenda (PDF)', provisional: 'Documento provisional: convocatoria oficial. Se sustituirá por la agenda definitiva.' },
+    agenda: { titulo: 'Programa del Congreso', descargar: 'Descargar el programa (PDF)', provisional: 'El programa general publicado: tres días, once mesas temáticas. Si cambia, basta con subir el PDF nuevo a la misma dirección.' },
   },
 };
 

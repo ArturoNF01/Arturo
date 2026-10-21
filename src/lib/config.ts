@@ -22,8 +22,11 @@ export const CONFIG = {
 
   urlVideoLogin:
     'https://home.ciess.org/wp-content/uploads/2026/03/1er-Congreso-de-Estudios-Interamericanos-de-Seguridad-Social-B.mp4',
-  urlConvocatoria:
-    'https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf',
+  /* El programa general, ya publicado. Sustituyó a la convocatoria: lo que
+     la gente busca en el sitio una vez abierto el registro es a qué hora y
+     en qué sala es cada mesa, no la invitación a mandar trabajos. */
+  urlAgenda:
+    'https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026_publico.pdf',
 
   zonaHoraria: 'America/Mexico_City',
   versionAvisoPrivacidad: '1.2',

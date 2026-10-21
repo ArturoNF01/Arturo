@@ -54,7 +54,7 @@ export function PaginaFaqs({ urlAgenda, faqs }: { urlAgenda: string; faqs: Faq[]
             aria-label={t.faq.buscar}
           />
           <a href={urlAgenda} target="_blank" rel="noreferrer" className="boton-secundario shrink-0">
-            {t.faq.verConvocatoria}
+            {t.faq.verAgenda}
           </a>
         </div>
 

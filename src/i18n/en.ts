@@ -280,10 +280,10 @@ export const en: Diccionario = {
   },
   faq: {
     titulo: 'Frequently asked questions',
-    subtitulo: 'Information based on the official call for papers. It will be updated once the final agenda is published.',
+    subtitulo: 'Answers to the most common questions about registration, participation and your stay. The general programme is now published.',
     buscar: 'Search the questions',
     sinResultados: 'No questions match your search.',
-    verConvocatoria: 'Read the full call for papers (PDF)',
+    verAgenda: 'Read the full programme (PDF)',
   },
   login: {
     titulo: 'Control panel',
