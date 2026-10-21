@@ -130,6 +130,9 @@ export interface TextosLanding {
   presentacion: string[];
   ejesTitulo: string;
   ejesAyuda: string;
+  programaTitulo: string;
+  programaAyuda: string;
+  programaNota: string;
   calendarioTitulo: string;
   calendarioAyuda: string;
   sedeTitulo: string;
@@ -163,6 +166,9 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     ],
     ejesTitulo: 'Ejes temáticos',
     ejesAyuda: 'Los trabajos del Congreso se organizan en estas nueve líneas de discusión.',
+    programaTitulo: 'Programa',
+    programaAyuda: 'Tres días de sesiones en la sede del CIESS. El detalle de cada ponencia —título, autoría y país— está en el PDF.',
+    programaNota: 'Programa sujeto a cambios: la versión vigente es siempre la del PDF.',
     calendarioTitulo: 'Fechas importantes',
     calendarioAyuda: 'Del lanzamiento de la convocatoria a los tres días de sesiones.',
     sedeTitulo: 'Cómo llegar',
@@ -196,6 +202,9 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     ],
     ejesTitulo: 'Thematic tracks',
     ejesAyuda: 'The Congress organises its sessions along these nine lines of discussion.',
+    programaTitulo: 'Programme',
+    programaAyuda: 'Three days of sessions at the CIESS headquarters. The detail of each paper —title, authors and country— is in the PDF.',
+    programaNota: 'Programme subject to change: the PDF is always the current version.',
     calendarioTitulo: 'Key dates',
     calendarioAyuda: 'From the opening of the call for papers to the three days of sessions.',
     sedeTitulo: 'Getting there',
@@ -229,6 +238,9 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     ],
     ejesTitulo: 'Eixos temáticos',
     ejesAyuda: 'Os trabalhos do Congresso organizam-se nestas nove linhas de discussão.',
+    programaTitulo: 'Programação',
+    programaAyuda: 'Três dias de sessões na sede do CIESS. O detalhe de cada trabalho —título, autoria e país— está no PDF.',
+    programaNota: 'Programação sujeita a alterações: a versão vigente é sempre a do PDF.',
     calendarioTitulo: 'Datas importantes',
     calendarioAyuda: 'Do lançamento da convocatória aos três dias de sessões.',
     sedeTitulo: 'Como chegar',
