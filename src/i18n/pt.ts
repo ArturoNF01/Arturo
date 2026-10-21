@@ -277,6 +277,9 @@ export const pt: Diccionario = {
     zoomTexto: 'Guarde este link: é por onde se entra nas sessões on-line. Conecte-se com ele nos dias do Congresso, no horário de cada sessão.',
     zoomBoton: 'Entrar no seminário web',
     zoomNota: 'Este mesmo link vai no seu e-mail de confirmação.',
+    agendaTitulo: 'A programação do Congresso',
+    agendaTexto: 'Três dias e onze mesas temáticas. Consulte-a para saber o horário e a sala de cada sessão.',
+    agendaBoton: 'Baixar a programação (PDF)',
 
   },
   faq: {

@@ -81,16 +81,16 @@
 .dark .eje-c { --eje: #d2a263; }
 
 .eje {
-  background-color: var(--fondo-tarjeta);
+  /* El color va al fondo, muy rebajado: lo justo para que cada tarjeta se
+     distinga de su vecina sin que la rejilla se vuelva un mosaico. El texto
+     sigue leyéndose sobre un fondo casi blanco, que es la condición. */
+  background-color: color-mix(in srgb, var(--eje) 8%, var(--fondo-tarjeta));
   @apply transition-colors duration-200;
 }
-.eje:hover { background-color: color-mix(in srgb, var(--eje) 9%, var(--fondo-tarjeta)); }
-.eje-numero {
-  color: var(--eje);
-  opacity: 0.55;
-  @apply transition-opacity duration-200;
-}
-.eje:hover .eje-numero { opacity: 1; }
+.eje:hover { background-color: color-mix(in srgb, var(--eje) 15%, var(--fondo-tarjeta)); }
+/* Y el número, encendido: es lo único a plena intensidad, y por eso ordena
+   la rejilla de un vistazo. */
+.eje-numero { color: var(--eje); }
 
 @layer base {
   html { scroll-behavior: smooth; }

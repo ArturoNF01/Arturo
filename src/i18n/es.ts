@@ -314,6 +314,9 @@ export const es = {
     zoomTexto: 'Guarde este enlace: es por donde se entra a las sesiones en línea. Conéctese con él los días del Congreso, a la hora de cada sesión.',
     zoomBoton: 'Entrar al seminario web',
     zoomNota: 'Este mismo enlace va en su correo de confirmación.',
+    agendaTitulo: 'El programa del Congreso',
+    agendaTexto: 'Tres días y once mesas temáticas. Consúltelo para saber a qué hora y en qué sala es cada sesión.',
+    agendaBoton: 'Descargar el programa (PDF)',
 
   },
   faq: {

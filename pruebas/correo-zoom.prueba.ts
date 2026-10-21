@@ -69,3 +69,59 @@ describe('la sala del seminario web en el acuse', () => {
     expect(v.url_zoom).toBe('');
   });
 });
+
+/**
+ * El programa va en todos los acuses que confirman algo, sin mirar el perfil
+ * ni la modalidad: quien expone quiere ver en qué mesa quedó y a qué hora, y
+ * quien asiste, qué va a oír.
+ */
+describe('el programa en los acuses', () => {
+  const PROGRAMA = 'https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026_publico.pdf';
+
+  function conPrograma(registro: Record<string, unknown>) {
+    return variablesDeRegistro({
+      clave: 'confirmacion_registro',
+      registro: { folio: 'REG-1', nombres: 'Ana', apellidos: 'Ruiz', correo: 'a@b.org', idioma: 'es', ...registro },
+      correoContacto: 'congreso@ciess.org',
+      fechaLimite: '2026-10-30',
+      urlAgenda: PROGRAMA,
+    });
+  }
+
+  it('sale para los cuatro casos: ponente y público, presencial y en línea', () => {
+    for (const perfil of ['ponente', 'publico_general']) {
+      for (const modalidad of ['presencial', 'en_linea']) {
+        const v = conPrograma({ perfil, modalidad });
+        expect(v.agenda_bloque, `${perfil} · ${modalidad}`).toContain(PROGRAMA);
+      }
+    }
+  });
+
+  it('y no compite con el de la sala: uno es la puerta y el otro el folleto', () => {
+    // El del seminario va relleno; el del programa, perfilado. Si los dos
+    // fueran botones azules, el correo tendría dos llamadas a la acción del
+    // mismo peso y ninguna ganaría.
+    const v = variablesDeRegistro({
+      clave: 'confirmacion_registro',
+      registro: { folio: 'REG-1', perfil: 'publico_general', modalidad: 'en_linea', idioma: 'es', correo: 'a@b.org' },
+      correoContacto: 'congreso@ciess.org',
+      fechaLimite: '2026-10-30',
+      urlAgenda: PROGRAMA,
+      urlSesionZoom: SALA,
+    });
+    expect(v.zoom_bloque).toContain('background:#2e5c8a');
+    expect(v.agenda_bloque).toContain('border:1px solid #2e5c8a');
+    expect(v.agenda_bloque).not.toContain('background:#2e5c8a');
+  });
+
+  it('sin programa configurado no se inventa un botón roto', () => {
+    const v = variablesDeRegistro({
+      clave: 'confirmacion_registro',
+      registro: { folio: 'REG-1', perfil: 'ponente', modalidad: 'presencial', idioma: 'es', correo: 'a@b.org' },
+      correoContacto: 'congreso@ciess.org',
+      fechaLimite: '2026-10-30',
+      urlAgenda: '',
+    });
+    expect(v.agenda_bloque).toBe('');
+  });
+});

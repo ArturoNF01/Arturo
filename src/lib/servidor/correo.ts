@@ -84,6 +84,20 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
 </div>`
         : '',
     url_agenda: datos.urlAgenda,
+    // El programa, para todo el mundo: quien expone quiere ver en qué mesa
+    // quedó y a qué hora, y quien asiste, qué va a oír. Es el único bloque
+    // que no depende del perfil ni de la modalidad.
+    //
+    // Va con el botón perfilado y no relleno, para que no compita con el de
+    // la sala del seminario cuando los dos salen en el mismo correo: uno es
+    // la puerta y el otro es el folleto.
+    agenda_bloque: datos.urlAgenda
+      ? `<div style="margin:20px 0;padding:16px;border-radius:8px;border:1px solid #cfdcea;">
+<p style="margin:0 0 8px;font-weight:bold;color:#16283d;">${t.confirmacion.agendaTitulo}</p>
+<p style="margin:0 0 12px;">${t.confirmacion.agendaTexto}</p>
+<p style="margin:0;"><a href="${datos.urlAgenda}" style="display:inline-block;padding:9px 16px;border-radius:6px;border:1px solid #2e5c8a;color:#2e5c8a;text-decoration:none;font-weight:bold;">${t.confirmacion.agendaBoton}</a></p>
+</div>`
+      : '',
     url_sitio: urlSitio(),
     correo_contacto: datos.correoContacto,
   };

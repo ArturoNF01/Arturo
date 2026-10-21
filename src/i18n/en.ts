@@ -276,6 +276,9 @@ export const en: Diccionario = {
     zoomTexto: 'Save this link: it is how you join the online sessions. Use it on the days of the Congress, at the time of each session.',
     zoomBoton: 'Join the webinar',
     zoomNota: 'This same link is included in your confirmation email.',
+    agendaTitulo: 'The Congress programme',
+    agendaTexto: 'Three days and eleven thematic panels. Check it for the time and room of each session.',
+    agendaBoton: 'Download the programme (PDF)',
 
   },
   faq: {

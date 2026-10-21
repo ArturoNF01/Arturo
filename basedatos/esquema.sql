@@ -529,6 +529,9 @@ group by 1 order by 2 desc;
 -- Variables disponibles: {{folio}} {{nombre}} {{perfil}} {{modalidad}}
 --                        {{correo}} {{fecha_limite}} {{url_edicion}}
 --                        {{url_agenda}} {{url_sitio}} {{correo_contacto}}
+--                        {{zoom_bloque}} {{agenda_bloque}} — bloques ya
+--                        formateados: el sistema decide si salen y con qué
+--                        aspecto. La plantilla sólo dice dónde van.
 -- ---------------------------------------------------------------------
 insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 ('confirmacion_registro', 'es',
@@ -542,8 +545,9 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Modalidad:</strong> {{modalidad}}</li>
 </ul>
 {{zoom_bloque}}
+{{agenda_bloque}}
 <p>Puede consultar o modificar sus datos hasta el {{fecha_limite}} en el siguiente enlace: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>Toda la información del Congreso —la convocatoria, la sede, el programa conforme se publique y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
+<p>Toda la información del Congreso —el programa, la sede y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Cualquier corrección posterior debe solicitarse a {{correo_contacto}}.</p>
 <p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -558,8 +562,9 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Format:</strong> {{modalidad}}</li>
 </ul>
 {{zoom_bloque}}
+{{agenda_bloque}}
 <p>You may review or edit your details until {{fecha_limite}} at the following link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>All the Congress information —the call for papers, the venue, the programme as it is published and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
+<p>All the Congress information —the programme, the venue and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Any later correction must be requested at {{correo_contacto}}.</p>
 <p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
 
@@ -574,8 +579,9 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Modalidade:</strong> {{modalidad}}</li>
 </ul>
 {{zoom_bloque}}
+{{agenda_bloque}}
 <p>Você pode consultar ou alterar seus dados até {{fecha_limite}} no seguinte link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>Todas as informações do Congresso —a convocatória, a sede, a programação conforme for publicada e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
+<p>Todas as informações do Congresso —a programação, a sede e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Qualquer correção posterior deve ser solicitada a {{correo_contacto}}.</p>
 <p>Comitê organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -587,11 +593,11 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
  $html$<p>Prezada pessoa participante,</p><p>Seus dados de inscrição (protocolo {{folio}}) foram atualizados em {{fecha}}.</p><p>Se você não fez esta alteração, escreva para {{correo_contacto}}.</p><p>Comitê organizador</p>$html$),
 
 ('lista_espera', 'es', 'Lista de espera · 1er Congreso',
- $html$<p>Estimada persona participante:</p><p>Los lugares presenciales se encuentran agotados. Su registro (folio {{folio}}) quedó en <strong>lista de espera</strong>; le avisaremos si se libera un lugar. También puede participar en modalidad en línea.</p><p>Comité organizador</p>$html$),
+ $html$<p>Estimada persona participante:</p><p>Los lugares presenciales se encuentran agotados. Su registro (folio {{folio}}) quedó en <strong>lista de espera</strong>; le avisaremos si se libera un lugar. También puede participar en modalidad en línea.</p>{{agenda_bloque}}<p>Comité organizador</p>$html$),
 ('lista_espera', 'en', 'Waiting list · 1st Congress',
- $html$<p>Dear participant,</p><p>On-site seats are sold out. Your registration (reference {{folio}}) is on the <strong>waiting list</strong>; we will notify you if a seat becomes available. You may also join online.</p><p>Organizing committee</p>$html$),
+ $html$<p>Dear participant,</p><p>On-site seats are sold out. Your registration (reference {{folio}}) is on the <strong>waiting list</strong>; we will notify you if a seat becomes available. You may also join online.</p>{{agenda_bloque}}<p>Organizing committee</p>$html$),
 ('lista_espera', 'pt', 'Lista de espera · 1º Congresso',
- $html$<p>Prezada pessoa participante,</p><p>As vagas presenciais estão esgotadas. Sua inscrição (protocolo {{folio}}) ficou na <strong>lista de espera</strong>; avisaremos se uma vaga for liberada. Você também pode participar online.</p><p>Comitê organizador</p>$html$)
+ $html$<p>Prezada pessoa participante,</p><p>As vagas presenciais estão esgotadas. Sua inscrição (protocolo {{folio}}) ficou na <strong>lista de espera</strong>; avisaremos se uma vaga for liberada. Você também pode participar online.</p>{{agenda_bloque}}<p>Comitê organizador</p>$html$)
 on conflict (clave, idioma) do nothing;
 -- ---------------------------------------------------------------------
 -- Consultas SQL directas para científicos de datos.
@@ -806,7 +812,8 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Nombre:</strong> {{nombre}}</li>
   <li><strong>Modalidad:</strong> {{modalidad}}</li>
 </ul>
-<p>Puede consultar o corregir sus datos hasta el {{fecha_limite}} en <a href="{{url_edicion}}">este enlace</a>. La información logística y el programa se enviarán por esta misma vía.</p>
+{{agenda_bloque}}
+<p>Puede consultar o corregir sus datos hasta el {{fecha_limite}} en <a href="{{url_edicion}}">este enlace</a>. La información logística se enviará por esta misma vía.</p>
 <p>Cualquier duda, escriba a {{correo_contacto}}.</p>
 <p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -819,7 +826,8 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Name:</strong> {{nombre}}</li>
   <li><strong>Format:</strong> {{modalidad}}</li>
 </ul>
-<p>You may review or correct your details until {{fecha_limite}} at <a href="{{url_edicion}}">this link</a>. Logistical information and the programme will be sent through this same channel.</p>
+{{agenda_bloque}}
+<p>You may review or correct your details until {{fecha_limite}} at <a href="{{url_edicion}}">this link</a>. Logistical information will be sent through this same channel.</p>
 <p>For any questions, write to {{correo_contacto}}.</p>
 <p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
 
@@ -832,6 +840,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Nome:</strong> {{nombre}}</li>
   <li><strong>Modalidade:</strong> {{modalidad}}</li>
 </ul>
+{{agenda_bloque}}
 <p>Você pode consultar ou corrigir seus dados até {{fecha_limite}} <a href="{{url_edicion}}">neste link</a>. As informações logísticas e a programação serão enviadas por esta mesma via.</p>
 <p>Em caso de dúvida, escreva para {{correo_contacto}}.</p>
 <p>Comitê organizador<br/>CIESS · RIUSS</p>$html$),

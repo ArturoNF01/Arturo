@@ -93,6 +93,58 @@ update configuracion
  where clave = 'url_agenda'
    and valor = '"https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf"'::jsonb;
 
+-- El programa, en los acuses que confirman algo.
+--
+-- Va detrás del bloque del seminario donde lo hay, y delante de la firma
+-- donde no. En los tres idiomas y en los tres acuses que confirman: el de
+-- registro recibido, el de lista de espera y el de registro confirmado.
+--
+-- No en el de ponencia rechazada ni en el de registro cancelado: un botón de
+-- «descargue el programa» ahí es sordo a lo que esa persona acaba de leer. Ni
+-- en el recordatorio, que ya enlaza el programa en su propio texto.
+--
+-- Se salta las plantillas que ya lo traen, así que puede correr mil veces.
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html, '{{zoom_bloque}}', '{{zoom_bloque}}' || chr(10) || '{{agenda_bloque}}')
+ where clave in ('confirmacion_registro', 'lista_espera', 'registro_confirmado')
+   and cuerpo_html like '%{{zoom_bloque}}%'
+   and cuerpo_html not like '%{{agenda_bloque}}%';
+
+update plantillas_correo
+   set cuerpo_html = regexp_replace(
+         cuerpo_html,
+         '(<p>(Comité organizador|Organizing committee|Comitê organizador))',
+         '{{agenda_bloque}}\1')
+ where clave in ('confirmacion_registro', 'lista_espera', 'registro_confirmado')
+   and cuerpo_html not like '%{{agenda_bloque}}%';
+
+-- Y las frases que daban el programa por no publicado.
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html,
+         '—la convocatoria, la sede, el programa conforme se publique y las preguntas frecuentes—',
+         '—el programa, la sede y las preguntas frecuentes—')
+ where cuerpo_html like '%el programa conforme se publique%';
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html,
+         '—the call for papers, the venue, the programme as it is published and the frequently asked questions—',
+         '—the programme, the venue and the frequently asked questions—')
+ where cuerpo_html like '%the programme as it is published%';
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html,
+         '—a convocatória, a sede, a programação conforme for publicada e as perguntas frequentes—',
+         '—a programação, a sede e as perguntas frequentes—')
+ where cuerpo_html like '%a programação conforme for publicada%';
+
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html, ' La información logística y el programa se enviarán por esta misma vía.', ' La información logística se enviará por esta misma vía.')
+ where cuerpo_html like '%el programa se enviarán por esta misma vía%';
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html, ' Logistical information and the programme will be sent through this same channel.', ' Logistical information will be sent through this same channel.')
+ where cuerpo_html like '%and the programme will be sent through%';
+update plantillas_correo
+   set cuerpo_html = replace(cuerpo_html, ' As informações logísticas e a programação serão enviadas por este mesmo meio.', ' As informações logísticas serão enviadas por este mesmo meio.')
+ where cuerpo_html like '%e a programação serão enviadas%';
+
 -- La sala del seminario web: el enlace con el que entra el público en línea.
 --
 -- Hubo un registro previo en Zoom —un formulario aparte que devolvía a cada
