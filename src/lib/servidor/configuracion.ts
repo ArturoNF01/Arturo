@@ -6,6 +6,7 @@ export interface ConfiguracionPublica {
   cupos_presenciales: number | null;
   cupos_en_linea: number | null;
   registro_abierto: boolean;
+  programa_publicado: boolean;
   fecha_limite_registro: string;
   url_agenda: string;
   url_video_login: string;
@@ -22,6 +23,10 @@ const RESPALDO: ConfiguracionPublica = {
   cupos_presenciales: 100,
   cupos_en_linea: null,
   registro_abierto: true,
+  // El programa se enseña sólo cuando el comité dice que está listo: el
+  // PDF se corrige hasta el último momento y una versión vieja circulando
+  // es peor que ninguna.
+  programa_publicado: false,
   fecha_limite_registro: CONFIG.fechaLimiteRegistro,
   url_agenda: CONFIG.urlAgenda,
   url_video_login: CONFIG.urlVideoLogin,
@@ -55,6 +60,7 @@ export async function leerConfiguracion(): Promise<ConfiguracionPublica> {
       cupos_presenciales: leer<number | null>('cupos_presenciales', RESPALDO.cupos_presenciales),
       cupos_en_linea: leer<number | null>('cupos_en_linea', RESPALDO.cupos_en_linea),
       registro_abierto: leer<boolean>('registro_abierto', RESPALDO.registro_abierto),
+      programa_publicado: leer<boolean>('programa_publicado', RESPALDO.programa_publicado),
       fecha_limite_registro: leer<string>('fecha_limite_registro', RESPALDO.fecha_limite_registro),
       url_agenda: leer<string>('url_agenda', RESPALDO.url_agenda),
       url_video_login: leer<string>('url_video_login', RESPALDO.url_video_login),

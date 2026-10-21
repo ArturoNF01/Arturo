@@ -127,6 +127,7 @@ export async function PUT(peticion: NextRequest, contexto: { params: Promise<{ i
       correoContacto: configuracion.correo_contacto,
       fechaLimite: configuracion.fecha_limite_registro,
       urlAgenda: configuracion.url_agenda,
+      programaPublicado: configuracion.programa_publicado,
     }),
   ]);
 

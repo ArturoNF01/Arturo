@@ -450,6 +450,8 @@ export const es = {
       presenciales: 'Lugares presenciales disponibles',
       enLinea: 'Lugares en línea (vacío = sin límite)',
       registroAbierto: 'Registro abierto',
+      programaPublicado: 'Programa publicado',
+      programaPublicadoAyuda: 'Mientras esté apagado, el programa no se enseña en el sitio y los acuses salen sin el botón de descarga. Enciéndalo cuando el PDF definitivo esté en su dirección.',
       fechaLimite: 'Fecha límite de registro',
       urlAgenda: 'URL de la agenda (PDF)',
       correoContacto: 'Correo de contacto',

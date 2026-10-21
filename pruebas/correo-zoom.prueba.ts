@@ -85,6 +85,7 @@ describe('el programa en los acuses', () => {
       correoContacto: 'congreso@ciess.org',
       fechaLimite: '2026-10-30',
       urlAgenda: PROGRAMA,
+      programaPublicado: true,
     });
   }
 
@@ -107,11 +108,27 @@ describe('el programa en los acuses', () => {
       correoContacto: 'congreso@ciess.org',
       fechaLimite: '2026-10-30',
       urlAgenda: PROGRAMA,
+      programaPublicado: true,
       urlSesionZoom: SALA,
     });
     expect(v.zoom_bloque).toContain('background:#2e5c8a');
     expect(v.agenda_bloque).toContain('border:1px solid #2e5c8a');
     expect(v.agenda_bloque).not.toContain('background:#2e5c8a');
+  });
+
+  it('mientras el comité no lo dé por publicado, el acuse sale sin botón', () => {
+    // Un correo es lo único que no se puede corregir después: mandar a
+    // descargar un PDF que todavía se está corrigiendo deja circulando una
+    // versión vieja que nadie puede retirar.
+    const v = variablesDeRegistro({
+      clave: 'confirmacion_registro',
+      registro: { folio: 'REG-1', perfil: 'ponente', modalidad: 'presencial', idioma: 'es', correo: 'a@b.org' },
+      correoContacto: 'congreso@ciess.org',
+      fechaLimite: '2026-10-30',
+      urlAgenda: PROGRAMA,
+      programaPublicado: false,
+    });
+    expect(v.agenda_bloque).toBe('');
   });
 
   it('sin programa configurado no se inventa un botón roto', () => {
@@ -121,6 +138,7 @@ describe('el programa en los acuses', () => {
       correoContacto: 'congreso@ciess.org',
       fechaLimite: '2026-10-30',
       urlAgenda: '',
+      programaPublicado: true,
     });
     expect(v.agenda_bloque).toBe('');
   });

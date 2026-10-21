@@ -6,7 +6,15 @@ import { useApp } from '@/componentes/proveedores';
 import { traducir, type Faq } from '@/lib/contenido';
 import { LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from '@/lib/landing';
 
-export function PaginaFaqs({ urlAgenda, faqs }: { urlAgenda: string; faqs: Faq[] }) {
+export function PaginaFaqs({
+  urlAgenda,
+  programaPublicado,
+  faqs,
+}: {
+  urlAgenda: string;
+  programaPublicado: boolean;
+  faqs: Faq[];
+}) {
   const { idioma, t } = useApp();
   const [busqueda, setBusqueda] = useState('');
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -53,9 +61,11 @@ export function PaginaFaqs({ urlAgenda, faqs }: { urlAgenda: string; faqs: Faq[]
             onChange={(e) => setBusqueda(e.target.value)}
             aria-label={t.faq.buscar}
           />
-          <a href={urlAgenda} target="_blank" rel="noreferrer" className="boton-secundario shrink-0">
-            {t.faq.verAgenda}
-          </a>
+          {programaPublicado && (
+            <a href={urlAgenda} target="_blank" rel="noreferrer" className="boton-secundario shrink-0">
+              {t.faq.verAgenda}
+            </a>
+          )}
         </div>
 
         {filtradas.length === 0 ? (

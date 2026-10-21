@@ -11,5 +11,19 @@ export const metadata: Metadata = {
 
 export default async function Faqs() {
   const [configuracion, { filas: faqs }] = await Promise.all([leerConfiguracion(), leerFaqs()]);
-  return <PaginaFaqs urlAgenda={configuracion.url_agenda} faqs={faqs} />;
+
+  // La pregunta sobre dónde consultar el programa se aparta aquí, en el
+  // servidor, y no al pintar: filtrándola en el navegador la respuesta viaja
+  // igual dentro de los datos de la página, y lo que no debe verse todavía no
+  // tiene por qué estar en el código fuente de nadie.
+  const visibles = configuracion.programa_publicado
+    ? faqs
+    : faqs.filter((f) => f.clave !== 'agenda');
+  return (
+    <PaginaFaqs
+      urlAgenda={configuracion.programa_publicado ? configuracion.url_agenda : ''}
+      programaPublicado={configuracion.programa_publicado}
+      faqs={visibles}
+    />
+  );
 }

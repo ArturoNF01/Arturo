@@ -84,6 +84,7 @@ export function PanelCupos({
     cupos_presenciales: configuracion.cupos_presenciales?.toString() ?? '',
     cupos_en_linea: configuracion.cupos_en_linea?.toString() ?? '',
     registro_abierto: configuracion.registro_abierto,
+    programa_publicado: configuracion.programa_publicado,
     fecha_limite_registro: configuracion.fecha_limite_registro,
     url_agenda: configuracion.url_agenda,
     url_video_login: configuracion.url_video_login,
@@ -113,6 +114,7 @@ export function PanelCupos({
         cupos_presenciales: valores.cupos_presenciales === '' ? null : Number(valores.cupos_presenciales),
         cupos_en_linea: valores.cupos_en_linea === '' ? null : Number(valores.cupos_en_linea),
         registro_abierto: valores.registro_abierto,
+        programa_publicado: valores.programa_publicado,
         fecha_limite_registro: valores.fecha_limite_registro,
         url_agenda: valores.url_agenda,
         url_video_login: valores.url_video_login,
@@ -328,6 +330,19 @@ export function PanelCupos({
             onChange={(e) => setValores({ ...valores, registro_abierto: e.target.checked })}
           />
           <span className="text-sm font-medium">{t.panel.cupos.registroAbierto}</span>
+        </label>
+
+        <label className="mt-4 flex items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-ciess-500"
+            checked={valores.programa_publicado}
+            onChange={(e) => setValores({ ...valores, programa_publicado: e.target.checked })}
+          />
+          <span>
+            <span className="text-sm font-medium">{t.panel.cupos.programaPublicado}</span>
+            <span className="ayuda block">{t.panel.cupos.programaPublicadoAyuda}</span>
+          </span>
         </label>
 
         <div className="mt-6 flex flex-wrap items-center gap-3 border-t pt-5" style={{ borderColor: 'var(--borde)' }}>

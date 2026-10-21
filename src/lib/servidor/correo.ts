@@ -28,6 +28,13 @@ export interface DatosCorreo {
   urlAgenda: string;
   /** La sala del seminario web: el enlace con el que se entra a las sesiones. */
   urlSesionZoom?: string;
+  /**
+   * Si el comité ya dio el programa por publicado. Mientras no, el acuse sale
+   * sin su botón: un correo es lo único que no se puede corregir después, y
+   * mandar a descargar un PDF que todavía se está corrigiendo deja circulando
+   * una versión vieja que nadie puede retirar.
+   */
+  programaPublicado?: boolean;
 }
 
 export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> {
@@ -91,7 +98,7 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
     // Va con el botón perfilado y no relleno, para que no compita con el de
     // la sala del seminario cuando los dos salen en el mismo correo: uno es
     // la puerta y el otro es el folleto.
-    agenda_bloque: datos.urlAgenda
+    agenda_bloque: datos.urlAgenda && datos.programaPublicado
       ? `<div style="margin:20px 0;padding:16px;border-radius:8px;border:1px solid #cfdcea;">
 <p style="margin:0 0 8px;font-weight:bold;color:#16283d;">${t.confirmacion.agendaTitulo}</p>
 <p style="margin:0 0 12px;">${t.confirmacion.agendaTexto}</p>

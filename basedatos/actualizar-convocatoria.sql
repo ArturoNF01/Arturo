@@ -79,6 +79,20 @@ update faqs
          'pt', 'De 11 a 13 de novembro de 2026, na sede do CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Cidade do México. A agenda detalhada será publicada antes do início do Congresso.')
  where clave = 'sede-fechas';
 
+-- El interruptor del programa.
+--
+-- Entra apagado: el PDF se corrige hasta el último momento, y una versión
+-- vieja circulando por los acuses es peor que ninguna. Lo enciende el comité
+-- desde el panel cuando la versión buena esté arriba, sin esperar un
+-- despliegue.
+--
+-- Con «do nothing», que es lo que hace que el panel mande: una vez encendido,
+-- ningún despliegue posterior vuelve a apagarlo.
+insert into configuracion (clave, valor, descripcion) values
+  ('programa_publicado', 'false'::jsonb,
+   'Enseña el programa en el sitio y el botón de descarga en los acuses')
+on conflict (clave) do nothing;
+
 -- El programa general ya está publicado, así que el botón de la portada deja
 -- de apuntar a la convocatoria y apunta a él. Es lo que busca quien entra al
 -- sitio con el registro ya abierto: a qué hora y en qué sala es cada mesa, no

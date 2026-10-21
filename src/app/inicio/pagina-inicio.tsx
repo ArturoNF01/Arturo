@@ -92,14 +92,16 @@ export function PaginaInicio({
               >
                 {textos.registrarse}
               </Link>
-              <a
-                href={configuracion.url_agenda}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg border border-white/30 px-7 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                {textos.descargarAgenda}
-              </a>
+              {configuracion.programa_publicado && (
+                <a
+                  href={configuracion.url_agenda}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-white/30 px-7 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  {textos.descargarAgenda}
+                </a>
+              )}
             </div>
           </div>
         </section>
@@ -151,62 +153,67 @@ export function PaginaInicio({
         </section>
 
         {/* Programa ------------------------------------------------------ */}
-        <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-20">
-          <h2 className="titulo-seccion">{textos.programaTitulo}</h2>
-          <p className="mt-2 tenue">{textos.programaAyuda}</p>
+        {/* Se enseña sólo cuando el comité lo da por publicado: el PDF se
+            corrige hasta el último momento, y un programa viejo a la vista
+            manda gente a la sala equivocada. */}
+        {configuracion.programa_publicado && (
+          <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-20">
+            <h2 className="titulo-seccion">{textos.programaTitulo}</h2>
+            <p className="mt-2 tenue">{textos.programaAyuda}</p>
 
-          <div className="mt-10 space-y-12">
-            {PROGRAMA.map((dia) => (
-              <article key={dia.iso}>
-                <header
-                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b pb-3"
-                  style={{ borderColor: 'var(--borde-fuerte)' }}
-                >
-                  <h3 className="font-serif text-lg font-bold">{dia.fecha[idioma]}</h3>
-                  <p className="text-sm tenue">{dia.titulo[idioma]}</p>
-                </header>
+            <div className="mt-10 space-y-12">
+              {PROGRAMA.map((dia) => (
+                <article key={dia.iso}>
+                  <header
+                    className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b pb-3"
+                    style={{ borderColor: 'var(--borde-fuerte)' }}
+                  >
+                    <h3 className="font-serif text-lg font-bold">{dia.fecha[idioma]}</h3>
+                    <p className="text-sm tenue">{dia.titulo[idioma]}</p>
+                  </header>
 
-                {dia.nota && <p className="mt-3 text-sm leading-relaxed tenue">{dia.nota[idioma]}</p>}
+                  {dia.nota && <p className="mt-3 text-sm leading-relaxed tenue">{dia.nota[idioma]}</p>}
 
-                {/* Las sesiones paralelas repiten el horario a propósito: el
-                    jueves por la tarde y todo el viernes hay dos salas a la
-                    vez, y verlo es justo lo que necesita quien está
-                    decidiendo a cuál entrar. */}
-                <ol className="mt-4">
-                  {dia.sesiones.map((sesion, i) => (
-                    <li
-                      key={`${sesion.horario}-${i}`}
-                      className="grid gap-x-5 gap-y-1 border-b py-3 last:border-b-0 sm:grid-cols-[6.5rem_1fr_11rem]"
-                      style={{ borderColor: 'var(--borde)' }}
-                    >
-                      <span className={`font-mono text-xs ${sesion.menor ? 'tenue' : 'font-semibold'}`}>
-                        {sesion.horario}
-                      </span>
-                      <span className={`text-sm leading-snug ${sesion.menor ? 'tenue' : ''}`}>
-                        {sesion.actividad[idioma]}
-                      </span>
-                      {sesion.sala && (
-                        <span className="text-xs leading-snug tenue sm:text-right">{sesion.sala[idioma]}</span>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </article>
-            ))}
-          </div>
+                  {/* Las sesiones paralelas repiten el horario a propósito: el
+                      jueves por la tarde y todo el viernes hay dos salas a la
+                      vez, y verlo es justo lo que necesita quien está
+                      decidiendo a cuál entrar. */}
+                  <ol className="mt-4">
+                    {dia.sesiones.map((sesion, i) => (
+                      <li
+                        key={`${sesion.horario}-${i}`}
+                        className="grid gap-x-5 gap-y-1 border-b py-3 last:border-b-0 sm:grid-cols-[6.5rem_1fr_11rem]"
+                        style={{ borderColor: 'var(--borde)' }}
+                      >
+                        <span className={`font-mono text-xs ${sesion.menor ? 'tenue' : 'font-semibold'}`}>
+                          {sesion.horario}
+                        </span>
+                        <span className={`text-sm leading-snug ${sesion.menor ? 'tenue' : ''}`}>
+                          {sesion.actividad[idioma]}
+                        </span>
+                        {sesion.sala && (
+                          <span className="text-xs leading-snug tenue sm:text-right">{sesion.sala[idioma]}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </article>
+              ))}
+            </div>
 
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <a
-              href={configuracion.url_agenda}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="boton-secundario"
-            >
-              {textos.descargarAgenda}
-            </a>
-            <p className="ayuda !mt-0">{textos.programaNota}</p>
-          </div>
-        </section>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <a
+                href={configuracion.url_agenda}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="boton-secundario"
+              >
+                {textos.descargarAgenda}
+              </a>
+              <p className="ayuda !mt-0">{textos.programaNota}</p>
+            </div>
+          </section>
+        )}
 
         {/* Calendario --------------------------------------------------- */}
         <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">

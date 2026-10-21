@@ -385,6 +385,8 @@ export const en: Diccionario = {
       presenciales: 'On-site seats available',
       enLinea: 'Online seats (empty = unlimited)',
       registroAbierto: 'Registration open',
+      programaPublicado: 'Programme published',
+      programaPublicadoAyuda: 'While this is off, the programme is not shown on the site and confirmation emails go out without the download button. Turn it on once the final PDF is at its address.',
       fechaLimite: 'Registration deadline',
       urlAgenda: 'Agenda URL (PDF)',
       correoContacto: 'Contact e-mail',

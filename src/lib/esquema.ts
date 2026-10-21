@@ -282,6 +282,7 @@ export const esquemaConfiguracion = z.object({
   url_agenda: z.string().url().optional(),
   url_video_login: z.string().url().optional().or(z.literal('')),
   url_sesion_zoom: z.string().url().optional().or(z.literal('')),
+  programa_publicado: z.boolean().optional(),
   correo_contacto: z.string().email().optional(),
 
   // Datos del congreso

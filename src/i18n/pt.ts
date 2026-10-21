@@ -386,6 +386,8 @@ export const pt: Diccionario = {
       presenciales: 'Vagas presenciais disponíveis',
       enLinea: 'Vagas online (vazio = sem limite)',
       registroAbierto: 'Inscrições abertas',
+      programaPublicado: 'Programação publicada',
+      programaPublicadoAyuda: 'Enquanto estiver desligado, a programação não é exibida no site e os e-mails de confirmação saem sem o botão de download. Ligue quando o PDF definitivo estiver no seu endereço.',
       fechaLimite: 'Prazo final de inscrição',
       urlAgenda: 'URL da agenda (PDF)',
       correoContacto: 'E-mail de contato',
