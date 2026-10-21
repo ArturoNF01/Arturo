@@ -48,6 +48,13 @@ const VALORES_INICIALES: Valores = {
   consentimiento_datos: false, consentimiento_comunicaciones: false,
 };
 
+/**
+ * Los tonos que toman las opciones del registro, en el mismo orden en que se
+ * pintan. Escritos enteros porque Tailwind descarta al compilar lo que no ve
+ * escrito en el código, y una clase armada con una plantilla no la ve.
+ */
+const TONOS_OPCION = ['tono-a', 'tono-b', 'tono-c'] as const;
+
 export function FormularioRegistro({
   configuracion,
   congreso,
@@ -562,13 +569,15 @@ function PasoPerfil({
           hacer, y cada uno lleva la línea que lo aclara para que nadie
           tenga que adivinar cuál le toca. */}
       <div className="grid gap-2 sm:grid-cols-2">
-        {PERFILES.map((p) => (
+        {PERFILES.map((p, i) => (
           <button
             key={p.clave}
             type="button"
             onClick={() => elegirPerfil(p.clave)}
             aria-pressed={valores.perfil === p.clave}
-            className={`opcion p-3.5 ${valores.perfil === p.clave ? 'opcion-activa' : ''}`}
+            className={`opcion ${TONOS_OPCION[i % TONOS_OPCION.length]} p-3.5 ${
+              valores.perfil === p.clave ? 'opcion-activa' : ''
+            }`}
           >
             <span className="block text-sm font-medium">{nombres[p.clave]}</span>
             <span className="mt-0.5 block text-xs tenue">{nombres[`${p.clave}Ayuda`]}</span>
@@ -583,7 +592,7 @@ function PasoPerfil({
           <h3 className="etiqueta">{t.modalidad.titulo}</h3>
           <div className="grid gap-2 sm:grid-cols-2">
             {(['presencial', 'en_linea'] as const)
-              .map((m) => {
+              .map((m, i) => {
                 const bloqueado = m === 'presencial' && presencialAgotado;
                 return (
                   <button
@@ -591,7 +600,7 @@ function PasoPerfil({
                     type="button"
                     onClick={() => fijar('modalidad', m)}
                     aria-pressed={valores.modalidad === m}
-                    className={`opcion p-3.5 text-sm font-medium ${
+                    className={`opcion ${TONOS_OPCION[i % TONOS_OPCION.length]} p-3.5 text-sm font-medium ${
                       valores.modalidad === m ? 'opcion-activa' : ''
                     }`}
                   >

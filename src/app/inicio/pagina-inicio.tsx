@@ -19,7 +19,7 @@ import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
  * encuentra y lo descarta al compilar. No da error —la página sale, sin
  * color—, que es la peor forma de fallar.
  */
-const TONOS_EJE = ['eje-a', 'eje-b', 'eje-c'] as const;
+const TONOS_EJE = ['tono-a', 'tono-b', 'tono-c'] as const;
 
 export function PaginaInicio({
   configuracion,
