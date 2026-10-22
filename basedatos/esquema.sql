@@ -472,7 +472,7 @@ null = sin límite'),
   ('registro_abierto',   'true'::jsonb, 'Permite recibir nuevos registros'),
   ('programa_publicado', 'false'::jsonb, 'Enseña el programa en el sitio y el botón de descarga en los acuses'),
   ('fecha_limite_registro', '"2026-10-30"'::jsonb, 'Fecha límite de registro y de edición'),
-  ('url_agenda',  '"https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026_publico.pdf"'::jsonb, 'PDF del programa general del Congreso'),
+  ('url_agenda',  '"https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026.pdf"'::jsonb, 'PDF del programa general del Congreso'),
   ('url_video_login', '"https://home.ciess.org/wp-content/uploads/2026/03/1er-Congreso-de-Estudios-Interamericanos-de-Seguridad-Social-B.mp4"'::jsonb, 'Video de fondo del login'),
   ('correo_contacto', '"ciess.cooperacion@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador'),
   ('url_sesion_zoom', '"https://us02web.zoom.us/j/83396553628"'::jsonb, 'Sala del seminario web: el enlace con el que entra el público en línea')

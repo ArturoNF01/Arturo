@@ -16,6 +16,11 @@
      más y las tarjetas se irían de tono. */
   --tono-tinte: 20%;
   --tono-tinte-fuerte: 30%;
+  /* El de las tarjetas del programa. Igual que el de los ejes, que es el que
+     se aprobó viéndolo: a menos, sobre blanco, se lee como «sin color». */
+  --sesion-tinte: 20%;
+  /* El texto que va sobre el azul de marca relleno: blanco en claro. */
+  --sobre-marca: #ffffff;
   --borde: #dde5ef;
   --borde-fuerte: #c3d0e0;
   --texto: #0e1c2c;
@@ -43,6 +48,9 @@
   --fondo-alterno: #070e18;
   --tono-tinte: 15%;
   --tono-tinte-fuerte: 24%;
+  --sesion-tinte: 16%;
+  /* En oscuro la marca es un azul claro, y el texto encima tiene que ser oscuro. */
+  --sobre-marca: #0b1420;
   --borde: #32485f;
   /* Para reglas que deben leerse como líneas, no como insinuaciones:
      cabeceras de tabla, separadores de sección. */
@@ -101,6 +109,77 @@
    la rejilla de un vistazo. */
 .eje-numero { color: var(--tono); }
 
+/*
+ * Una sesión del programa, teñida con el tono de su sala.
+ *
+ * El color es información y no adorno: Auditorio, sala de comisiones y sala de
+ * sesiones llevan cada una el suyo, y las sesiones paralelas —dos salas a la
+ * vez— se distinguen de un vistazo sin leer el nombre. Una sesión sin sala
+ * conocida cae al gris del tema, que es el aspecto de «sin color».
+ *
+ * Fuera de `@layer`, como el resto de lo que depende de `--tono`: no lleva
+ * utilidades que le pisen el borde o el radio, y así se puede leer entero.
+ */
+.sesion {
+  background-color: color-mix(in srgb, var(--tono, var(--texto-tenue)) var(--sesion-tinte), var(--fondo-tarjeta));
+  border: 1px solid color-mix(in srgb, var(--tono, var(--texto-tenue)) 38%, var(--borde));
+  border-left: 4px solid var(--tono, var(--borde-fuerte));
+  border-radius: 0.75rem;
+}
+.sesion-cabecera {
+  border-radius: 0.65rem;
+  transition: background-color 0.15s;
+}
+.sesion-cabecera:hover {
+  background-color: color-mix(in srgb, var(--tono, var(--texto-tenue)) 8%, transparent);
+}
+.punto-sala { background-color: var(--tono, var(--texto-tenue)); }
+
+/* La sala como etiqueta rellena, no sólo un punto: es lo que más color aporta
+   a la tarjeta sin tocar el texto, que sigue en el color normal. */
+.sala-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  padding: 0.15rem 0.65rem 0.15rem 0.55rem;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  color: var(--texto);
+  background-color: color-mix(in srgb, var(--tono, var(--texto-tenue)) 22%, transparent);
+}
+.pais-chip {
+  background-color: color-mix(in srgb, var(--tono, var(--texto-tenue)) 18%, transparent);
+}
+
+/* El texto teñido con la sala pero oscurecido hacia el color del texto: el
+   tono a secas, en tamaño pequeño, no llega al contraste que se le pide. */
+.texto-tono { color: color-mix(in srgb, var(--tono, var(--texto-tenue)) 70%, var(--texto)); }
+
+/* Las cuentas de arriba del programa, en fichas con el color de la marca. */
+.ficha-dato {
+  background-color: color-mix(in srgb, var(--marca) 10%, var(--fondo-tarjeta));
+  border: 1px solid color-mix(in srgb, var(--marca) 26%, var(--borde));
+  border-radius: 0.75rem;
+}
+.ficha-dato .numero { color: var(--marca); }
+
+/* El día elegido, relleno con el color de la marca. A diferencia de las
+   opciones del formulario —que se tiñen—, aquí hay que ver a la primera cuál
+   de los tres días es el que se está leyendo.
+
+   La regla de hover de `.opcion` excluye a `.dia-activo` a propósito: al pulsar
+   un día el ratón se queda encima, y sin la exclusión el hover (más específico
+   que esta regla) le ponía su tinte claro al botón relleno: texto blanco sobre
+   fondo claro, ilegible justo en el botón que se acaba de pulsar. */
+.dia-activo {
+  background-color: var(--marca);
+  border-color: var(--marca);
+  color: var(--sobre-marca);
+  box-shadow: 0 4px 14px -6px var(--marca);
+}
+.dia-activo .tenue { color: inherit; opacity: 0.85; }
+
 @layer base {
   html { scroll-behavior: smooth; }
   body {
@@ -148,7 +227,7 @@
     background-color: color-mix(in srgb, var(--tono, var(--marca)) 12%, var(--fondo-tarjeta));
     border-color: color-mix(in srgb, var(--tono, var(--marca)) 25%, var(--borde));
   }
-  .opcion:hover:not(.opcion-activa) {
+  .opcion:hover:not(.opcion-activa):not(.dia-activo) {
     background-color: color-mix(in srgb, var(--tono, var(--marca)) 20%, var(--fondo-tarjeta));
     border-color: color-mix(in srgb, var(--tono, var(--marca)) 45%, var(--borde));
   }

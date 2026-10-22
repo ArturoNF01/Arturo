@@ -76,7 +76,7 @@ describe('la sala del seminario web en el acuse', () => {
  * quien asiste, qué va a oír.
  */
 describe('el programa en los acuses', () => {
-  const PROGRAMA = 'https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026_publico.pdf';
+  const PROGRAMA = 'https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026.pdf';
 
   function conPrograma(registro: Record<string, unknown>) {
     return variablesDeRegistro({

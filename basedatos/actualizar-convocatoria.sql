@@ -93,19 +93,23 @@ insert into configuracion (clave, valor, descripcion) values
    'Enseña el programa en el sitio y el botón de descarga en los acuses')
 on conflict (clave) do nothing;
 
--- El programa general ya está publicado, así que el botón de la portada deja
--- de apuntar a la convocatoria y apunta a él. Es lo que busca quien entra al
--- sitio con el registro ya abierto: a qué hora y en qué sala es cada mesa, no
--- la invitación a mandar trabajos.
+-- El programa definitivo.
 --
--- Con condición, para que se aplique una vez y el panel siga mandando después:
--- si el comité sube una versión corregida del programa a otra dirección, el
--- despliegue siguiente no debe devolverla a ésta.
+-- Pasó por tres direcciones: la convocatoria de marzo, el programa
+-- provisional de octubre y, ahora, el definitivo. Según cuándo se haya
+-- desplegado por última vez, el servidor tiene guardada la primera o la
+-- segunda, y las dos se llevan a la nueva.
+--
+-- Sólo esas dos: si el comité escribió otra dirección en el panel, el
+-- despliegue siguiente no debe devolverla a ésta. El panel manda.
 update configuracion
-   set valor = '"https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026_publico.pdf"'::jsonb,
+   set valor = '"https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026.pdf"'::jsonb,
        descripcion = 'PDF del programa general del Congreso'
  where clave = 'url_agenda'
-   and valor = '"https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf"'::jsonb;
+   and valor in (
+     '"https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf"'::jsonb,
+     '"https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026_publico.pdf"'::jsonb
+   );
 
 -- El programa, en los acuses que confirman algo.
 --

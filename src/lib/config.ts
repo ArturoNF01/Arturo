@@ -26,7 +26,7 @@ export const CONFIG = {
      la gente busca en el sitio una vez abierto el registro es a qué hora y
      en qué sala es cada mesa, no la invitación a mandar trabajos. */
   urlAgenda:
-    'https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026_publico.pdf',
+    'https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026.pdf',
 
   zonaHoraria: 'America/Mexico_City',
   versionAvisoPrivacidad: '1.2',
