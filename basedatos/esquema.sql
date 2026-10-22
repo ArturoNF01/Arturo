@@ -470,9 +470,9 @@ insert into configuracion (clave, valor, descripcion) values
   ('cupos_en_linea',     'null'::jsonb, 'Lugares en línea;
 null = sin límite'),
   ('registro_abierto',   'true'::jsonb, 'Permite recibir nuevos registros'),
-  ('programa_publicado', 'false'::jsonb, 'Enseña el programa en el sitio y el botón de descarga en los acuses'),
+  ('programa_publicado', 'false'::jsonb, 'Enseña la agenda en el sitio y el botón de descarga en los acuses'),
   ('fecha_limite_registro', '"2026-10-30"'::jsonb, 'Fecha límite de registro y de edición'),
-  ('url_agenda',  '"https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026.pdf"'::jsonb, 'PDF del programa general del Congreso'),
+  ('url_agenda',  '"https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026.pdf"'::jsonb, 'PDF de la agenda general del Congreso'),
   ('url_video_login', '"https://home.ciess.org/wp-content/uploads/2026/03/1er-Congreso-de-Estudios-Interamericanos-de-Seguridad-Social-B.mp4"'::jsonb, 'Video de fondo del login'),
   ('correo_contacto', '"ciess.cooperacion@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador'),
   ('url_sesion_zoom', '"https://us02web.zoom.us/j/83396553628"'::jsonb, 'Sala del seminario web: el enlace con el que entra el público en línea')
@@ -548,7 +548,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 {{zoom_bloque}}
 {{agenda_bloque}}
 <p>Puede consultar o modificar sus datos hasta el {{fecha_limite}} en el siguiente enlace: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>Toda la información del Congreso —el programa, la sede y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
+<p>Toda la información del Congreso —la agenda, la sede y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Cualquier corrección posterior debe solicitarse a {{correo_contacto}}.</p>
 <p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -565,7 +565,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 {{zoom_bloque}}
 {{agenda_bloque}}
 <p>You may review or edit your details until {{fecha_limite}} at the following link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>All the Congress information —the programme, the venue and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
+<p>All the Congress information —the agenda, the venue and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Any later correction must be requested at {{correo_contacto}}.</p>
 <p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
 
@@ -582,7 +582,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 {{zoom_bloque}}
 {{agenda_bloque}}
 <p>Você pode consultar ou alterar seus dados até {{fecha_limite}} no seguinte link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
-<p>Todas as informações do Congresso —a programação, a sede e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
+<p>Todas as informações do Congresso —a agenda, a sede e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Qualquer correção posterior deve ser solicitada a {{correo_contacto}}.</p>
 <p>Comitê organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -842,7 +842,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Modalidade:</strong> {{modalidad}}</li>
 </ul>
 {{agenda_bloque}}
-<p>Você pode consultar ou corrigir seus dados até {{fecha_limite}} <a href="{{url_edicion}}">neste link</a>. As informações logísticas e a programação serão enviadas por esta mesma via.</p>
+<p>Você pode consultar ou corrigir seus dados até {{fecha_limite}} <a href="{{url_edicion}}">neste link</a>. As informações logísticas serão enviadas por esta mesma via.</p>
 <p>Em caso de dúvida, escreva para {{correo_contacto}}.</p>
 <p>Comitê organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -929,21 +929,21 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 <p>Nos complace informarle que el comité dictaminador <strong>aceptó</strong> su propuesta para el 1er Congreso.</p>
 <ul><li><strong>Folio:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
-<p>El día, la hora y la mesa asignada se comunicarán con el programa definitivo. Cualquier duda, escriba a {{correo_contacto}}.</p>
+<p>El día, la hora y la mesa asignada se comunicarán con la agenda definitiva. Cualquier duda, escriba a {{correo_contacto}}.</p>
 <p>Comité dictaminador<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_aceptada', 'en', 'Paper accepted · 1st Congress',
  $html$<p>Dear participant,</p>
 <p>We are pleased to inform you that the review committee has <strong>accepted</strong> your proposal for the 1st Congress.</p>
 <ul><li><strong>Reference:</strong> {{folio}}</li><li><strong>Title:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
-<p>The date, time and panel will be announced with the final programme. For any questions, write to {{correo_contacto}}.</p>
+<p>The date, time and panel will be announced with the final agenda. For any questions, write to {{correo_contacto}}.</p>
 <p>Review committee<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_aceptada', 'pt', 'Trabalho aceito · 1º Congresso',
  $html$<p>Prezada pessoa participante,</p>
 <p>Temos o prazer de informar que o comitê avaliador <strong>aceitou</strong> sua proposta para o 1º Congresso.</p>
 <ul><li><strong>Protocolo:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
-<p>A data, o horário e a mesa serão comunicados com a programação definitiva. Em caso de dúvida, escreva para {{correo_contacto}}.</p>
+<p>A data, o horário e a mesa serão comunicados com a agenda definitiva. Em caso de dúvida, escreva para {{correo_contacto}}.</p>
 <p>Comitê avaliador<br/>CIESS · RIUSS</p>$html$),
 
 ('ponencia_aceptada_con_cambios', 'es', 'Ponencia aceptada con cambios · 1er Congreso',
@@ -970,21 +970,21 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 
 ('ponencia_rechazada', 'es', 'Resultado del dictamen · 1er Congreso',
  $html$<p>Estimada persona participante:</p>
-<p>Agradecemos el envío de su propuesta al 1er Congreso. Tras la revisión, el comité dictaminador <strong>no pudo incluirla</strong> en el programa de esta edición.</p>
+<p>Agradecemos el envío de su propuesta al 1er Congreso. Tras la revisión, el comité dictaminador <strong>no pudo incluirla</strong> en la agenda de esta edición.</p>
 <ul><li><strong>Folio:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>Su registro sigue vigente y puede participar como asistente. Agradecemos su interés y esperamos contar con usted.</p>
 <p>Comité dictaminador<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_rechazada', 'en', 'Review outcome · 1st Congress',
  $html$<p>Dear participant,</p>
-<p>Thank you for submitting your proposal to the 1st Congress. After review, the review committee <strong>was unable to include it</strong> in the programme for this edition.</p>
+<p>Thank you for submitting your proposal to the 1st Congress. After review, the review committee <strong>was unable to include it</strong> in the agenda for this edition.</p>
 <ul><li><strong>Reference:</strong> {{folio}}</li><li><strong>Title:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>Your registration remains valid and you are welcome to attend. We appreciate your interest and hope to see you there.</p>
 <p>Review committee<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_rechazada', 'pt', 'Resultado da avaliação · 1º Congresso',
  $html$<p>Prezada pessoa participante,</p>
-<p>Agradecemos o envio da sua proposta ao 1º Congresso. Após a avaliação, o comitê avaliador <strong>não pôde incluí-la</strong> na programação desta edição.</p>
+<p>Agradecemos o envio da sua proposta ao 1º Congresso. Após a avaliação, o comitê avaliador <strong>não pôde incluí-la</strong> na agenda desta edição.</p>
 <ul><li><strong>Protocolo:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>Sua inscrição continua válida e você pode participar como ouvinte. Agradecemos seu interesse e esperamos contar com você.</p>
@@ -1062,7 +1062,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Sede e datas:</strong> {{sede}} · {{fechas}}</li>
 </ul>
 {{zoom_bloque}}
-<p>Você pode revisar seus dados <a href="{{url_edicion}}">neste link</a> e consultar a programação <a href="{{url_agenda}}">aqui</a>.</p>
+<p>Você pode revisar seus dados <a href="{{url_edicion}}">neste link</a> e consultar a agenda <a href="{{url_agenda}}">aqui</a>.</p>
 <p>Em caso de dúvida, escreva para {{correo_contacto}}.</p>
 <p>Comitê organizador<br/>CIESS · RIUSS</p>$html$)
 on conflict (clave, idioma) do nothing;

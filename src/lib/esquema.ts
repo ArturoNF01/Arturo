@@ -199,7 +199,7 @@ export function crearEsquemaRegistro(limites: LimitesFormulario = LIMITES_POR_DE
       ctx.addIssue({
         code: 'custom',
         path: ['titulo_ponencia'],
-        message: 'Indique el título de su ponencia tal como debe aparecer en el programa',
+        message: 'Indique el título de su ponencia tal como debe aparecer en la agenda',
       });
     }
     // Quien sale en la transmisión tiene que autorizarlo por escrito. Se

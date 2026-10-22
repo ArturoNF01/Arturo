@@ -69,17 +69,51 @@ update faqs set provisional = false where provisional;
 update configuracion set valor = '100'::jsonb
  where clave = 'cupos_presenciales' and valor = '60'::jsonb;
 
--- La sede y las fechas ya están decididas. Las filas de la base no se tocan
--- al desplegar —se insertan sólo si faltan— así que el texto nuevo se aplica
--- aquí; debajo de la respuesta, la página pinta además el mapa.
+-- Las preguntas frecuentes que hablaban de la agenda como algo por publicar.
+--
+-- Las filas de la base no se tocan al desplegar —se insertan sólo si faltan—, y
+-- lo que hay en src/i18n/faqs.ts es sólo la reserva para cuando la tabla está
+-- vacía: reescribir el texto allí no llega a un servidor que ya tiene sus filas.
+-- Por eso la respuesta nueva se aplica aquí.
+--
+-- Cada una se reconoce por una frase del texto viejo y sólo se reescribe si
+-- todavía la lleva. Si el comité la editó desde el panel, ya no la lleva y se
+-- respeta lo que escribió.
+--
+-- La de «sede-fechas» se reescribía antes sin condición en cada despliegue:
+-- cualquier cambio que se le hiciera, aquí o en el panel, se deshacía en el
+-- siguiente. Ése era el motivo de que siguiera diciendo «se publicará».
 update faqs
-   set respuesta = jsonb_build_object(
-         'es', 'Del 11 al 13 de noviembre de 2026, en la sede del CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Ciudad de México. La agenda detallada se publicará antes del inicio del Congreso.',
-         'en', '11-13 November 2026, at the CIESS headquarters: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Mexico City. The detailed programme will be published before the Congress begins.',
-         'pt', 'De 11 a 13 de novembro de 2026, na sede do CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Cidade do México. A agenda detalhada será publicada antes do início do Congresso.')
- where clave = 'sede-fechas';
+   set pregunta  = jsonb_build_object('es', '¿Qué es el 1er Congreso Desafíos de la seguridad social en las Américas?', 'en', 'What is the 1st Congress on the challenges of social security in the Americas?', 'pt', 'O que é o 1º Congresso Desafios da seguridade social nas Américas?'),
+       respuesta = jsonb_build_object('es', 'Es el primer Congreso de estudios interamericanos de seguridad social convocado por el CIESS y la RIUSS. Reúne a personas investigadoras, funcionarias y especialistas del continente para discutir los desafíos de la seguridad social en el primer cuarto del siglo XXI. La agenda general —tres días y once mesas temáticas— ya está publicada: puede verla en la página de inicio o descargarla desde el botón de esta página.', 'en', 'It is the first Congress of inter-American social security studies convened by CIESS and CISS. It brings together researchers, public officials and specialists from across the continent to discuss the challenges facing social security in the first quarter of the 21st century. The general agenda —three days and eleven thematic panels— is now published: you can see it on the home page or download it from the button on this page.', 'pt', 'É o primeiro Congresso de estudos interamericanos de seguridade social convocado pelo CIESS e pela CISS. Reúne pesquisadores, servidores públicos e especialistas do continente para discutir os desafios da seguridade social no primeiro quarto do século XXI. A agenda geral —três dias e onze mesas temáticas— já está publicada: pode vê-la na página inicial ou baixá-la no botão desta página.')
+ where clave = 'que-es'
+   and respuesta->>'es' like '%se publican en la convocatoria oficial%';
 
--- El interruptor del programa.
+update faqs
+   set pregunta  = jsonb_build_object('es', '¿Dónde y cuándo se realiza?', 'en', 'Where and when does it take place?', 'pt', 'Onde e quando acontece?'),
+       respuesta = jsonb_build_object('es', 'Del 11 al 13 de noviembre de 2026, en la sede del CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Ciudad de México. La agenda general ya está publicada: el miércoles 11 son las sesiones internas de trabajo de la RIUSS; el jueves 12, la inauguración, la conferencia magistral y las mesas temáticas 1 a 4; y el viernes 13, las mesas 5 a 11 y la clausura.', 'en', '11–13 November 2026, at the CIESS headquarters: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Mexico City. The general agenda is now published: Wednesday 11 brings the RIUSS internal working sessions; Thursday 12 brings the opening, the keynote lecture and thematic panels 1 to 4; and Friday 13, panels 5 to 11 and the closing.', 'pt', 'De 11 a 13 de novembro de 2026, na sede do CIESS: San Ramón s/n, Col. San Jerónimo Lídice, C.P. 10200, Cidade do México. A agenda geral já está publicada: na quarta-feira 11 são as sessões internas de trabalho da RIUSS; na quinta-feira 12, a abertura, a conferência magistral e as mesas temáticas 1 a 4; e na sexta-feira 13, as mesas 5 a 11 e o encerramento.')
+ where clave = 'sede-fechas'
+   and respuesta->>'es' like '%se publicará antes del inicio del Congreso%';
+
+update faqs
+   set pregunta  = jsonb_build_object('es', '¿Cuáles son los ejes temáticos?', 'en', 'What are the thematic axes?', 'pt', 'Quais são os eixos temáticos?'),
+       respuesta = jsonb_build_object('es', 'Son nueve y están en la página de inicio: seguridad y salud en el trabajo, pensiones, salud, financiamiento, servicios sociales, población migrante, género, la seguridad social en América, y mercado laboral. Al registrarse como ponente elige el eje al que se adscribe su trabajo. Los trabajos aceptados se agruparon después en once mesas temáticas, que puede ver en la agenda.', 'en', 'There are nine, listed on the home page: occupational safety and health, pensions, health, financing, social services, migrant population, gender, social security in the Americas, and the labour market. When you register as a speaker you choose the axis your paper belongs to. Accepted papers were then grouped into eleven thematic panels, which you can see in the agenda.', 'pt', 'São nove e estão na página inicial: segurança e saúde no trabalho, pensões, saúde, financiamento, serviços sociais, população migrante, gênero, a seguridade social na América e mercado de trabalho. Ao se inscrever como palestrante você escolhe o eixo ao qual seu trabalho se vincula. Os trabalhos aprovados foram depois agrupados em onze mesas temáticas, que pode ver na agenda.')
+ where clave = 'ejes'
+   and respuesta->>'es' like '%definitivos se establecen en la convocatoria oficial%';
+
+update faqs
+   set pregunta  = jsonb_build_object('es', '¿Se entrega constancia de participación?', 'en', 'Is a certificate of participation issued?', 'pt', 'É emitido certificado de participação?'),
+       respuesta = jsonb_build_object('es', 'Sí. En el formulario puede indicar el nombre exacto tal como debe aparecer en la constancia. Las condiciones y los plazos de entrega los comunica el comité organizador por correo.', 'en', 'Yes. In the form you can state the exact name as it should appear on the certificate. The conditions and delivery times are communicated by the organizing committee by email.', 'pt', 'Sim. No formulário você pode indicar o nome exato como deve constar no certificado. As condições e os prazos de entrega são comunicados pelo comitê organizador por e-mail.')
+ where clave = 'constancia'
+   and respuesta->>'es' like '%se precisan en la convocatoria oficial%';
+
+update faqs
+   set pregunta  = jsonb_build_object('es', '¿Dónde consulto la agenda del Congreso?', 'en', 'Where can I see the Congress agenda?', 'pt', 'Onde consulto a agenda do Congresso?'),
+       respuesta = jsonb_build_object('es', 'En la página de inicio está la agenda de los tres días, con el horario y la sala de cada sesión. El PDF completo —con el título, la autoría y el país de cada ponencia— se descarga desde el botón de esta página, y es siempre la versión vigente: si algo cambia, cambia ahí.', 'en', 'The home page shows the agenda for all three days, with the time and room of each session. The full PDF —with the title, authors and country of every paper— can be downloaded from the button on this page, and it is always the current version: if anything changes, it changes there.', 'pt', 'Na página inicial está a agenda dos três dias, com o horário e a sala de cada sessão. O PDF completo —com o título, a autoria e o país de cada trabalho— baixa-se no botão desta página, e é sempre a versão vigente: se algo mudar, muda ali.')
+ where clave = 'agenda'
+   and respuesta->>'es' like '%Mientras se publica la agenda definitiva%';
+
+-- El interruptor de la agenda.
 --
 -- Entra apagado: el PDF se corrige hasta el último momento, y una versión
 -- vieja circulando por los acuses es peor que ninguna. Lo enciende el comité
@@ -90,13 +124,13 @@ update faqs
 -- ningún despliegue posterior vuelve a apagarlo.
 insert into configuracion (clave, valor, descripcion) values
   ('programa_publicado', 'false'::jsonb,
-   'Enseña el programa en el sitio y el botón de descarga en los acuses')
+   'Enseña la agenda en el sitio y el botón de descarga en los acuses')
 on conflict (clave) do nothing;
 
--- El programa definitivo.
+-- La agenda definitiva.
 --
--- Pasó por tres direcciones: la convocatoria de marzo, el programa
--- provisional de octubre y, ahora, el definitivo. Según cuándo se haya
+-- Pasó por tres direcciones: la convocatoria de marzo, la agenda
+-- provisional de octubre y, ahora, la definitiva. Según cuándo se haya
 -- desplegado por última vez, el servidor tiene guardada la primera o la
 -- segunda, y las dos se llevan a la nueva.
 --
@@ -104,7 +138,7 @@ on conflict (clave) do nothing;
 -- despliegue siguiente no debe devolverla a ésta. El panel manda.
 update configuracion
    set valor = '"https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026.pdf"'::jsonb,
-       descripcion = 'PDF del programa general del Congreso'
+       descripcion = 'PDF de la agenda general del Congreso'
  where clave = 'url_agenda'
    and valor in (
      '"https://home.ciess.org/wp-content/uploads/2026/03/Convocatoria-congreso.pdf"'::jsonb,
@@ -140,17 +174,17 @@ update plantillas_correo
 update plantillas_correo
    set cuerpo_html = replace(cuerpo_html,
          '—la convocatoria, la sede, el programa conforme se publique y las preguntas frecuentes—',
-         '—el programa, la sede y las preguntas frecuentes—')
+         '—la agenda, la sede y las preguntas frecuentes—')
  where cuerpo_html like '%el programa conforme se publique%';
 update plantillas_correo
    set cuerpo_html = replace(cuerpo_html,
          '—the call for papers, the venue, the programme as it is published and the frequently asked questions—',
-         '—the programme, the venue and the frequently asked questions—')
+         '—the agenda, the venue and the frequently asked questions—')
  where cuerpo_html like '%the programme as it is published%';
 update plantillas_correo
    set cuerpo_html = replace(cuerpo_html,
          '—a convocatória, a sede, a programação conforme for publicada e as perguntas frequentes—',
-         '—a programação, a sede e as perguntas frequentes—')
+         '—a agenda, a sede e as perguntas frequentes—')
  where cuerpo_html like '%a programação conforme for publicada%';
 
 update plantillas_correo
@@ -418,20 +452,138 @@ alter table registros alter column requiere_traslado drop default;
 update plantillas_correo
    set cuerpo_html = replace(cuerpo_html,
          '<p>La convocatoria y la agenda están disponibles en <a href="{{url_agenda}}">este documento</a>.</p>',
-         '<p>Toda la información del Congreso —la convocatoria, la sede, el programa conforme se publique y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
+         '<p>Toda la información del Congreso —la agenda, la sede y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
  where cuerpo_html like '%La convocatoria y la agenda están disponibles%';
 
 update plantillas_correo
    set cuerpo_html = replace(cuerpo_html,
          '<p>The call for papers and the agenda are available in <a href="{{url_agenda}}">this document</a>.</p>',
-         '<p>All the Congress information —the call for papers, the venue, the programme as it is published and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
+         '<p>All the Congress information —the agenda, the venue and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
  where cuerpo_html like '%The call for papers and the agenda are available%';
 
 update plantillas_correo
    set cuerpo_html = replace(cuerpo_html,
          '<p>A convocatória e a agenda estão disponíveis <a href="{{url_agenda}}">neste documento</a>.</p>',
-         '<p>Todas as informações do Congresso —a convocatória, a sede, a programação conforme for publicada e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
+         '<p>Todas as informações do Congresso —a agenda, a sede e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>')
  where cuerpo_html like '%A convocatória e a agenda estão disponíveis%';
+
+-- Programa → Agenda, en lo que ya está guardado en la base.
+--
+-- El texto del sitio sale de las tablas y no del código: el aviso de
+-- privacidad, las plantillas de correo y las preguntas frecuentes que el
+-- comité haya editado conservan lo que decían. Se reemplazan frases enteras y
+-- no la palabra, porque en español «el programa» es masculino y «la agenda»
+-- femenino: «el programa general ya está publicado» pide «la agenda general ya
+-- está publicada», y un reemplazo ciego dejaría «el agenda».
+--
+-- Puede correr mil veces: tras el reemplazo, la frase vieja ya no existe.
+do $renombrar$
+declare
+  par record;
+begin
+  for par in
+    select * from (values
+      ('sin participar en el programa.', 'sin participar en la agenda.'),
+      ('necesaria para elaborar el programa, preparar', 'necesaria para elaborar la agenda, preparar'),
+      ('cómo debe aparecer en el programa.', 'cómo debe aparecer en la agenda.'),
+      ('antes de cerrar el programa.', 'antes de cerrar la agenda.'),
+      ('se usan en el programa, las constancias', 'se usan en la agenda, las constancias'),
+      ('se publica en el programa', 'se publica en la agenda'),
+      ('Se publica en el programa', 'Se publica en la agenda'),
+      ('quienes participan en el programa', 'quienes participan en la agenda'),
+      ('El programa del Congreso', 'La agenda del Congreso'),
+      ('Descargar el programa (PDF)', 'Descargar la agenda (PDF)'),
+      ('El programa general ya está publicado.', 'La agenda general ya está publicada.'),
+      ('Consultar el programa completo (PDF)', 'Consultar la agenda completa (PDF)'),
+      ('el programa no se enseña en el sitio', 'la agenda no se enseña en el sitio'),
+      ('El programa general publicado:', 'La agenda general publicada:'),
+      ('Consúltelo para saber', 'Consúltela para saber'),
+      ('Publicación de la programación completa', 'Publicación de la agenda completa'),
+      ('tal como debe aparecer en el programa', 'tal como debe aparecer en la agenda'),
+      ('elaborar el programa académico', 'elaborar la agenda académica'),
+      ('El programa general —tres días y once mesas temáticas— ya está publicado: puede verlo en la página de inicio o descargarlo desde el botón de esta página.', 'La agenda general —tres días y once mesas temáticas— ya está publicada: puede verla en la página de inicio o descargarla desde el botón de esta página.'),
+      ('El programa general ya está publicado: el miércoles 11 es la jornada de la RIUSS;', 'La agenda general ya está publicada: el miércoles 11 son las sesiones internas de trabajo de la RIUSS;'),
+      ('que puede ver en el programa.', 'que puede ver en la agenda.'),
+      ('¿Dónde consulto el programa del Congreso?', '¿Dónde consulto la agenda del Congreso?'),
+      ('En la página de inicio está el programa de los tres días', 'En la página de inicio está la agenda de los tres días'),
+      ('—el programa, la sede y las preguntas frecuentes—', '—la agenda, la sede y las preguntas frecuentes—'),
+      ('se comunicarán con el programa definitivo.', 'se comunicarán con la agenda definitiva.'),
+      ('en el programa de esta edición', 'en la agenda de esta edición'),
+      ('Enseña el programa en el sitio', 'Enseña la agenda en el sitio'),
+      ('PDF del programa general del Congreso', 'PDF de la agenda general del Congreso'),
+      ('without taking part in the programme.', 'without taking part in the agenda.'),
+      ('required to prepare the programme, name plates', 'required to prepare the agenda, name plates'),
+      ('how it should appear in the programme.', 'how it should appear in the agenda.'),
+      ('before the programme is finalised.', 'before the agenda is finalised.'),
+      ('is used in the programme, the certificates', 'is used in the agenda, the certificates'),
+      ('published in the programme', 'published in the agenda'),
+      ('those taking part in the programme', 'those taking part in the agenda'),
+      ('The Congress programme', 'The Congress agenda'),
+      ('the Congress programme', 'the Congress agenda'),
+      ('Download the programme (PDF)', 'Download the agenda (PDF)'),
+      ('The general programme is now published.', 'The general agenda is now published.'),
+      ('Read the full programme (PDF)', 'Read the full agenda (PDF)'),
+      ('the programme is not shown on the site', 'the agenda is not shown on the site'),
+      ('Full programme published', 'Full agenda published'),
+      ('preparing the academic programme', 'preparing the academic agenda'),
+      ('The general programme —three days and eleven thematic panels— is now published:', 'The general agenda —three days and eleven thematic panels— is now published:'),
+      ('The general programme is now published: Wednesday 11 is the RIUSS working day;', 'The general agenda is now published: Wednesday 11 brings the RIUSS internal working sessions;'),
+      ('which you can see in the programme.', 'which you can see in the agenda.'),
+      ('The home page shows the programme for all three days', 'The home page shows the agenda for all three days'),
+      ('—the programme, the venue and the frequently asked questions—', '—the agenda, the venue and the frequently asked questions—'),
+      ('will be announced with the final programme.', 'will be announced with the final agenda.'),
+      ('in the programme for this edition', 'in the agenda for this edition'),
+      ('sem integrar a programação.', 'sem integrar a agenda.'),
+      ('para a elaboração do programa,', 'para a elaboração da agenda,'),
+      ('deve aparecer na programação.', 'deve aparecer na agenda.'),
+      ('antes de fechar a programação.', 'antes de fechar a agenda.'),
+      ('são usados no programa,', 'são usados na agenda,'),
+      ('publicado no programa', 'publicado na agenda'),
+      ('publicada no programa', 'publicada na agenda'),
+      ('quem participa do programa', 'quem participa da agenda'),
+      ('A programação do Congresso', 'A agenda do Congresso'),
+      ('a programação do Congresso', 'a agenda do Congresso'),
+      ('Baixar a programação (PDF)', 'Baixar a agenda (PDF)'),
+      ('A programação geral já está publicada.', 'A agenda geral já está publicada.'),
+      ('Consultar a programação completa (PDF)', 'Consultar a agenda completa (PDF)'),
+      ('a programação não é exibida no site', 'a agenda não é exibida no site'),
+      ('Publicação da programação completa', 'Publicação da agenda completa'),
+      ('elaborar o programa acadêmico', 'elaborar a agenda acadêmica'),
+      ('A programação geral —três dias e onze mesas temáticas— já está publicada:', 'A agenda geral —três dias e onze mesas temáticas— já está publicada:'),
+      ('A programação geral já está publicada: na quarta-feira 11 é a jornada da RIUSS;', 'A agenda geral já está publicada: na quarta-feira 11 são as sessões internas de trabalho da RIUSS;'),
+      ('que pode ver na programação.', 'que pode ver na agenda.'),
+      ('Na página inicial está a programação dos três dias', 'Na página inicial está a agenda dos três dias'),
+      ('—a programação, a sede e as perguntas frequentes—', '—a agenda, a sede e as perguntas frequentes—'),
+      (' As informações logísticas e a programação serão enviadas por esta mesma via.', ' As informações logísticas serão enviadas por esta mesma via.'),
+      ('serão comunicados com a programação definitiva.', 'serão comunicados com a agenda definitiva.'),
+      ('na programação desta edição', 'na agenda desta edição'),
+      ('consultar a programação <a', 'consultar a agenda <a')
+    ) as t(viejo, nuevo)
+  loop
+    update faqs
+       set pregunta  = replace(pregunta::text,  par.viejo, par.nuevo)::jsonb,
+           respuesta = replace(respuesta::text, par.viejo, par.nuevo)::jsonb
+     where position(par.viejo in pregunta::text) > 0
+        or position(par.viejo in respuesta::text) > 0;
+
+    update aviso_privacidad
+       set titulo   = replace(titulo::text,   par.viejo, par.nuevo)::jsonb,
+           parrafos = replace(parrafos::text, par.viejo, par.nuevo)::jsonb
+     where position(par.viejo in titulo::text) > 0
+        or position(par.viejo in parrafos::text) > 0;
+
+    update plantillas_correo
+       set asunto      = replace(asunto,      par.viejo, par.nuevo),
+           cuerpo_html = replace(cuerpo_html, par.viejo, par.nuevo)
+     where position(par.viejo in asunto) > 0
+        or position(par.viejo in cuerpo_html) > 0;
+
+    update configuracion
+       set descripcion = replace(descripcion, par.viejo, par.nuevo)
+     where position(par.viejo in coalesce(descripcion, '')) > 0;
+  end loop;
+end
+$renombrar$;
 
 commit;
 

@@ -100,10 +100,6 @@ export const MESAS: Mesa[] = [
         autores: ['Ángel Edoardo Ruiz Buenrostro'], pais: 'mx',
       },
       {
-        titulo: 'Gestión de las Plataformas Digitales: Un Análisis Comparado de las Similitudes, los Retos y las Oportunidades en la Regulación de las Nuevas Formas de Trabajo.',
-        autores: ['Johan Sebastian Baquero Rozo'], pais: 'co',
-      },
-      {
         titulo: 'Migración Laboral: retos y oportunidades para la protección social.',
         autores: ['José Gabriel Martínez'], pais: 'mx',
       },
@@ -262,10 +258,6 @@ export const MESAS: Mesa[] = [
     ponencias: [
       {
         titulo: 'Invisibilidad y segregación de género en el modelo de cárceles productivas.',
-        autores: ['Alejandra Arias Vergara', 'Valentina Giraldo'], pais: 'co',
-      },
-      {
-        titulo: 'Desafío de la seguridad social en los modelos de cárceles productivas: un análisis comparativo entre Colombia y Perú.',
         autores: ['Alejandra Arias Vergara', 'Valentina Giraldo'], pais: 'co',
       },
       {
@@ -433,6 +425,8 @@ export interface DiaPrograma {
   fecha: Texto;
   titulo: Texto;
   nota?: Texto;
+  /** La frase de la nota que va en negrita: lo que más importa, aparte del resto. */
+  notaDestacada?: Texto;
   sesiones: Sesion[];
 }
 
@@ -459,11 +453,17 @@ export const PROGRAMA: DiaPrograma[] = [
   {
     iso: '2026-11-11',
     fecha: { es: 'Miércoles 11 de noviembre', en: 'Wednesday 11 November', pt: 'Quarta-feira, 11 de novembro' },
-    titulo: { es: 'Sesiones de trabajo', en: 'Working sessions', pt: 'Sessões de trabalho' },
+    titulo: { es: 'Sesiones internas de trabajo', en: 'Internal working sessions', pt: 'Sessões internas de trabalho' },
     nota: {
-      es: 'Se admite la asistencia del público, con cupo limitado según la capacidad de la sala.',
-      en: 'Open to the public, with limited seating subject to room capacity.',
-      pt: 'É admitida a presença do público, com vagas limitadas conforme a capacidade da sala.',
+      es: 'La participación está abierta a investigadores, académicos y profesionales interesados en conocer las actividades de la RIUSS y explorar la posibilidad de integrarse a la Red. ¡Les invitamos a acompañarnos!',
+      en: 'Participation is open to researchers, academics and professionals interested in learning about the activities of RIUSS and exploring the possibility of joining the Network. We invite you to join us!',
+      pt: 'A participação está aberta a pesquisadores, acadêmicos e profissionais interessados em conhecer as atividades da RIUSS e explorar a possibilidade de integrar a Rede. Convidamos você a nos acompanhar!',
+    },
+    // En el PDF va en negrita: es la condición que más importa a quien decide ir.
+    notaDestacada: {
+      es: 'Cupo limitado a la capacidad de la sala.',
+      en: 'Seating is limited to the capacity of the room.',
+      pt: 'Vagas limitadas à capacidade da sala.',
     },
     sesiones: [
       { horario: '08:30–09:00', tipo: 'registro', sala: 'comisiones', actividad: REGISTRO },
@@ -664,7 +664,7 @@ export interface TextosPrograma {
 
 export const TEXTOS_PROGRAMA: Record<Idioma, TextosPrograma> = {
   es: {
-    selector: 'Día del programa',
+    selector: 'Día de la agenda',
     leyenda: 'El color indica la sala',
     paralelo: 'Al mismo tiempo',
     desplegar: 'Desplegar todo',
@@ -676,7 +676,7 @@ export const TEXTOS_PROGRAMA: Record<Idioma, TextosPrograma> = {
     resumen: { dias: 'días', mesas: 'mesas temáticas', ponencias: 'ponencias', paises: 'países' },
   },
   en: {
-    selector: 'Programme day',
+    selector: 'Day of the agenda',
     leyenda: 'Colour shows the room',
     paralelo: 'At the same time',
     desplegar: 'Expand all',
@@ -688,7 +688,7 @@ export const TEXTOS_PROGRAMA: Record<Idioma, TextosPrograma> = {
     resumen: { dias: 'days', mesas: 'thematic panels', ponencias: 'papers', paises: 'countries' },
   },
   pt: {
-    selector: 'Dia da programação',
+    selector: 'Dia da agenda',
     leyenda: 'A cor indica a sala',
     paralelo: 'Ao mesmo tempo',
     desplegar: 'Expandir tudo',

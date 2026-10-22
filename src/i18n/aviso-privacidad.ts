@@ -31,7 +31,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '3. Finalidades del tratamiento',
         parrafos: [
-          'Finalidades primarias (necesarias para su participación): integrar el padrón oficial de participantes; elaborar el programa académico, los personificadores y las semblanzas de presentación; emitir constancias y cartas de invitación; gestionar alojamiento, traslados y alimentación; y comunicarle información logística y académica del Congreso.',
+          'Finalidades primarias (necesarias para su participación): integrar el padrón oficial de participantes; elaborar la agenda académica, los personificadores y las semblanzas de presentación; emitir constancias y cartas de invitación; gestionar alojamiento, traslados y alimentación; y comunicarle información logística y académica del Congreso.',
           'Finalidades secundarias (opcionales): difusión de futuras actividades académicas del CIESS y de la CISS, y publicación de su semblanza, fotografía, intervención o ponencia, cuando usted lo autorice de manera específica en el formulario. Puede negarse a estas finalidades sin que ello afecte su registro.',
         ],
       },
@@ -92,7 +92,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '3. Purposes of processing',
         parrafos: [
-          'Primary purposes (necessary for your participation): compiling the official roster of participants; preparing the academic programme, name plates and introductory biographies; issuing certificates and invitation letters; arranging accommodation, transfers and catering; and sending you logistical and academic information about the Congress.',
+          'Primary purposes (necessary for your participation): compiling the official roster of participants; preparing the academic agenda, name plates and introductory biographies; issuing certificates and invitation letters; arranging accommodation, transfers and catering; and sending you logistical and academic information about the Congress.',
           'Secondary purposes (optional): dissemination of future academic activities of CIESS and CISS, and publication of your biography, photograph, intervention or paper, where you specifically authorise it in the form. You may refuse these purposes without affecting your registration.',
         ],
       },
@@ -153,7 +153,7 @@ export const AVISO: Record<Idioma, { titulo: string; actualizado: string; bloque
       {
         titulo: '3. Finalidades do tratamento',
         parrafos: [
-          'Finalidades primárias (necessárias à sua participação): compor a lista oficial de participantes; elaborar o programa acadêmico, os identificadores de mesa e as apresentações biográficas; emitir certificados e cartas-convite; organizar hospedagem, traslados e alimentação; e comunicar informações logísticas e acadêmicas do Congresso.',
+          'Finalidades primárias (necessárias à sua participação): compor a lista oficial de participantes; elaborar a agenda acadêmica, os identificadores de mesa e as apresentações biográficas; emitir certificados e cartas-convite; organizar hospedagem, traslados e alimentação; e comunicar informações logísticas e acadêmicas do Congresso.',
           'Finalidades secundárias (opcionais): divulgação de futuras atividades acadêmicas do CIESS e da CISS e publicação da sua minibiografia, fotografia, intervenção ou trabalho, quando você autorizar de forma específica no formulário. A recusa a essas finalidades não afeta sua inscrição.',
         ],
       },

@@ -79,7 +79,14 @@ describe('el programa publicado', () => {
   });
 
   it('las cuentas que se enseñan arriba salen de los datos', () => {
-    expect(RESUMEN).toEqual({ dias: 3, mesas: 11, ponencias: 49, paises: 12 });
+    expect(RESUMEN).toEqual({ dias: 3, mesas: 11, ponencias: 47, paises: 12 });
+  });
+
+  it('cada mesa lleva las ponencias que dice el programa impreso', () => {
+    // Cuatro, cinco, cinco, cuatro, cuatro, cuatro, tres, cuatro, cuatro, cinco, cinco.
+    // La versión anterior traía una más en la mesa 1 y otra en la 7: si alguien
+    // vuelve a pegar un título retirado, esta cuenta se descuadra.
+    expect(MESAS.map((m) => m.ponencias.length)).toEqual([4, 5, 5, 4, 4, 4, 3, 4, 4, 5, 5]);
   });
 
   it('toda sala y todo país usados existen, y toda ponencia tiene autor y título', () => {
@@ -117,6 +124,14 @@ describe('el programa publicado', () => {
     // Y los textos de la interfaz traen las mismas claves en los tres.
     expect(Object.keys(TEXTOS_PROGRAMA.en).sort()).toEqual(Object.keys(TEXTOS_PROGRAMA.es).sort());
     expect(Object.keys(TEXTOS_PROGRAMA.pt).sort()).toEqual(Object.keys(TEXTOS_PROGRAMA.es).sort());
+  });
+
+  it('la nota del miércoles trae aparte la condición del cupo, en los tres idiomas', () => {
+    const miercoles = PROGRAMA[0];
+    for (const idioma of IDIOMAS) {
+      expect(miercoles.nota?.[idioma]?.length, idioma).toBeGreaterThan(20);
+      expect(miercoles.notaDestacada?.[idioma]?.length, idioma).toBeGreaterThan(10);
+    }
   });
 
   it('la sesión de apertura lista a siete personas, y sólo ella', () => {

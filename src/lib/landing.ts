@@ -112,9 +112,9 @@ export const CALENDARIO: HitoCalendario[] = [
     iso: '2026-10-23',
     fecha: { es: '23 de octubre de 2026', en: '23 October 2026', pt: '23 de outubro de 2026' },
     hecho: {
-      es: 'Publicación de la programación completa',
-      en: 'Full programme published',
-      pt: 'Publicação da programação completa',
+      es: 'Publicación de la agenda completa',
+      en: 'Full agenda published',
+      pt: 'Publicação da agenda completa',
     },
   },
   {
@@ -166,9 +166,9 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     ],
     ejesTitulo: 'Ejes temáticos',
     ejesAyuda: 'Los trabajos del Congreso se organizan en estas nueve líneas de discusión.',
-    programaTitulo: 'Programa',
+    programaTitulo: 'Agenda',
     programaAyuda: 'Tres días de sesiones en la sede del CIESS. Elija un día y abra cada mesa para ver sus ponencias, con su autoría y país.',
-    programaNota: 'Programa sujeto a cambios; esta página muestra la versión vigente.',
+    programaNota: 'Agenda sujeta a cambios; esta página muestra la versión vigente.',
     calendarioTitulo: 'Fechas importantes',
     calendarioAyuda: 'Del lanzamiento de la convocatoria a los tres días de sesiones.',
     sedeTitulo: 'Cómo llegar',
@@ -188,7 +188,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     participarAyuda:
       'El registro está abierto para asistir, presencialmente en la Ciudad de México o en línea desde cualquier país.',
     registrarse: 'Registrarse',
-    descargarAgenda: 'Descargar el programa (PDF)',
+    descargarAgenda: 'Descargar la agenda (PDF)',
     cumplido: 'Cumplido',
   },
   en: {
@@ -202,9 +202,9 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     ],
     ejesTitulo: 'Thematic tracks',
     ejesAyuda: 'The Congress organises its sessions along these nine lines of discussion.',
-    programaTitulo: 'Programme',
+    programaTitulo: 'Agenda',
     programaAyuda: 'Three days of sessions at the CIESS headquarters. Pick a day and open each panel to see its papers, with their authors and country.',
-    programaNota: 'Programme subject to change; this page shows the current version.',
+    programaNota: 'Agenda subject to change; this page shows the current version.',
     calendarioTitulo: 'Key dates',
     calendarioAyuda: 'From the opening of the call for papers to the three days of sessions.',
     sedeTitulo: 'Getting there',
@@ -224,7 +224,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     participarAyuda:
       'Registration is open to attend, in person in Mexico City or online from anywhere.',
     registrarse: 'Register',
-    descargarAgenda: 'Download the programme (PDF)',
+    descargarAgenda: 'Download the agenda (PDF)',
     cumplido: 'Completed',
   },
   pt: {
@@ -238,9 +238,9 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     ],
     ejesTitulo: 'Eixos temáticos',
     ejesAyuda: 'Os trabalhos do Congresso organizam-se nestas nove linhas de discussão.',
-    programaTitulo: 'Programação',
+    programaTitulo: 'Agenda',
     programaAyuda: 'Três dias de sessões na sede do CIESS. Escolha um dia e abra cada mesa para ver os seus trabalhos, com autoria e país.',
-    programaNota: 'Programação sujeita a alterações; esta página mostra a versão vigente.',
+    programaNota: 'Agenda sujeita a alterações; esta página mostra a versão vigente.',
     calendarioTitulo: 'Datas importantes',
     calendarioAyuda: 'Do lançamento da convocatória aos três dias de sessões.',
     sedeTitulo: 'Como chegar',
@@ -260,7 +260,7 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     participarAyuda:
       'As inscrições estão abertas para participar presencialmente na Cidade do México ou online de qualquer país.',
     registrarse: 'Inscrever-se',
-    descargarAgenda: 'Baixar a programação (PDF)',
+    descargarAgenda: 'Baixar a agenda (PDF)',
     cumplido: 'Concluído',
   },
 };

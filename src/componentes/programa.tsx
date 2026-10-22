@@ -247,7 +247,7 @@ export function Programa({ urlAgenda }: { urlAgenda: string }) {
 
   return (
     <section
-      id="programa"
+      id="agenda"
       // Un degradado muy suave, de la página a un velo de la marca: las tarjetas
       // tienen sobre qué despegarse. Una banda plana pegada a la de los ejes
       // se habría leído como una sola, y el degradado no.
@@ -321,7 +321,19 @@ export function Programa({ urlAgenda }: { urlAgenda: string }) {
           </div>
         </div>
 
-        {dia.nota && <p className="mt-3 text-sm leading-relaxed tenue">{dia.nota[idioma]}</p>}
+        {dia.nota && (
+          <p className="mt-3 text-sm leading-relaxed tenue">
+            {dia.nota[idioma]}
+            {dia.notaDestacada && (
+              <>
+                {' '}
+                <strong className="font-semibold" style={{ color: 'var(--texto)' }}>
+                  {dia.notaDestacada[idioma]}
+                </strong>
+              </>
+            )}
+          </p>
+        )}
 
         <ol className="mt-5 space-y-3">
           {agruparPorHorario(dia.sesiones).map((bloque) => {
