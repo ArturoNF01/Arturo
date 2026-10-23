@@ -416,7 +416,7 @@ export interface Sesion {
   /** Todas menos las mesas, que se nombran por su número. */
   actividad?: Texto;
   mesa?: number;
-  /** Quiénes abren el Congreso, con su cargo. Sólo la sesión de apertura. */
+  /** Quiénes abren el Congreso, con su cargo. Sólo la sesión de apertura, y sólo cuando el comité la da. */
   participantes?: Participante[];
 }
 
@@ -436,18 +436,6 @@ const REGISTRO: Texto = {
   pt: 'Credenciamento de participantes',
 };
 const ALMUERZO: Texto = { es: 'Almuerzo', en: 'Lunch', pt: 'Almoço' };
-
-/** El cargo de quien coordina una mesa de trabajo de la RIUSS. */
-function coordina(
-  mesa: { es: string; en: string; pt: string },
-  genero: 'a' | 'o',
-): Texto {
-  return {
-    es: `Coordinador${genero === 'a' ? 'a' : ''} de la Mesa de ${mesa.es} (RIUSS)`,
-    en: `Coordinator of the ${mesa.en} Working Group (RIUSS)`,
-    pt: `Coordenador${genero === 'a' ? 'a' : ''} da Mesa de ${mesa.pt} (RIUSS)`,
-  };
-}
 
 export const PROGRAMA: DiaPrograma[] = [
   {
@@ -507,48 +495,9 @@ export const PROGRAMA: DiaPrograma[] = [
       {
         horario: '09:00–09:30', tipo: 'apertura', sala: 'auditorio',
         actividad: { es: 'Sesión de apertura', en: 'Opening session', pt: 'Sessão de abertura' },
-        participantes: [
-          {
-            nombre: 'Zoé Robledo',
-            cargo: {
-              es: 'Presidente de la Conferencia Interamericana de Seguridad Social (CISS)',
-              en: 'President of the Inter-American Conference on Social Security (CISS)',
-              pt: 'Presidente da Conferência Interamericana de Seguridade Social (CISS)',
-            },
-          },
-          {
-            nombre: 'Pedro Kumamoto',
-            cargo: {
-              es: 'Secretario General de la Conferencia Interamericana de Seguridad Social (CISS)',
-              en: 'Secretary General of the Inter-American Conference on Social Security (CISS)',
-              pt: 'Secretário-Geral da Conferência Interamericana de Seguridade Social (CISS)',
-            },
-          },
-          {
-            nombre: 'Emanuel de Araújo Dantas',
-            cargo: {
-              es: 'Director del Centro Interamericano de Estudios de Seguridad Social (CIESS)',
-              en: 'Director of the Inter-American Center for Social Security Studies (CIESS)',
-              pt: 'Diretor do Centro Interamericano de Estudos de Seguridade Social (CIESS)',
-            },
-          },
-          {
-            nombre: 'Marcela Agudelo Botero',
-            cargo: coordina({ es: 'Salud', en: 'Health', pt: 'Saúde' }, 'a'),
-          },
-          {
-            nombre: 'Ann Sibelle Rodríguez Mininni',
-            cargo: coordina({ es: 'Pensiones', en: 'Pensions', pt: 'Pensões' }, 'a'),
-          },
-          {
-            nombre: 'Luiz Carlos Lumbreras Rocha',
-            cargo: coordina({ es: 'Riesgos Laborales', en: 'Occupational Risks', pt: 'Riscos do Trabalho' }, 'o'),
-          },
-          {
-            nombre: 'Gabriela Mendizábal',
-            cargo: coordina({ es: 'Cuidados', en: 'Care', pt: 'Cuidados' }, 'a'),
-          },
-        ],
+        // Sin lista de participantes por ahora: el comité mandará la definitiva.
+        // Cuando llegue, va aquí como `participantes: [{ nombre, cargo }]` y la
+        // tarjeta vuelve a poder desplegarse sola.
       },
       {
         horario: '09:30–10:30', tipo: 'conferencia', sala: 'auditorio',

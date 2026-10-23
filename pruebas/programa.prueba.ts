@@ -134,11 +134,21 @@ describe('el programa publicado', () => {
     }
   });
 
-  it('la sesión de apertura lista a siete personas, y sólo ella', () => {
-    const conLista = todas.filter(({ s }) => s.participantes);
-    expect(conLista).toHaveLength(1);
-    expect(conLista[0].s.tipo).toBe('apertura');
-    expect(conLista[0].s.participantes).toHaveLength(7);
+  it('la apertura conserva su horario, su sala y su nombre, y no lista a nadie por ahora', () => {
+    // El comité pidió quitar los nombres hasta tener la lista definitiva y
+    // mantener lo demás. Cuando llegue la lista, esta prueba se cambia por la
+    // que cuente a quienes abren el Congreso.
+    const apertura = todas.find(({ s }) => s.tipo === 'apertura')!.s;
+    expect(apertura.horario).toBe('09:00–09:30');
+    expect(apertura.sala).toBe('auditorio');
+    expect(apertura.actividad?.es).toBe('Sesión de apertura');
+    expect(apertura.participantes).toBeUndefined();
+  });
+
+  it('sólo la apertura puede llevar lista de participantes', () => {
+    for (const { s } of todas) {
+      if (s.participantes) expect(s.tipo, s.horario).toBe('apertura');
+    }
   });
 });
 

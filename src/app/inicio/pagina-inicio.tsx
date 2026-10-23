@@ -8,6 +8,7 @@ import { VideoFondo } from '@/componentes/video-fondo';
 import { Collage } from '@/componentes/collage';
 import { CALENDARIO, GALERIA, LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from '@/lib/landing';
 import { Programa } from '@/componentes/programa';
+import { diaEnMexico } from '@/lib/fechas';
 import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 
@@ -32,7 +33,7 @@ export function PaginaInicio({
 }) {
   const { t, idioma } = useApp();
   const textos = LANDING[idioma];
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = diaEnMexico();
 
   return (
     <>

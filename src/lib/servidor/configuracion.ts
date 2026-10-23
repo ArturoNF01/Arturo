@@ -1,6 +1,7 @@
 import 'server-only';
 import { consultar, unaFila } from '@/lib/bd/conexion';
 import { CONFIG } from '@/lib/config';
+import { plazoVigente } from '@/lib/fechas';
 
 export interface ConfiguracionPublica {
   cupos_presenciales: number | null;
@@ -76,8 +77,7 @@ export async function leerConfiguracion(): Promise<ConfiguracionPublica> {
 
 /** ¿Sigue abierto el plazo de edición del registro? La hora la pone el servidor. */
 export function dentroDelPlazo(fechaLimite: string): boolean {
-  const limite = new Date(`${fechaLimite}T23:59:59`).getTime();
-  return Number.isFinite(limite) ? Date.now() <= limite : true;
+  return plazoVigente(fechaLimite);
 }
 
 export function lugaresPresencialesRestantes(config: ConfiguracionPublica): number | null {

@@ -44,7 +44,9 @@ function diaDeLaSemana(iso: string, idioma: string): string {
 /** Lo que se puede desplegar: las mesas, que traen sus ponencias, y la apertura, que trae a quien la abre. */
 function claveDesplegable(sesion: Sesion): string | null {
   if (sesion.tipo === 'mesa') return `mesa-${sesion.mesa}`;
-  if (sesion.tipo === 'apertura') return 'apertura';
+  // La apertura se despliega sólo si trae a quién enseñar. Sin lista, un botón de
+  // desplegar abriría una caja vacía.
+  if (sesion.tipo === 'apertura') return sesion.participantes?.length ? 'apertura' : null;
   return null;
 }
 

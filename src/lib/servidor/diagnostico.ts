@@ -1,6 +1,7 @@
 import 'server-only';
 import { consultar } from '@/lib/bd/conexion';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
+import { diaEnMexico } from '@/lib/fechas';
 import { leerDatosCongreso } from '@/lib/servidor/contenido';
 
 /**
@@ -134,7 +135,7 @@ export async function diagnosticar(): Promise<Informe> {
   // Con la fecha límite pasada, el formulario sigue aceptando registros pero
   // nadie puede editar el suyo, y los recordatorios no salen nunca. Es un
   // fallo silencioso: nada se rompe, sólo deja de ocurrir.
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = diaEnMexico();
   const [configuracion, congreso] = await Promise.all([
     leerConfiguracion().catch(() => null),
     leerDatosCongreso().catch(() => null),

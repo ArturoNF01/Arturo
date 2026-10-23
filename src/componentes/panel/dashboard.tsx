@@ -9,6 +9,7 @@ import { BarraFiltros } from './filtros';
 import { aplicarFiltros, useRegistros, FILTROS_VACIOS, type Filtros, type RegistroPanel } from './usar-registros';
 import { contarPor, regresionLineal } from '@/lib/graficas';
 import { codigoPais } from '@/lib/paises';
+import { diaEnMexico } from '@/lib/fechas';
 import { traducir } from '@/lib/contenido';
 import { useContenidoPanel } from './contexto-panel';
 import { nombrePerfil } from '@/lib/perfiles';
@@ -92,8 +93,8 @@ export function Dashboard({
     return mapa;
   }, [activos]);
 
-  const hoy = new Date().toISOString().slice(0, 10);
-  const registrosHoy = activos.filter((r) => r.creado_en.slice(0, 10) === hoy).length;
+  const hoy = diaEnMexico();
+  const registrosHoy = activos.filter((r) => diaEnMexico(r.creado_en) === hoy).length;
   const presenciales = activos.filter((r) => r.modalidad === 'presencial').length;
   const enLinea = activos.filter((r) => r.modalidad === 'en_linea').length;
   const paisesUnicos = new Set(activos.map((r) => r.pais_residencia).filter(Boolean)).size;
@@ -299,7 +300,7 @@ function construirSerieDiaria(registros: RegistroPanel[]) {
 
   const porDia = new Map<string, number>();
   for (const r of registros) {
-    const dia = r.creado_en.slice(0, 10);
+    const dia = diaEnMexico(r.creado_en);
     porDia.set(dia, (porDia.get(dia) ?? 0) + 1);
   }
 
@@ -342,7 +343,7 @@ function construirProyeccion(
 
   const diasHastaLimite = Math.max(
     0,
-    Math.round((Date.parse(`${fechaLimite}T00:00:00Z`) - Date.now()) / 86_400_000),
+    Math.round((Date.parse(`${fechaLimite}T00:00:00Z`) - Date.parse(`${diaEnMexico()}T00:00:00Z`)) / 86_400_000),
   );
   const pasos = Math.min(DIAS_PROYECCION, diasHastaLimite || DIAS_PROYECCION);
   const ultimoAcumulado = serie[serie.length - 1].acumulado;
