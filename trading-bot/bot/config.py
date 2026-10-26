@@ -50,7 +50,7 @@ def load_config() -> Config:
         daily_loss_limit_pct=_f("DAILY_LOSS_LIMIT_PCT", "5.0"),
         fee_pct=_f("FEE_PCT", "0.1"),
         poll_seconds=int(_f("POLL_SECONDS", "60")),
-        telegram_token=os.getenv("TELEGRAM_TOKEN", ""),
+        telegram_token=os.getenv("TELEGRAM_TOKEN", "").strip().removeprefix("bot"),  # un token real empieza con digitos
         telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID", ""),
         live_confirmed=os.getenv("I_UNDERSTAND_REAL_MONEY", "no") == "yes",
     )

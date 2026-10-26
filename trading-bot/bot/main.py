@@ -162,27 +162,52 @@ def build(cfg: Config) -> Bot:
     return Bot(cfg, broker, data_ex, s)
 
 
+class RedactingFormatter(logging.Formatter):
+    """Nunca escribe secretos en los logs (las URLs de error de Telegram llevan el token)."""
+
+    def __init__(self, fmt: str, secrets: list[str]):
+        super().__init__(fmt)
+        self.secrets = [s for s in secrets if s]
+
+    def format(self, record: logging.LogRecord) -> str:
+        out = super().format(record)
+        for s in self.secrets:
+            out = out.replace(s, "***")
+        return out
+
+
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     cfg = load_config()
+    logging.basicConfig(level=logging.INFO)
+    for h in logging.getLogger().handlers:
+        h.setFormatter(RedactingFormatter("%(asctime)s %(levelname)s %(message)s",
+                                          [cfg.telegram_token, cfg.api_key, cfg.api_secret]))
     bot = build(cfg)
     bot.say(f"Bot iniciado: {cfg.symbol} {cfg.timeframe} SMA {cfg.sma_fast}/{cfg.sma_slow}. "
             f"Comandos: /status /pause /resume /close")
-    next_step = 0.0
+    next_step = next_cmd = 0.0
     while True:
         try:
             if time.time() >= next_step:
                 next_step = time.time() + cfg.poll_seconds
                 bot.step()
-            bot.process_commands()
-            if cfg.mode == "paper":
-                bot.state["paper"] = bot.broker.snapshot()
-            st.save(bot.state)
         except (ccxt.NetworkError, ccxt.ExchangeNotAvailable, requests.RequestException) as e:
             log.warning("Error de red, reintento: %s", e)
         except Exception as e:  # noqa: BLE001 - el bot nunca debe morir en silencio
             log.exception("Error inesperado")
-            bot.say(f"ERROR: {e!r}")
+            bot.say(f"ERROR: {type(e).__name__}")
+        try:
+            if time.time() >= next_cmd:
+                bot.process_commands()
+        except requests.RequestException as e:
+            log.warning("Telegram no responde, reintento en 60 s: %s", e)
+            next_cmd = time.time() + 60
+        try:
+            if cfg.mode == "paper":
+                bot.state["paper"] = bot.broker.snapshot()
+            st.save(bot.state)
+        except OSError as e:
+            log.error("No se pudo guardar el estado: %s", e)
         time.sleep(3)  # revisa comandos de Telegram cada 3 s; el precio cada POLL_SECONDS
 
 

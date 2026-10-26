@@ -197,3 +197,21 @@ def test_telegram_ignores_old_and_foreign_messages(monkeypatch):
     bot.process_commands()
     assert bot.state["paused"] is True and bot.state["tg_offset"] == 8
     assert len(sent) == 1
+
+
+# ---------- secretos ----------
+def test_token_bot_prefix_is_stripped(monkeypatch):
+    from bot.config import load_config
+    monkeypatch.setenv("MODE", "paper")
+    monkeypatch.setenv("TELEGRAM_TOKEN", " bot123456:AAHxyz ")
+    assert load_config().telegram_token == "123456:AAHxyz"
+
+
+def test_logs_never_contain_token():
+    import logging
+    from bot.main import RedactingFormatter
+    fmt = RedactingFormatter("%(message)s", ["123456:AAHxyz"])
+    rec = logging.LogRecord("bot", logging.WARNING, "", 0,
+                            "404 for url: https://api.telegram.org/bot123456:AAHxyz/getUpdates", (), None)
+    out = fmt.format(rec)
+    assert "AAHxyz" not in out and "***" in out
