@@ -12,6 +12,8 @@ EMPTY = {
     "day": None,
     "day_start_equity": 0.0,
     "halted": False,
+    "paused": False,         # pausa manual por Telegram: no abre compras nuevas
+    "tg_offset": None,       # ultimo update de Telegram procesado
     "last_candle_ts": None,
     "paper": None,           # {"usdt", "base"} solo en modo paper
 }

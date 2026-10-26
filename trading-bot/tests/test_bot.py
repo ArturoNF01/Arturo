@@ -151,3 +151,49 @@ def test_live_requires_confirmation():
 def test_testnet_requires_keys():
     with pytest.raises(ValueError):
         validate(make_cfg(mode="testnet"))
+
+
+# ---------- control por Telegram ----------
+def test_pause_blocks_new_buys():
+    closes = [100] * 12 + [99, 98, 97, 96, 100, 110, 120]
+    for n in range(14, len(closes) + 1):
+        bot, _ = new_bot(closes[:n], sma_fast=3, sma_slow=6)
+        bot.state["paused"] = True
+        bot.step()
+        assert bot.state["position"] is None
+
+
+def test_close_command_sells_position():
+    bot, broker = new_bot([100] * 60)
+    bot.state["position"] = {"entry": 100.0, "qty": 0.3, "stop": 97.0, "tp": 106.0, "ts": "x"}
+    broker.base, broker.usdt = 0.3, 70.0
+    assert bot.handle("/close") == ""
+    assert bot.state["position"] is None and broker.usdt == pytest.approx(100.0)
+    assert "No hay posicion" in bot.handle("/close")
+
+
+def test_status_and_pause_resume():
+    bot, _ = new_bot([100] * 60)
+    assert "activo" in bot.handle("/status")
+    bot.handle("/pause")
+    assert "PAUSADO" in bot.handle("/status")
+    bot.handle("/resume")
+    assert "activo" in bot.handle("/status")
+
+
+def test_telegram_ignores_old_and_foreign_messages(monkeypatch):
+    from bot import notify
+    bot, _ = new_bot([100] * 60, telegram_token="t", telegram_chat_id="42")
+    sent = []
+    monkeypatch.setattr(notify, "send", lambda t, c, text: sent.append(text))
+    msgs = {-1: [{"update_id": 5, "message": {"chat": {"id": 42}, "text": "/pause"}}]}
+    monkeypatch.setattr(notify, "get_updates", lambda tok, off: msgs.get(off, []))
+    bot.process_commands()                       # primer arranque: descarta lo viejo
+    assert bot.state["tg_offset"] == 6 and not bot.state["paused"]
+    msgs[6] = [
+        {"update_id": 6, "message": {"chat": {"id": 999}, "text": "/pause"}},   # chat ajeno
+        {"update_id": 7, "message": {"chat": {"id": 42}, "text": "/pause"}},
+    ]
+    bot.process_commands()
+    assert bot.state["paused"] is True and bot.state["tg_offset"] == 8
+    assert len(sent) == 1

@@ -18,3 +18,12 @@ def send(token: str, chat_id: str, text: str) -> None:
         )
     except requests.RequestException as e:
         log.warning("Telegram fallo: %s", e)
+
+
+def get_updates(token: str, offset: int | None) -> list:
+    params = {"timeout": 0}
+    if offset is not None:
+        params["offset"] = offset
+    r = requests.get(f"https://api.telegram.org/bot{token}/getUpdates", params=params, timeout=10)
+    r.raise_for_status()
+    return r.json().get("result", [])

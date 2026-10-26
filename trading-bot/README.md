@@ -35,6 +35,8 @@ Salida: logs en consola, operaciones en `data/trades.csv`, estado en `data/state
 
 ## Dejarlo 24/7
 
+**Guia completa paso a paso (servidor + Telegram): [DESPLIEGUE-NUBE.md](DESPLIEGUE-NUBE.md).** Resumen manual:
+
 En un VPS pequeno (DigitalOcean $4-6/mes):
 
 ```bash

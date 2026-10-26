@@ -3,6 +3,7 @@ import time
 from datetime import datetime, timezone
 
 import ccxt
+import requests
 
 from . import notify, state as st
 from .broker import CcxtBroker, PaperBroker
@@ -92,10 +93,59 @@ class Bot:
 
         sig = signal(candles, c.sma_fast, c.sma_slow)
         log.info("vela %s cierre %.2f senal=%s", last_ts, candles.iloc[-1]["close"], sig)
-        if sig == "buy" and not s["position"]:
+        if sig == "buy" and not s["position"] and not s["paused"]:
             self.open_position(price, equity)
         elif sig == "sell" and s["position"]:
             self.close_position("cruce bajista")
+
+    # ---------- control remoto por Telegram ----------
+    def handle(self, cmd: str) -> str:
+        s = self.state
+        if cmd == "/status":
+            price = self.broker.price()
+            pos = s["position"]
+            lines = [f"Modo: {self.cfg.mode} | {self.cfg.symbol} @ {price:.2f}",
+                     f"Capital: {self.equity(price):.2f} USDT (inicio del dia {s['day_start_equity']:.2f})",
+                     f"Estado: {'LIMITE DIARIO' if s['halted'] else 'PAUSADO' if s['paused'] else 'activo'}"]
+            if pos:
+                pnl = (price / pos["entry"] - 1) * 100
+                lines.append(f"Posicion: {pos['qty']:.6f} @ {pos['entry']:.2f} ({pnl:+.2f}%), "
+                             f"stop {pos['stop']:.2f}, tp {pos['tp']:.2f}")
+            else:
+                lines.append("Posicion: ninguna")
+            return "\n".join(lines)
+        if cmd == "/pause":
+            s["paused"] = True
+            return "Pausado: no abrira compras nuevas (la posicion abierta sigue protegida por su stop)."
+        if cmd == "/resume":
+            s["paused"] = False
+            return "Reanudado."
+        if cmd == "/close":
+            if not s["position"]:
+                return "No hay posicion abierta."
+            self.close_position("manual")
+            return ""
+        return "Comandos: /status /pause /resume /close"
+
+    def process_commands(self) -> None:
+        c, s = self.cfg, self.state
+        if not (c.telegram_token and c.telegram_chat_id):
+            return
+        if s["tg_offset"] is None:
+            # primer arranque: ignorar mensajes viejos para no ejecutar ordenes atrasadas
+            pending = notify.get_updates(c.telegram_token, -1)
+            s["tg_offset"] = pending[-1]["update_id"] + 1 if pending else 0
+            return
+        for u in notify.get_updates(c.telegram_token, s["tg_offset"]):
+            s["tg_offset"] = u["update_id"] + 1
+            msg = u.get("message") or {}
+            if str(msg.get("chat", {}).get("id")) != str(c.telegram_chat_id):
+                continue  # solo obedece a tu chat
+            text = (msg.get("text") or "").strip().lower()
+            if text.startswith("/"):
+                reply = self.handle(text.split()[0].split("@")[0])
+                if reply:
+                    self.say(reply)
 
 
 def build(cfg: Config) -> Bot:
@@ -116,19 +166,24 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     cfg = load_config()
     bot = build(cfg)
-    bot.say(f"Bot iniciado: {cfg.symbol} {cfg.timeframe} SMA {cfg.sma_fast}/{cfg.sma_slow}")
+    bot.say(f"Bot iniciado: {cfg.symbol} {cfg.timeframe} SMA {cfg.sma_fast}/{cfg.sma_slow}. "
+            f"Comandos: /status /pause /resume /close")
+    next_step = 0.0
     while True:
         try:
-            bot.step()
+            if time.time() >= next_step:
+                next_step = time.time() + cfg.poll_seconds
+                bot.step()
+            bot.process_commands()
             if cfg.mode == "paper":
                 bot.state["paper"] = bot.broker.snapshot()
             st.save(bot.state)
-        except (ccxt.NetworkError, ccxt.ExchangeNotAvailable) as e:
+        except (ccxt.NetworkError, ccxt.ExchangeNotAvailable, requests.RequestException) as e:
             log.warning("Error de red, reintento: %s", e)
         except Exception as e:  # noqa: BLE001 - el bot nunca debe morir en silencio
             log.exception("Error inesperado")
             bot.say(f"ERROR: {e!r}")
-        time.sleep(cfg.poll_seconds)
+        time.sleep(3)  # revisa comandos de Telegram cada 3 s; el precio cada POLL_SECONDS
 
 
 if __name__ == "__main__":
