@@ -2,7 +2,19 @@
 
 Todo se hace desde el navegador, sin instalar nada en tu computadora.
 
-## 1. Crear el servidor
+## 0. Usar un droplet que ya tienes (sin costo extra)
+
+El bot corre aparte (carpeta `/opt/arturo`, usuario y servicio propios) y no toca tus otros servicios ni el firewall. Antes, en la **Console** del droplet, verifica:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://api.binance.com/api/v3/ping   # debe decir 200 (451 = region bloqueada, EE.UU.)
+cat /etc/os-release | head -2                                                   # Ubuntu o Debian
+free -m                                                                         # idealmente 300+ MB libres en "available"
+```
+
+Si da 200, es Ubuntu/Debian y hay memoria, salta al **paso 2**. Si da 451, necesitas un droplet en otra region.
+
+## 1. Crear el servidor (solo si no reutilizas uno)
 
 En DigitalOcean: **Create → Droplets**
 

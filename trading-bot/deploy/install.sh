@@ -11,7 +11,7 @@ BOT="$DIR/trading-bot"
 if [ "$(id -u)" -ne 0 ]; then echo "Ejecuta como root"; exit 1; fi
 
 apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-venv git ufw
+DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-venv git
 
 id tradingbot >/dev/null 2>&1 || useradd --system --home "$DIR" --shell /usr/sbin/nologin tradingbot
 
@@ -51,9 +51,6 @@ EOF
 systemctl daemon-reload
 systemctl enable tradingbot
 systemctl restart tradingbot
-
-ufw allow OpenSSH >/dev/null
-ufw --force enable >/dev/null
 
 echo
 echo "Listo. El bot corre en modo: $(grep -E '^MODE=' "$BOT/.env")"
