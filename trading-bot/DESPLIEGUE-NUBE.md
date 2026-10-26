@@ -4,7 +4,7 @@ Todo se hace desde el navegador, sin instalar nada en tu computadora.
 
 ## 0. Usar un droplet que ya tienes (sin costo extra)
 
-El bot corre aparte (carpeta `/opt/arturo`, usuario y servicio propios) y no toca tus otros servicios ni el firewall. Antes, en la **Console** del droplet, verifica:
+El bot corre aparte (carpeta `/opt/tradingbot`, usuario y servicio propios, con tope de 350 MB de RAM y 50% de CPU) y no toca tus otros servicios, puertos, firewall ni paquetes ya instalados. El instalador revisa todo antes de cambiar nada y, si algo no cuadra, aborta sin modificar el servidor. Para quitarlo: `bash /opt/tradingbot/src/trading-bot/deploy/uninstall.sh`. Antes, en la **Console** del droplet, verifica:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" https://api.binance.com/api/v3/ping   # debe decir 200 (451 = region bloqueada, EE.UU.)
@@ -45,7 +45,7 @@ journalctl -u tradingbot -f      # Ctrl+C para salir
 3. Abre en el navegador `https://api.telegram.org/bot<TOKEN>/getUpdates` y copia el numero de `"chat":{"id":...}`.
 4. En la Console:
    ```bash
-   nano /opt/arturo/trading-bot/.env
+   nano /opt/tradingbot/src/trading-bot/.env
    ```
    Llena `TELEGRAM_TOKEN=` y `TELEGRAM_CHAT_ID=`. Guarda (`Ctrl+O`, Enter, `Ctrl+X`) y reinicia:
    ```bash
@@ -75,7 +75,7 @@ Edita `.env` con `nano` (paso 3) y reinicia con `systemctl restart tradingbot`.
 ```bash
 systemctl status tradingbot          # esta corriendo?
 systemctl restart tradingbot         # reiniciar
-cat /opt/arturo/trading-bot/data/trades.csv   # operaciones
+cat /opt/tradingbot/src/trading-bot/data/trades.csv   # operaciones
 # actualizar a la ultima version (conserva .env y data):
 curl -fsSL https://raw.githubusercontent.com/ArturoNF01/Arturo/claude/gracious-mayer-3ikbtj/trading-bot/deploy/install.sh | bash
 ```
