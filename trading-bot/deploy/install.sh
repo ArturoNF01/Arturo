@@ -65,8 +65,10 @@ id tradingbot >/dev/null 2>&1 || useradd --system --home "$DIR" --shell /usr/sbi
 
 # Solo se descarga la carpeta trading-bot (no el resto del repositorio)
 if [ -d "$SRC/.git" ]; then
-  git -C "$SRC" fetch --depth 1 origin "$BRANCH"
-  git -C "$SRC" reset --hard FETCH_HEAD   # no toca .env, data/ ni .venv (estan en .gitignore)
+  # La carpeta pertenece a 'tradingbot': safe.directory solo para estos comandos (no cambia la config global de git)
+  GIT="git -c safe.directory=$SRC -C $SRC"
+  $GIT fetch --depth 1 origin "$BRANCH"
+  $GIT reset --hard FETCH_HEAD   # no toca .env, data/ ni .venv (estan en .gitignore)
 else
   git clone --depth 1 --filter=blob:none --sparse --branch "$BRANCH" "$REPO_URL" "$SRC"
   git -C "$SRC" sparse-checkout set trading-bot
