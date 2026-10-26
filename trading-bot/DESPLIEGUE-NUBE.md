@@ -12,7 +12,9 @@ cat /etc/os-release | head -2                                                   
 free -m                                                                         # idealmente 300+ MB libres en "available"
 ```
 
-Si da 200, es Ubuntu/Debian y hay memoria, salta al **paso 2**. Si da 451, necesitas un droplet en otra region.
+Si da 200, es Ubuntu/Debian y hay memoria, salta al **paso 2**.
+
+Si da **451** (droplet en EE.UU.), Binance no funciona desde ahi. Para practicar en `paper` (dinero simulado) usa precios de Kraken, que si funciona desde EE.UU.: en el paso 2 agrega `EXCHANGE=kraken` antes de `bash`. Para dinero real necesitaras un exchange que acepte esa IP o un droplet en otra region.
 
 ## 1. Crear el servidor (solo si no reutilizas uno)
 
@@ -31,6 +33,8 @@ En la pagina del droplet pulsa **Console** (terminal dentro del navegador; sirve
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ArturoNF01/Arturo/claude/gracious-mayer-3ikbtj/trading-bot/deploy/install.sh | bash
 ```
+
+(Con Kraken: `... | EXCHANGE=kraken bash`)
 
 Termina diciendo `Listo. El bot corre en modo: MODE=paper` (dinero simulado). Ver que vive:
 

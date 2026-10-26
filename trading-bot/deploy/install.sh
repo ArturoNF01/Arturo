@@ -19,6 +19,13 @@ MARKER="$DIR/.tradingbot-managed"
 UNIT=/etc/systemd/system/tradingbot.service
 UNIT_TAG="# managed-by: tradingbot-installer"
 MIN_MEM_MB="${MIN_MEM_MB:-250}"
+# Fuente de precios. Binance bloquea IPs de EE.UU.; en ese caso usa EXCHANGE=kraken (solo paper).
+EXCHANGE="${EXCHANGE:-binance}"
+case "$EXCHANGE" in
+  binance) PING_URL=https://api.binance.com/api/v3/ping ;;
+  kraken)  PING_URL=https://api.kraken.com/0/public/Time ;;
+  *) echo "ABORTADO (no se cambio nada): EXCHANGE debe ser binance o kraken" >&2; exit 1 ;;
+esac
 
 die() { echo "ABORTADO (no se cambio nada): $*" >&2; exit 1; }
 
@@ -43,8 +50,8 @@ avail_mb=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
 [ "$avail_mb" -ge "$MIN_MEM_MB" ] || die "memoria disponible ${avail_mb} MB (minimo ${MIN_MEM_MB} MB); no se arriesga a tus apps"
 
 if [ "${SKIP_NET_CHECK:-0}" != "1" ]; then
-  code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' https://api.binance.com/api/v3/ping || true)
-  [ "$code" = "200" ] || die "Binance no responde 200 desde este servidor (codigo $code). 451 = region bloqueada (EE.UU.)"
+  code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$PING_URL" || true)
+  [ "$code" = "200" ] || die "$EXCHANGE no responde 200 desde este servidor (codigo $code). 451 = region bloqueada (EE.UU.): prueba EXCHANGE=kraken"
 fi
 
 # ---------- 2. Instalacion ----------
@@ -68,7 +75,10 @@ fi
 python3 -m venv "$BOT/.venv"
 nice -n 19 "$BOT/.venv/bin/pip" install -q --no-cache-dir -r "$BOT/requirements.txt"
 
-[ -f "$BOT/.env" ] || cp "$BOT/.env.example" "$BOT/.env"
+if [ ! -f "$BOT/.env" ]; then
+  cp "$BOT/.env.example" "$BOT/.env"
+  sed -i "s/^EXCHANGE=.*/EXCHANGE=$EXCHANGE/" "$BOT/.env"
+fi
 mkdir -p "$BOT/data"
 chmod 600 "$BOT/.env"
 chown -R tradingbot:tradingbot "$DIR"   # solo nuestra carpeta
