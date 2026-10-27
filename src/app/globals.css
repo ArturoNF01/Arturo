@@ -226,22 +226,6 @@
   .portada-velo, .portada-entrada { animation: none; }
 }
 
-.portada-gratuita {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 18px;
-  padding: 0.55rem 1.1rem;
-  border-radius: 8px;
-  background-color: var(--portada-acento);
-  color: var(--portada-tinta);
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  text-shadow: none;
-  box-shadow: 0 6px 18px rgba(199, 174, 111, 0.35);
-}
 .portada-titulo {
   margin-bottom: 10px;
   font-size: 2.5rem;

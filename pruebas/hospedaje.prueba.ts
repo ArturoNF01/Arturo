@@ -16,7 +16,7 @@ describe('el hotel con convenio', () => {
     expect(HOTEL.mapa).toContain('19.328198,-99.213928');
   });
 
-  it('los textos de la portada y del hospedaje existen, sin huecos, en los tres idiomas', () => {
+  it('los textos del hospedaje existen, sin huecos, en los tres idiomas', () => {
     const claves = Object.keys(LANDING.es).sort();
     for (const idioma of ['en', 'pt'] as const) {
       expect(Object.keys(LANDING[idioma]).sort(), idioma).toEqual(claves);
@@ -25,7 +25,7 @@ describe('el hotel con convenio', () => {
       for (const clave of [
         'hospedajeTitulo', 'hospedajeAyuda', 'hospedajeEtiqueta', 'hospedajeAtencion',
         'hospedajeSitio', 'hospedajeLlamar', 'hospedajeComoLlegar', 'codigoEtiqueta',
-        'codigoAyuda', 'codigoCopiar', 'codigoCopiado', 'gratuita',
+        'codigoAyuda', 'codigoCopiar', 'codigoCopiado',
       ] as const) {
         expect(LANDING[idioma][clave].trim().length, `${idioma}.${clave}`).toBeGreaterThan(0);
       }

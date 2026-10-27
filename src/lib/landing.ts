@@ -178,7 +178,6 @@ export interface TextosLanding {
   codigoAyuda: string;
   codigoCopiar: string;
   codigoCopiado: string;
-  gratuita: string;
   participarTitulo: string;
   participarAyuda: string;
   registrarse: string;
@@ -228,7 +227,6 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     codigoAyuda: 'Indíquelo al hacer su reservación.',
     codigoCopiar: 'Copiar código',
     codigoCopiado: 'Código copiado',
-    gratuita: 'Actividad gratuita',
     participarTitulo: 'Participe en el Congreso',
     participarAyuda:
       'El registro está abierto para asistir, presencialmente en la Ciudad de México o en línea desde cualquier país.',
@@ -277,7 +275,6 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     codigoAyuda: 'Give it when you make your reservation.',
     codigoCopiar: 'Copy code',
     codigoCopiado: 'Code copied',
-    gratuita: 'Free event',
     participarTitulo: 'Take part',
     participarAyuda:
       'Registration is open to attend, in person in Mexico City or online from anywhere.',
@@ -326,7 +323,6 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     codigoAyuda: 'Informe-o ao fazer a sua reserva.',
     codigoCopiar: 'Copiar código',
     codigoCopiado: 'Código copiado',
-    gratuita: 'Atividade gratuita',
     participarTitulo: 'Participe do Congresso',
     participarAyuda:
       'As inscrições estão abertas para participar presencialmente na Cidade do México ou online de qualquer país.',

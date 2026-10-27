@@ -39,19 +39,6 @@ export function Portada({
       <div className="portada-velo" aria-hidden />
 
       <div className="portada-contenido">
-        {/* La condición que más importa a quien duda si registrarse: va
-            arriba, en dorado macizo, y no como una píldora entre los datos. */}
-        <p className="portada-gratuita portada-entrada" style={{ ['--retraso' as string]: '0.1s' }}>
-          <svg
-            width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden
-          >
-            <circle cx="12" cy="12" r="9.5" />
-            <path d="m7.5 12.5 3 3 6-6.5" />
-          </svg>
-          {textos.gratuita}
-        </p>
-
         <h1 className="portada-titulo portada-entrada" style={{ ['--retraso' as string]: '0.3s' }}>
           <span className="portada-nombre">{t.congreso.titulo}</span>
           {t.congreso.subtitulo}

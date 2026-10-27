@@ -6,7 +6,6 @@ import { useApp } from '@/componentes/proveedores';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import { traducir, type DatosCongreso } from '@/lib/contenido';
 import { VideoFondo } from '@/componentes/video-fondo';
-import { LANDING } from '@/lib/landing';
 
 export function PaginaRegistro({
   configuracion,
@@ -32,22 +31,6 @@ export function PaginaRegistro({
           <h1 className="text-2xl font-bold leading-tight sm:text-3xl">
             {t.formulario.titulo}
           </h1>
-
-          {/* Aparte de los datos del lugar, y en el dorado de la marca. */}
-          <p
-            className="mt-4 inline-flex items-center gap-2.5 rounded-lg border-l-4 border-accent-500 px-4 py-2.5 text-base font-bold uppercase tracking-[0.1em]"
-            style={{ backgroundColor: 'color-mix(in srgb, #c9a227 20%, transparent)' }}
-          >
-            <svg
-              width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden
-              className="shrink-0 text-accent-600 dark:text-accent-500"
-            >
-              <circle cx="12" cy="12" r="9.5" />
-              <path d="m7.5 12.5 3 3 6-6.5" />
-            </svg>
-            {LANDING[idioma].gratuita}
-          </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-xs font-medium tenue">
             <span className="rounded-full border px-3 py-1" style={{ borderColor: 'var(--borde)' }}>
