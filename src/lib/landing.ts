@@ -68,6 +68,24 @@ export const GALERIA: string[] = Array.from({ length: GALERIA_TOTAL }, (_, i) =>
   fotoInstalaciones(i + 1),
 );
 
+/**
+ * El hotel con el que el CIESS tiene convenio.
+ *
+ * El hospedaje del propio CIESS no alcanza: otros eventos internacionales
+ * caen en las mismas fechas. Lo que el comité pidió resaltar es el código
+ * de promoción —no hay tarifas que publicar—, y es lo único que se copia.
+ * Si el hotel o el código cambian, se cambian aquí.
+ */
+export const HOTEL = {
+  nombre: 'Hotel Galería Plaza San Jerónimo',
+  direccion: 'Avenida Contreras 300, Colonia San Jerónimo Lídice, Alcaldía Magdalena Contreras, 10200 CDMX, México',
+  telefono: '+52 55 5377 6400',
+  telefonoEnlace: 'tel:+525553776400',
+  web: 'https://www.galeriaplazahotels.com.mx/es/san-jeronimo/',
+  mapa: 'https://www.google.com/maps?ll=19.328198,-99.213928&z=14&t=m&hl=es&gl=MX&mapclient=embed&cid=12815805780581030290',
+  codigo: 'Convenio CISS',
+} as const;
+
 export interface HitoCalendario {
   fecha: Record<Idioma, string>;
   hecho: Record<Idioma, string>;
@@ -147,6 +165,18 @@ export interface TextosLanding {
   galeriaSiguiente: string;
   galeriaFoto: (n: number) => string;
   galeriaVacia: string;
+  hospedajeTitulo: string;
+  hospedajeAyuda: string;
+  hospedajeEtiqueta: string;
+  hospedajeAtencion: string;
+  hospedajeSitio: string;
+  hospedajeLlamar: string;
+  hospedajeComoLlegar: string;
+  codigoEtiqueta: string;
+  codigoAyuda: string;
+  codigoCopiar: string;
+  codigoCopiado: string;
+  gratuita: string;
   participarTitulo: string;
   participarAyuda: string;
   registrarse: string;
@@ -184,6 +214,19 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     galeriaSiguiente: 'Siguiente',
     galeriaFoto: (n: number) => `Instalaciones del CIESS, fotografía ${n}`,
     galeriaVacia: 'Las fotografías no están disponibles en este momento.',
+    hospedajeTitulo: 'Hospedaje',
+    hospedajeAyuda:
+      'El hospedaje del CIESS tiene disponibilidad limitada, porque varios eventos internacionales coinciden en las mismas fechas. Por eso contamos con un convenio con un hotel cercano.',
+    hospedajeEtiqueta: 'Hotel con convenio',
+    hospedajeAtencion: 'Atención las 24 horas, todos los días',
+    hospedajeSitio: 'Sitio del hotel',
+    hospedajeLlamar: 'Llamar',
+    hospedajeComoLlegar: 'Cómo llegar',
+    codigoEtiqueta: 'Código de promoción',
+    codigoAyuda: 'Indíquelo al hacer su reservación.',
+    codigoCopiar: 'Copiar código',
+    codigoCopiado: 'Código copiado',
+    gratuita: 'Actividad gratuita',
     participarTitulo: 'Participe en el Congreso',
     participarAyuda:
       'El registro está abierto para asistir, presencialmente en la Ciudad de México o en línea desde cualquier país.',
@@ -220,6 +263,19 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     galeriaSiguiente: 'Next',
     galeriaFoto: (n: number) => `CIESS campus, photograph ${n}`,
     galeriaVacia: 'The photographs are unavailable at the moment.',
+    hospedajeTitulo: 'Accommodation',
+    hospedajeAyuda:
+      'Rooms at the CIESS are limited, because several international events fall on the same dates. That is why we have an agreement with a nearby hotel.',
+    hospedajeEtiqueta: 'Partner hotel',
+    hospedajeAtencion: 'Open 24 hours, every day',
+    hospedajeSitio: 'Hotel website',
+    hospedajeLlamar: 'Call',
+    hospedajeComoLlegar: 'Get directions',
+    codigoEtiqueta: 'Promotion code',
+    codigoAyuda: 'Give it when you make your reservation.',
+    codigoCopiar: 'Copy code',
+    codigoCopiado: 'Code copied',
+    gratuita: 'Free event',
     participarTitulo: 'Take part',
     participarAyuda:
       'Registration is open to attend, in person in Mexico City or online from anywhere.',
@@ -256,6 +312,19 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     galeriaSiguiente: 'Seguinte',
     galeriaFoto: (n: number) => `Instalações do CIESS, fotografia ${n}`,
     galeriaVacia: 'As fotografias não estão disponíveis no momento.',
+    hospedajeTitulo: 'Hospedagem',
+    hospedajeAyuda:
+      'A hospedagem do CIESS tem disponibilidade limitada, porque vários eventos internacionais coincidem nas mesmas datas. Por isso temos um convênio com um hotel próximo.',
+    hospedajeEtiqueta: 'Hotel conveniado',
+    hospedajeAtencion: 'Atendimento 24 horas, todos os dias',
+    hospedajeSitio: 'Site do hotel',
+    hospedajeLlamar: 'Ligar',
+    hospedajeComoLlegar: 'Como chegar',
+    codigoEtiqueta: 'Código promocional',
+    codigoAyuda: 'Informe-o ao fazer a sua reserva.',
+    codigoCopiar: 'Copiar código',
+    codigoCopiado: 'Código copiado',
+    gratuita: 'Atividade gratuita',
     participarTitulo: 'Participe do Congresso',
     participarAyuda:
       'As inscrições estão abertas para participar presencialmente na Cidade do México ou online de qualquer país.',

@@ -180,6 +180,23 @@
 }
 .dia-activo .tenue { color: inherit; opacity: 0.85; }
 
+/* El hospedaje: el panel del código lleva el color de la marca, y el código va
+   en un recuadro de línea discontinua, como un cupón. Fuera de `@layer` para
+   que Tailwind no lo descarte al compilar. */
+.hospedaje-codigo {
+  background-color: color-mix(in srgb, var(--marca) 12%, var(--fondo-tarjeta));
+  border-top: 1px solid color-mix(in srgb, var(--marca) 26%, var(--borde));
+}
+@media (min-width: 768px) {
+  .hospedaje-codigo { border-top: 0; border-left: 1px solid color-mix(in srgb, var(--marca) 26%, var(--borde)); }
+}
+.hospedaje-codigo-valor {
+  color: var(--marca);
+  background-color: var(--fondo-tarjeta);
+  border: 2px dashed color-mix(in srgb, var(--marca) 60%, var(--borde));
+}
+.texto-marca { color: var(--marca); }
+
 @layer base {
   html { scroll-behavior: smooth; }
   body {

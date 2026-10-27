@@ -6,6 +6,7 @@ import { useApp } from '@/componentes/proveedores';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import { traducir, type DatosCongreso } from '@/lib/contenido';
 import { VideoFondo } from '@/componentes/video-fondo';
+import { LANDING } from '@/lib/landing';
 
 export function PaginaRegistro({
   configuracion,
@@ -41,6 +42,12 @@ export function PaginaRegistro({
             </span>
             <span className="rounded-full border px-3 py-1" style={{ borderColor: 'var(--borde)' }}>
               {t.modalidad.presencial} · {t.modalidad.en_linea}
+            </span>
+            <span
+              className="rounded-full border px-3 py-1 font-semibold"
+              style={{ borderColor: 'var(--marca)', color: 'var(--marca)' }}
+            >
+              {LANDING[idioma].gratuita}
             </span>
           </div>
 

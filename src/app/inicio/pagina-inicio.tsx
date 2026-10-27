@@ -8,6 +8,7 @@ import { VideoFondo } from '@/componentes/video-fondo';
 import { Collage } from '@/componentes/collage';
 import { CALENDARIO, GALERIA, LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from '@/lib/landing';
 import { Programa } from '@/componentes/programa';
+import { Hospedaje } from '@/componentes/hospedaje';
 import { diaEnMexico } from '@/lib/fechas';
 import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
@@ -81,6 +82,11 @@ export function PaginaInicio({
               </a>
               <span className="rounded-full border border-white/25 px-4 py-1.5">
                 {t.modalidad.presencial} · {t.modalidad.en_linea}
+              </span>
+              {/* Lo único que no es un dato del lugar: va relleno para que se
+                  lea como una condición, no como un cuarto dato más. */}
+              <span className="rounded-full border border-white/50 bg-white/15 px-4 py-1.5 font-semibold text-white">
+                {textos.gratuita}
               </span>
             </div>
 
@@ -260,6 +266,9 @@ export function PaginaInicio({
             </div>
           </div>
         </section>
+
+        {/* Hospedaje ----------------------------------------------------- */}
+        <Hospedaje />
 
         {/* Llamado a registrarse ---------------------------------------- */}
         <section className="border-t" style={{ borderColor: 'var(--borde)' }}>
