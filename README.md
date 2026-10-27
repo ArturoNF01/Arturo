@@ -14,8 +14,8 @@ convocado por el **CIESS** y la **CISS**.
 - **Almacenamiento sincronizado**: PostgreSQL como base principal y Google Sheets
   como réplica en las pestañas normalizadas `REG`, `PAR`, `ALO`, `TRA`, `PSE` y
   `ALI`. Las fotografías se guardan en una carpeta de Google Drive.
-- **Trilingüe** (español por defecto, inglés y portugués) y **modo oscuro** activo
-  por defecto, con alternancia a modo claro.
+- **Trilingüe** (español por defecto, inglés y portugués) y **modo claro** por
+  defecto, con alternancia a modo oscuro.
 - **Correos de confirmación** en el idioma del participante, con plantillas
   editables desde el panel.
 - **Cupos por modalidad** con número de lugares presenciales configurable y paso

@@ -22,15 +22,21 @@ export const viewport: Viewport = {
   ],
 };
 
-/** Aplica el tema antes de la hidratación para evitar el parpadeo. */
-const GUION_TEMA = `(function(){try{var t=localStorage.getItem('congreso.tema');if(t!=='claro'){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}}catch(e){document.documentElement.classList.add('dark');}})();`;
+/**
+ * Aplica el tema antes de la hidratación para evitar el parpadeo.
+ *
+ * El claro es el de origen: la página sale sin clase «dark» y sólo se añade
+ * si quien visita eligió el oscuro alguna vez. Si el almacenamiento no está
+ * disponible (ventana privada, datos bloqueados), se queda en claro.
+ */
+const GUION_TEMA = `(function(){try{if(localStorage.getItem('congreso.tema')==='oscuro'){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}}catch(e){}})();`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const galleta = (await cookies()).get('congreso.idioma')?.value;
   const idioma = esIdiomaValido(galleta) ? galleta : IDIOMA_POR_DEFECTO;
 
   return (
-    <html lang={obtenerDiccionario(idioma).meta.codigo} className="dark" suppressHydrationWarning>
+    <html lang={obtenerDiccionario(idioma).meta.codigo} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: GUION_TEMA }} />
       </head>
