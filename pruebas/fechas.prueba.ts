@@ -47,3 +47,18 @@ describe('el cierre del registro', () => {
     expect(plazoVigente('pronto', new Date())).toBe(true);
   });
 });
+
+describe('los filtros por fecha del panel', () => {
+  const registro = (creado_en: string) => ({ creado_en, estado: 'confirmado' }) as never;
+
+  it('«hasta hoy» incluye los registros de la tarde-noche de México', async () => {
+    const { aplicarFiltros, FILTROS_VACIOS } = await import('@/componentes/panel/usar-registros');
+    const registros = [
+      registro('2026-10-27T15:00:00Z'), // 09:00 en México
+      registro('2026-10-28T02:30:00Z'), // 20:30 en México, mismo día
+      registro('2026-10-28T06:30:00Z'), // 00:30 del 28
+    ];
+    const hastaHoy = aplicarFiltros(registros, { ...FILTROS_VACIOS, desde: '2026-10-27', hasta: '2026-10-27' });
+    expect(hastaHoy).toHaveLength(2);
+  });
+});

@@ -1,6 +1,7 @@
 'use client';
 
 import { useContextoRegistros } from './proveedor-registros';
+import { diaEnMexico } from '@/lib/fechas';
 
 /** Proyección ligera de la tabla `registros` para el dashboard. */
 export interface RegistroPanel {
@@ -60,7 +61,9 @@ export function aplicarFiltros(registros: RegistroPanel[], filtros: Filtros): Re
   const texto = filtros.texto.trim().toLowerCase();
 
   return registros.filter((r) => {
-    const dia = r.creado_en.slice(0, 10);
+    // El día es el de México: en UTC, «hasta hoy» dejaba fuera los registros
+    // de después de las 18:00.
+    const dia = diaEnMexico(r.creado_en);
     if (filtros.desde && dia < filtros.desde) return false;
     if (filtros.hasta && dia > filtros.hasta) return false;
     if (filtros.pais && (r.pais_residencia ?? '') !== filtros.pais) return false;
