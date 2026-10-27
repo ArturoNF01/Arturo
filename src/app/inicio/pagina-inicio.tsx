@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { useApp } from '@/componentes/proveedores';
 import { Encabezado, PieDePagina } from '@/componentes/controles';
-import { LogoCiess } from '@/componentes/logo';
-import { VideoFondo } from '@/componentes/video-fondo';
+import { Portada } from '@/componentes/portada';
 import { Collage } from '@/componentes/collage';
 import { CALENDARIO, GALERIA, LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from '@/lib/landing';
 import { Programa } from '@/componentes/programa';
@@ -32,7 +31,7 @@ export function PaginaInicio({
   congreso: DatosCongreso;
   ejes: EjeTematico[];
 }) {
-  const { t, idioma } = useApp();
+  const { idioma } = useApp();
   const textos = LANDING[idioma];
   const hoy = diaEnMexico();
 
@@ -42,85 +41,7 @@ export function PaginaInicio({
 
       <main>
         {/* Portada ------------------------------------------------------ */}
-        <section className="relative overflow-hidden bg-ciess-950 text-white">
-          <VideoFondo url={configuracion.url_video_login} variante="oscuro" posicion="contenido" />
-
-          <div className="relative z-10 mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-28">
-            <LogoCiess className="mx-auto h-16 sm:h-20" forzar="oscuro" />
-
-            <h1 className="mt-8 text-3xl font-bold leading-tight sm:text-5xl">
-              {t.congreso.titulo}
-            </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-lg italic text-ciess-200 sm:text-xl">
-              {t.congreso.subtitulo}
-            </p>
-
-            {/* La condición que más importa a quien duda si registrarse, y no
-                un dato más del lugar: va aparte, en el dorado del logotipo y
-                en tamaño de titular, no como una píldora entre las otras. */}
-            <p className="mt-7 inline-flex items-center gap-3 rounded-xl bg-accent-500 px-6 py-3 text-lg font-bold uppercase tracking-[0.14em] text-ciess-950 shadow-lg shadow-black/30 sm:text-xl">
-              <svg
-                width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden
-              >
-                <circle cx="12" cy="12" r="9.5" />
-                <path d="m7.5 12.5 3 3 6-6.5" />
-              </svg>
-              {textos.gratuita}
-            </p>
-
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm font-medium text-white/90">
-              <span className="rounded-full border border-white/25 px-4 py-1.5">
-                {traducir(congreso.fechas, idioma)}
-              </span>
-              {/* La sede es el único dato del banner sobre el que alguien
-                  querrá hacer algo: ver dónde cae. Se abre en otra pestaña
-                  para no sacar a nadie del registro a medias. */}
-              <a
-                href={SEDE_MAPA_ENLACE}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group inline-flex items-center gap-1.5 rounded-full border border-white/25 px-4 py-1.5 transition hover:border-white/60 hover:bg-white/10"
-              >
-                {traducir(congreso.sede, idioma)}
-                <svg
-                  width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-                  aria-hidden
-                  className="opacity-60 transition-opacity group-hover:opacity-100"
-                >
-                  <path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                <span className="sr-only"> · {textos.verEnMapa}</span>
-              </a>
-              <span className="rounded-full border border-white/25 px-4 py-1.5">
-                {t.modalidad.presencial} · {t.modalidad.en_linea}
-              </span>
-            </div>
-
-            <p className="mx-auto mt-8 max-w-2xl text-base text-white/75">{textos.entradilla}</p>
-
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                href="/registro"
-                className="rounded-lg bg-ciess-500 px-7 py-3 text-sm font-semibold text-white transition hover:bg-ciess-400"
-              >
-                {textos.registrarse}
-              </Link>
-              {configuracion.programa_publicado && (
-                <a
-                  href={configuracion.url_agenda}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-lg border border-white/30 px-7 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-                >
-                  {textos.descargarAgenda}
-                </a>
-              )}
-            </div>
-          </div>
-        </section>
+        <Portada configuracion={configuracion} congreso={congreso} />
 
         {/* Presentación ------------------------------------------------- */}
         <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">

@@ -180,6 +180,155 @@
 }
 .dia-activo .tenue { color: inherit; opacity: 0.85; }
 
+/* La portada: réplica del banner de la página de la RIUSS (home.ciess.org).
+   Los valores —degradado, tamaños, retrasos, dorado— son los de allá. Una sola
+   diferencia, a propósito: el texto de los botones dorados va en el verde
+   oscuro de la marca y no en blanco, que sobre #C7AE6F da 2.1:1 y no se lee.
+   Fuera de `@layer` para que Tailwind no lo descarte al compilar. */
+.portada {
+  --portada-acento: #C7AE6F;
+  --portada-tinta: #0A281C;
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 80vh;
+  min-height: 450px;
+  overflow: hidden;
+  isolation: isolate;
+  background-color: #000;
+  color: #fff;
+  font-family: 'Work Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+/* Los h1 de la hoja base van en serif; aquí el titular es Work Sans, como en la RIUSS. */
+.portada .portada-titulo { font-family: inherit; }
+.portada-velo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(90deg, rgba(11, 37, 112, 0.88) 10%, rgba(11, 37, 112, 0.65) 50%, rgba(11, 37, 112, 0.85) 100%);
+  animation: portada-zoom 8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+.portada-contenido {
+  position: relative;
+  z-index: 2;
+  margin-left: 10%;
+  max-width: 620px;
+  padding: 30px 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.portada-entrada {
+  animation: portada-subir 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: var(--retraso, 0s);
+}
+@keyframes portada-subir { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+@keyframes portada-zoom { from { transform: scale(1.15); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .portada-velo, .portada-entrada { animation: none; }
+}
+
+.portada-gratuita {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 18px;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  background-color: var(--portada-acento);
+  color: var(--portada-tinta);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow: none;
+  box-shadow: 0 6px 18px rgba(199, 174, 111, 0.35);
+}
+.portada-titulo {
+  margin-bottom: 10px;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+/* En su propio bloque y con su propio interlineado: dentro del h1 heredaría el
+   de 2.5rem, y si el nombre se parte en dos renglones quedarían muy separados. */
+.portada-nombre {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--portada-acento);
+  font-size: 1.5rem;
+  line-height: 1.25;
+}
+.portada-descripcion {
+  margin-bottom: 22px;
+  font-size: 1.05rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.portada-sede { color: var(--portada-acento); text-decoration: none; }
+.portada-sede:hover { text-decoration: underline; text-underline-offset: 4px; }
+.portada-barra { margin: 0 0.6rem; }
+.portada-fechas { white-space: nowrap; }
+.portada-modalidad { display: block; opacity: 0.85; font-size: 0.95em; }
+
+.portada-botones { display: flex; flex-wrap: wrap; gap: 12px; }
+.portada-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  text-shadow: none;
+  transition: all 0.3s ease;
+}
+.portada-boton svg { flex-shrink: 0; width: 18px; height: 18px; }
+.portada-boton:hover { transform: translateY(-3px); }
+.portada-boton-registro {
+  padding: 16px 36px;
+  background-color: var(--portada-acento);
+  color: var(--portada-tinta);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  box-shadow: 0 6px 18px rgba(199, 174, 111, 0.35);
+}
+.portada-boton-registro:hover { background-color: #d4bc82; box-shadow: 0 8px 22px rgba(199, 174, 111, 0.5); }
+.portada-boton-agenda {
+  background-color: transparent;
+  border: 2px solid rgba(199, 174, 111, 0.6);
+  color: #fff;
+}
+.portada-boton-agenda:hover {
+  background-color: rgba(199, 174, 111, 0.15);
+  border-color: var(--portada-acento);
+  box-shadow: 0 6px 18px rgba(199, 174, 111, 0.25);
+}
+.portada-boton:focus-visible, .portada-sede:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+@media (max-width: 768px) {
+  .portada { height: auto; min-height: calc(100svh - 4.25rem); }
+  .portada-velo { background: linear-gradient(0deg, rgba(11, 37, 112, 0.9) 0%, rgba(11, 37, 112, 0.7) 50%, rgba(11, 37, 112, 0.5) 100%); }
+  .portada-contenido {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%; max-width: 100%; margin: 0 auto; padding: 24px 16px; text-align: center;
+  }
+  .portada-titulo { margin-bottom: 8px; font-size: 1.5rem; line-height: 1.2; }
+  .portada-nombre { font-size: 1rem; margin-bottom: 0.4rem; }
+  .portada-descripcion { margin-bottom: 22px; padding: 0 5px; font-size: 0.95rem; text-align: center; }
+  .portada-botones { justify-content: center; width: 100%; }
+  .portada-boton { flex: 1 1 0; min-width: 130px; padding: 14px 16px; font-size: 0.88rem; }
+}
+@media (max-width: 480px) {
+  .portada-titulo { font-size: 1.2rem; }
+  .portada-nombre { font-size: 0.9rem; }
+  .portada-descripcion { font-size: 0.88rem; }
+  .portada-boton { min-width: 110px; padding: 12px; font-size: 0.82rem; }
+}
+
 /* El hospedaje: el panel del código lleva el color de la marca, y el código va
    en un recuadro de línea discontinua, como un cupón. Fuera de `@layer` para
    que Tailwind no lo descarte al compilar. */

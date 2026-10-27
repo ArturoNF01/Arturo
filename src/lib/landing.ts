@@ -146,7 +146,6 @@ export const CALENDARIO: HitoCalendario[] = [
 ];
 
 export interface TextosLanding {
-  entradilla: string;
   presentacionTitulo: string;
   presentacion: string[];
   ejesTitulo: string;
@@ -183,14 +182,14 @@ export interface TextosLanding {
   participarTitulo: string;
   participarAyuda: string;
   registrarse: string;
+  irAlRegistro: string;
+  verAgenda: string;
   descargarAgenda: string;
   cumplido: string;
 }
 
 export const LANDING: Record<Idioma, TextosLanding> = {
   es: {
-    entradilla:
-      'Un encuentro continental para analizar, comparar y discutir el estado de la seguridad social en las Américas.',
     presentacionTitulo: 'Sobre el Congreso',
     presentacion: [
       'El 1er Congreso de Estudios Interamericanos de Seguridad Social se concibe como un espacio de encuentro y reflexión para el análisis, el intercambio de experiencias y la discusión de investigaciones vinculadas a la seguridad social en los países de América.',
@@ -234,12 +233,12 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     participarAyuda:
       'El registro está abierto para asistir, presencialmente en la Ciudad de México o en línea desde cualquier país.',
     registrarse: 'Registrarse',
+    irAlRegistro: 'Ir al registro',
+    verAgenda: 'Ver agenda',
     descargarAgenda: 'Descargar la agenda (PDF)',
     cumplido: 'Cumplido',
   },
   en: {
-    entradilla:
-      'A continental meeting to analyse, compare and debate the state of social security across the Americas.',
     presentacionTitulo: 'About the Congress',
     presentacion: [
       'The 1st Congress of Inter-American Social Security Studies is conceived as a space for encounter and reflection: for analysis, for the exchange of experience, and for discussing research on social security across the countries of the Americas.',
@@ -283,12 +282,12 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     participarAyuda:
       'Registration is open to attend, in person in Mexico City or online from anywhere.',
     registrarse: 'Register',
+    irAlRegistro: 'Go to registration',
+    verAgenda: 'View agenda',
     descargarAgenda: 'Download the agenda (PDF)',
     cumplido: 'Completed',
   },
   pt: {
-    entradilla:
-      'Um encontro continental para analisar, comparar e debater a situação da seguridade social nas Américas.',
     presentacionTitulo: 'Sobre o Congresso',
     presentacion: [
       'O 1º Congresso de Estudos Interamericanos de Seguridade Social é concebido como um espaço de encontro e reflexão para a análise, o intercâmbio de experiências e a discussão de pesquisas ligadas à seguridade social nos países da América.',
@@ -332,6 +331,8 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     participarAyuda:
       'As inscrições estão abertas para participar presencialmente na Cidade do México ou online de qualquer país.',
     registrarse: 'Inscrever-se',
+    irAlRegistro: 'Ir para a inscrição',
+    verAgenda: 'Ver agenda',
     descargarAgenda: 'Baixar a agenda (PDF)',
     cumplido: 'Concluído',
   },

@@ -32,8 +32,11 @@ export function VideoFondo({
 }: {
   url: string;
   opacidad?: number;
-  /** 'oscuro' fija el velo oscuro del login; 'claro-oscuro' lo toma del tema. */
-  variante?: 'oscuro' | 'claro-oscuro';
+  /**
+   * 'oscuro' fija el velo oscuro del login; 'claro-oscuro' lo toma del tema;
+   * 'sin-velo' deja el video limpio, para quien pone su propio degradado encima.
+   */
+  variante?: 'oscuro' | 'claro-oscuro' | 'sin-velo';
   /**
    * 'pantalla' cubre toda la ventana: es lo que quiere el login, que ocupa
    * la pantalla entera. 'contenido' se queda dentro de su contenedor, que es
@@ -53,9 +56,11 @@ export function VideoFondo({
   }, []);
 
   const velo =
-    variante === 'oscuro'
-      ? 'radial-gradient(ellipse at center, rgba(8,15,24,0.35), rgba(8,15,24,0.9))'
-      : 'color-mix(in srgb, var(--fondo) 30%, transparent)';
+    variante === 'sin-velo'
+      ? 'transparent'
+      : variante === 'oscuro'
+        ? 'radial-gradient(ellipse at center, rgba(8,15,24,0.35), rgba(8,15,24,0.9))'
+        : 'color-mix(in srgb, var(--fondo) 30%, transparent)';
 
   return (
     <div
