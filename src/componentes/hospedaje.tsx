@@ -78,6 +78,20 @@ export function Hospedaje() {
                 texto, pero un cambio dentro de un botón no se anuncia. */}
             <span className="sr-only" aria-live="polite">{copiado ? textos.codigoCopiado : ''}</span>
           </div>
+
+          {/* El mapa, en la misma tarjeta: dónde queda es lo siguiente que
+              quiere saber quien ya decidió hospedarse ahí. Lazy, como el de
+              la sede: está al final de la página y pesa más que todo lo demás. */}
+          <div className="border-t md:col-span-2" style={{ borderColor: 'var(--borde)', backgroundColor: 'var(--fondo-alterno)' }}>
+            <iframe
+              src={HOTEL.mapaEmbed}
+              title={`${textos.hospedajeComoLlegar} · ${HOTEL.nombre}`}
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+              className="block h-[280px] w-full border-0 sm:h-[340px]"
+            />
+          </div>
         </div>
       </div>
     </section>

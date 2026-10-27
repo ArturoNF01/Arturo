@@ -55,7 +55,21 @@ export function PaginaInicio({
               {t.congreso.subtitulo}
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm font-medium text-white/90">
+            {/* La condición que más importa a quien duda si registrarse, y no
+                un dato más del lugar: va aparte, en el dorado del logotipo y
+                en tamaño de titular, no como una píldora entre las otras. */}
+            <p className="mt-7 inline-flex items-center gap-3 rounded-xl bg-accent-500 px-6 py-3 text-lg font-bold uppercase tracking-[0.14em] text-ciess-950 shadow-lg shadow-black/30 sm:text-xl">
+              <svg
+                width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+              >
+                <circle cx="12" cy="12" r="9.5" />
+                <path d="m7.5 12.5 3 3 6-6.5" />
+              </svg>
+              {textos.gratuita}
+            </p>
+
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm font-medium text-white/90">
               <span className="rounded-full border border-white/25 px-4 py-1.5">
                 {traducir(congreso.fechas, idioma)}
               </span>
@@ -82,11 +96,6 @@ export function PaginaInicio({
               </a>
               <span className="rounded-full border border-white/25 px-4 py-1.5">
                 {t.modalidad.presencial} · {t.modalidad.en_linea}
-              </span>
-              {/* Lo único que no es un dato del lugar: va relleno para que se
-                  lea como una condición, no como un cuarto dato más. */}
-              <span className="rounded-full border border-white/50 bg-white/15 px-4 py-1.5 font-semibold text-white">
-                {textos.gratuita}
               </span>
             </div>
 

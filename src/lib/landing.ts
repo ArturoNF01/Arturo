@@ -83,6 +83,9 @@ export const HOTEL = {
   telefonoEnlace: 'tel:+525553776400',
   web: 'https://www.galeriaplazahotels.com.mx/es/san-jeronimo/',
   mapa: 'https://www.google.com/maps?ll=19.328198,-99.213928&z=14&t=m&hl=es&gl=MX&mapclient=embed&cid=12815805780581030290',
+  // El visor incrustado se pide por coordenadas: es la misma chincheta que el
+  // enlace de arriba y no depende de cómo esté escrito el nombre del hotel.
+  mapaEmbed: 'https://www.google.com/maps?q=19.328198,-99.213928&z=16&hl=es&output=embed',
   codigo: 'Convenio CISS',
 } as const;
 
