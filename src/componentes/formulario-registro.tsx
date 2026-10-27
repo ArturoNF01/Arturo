@@ -288,7 +288,7 @@ export function FormularioRegistro({
 
       <ProgresoPasos pasos={pasos} indice={indicePaso} onIr={setIndicePaso} />
 
-      <div className="tarjeta mt-6 p-5 sm:p-8">
+      <div className="tarjeta tarjeta-vidrio mt-6 p-5 sm:p-8">
         {pasoActual === 'perfil' && (
           <PasoPerfil
             valores={valores}

@@ -5,6 +5,7 @@ import { FormularioRegistro } from '@/componentes/formulario-registro';
 import { useApp } from '@/componentes/proveedores';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import { traducir, type DatosCongreso } from '@/lib/contenido';
+import { VideoFondo } from '@/componentes/video-fondo';
 
 export function PaginaRegistro({
   configuracion,
@@ -24,6 +25,18 @@ export function PaginaRegistro({
           va en tarjetas claras sobre él, y lo que queda fuera de las tarjetas
           —título, pasos, botones— va en blanco y dorado. */}
       <main className="seccion-azul min-h-[80vh]">
+        {/* El video de la portada, detrás de todo el registro. Va en una capa
+            «pegajosa» de la altura de la pantalla: el formulario es largo, y
+            con el video estirado a toda la página se vería enorme y
+            recortado; así se queda quieto en la ventana mientras el contenido
+            pasa por encima. El margen negativo evita que la capa empuje el
+            contenido hacia abajo. */}
+        <div aria-hidden className="pointer-events-none sticky top-0 z-0 -mb-[100svh] h-[100svh] overflow-hidden">
+          <VideoFondo url={configuracion.url_video_login} opacidad={1} variante="sin-velo" posicion="contenido" />
+          <div className="portada-velo" />
+        </div>
+
+        <div className="relative z-10">
         {/* Quien llega aquí ya leyó la portada: el encabezado no repite el
             congreso entero, lo sitúa y pasa al formulario. Lo único que
             necesita destacar es hasta cuándo se puede uno registrar, que
@@ -62,6 +75,7 @@ export function PaginaRegistro({
           </div>
         </section>
         <FormularioRegistro configuracion={configuracion} congreso={congreso} />
+        </div>
       </main>
       <PieDePagina />
     </>

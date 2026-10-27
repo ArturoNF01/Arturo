@@ -358,7 +358,10 @@
 .seccion-azul {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  /* `clip` y no `hidden`: con `hidden` la sección pasa a ser un contenedor de
+     desplazamiento y las capas «pegajosas» de dentro (el video del registro)
+     dejan de pegarse a la ventana. */
+  overflow: clip;
   color: #fff;
   background:
     radial-gradient(60rem 30rem at 88% -10%, rgba(86, 121, 217, 0.38), transparent 60%),
@@ -368,6 +371,24 @@
 /* Las tarjetas de dentro vuelven al color de texto del tema: el blanco de la
    sección sólo es para lo que va directamente sobre el azul. */
 .seccion-azul .tarjeta { color: var(--texto); }
+/* La tarjeta principal del formulario, de vidrio esmerilado claro: deja ver el
+   video y el azul de atrás, pero con blanco suficiente para que el texto y los
+   campos se lean sin esfuerzo. Ni el blanco liso de antes ni una plasta azul. */
+.seccion-azul .tarjeta-vidrio {
+  /* El texto de ayuda se oscurece un paso dentro del vidrio: sobre un blanco
+     al 76 % que deja pasar el azul, el gris de siempre bajaba de 4.5:1. */
+  --texto-tenue: #3b4b79;
+  background-color: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(16px) saturate(1.25);
+  backdrop-filter: blur(16px) saturate(1.25);
+  box-shadow: 0 28px 70px -28px rgba(0, 8, 44, 0.8);
+}
+.dark .seccion-azul .tarjeta-vidrio {
+  --texto-tenue: #aab9e2;
+  background-color: rgba(13, 31, 92, 0.6);
+  border-color: rgba(255, 255, 255, 0.18);
+}
 .seccion-azul .titulo-bloque { color: #fff; }
 .seccion-azul .bajada { color: rgba(255, 255, 255, 0.8); }
 
