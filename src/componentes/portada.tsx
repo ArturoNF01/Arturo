@@ -1,8 +1,5 @@
 'use client';
 
-import '@fontsource/work-sans/latin-400.css';
-import '@fontsource/work-sans/latin-600.css';
-import '@fontsource/work-sans/latin-700.css';
 import { useApp } from '@/componentes/proveedores';
 import { VideoFondo } from '@/componentes/video-fondo';
 import { LANDING, SEDE_MAPA_ENLACE } from '@/lib/landing';

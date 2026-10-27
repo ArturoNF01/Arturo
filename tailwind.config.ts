@@ -6,12 +6,15 @@ export default {
   theme: {
     extend: {
       colors: {
+        // El azul del banner de la portada (#0b2570, el 800) es el principal; el
+        // 900 es el azul marino del programa impreso. Del 500 al 600 salen los
+        // botones y los enlaces.
         ciess: {
-          50: '#eef4fb', 100: '#d7e5f5', 200: '#b0cbea', 300: '#7fa9db',
-          400: '#4d84c9', 500: '#2e5c8a', 600: '#254a70', 700: '#1d3a58',
-          800: '#152a41', 900: '#0e1c2c', 950: '#080f18',
+          50: '#eef3fd', 100: '#dce6fb', 200: '#bccaf3', 300: '#8da6e8',
+          400: '#5679d9', 500: '#2a56c6', 600: '#1c44ad', 700: '#123290',
+          800: '#0b2570', 900: '#001b57', 950: '#000f33',
         },
-        accent: { 500: '#c9a227', 600: '#a8871d' },
+        accent: { 500: '#c7ae6f', 600: '#8f7424' },
       },
       fontFamily: {
         sans: ['var(--font-sans)'],

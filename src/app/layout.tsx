@@ -2,6 +2,11 @@ import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
 import { Proveedores } from '@/componentes/proveedores';
 import { esIdiomaValido, IDIOMA_POR_DEFECTO, obtenerDiccionario } from '@/i18n';
+import '@fontsource/work-sans/latin-400.css';
+import '@fontsource/work-sans/latin-400-italic.css';
+import '@fontsource/work-sans/latin-500.css';
+import '@fontsource/work-sans/latin-600.css';
+import '@fontsource/work-sans/latin-700.css';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -17,8 +22,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: [
-    { media: '(prefers-color-scheme: dark)', color: '#0b1420' },
-    { media: '(prefers-color-scheme: light)', color: '#f7f9fc' },
+    { media: '(prefers-color-scheme: dark)', color: '#061239' },
+    { media: '(prefers-color-scheme: light)', color: '#eef3fc' },
   ],
 };
 

@@ -18,17 +18,10 @@ import {
  * misma hora, y las ponencias de cada mesa plegadas hasta que alguien las
  * abre —son cuarenta y nueve, y desplegadas todas serían una pared—.
  *
- * El color de cada tarjeta es la sala, no un adorno: quien mira el viernes a
- * las nueve ve en seguida que hay dos cosas a la vez y en qué sitio es cada una.
+ * Lleva los colores del programa impreso —azul marino y dorado— y una sola
+ * tipografía. Las sesiones paralelas se distinguen por la etiqueta de su sala
+ * y por ir lado a lado, no por un color distinto cada una.
  */
-
-/** La clase de tono de cada sala, escrita entera para poder buscarla en el código. */
-const TONO_SALA: Record<ClaveSala, string> = {
-  lobby: '',
-  auditorio: 'tono-a',
-  comisiones: 'tono-b',
-  sesiones: 'tono-c',
-};
 
 /** La fecha de hoy en la Ciudad de México, que es la que importa el día del Congreso. */
 function hoyEnMexico(): string {
@@ -54,7 +47,7 @@ function claveDesplegable(sesion: Sesion): string | null {
 function Sala({ sala }: { sala: ClaveSala }) {
   const { idioma } = useApp();
   return (
-    <span className={`${TONO_SALA[sala]} sala-chip`}>
+    <span className="sala-chip">
       <span aria-hidden className="punto-sala h-2 w-2 shrink-0 rounded-full" />
       {SALAS[sala][idioma]}
     </span>
@@ -86,12 +79,12 @@ function ListaPonencias({ mesa }: { mesa: Mesa }) {
     <ol className="space-y-3.5">
       {mesa.ponencias.map((ponencia, i) => (
         <li key={i} className="flex gap-3">
-          <span aria-hidden className="texto-tono w-4 shrink-0 text-right font-serif text-sm font-bold">
+          <span aria-hidden className="texto-dorado w-4 shrink-0 text-right text-sm font-bold">
             {i + 1}
           </span>
           <div className="min-w-0">
             <p className="text-sm font-medium leading-snug">{ponencia.titulo}</p>
-            <p className="mt-1 text-xs leading-relaxed tenue">
+            <p className="texto-azul mt-1 text-xs leading-relaxed">
               {unirAutores(ponencia, idioma)}
               <span className="pais-chip ml-2 inline-block whitespace-nowrap rounded-full px-2 py-px text-[11px] leading-snug">
                 {PAISES[ponencia.pais][idioma]}
@@ -132,9 +125,9 @@ function Tarjeta({
     <>
       <span className="min-w-0 flex-1">
         {etiqueta && (
-          <span className="texto-tono block text-[11px] font-bold uppercase tracking-wide">{etiqueta}</span>
+          <span className="texto-dorado block text-[11px] font-bold uppercase tracking-wide">{etiqueta}</span>
         )}
-        <span className={`block text-sm font-semibold leading-snug ${etiqueta ? 'mt-0.5' : ''}`}>{titulo}</span>
+        <span className={`texto-azul block text-sm font-semibold leading-snug ${etiqueta ? 'mt-0.5' : ''}`}>{titulo}</span>
         {((mostrarSala && sesion.sala) || cuenta) && (
           <span className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
             {mostrarSala && sesion.sala && <Sala sala={sesion.sala} />}
@@ -147,7 +140,7 @@ function Tarjeta({
   );
 
   return (
-    <div className={`sesion ${sesion.sala ? TONO_SALA[sesion.sala] : ''}`}>
+    <div className="sesion">
       {clave ? (
         <button
           type="button"
@@ -166,7 +159,6 @@ function Tarjeta({
         <div
           id={`programa-${clave}`}
           className="border-t px-4 pb-4 pt-3"
-          style={{ borderColor: 'color-mix(in srgb, var(--tono, var(--borde)) 22%, var(--borde))' }}
         >
           {mesa && <ListaPonencias mesa={mesa} />}
           {sesion.participantes && (
@@ -249,21 +241,40 @@ export function Programa({ urlAgenda, urlAgendaPt }: { urlAgenda: string; urlAge
     });
 
   return (
-    <section
-      id="agenda"
-      // Un degradado muy suave, de la página a un velo de la marca: las tarjetas
-      // tienen sobre qué despegarse. Una banda plana pegada a la de los ejes
-      // se habría leído como una sola, y el degradado no.
-      style={{ background: 'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--marca) 9%, var(--fondo)) 100%)' }}
-    >
-      <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
-        <h2 className="titulo-seccion">{textos.programaTitulo}</h2>
-        <p className="mt-2 tenue">{textos.programaAyuda}</p>
+    <section id="agenda">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        {/* La descarga va arriba, a la vista de quien llega a la sección: quien
+            quiere el PDF no tiene por qué recorrer tres días de sesiones para
+            encontrarlo al final. */}
+        <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+          <div className="min-w-0 max-w-2xl">
+            <h2 className="titulo-bloque">{textos.programaTitulo}</h2>
+            <span aria-hidden className="regla-dorada" />
+            <p className="bajada">{textos.programaAyuda}</p>
+          </div>
 
-        <ul className="mt-5 flex flex-wrap gap-2.5">
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <a
+              href={urlAgendaSegunIdioma({ general: urlAgenda, pt: urlAgendaPt }, idioma)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="portada-boton portada-boton-registro"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 3v12" />
+                <path d="m7 11 5 5 5-5" />
+                <path d="M5 21h14" />
+              </svg>
+              {textos.descargarAgenda}
+            </a>
+            <p className="text-xs tenue">{textos.programaNota}</p>
+          </div>
+        </div>
+
+        <ul className="mt-8 flex flex-wrap gap-2.5">
           {(['dias', 'mesas', 'ponencias', 'paises'] as const).map((clave) => (
             <li key={clave} className="ficha-dato flex items-baseline gap-2 px-4 py-2">
-              <span className="numero font-serif text-2xl font-bold leading-none">{RESUMEN[clave]}</span>
+              <span className="numero text-2xl font-bold leading-none">{RESUMEN[clave]}</span>
               <span className="text-sm">{ui.resumen[clave]}</span>
             </li>
           ))}
@@ -281,7 +292,7 @@ export function Programa({ urlAgenda, urlAgendaPt }: { urlAgenda: string; urlAge
               <span className="block text-[11px] font-semibold uppercase tracking-wide tenue">
                 {diaDeLaSemana(d.iso, idioma)}
               </span>
-              <span className="mt-0.5 block font-serif text-3xl font-bold leading-none">{Number(d.iso.slice(8))}</span>
+              <span className="dia-numero mt-0.5 block text-3xl font-bold leading-none">{Number(d.iso.slice(8))}</span>
               <span className="mt-1.5 block text-xs leading-snug">{d.titulo[idioma]}</span>
             </button>
           ))}
@@ -292,11 +303,10 @@ export function Programa({ urlAgenda, urlAgendaPt }: { urlAgenda: string; urlAge
           style={{ borderColor: 'var(--borde-fuerte)' }}
         >
           <div>
-            <h3 className="font-serif text-xl font-bold">{dia.fecha[idioma]}</h3>
+            <h3 className="texto-azul text-xl font-bold">{dia.fecha[idioma]}</h3>
             <p className="mt-0.5 text-sm tenue">{dia.titulo[idioma]}</p>
-            {/* La barra dorada del programa impreso: es el color de la marca, no
-                el de ninguna sala. */}
-            <span aria-hidden className="mt-2.5 block h-[3px] w-12 rounded-full" style={{ backgroundColor: 'var(--acento)' }} />
+            {/* La barra dorada del programa impreso. */}
+            <span aria-hidden className="mt-2.5 block h-[3px] w-12 rounded-full" style={{ backgroundColor: 'var(--dorado)' }} />
           </div>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -342,16 +352,9 @@ export function Programa({ urlAgenda, urlAgendaPt }: { urlAgenda: string; urlAge
           {agruparPorHorario(dia.sesiones).map((bloque) => {
             const soloFilas = bloque.sesiones.every((s) => s.tipo === 'registro' || s.tipo === 'pausa');
             const paralelas = bloque.sesiones.length > 1;
-            // Una sola sala, un solo color: la hora lo lleva. En un bloque
-            // paralelo hay dos y la hora se queda neutra, que es lo correcto.
-            const salaDelBloque = !paralelas && !soloFilas ? bloque.sesiones[0].sala : undefined;
             return (
               <li key={`${dia.iso}-${bloque.horario}`} className="grid gap-x-6 gap-y-2 sm:grid-cols-[6.5rem_1fr]">
-                <p
-                  className={`font-mono text-xs font-bold ${soloFilas ? 'sm:pt-2' : 'sm:pt-3.5'} ${
-                    salaDelBloque ? `texto-tono ${TONO_SALA[salaDelBloque]}` : ''
-                  }`}
-                >
+                <p className={`texto-azul text-sm font-bold tabular-nums ${soloFilas ? 'sm:pt-2' : 'sm:pt-3.5'}`}>
                   {bloque.horario}
                 </p>
                 <div className={paralelas ? 'grid items-start gap-3 md:grid-cols-2' : ''}>
@@ -379,18 +382,6 @@ export function Programa({ urlAgenda, urlAgendaPt }: { urlAgenda: string; urlAge
             );
           })}
         </ol>
-
-        <div className="mt-10 flex flex-wrap items-center gap-4">
-          <a
-            href={urlAgendaSegunIdioma({ general: urlAgenda, pt: urlAgendaPt }, idioma)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="boton-secundario"
-          >
-            {textos.descargarAgenda}
-          </a>
-          <p className="ayuda !mt-0">{textos.programaNota}</p>
-        </div>
       </div>
     </section>
   );

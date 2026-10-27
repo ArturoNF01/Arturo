@@ -270,7 +270,7 @@ export function FormularioRegistro({
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-16 sm:px-6">
+    <div className="registro-lienzo mx-auto max-w-3xl px-4 pb-16 sm:px-6">
       {/* Señuelo. Fuera de la pantalla y fuera del recorrido del teclado y de
           los lectores de pantalla: nadie que se registre lo encuentra. */}
       <div aria-hidden className="pointer-events-none absolute left-[-9999px] h-px w-px overflow-hidden">
@@ -476,7 +476,7 @@ export function FormularioRegistro({
         )}
       </div>
 
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+      <div className="registro-botones mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
         <button type="button" className="boton-secundario" onClick={retroceder} disabled={indicePaso === 0}>
           {t.acciones.anterior}
         </button>
@@ -491,7 +491,7 @@ export function FormularioRegistro({
         )}
       </div>
 
-      <p className="mt-4 text-center text-xs tenue">
+      <p className="registro-contador mt-4 text-center text-xs">
         {tt('{paso} {i} {de} {n}', { paso: t.formulario.paso, i: indicePaso + 1, de: t.formulario.de, n: pasos.length })}
       </p>
     </div>
@@ -527,10 +527,10 @@ function ProgresoPasos({
           aria-current={i === indice ? 'step' : undefined}
           className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
             i === indice
-              ? 'bg-ciess-500 text-white'
+              ? 'bg-[var(--dorado)] font-semibold text-[var(--azul-marino)]'
               : i < indice
-                ? 'bg-ciess-500/15 text-ciess-400'
-                : 'tenue opacity-60'
+                ? 'bg-white/15 text-white hover:bg-white/25'
+                : 'border border-white/20 text-white/60'
           }`}
         >
           {i + 1}. {nombres[paso] ?? paso}

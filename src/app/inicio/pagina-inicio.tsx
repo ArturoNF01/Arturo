@@ -5,22 +5,11 @@ import { useApp } from '@/componentes/proveedores';
 import { Encabezado, PieDePagina } from '@/componentes/controles';
 import { Portada } from '@/componentes/portada';
 import { Collage } from '@/componentes/collage';
-import { CALENDARIO, GALERIA, LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from '@/lib/landing';
+import { GALERIA, LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from '@/lib/landing';
 import { Programa } from '@/componentes/programa';
 import { Hospedaje } from '@/componentes/hospedaje';
-import { diaEnMexico } from '@/lib/fechas';
 import { traducir, type DatosCongreso, type EjeTematico } from '@/lib/contenido';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
-
-/**
- * Los tres tonos que rotan por las tarjetas de los ejes.
- *
- * Escritos enteros y no armados con una plantilla: Tailwind lee el código
- * buscando nombres de clase, y uno que sólo existe al ejecutarse no lo
- * encuentra y lo descarta al compilar. No da error —la página sale, sin
- * color—, que es la peor forma de fallar.
- */
-const TONOS_EJE = ['tono-a', 'tono-b', 'tono-c'] as const;
 
 export function PaginaInicio({
   configuracion,
@@ -33,7 +22,6 @@ export function PaginaInicio({
 }) {
   const { idioma } = useApp();
   const textos = LANDING[idioma];
-  const hoy = diaEnMexico();
 
   return (
     <>
@@ -44,42 +32,47 @@ export function PaginaInicio({
         <Portada configuracion={configuracion} congreso={congreso} />
 
         {/* Presentación ------------------------------------------------- */}
-        <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
-          <h2 className="titulo-seccion">{textos.presentacionTitulo}</h2>
-          <div className="mt-6 space-y-5 text-base leading-relaxed">
-            {textos.presentacion.map((parrafo, i) => (
-              <p key={i} className={i === 0 ? 'text-lg' : undefined}>
-                {parrafo}
-              </p>
-            ))}
+        {/* Sobre un fondo celeste y no sobre el de la página: tras la portada,
+            azul intenso, un bloque de texto en blanco liso se leía como otra
+            página. El texto va en una tarjeta de vidrio claro para que el
+            fondo lo enmarque sin quitarle contraste. */}
+        <section className="seccion-celeste">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[5fr_7fr] lg:gap-16">
+            <div className="lg:sticky lg:top-28 lg:self-start">
+              <h2 className="titulo-bloque">{textos.presentacionTitulo}</h2>
+              <span aria-hidden className="regla-dorada" />
+            </div>
+            <div className="vidrio-claro space-y-5 p-6 text-base leading-relaxed sm:p-8">
+              {textos.presentacion.map((parrafo, i) => (
+                <p key={i} className={i === 0 ? 'text-lg font-medium' : undefined}>
+                  {parrafo}
+                </p>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* Ejes temáticos ----------------------------------------------- */}
-        <section className="border-y" style={{ borderColor: 'var(--borde)', backgroundColor: 'var(--fondo-alterno)' }}>
-          <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
-            <h2 className="titulo-seccion">{textos.ejesTitulo}</h2>
-            <p className="mt-2 tenue">{textos.ejesAyuda}</p>
+        {/* El azul de la portada y tarjetas de vidrio esmerilado: los nueve ejes
+            se recorren de un vistazo, con el número en dorado como lo único
+            que se enciende. */}
+        <section className="seccion-azul">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+            <h2 className="titulo-bloque">{textos.ejesTitulo}</h2>
+            <span aria-hidden className="regla-dorada" />
+            <p className="bajada">{textos.ejesAyuda}</p>
 
-            {/* El número va en una columna propia, grande y fuera del texto:
-                así los nueve ejes se recorren de un vistazo y los títulos
-                quedan alineados aunque midan distinto. La tarjeta entera se
-                tiñe al pasar el ratón, no sólo el borde. */}
-            <ol className="mt-10 grid gap-px overflow-hidden rounded-xl border shadow-sm sm:grid-cols-2 lg:grid-cols-3"
-                style={{ borderColor: 'var(--borde)', backgroundColor: 'var(--borde)' }}>
+            <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {ejes.map((eje, i) => (
-                <li
-                  key={eje.clave}
-                  className={`eje ${TONOS_EJE[i % TONOS_EJE.length]} flex gap-4 p-5`}
-                >
-                  <span aria-hidden className="eje-numero shrink-0 font-serif text-3xl font-bold leading-none">
+                <li key={eje.clave} className="vidrio flex gap-4 p-5 sm:p-6">
+                  <span aria-hidden className="shrink-0 text-3xl font-bold leading-none tabular-nums" style={{ color: 'var(--dorado)' }}>
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <div className="min-w-0">
-                    <h3 className="text-sm font-semibold leading-snug">
+                    <h3 className="text-base font-semibold leading-snug text-white">
                       {traducir(eje.nombre, idioma)}
                     </h3>
-                    <p className="mt-1.5 text-xs leading-relaxed tenue">
+                    <p className="mt-2 text-sm leading-relaxed text-white/75">
                       {traducir(eje.descripcion, idioma)}
                     </p>
                   </div>
@@ -89,63 +82,25 @@ export function PaginaInicio({
           </div>
         </section>
 
-        {/* Programa ------------------------------------------------------ */}
-        {/* Se enseña sólo cuando el comité lo da por publicado: el PDF se
-            corrige hasta el último momento, y un programa viejo a la vista
+        {/* Agenda -------------------------------------------------------- */}
+        {/* Se enseña sólo cuando el comité la da por publicada: el PDF se
+            corrige hasta el último momento, y una agenda vieja a la vista
             manda gente a la sala equivocada. */}
-        {configuracion.programa_publicado && <Programa urlAgenda={configuracion.url_agenda} urlAgendaPt={configuracion.url_agenda_pt} />}
-
-        {/* Calendario --------------------------------------------------- */}
-        <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
-          <h2 className="titulo-seccion">{textos.calendarioTitulo}</h2>
-          <p className="mt-2 tenue">{textos.calendarioAyuda}</p>
-
-          <ol className="mt-8 space-y-0">
-            {CALENDARIO.map((hito, i) => {
-              const pasado = hito.iso < hoy;
-              const ultimo = i === CALENDARIO.length - 1;
-              return (
-                <li key={hito.iso} className="relative flex gap-4 pb-8 last:pb-0">
-                  {/* La línea une los hitos; el último no la necesita. */}
-                  {!ultimo && (
-                    <span
-                      aria-hidden
-                      className="absolute left-[7px] top-4 h-full w-px"
-                      style={{ backgroundColor: 'var(--borde)' }}
-                    />
-                  )}
-                  <span
-                    aria-hidden
-                    className={`relative mt-1 h-3.5 w-3.5 shrink-0 rounded-full border-2 ${
-                      ultimo ? 'border-ciess-500 bg-ciess-500' : pasado ? 'border-ciess-500/40' : 'border-ciess-500'
-                    }`}
-                    style={{ backgroundColor: ultimo ? undefined : 'var(--fondo)' }}
-                  />
-                  <div className={pasado && !ultimo ? 'opacity-55' : undefined}>
-                    <p className="text-sm font-semibold">{hito.fecha[idioma]}</p>
-                    <p className="text-sm tenue">{hito.hecho[idioma]}</p>
-                    {pasado && !ultimo && (
-                      <span className="mt-1 inline-block text-[11px] uppercase tracking-wide tenue">
-                        {textos.cumplido}
-                      </span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
+        {configuracion.programa_publicado && (
+          <Programa urlAgenda={configuracion.url_agenda} urlAgendaPt={configuracion.url_agenda_pt} />
+        )}
 
         {/* Sede ---------------------------------------------------------- */}
         {/* Aquí estaba «Convoca», que repetía palabra por palabra los dos
             enlaces del pie de página. En su lugar va lo que sí falta al
             final de la página: dónde es. */}
-        <section className="border-t" style={{ borderColor: 'var(--borde)' }}>
-          <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
+        <section className="seccion-celeste">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
             <div className="grid gap-8 lg:grid-cols-[1fr,1.3fr] lg:items-center">
               <div>
-                <h2 className="titulo-seccion">{textos.sedeTitulo}</h2>
-                <p className="mt-4 text-base leading-relaxed">{traducir(congreso.sede, idioma)}</p>
+                <h2 className="titulo-bloque">{textos.sedeTitulo}</h2>
+                <span aria-hidden className="regla-dorada" />
+                <p className="mt-6 text-lg font-medium leading-relaxed">{traducir(congreso.sede, idioma)}</p>
                 <p className="mt-3 leading-relaxed tenue">{textos.sedeAyuda}</p>
                 <a
                   href={SEDE_MAPA_ENLACE}
@@ -167,8 +122,7 @@ export function PaginaInicio({
                   más que todo lo demás junto; no tiene por qué retrasar la
                   portada de quien nunca baja hasta aquí. */}
               <div
-                className="overflow-hidden rounded-xl border"
-                style={{ borderColor: 'var(--borde)' }}
+                className="vidrio-claro overflow-hidden !p-1.5"
               >
                 <iframe
                   src={SEDE_MAPA_EMBED}
@@ -186,12 +140,13 @@ export function PaginaInicio({
         {/* Instalaciones ------------------------------------------------- */}
         {/* Un adelanto, no la galería: son doscientas fotografías y aquí
             caben nueve. Quien quiera verlas entra a su página. */}
-        <section className="border-t" style={{ borderColor: 'var(--borde)' }}>
-          <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
-            <h2 className="titulo-seccion">{textos.galeriaTitulo}</h2>
-            <p className="mt-2 max-w-2xl tenue">{textos.galeriaAyuda}</p>
+        <section>
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+            <h2 className="titulo-bloque">{textos.galeriaTitulo}</h2>
+            <span aria-hidden className="regla-dorada" />
+            <p className="bajada">{textos.galeriaAyuda}</p>
 
-            <div className="mt-8">
+            <div className="mt-10">
               <Collage fotos={GALERIA} />
             </div>
           </div>
@@ -201,12 +156,17 @@ export function PaginaInicio({
         <Hospedaje />
 
         {/* Llamado a registrarse ---------------------------------------- */}
-        <section className="border-t" style={{ borderColor: 'var(--borde)' }}>
-          <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-20">
-            <h2 className="titulo-seccion">{textos.participarTitulo}</h2>
-            <p className="mx-auto mt-4 max-w-xl leading-relaxed tenue">{textos.participarAyuda}</p>
-            <Link href="/registro" className="boton-primario mt-8 inline-flex px-8 py-3">
-              {textos.registrarse}
+        <section className="seccion-azul">
+          <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-24">
+            <h2 className="titulo-bloque">{textos.participarTitulo}</h2>
+            <span aria-hidden className="regla-dorada mx-auto" />
+            <p className="bajada mx-auto">{textos.participarAyuda}</p>
+            <Link href="/registro" className="portada-boton portada-boton-registro mt-8">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+              {textos.irAlRegistro}
             </Link>
           </div>
         </section>

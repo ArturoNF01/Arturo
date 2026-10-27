@@ -162,14 +162,14 @@ export function PieDePagina() {
   const anio = new Date().getFullYear();
 
   return (
-    <footer className="mt-20 border-t sin-impresion" style={{ borderColor: 'var(--borde)' }}>
+    <footer className="pie-azul mt-20 sin-impresion">
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         {/* Tres bloques en pantalla ancha, apilados en el teléfono: la marca
             a la izquierda, lo que se puede consultar en medio, y a la derecha
             quien convoca. El acceso al panel no está en ninguno: va abajo. */}
         <div className="grid gap-8 sm:grid-cols-[auto,1fr,auto] sm:items-start sm:gap-12">
           <div>
-            <LogoCiess className="h-8 sm:h-9" />
+            <LogoCiess className="h-8 sm:h-9" forzar="oscuro" />
             <p className="mt-3 max-w-xs text-xs leading-relaxed tenue">{t.congreso.titulo}</p>
           </div>
 

@@ -33,21 +33,26 @@ export function Hospedaje() {
   }
 
   return (
-    <section className="border-t" style={{ borderColor: 'var(--borde)' }}>
-      <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
-        <h2 className="titulo-seccion">{textos.hospedajeTitulo}</h2>
-        <p className="mt-2 max-w-2xl tenue">{textos.hospedajeAyuda}</p>
+    <section className="seccion-celeste">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <h2 className="titulo-bloque">{textos.hospedajeTitulo}</h2>
+        <span aria-hidden className="regla-dorada" />
+        <p className="bajada">{textos.hospedajeAyuda}</p>
 
         <div
-          className="mt-8 grid overflow-hidden rounded-xl border shadow-sm md:grid-cols-[1.25fr,1fr]"
-          style={{ borderColor: 'var(--borde)', backgroundColor: 'var(--fondo-tarjeta)' }}
+          className="mt-10 grid overflow-hidden rounded-2xl border md:grid-cols-[1.25fr,1fr]"
+          style={{
+            borderColor: 'var(--borde)',
+            backgroundColor: 'var(--fondo-tarjeta)',
+            boxShadow: '0 24px 60px -28px rgba(11, 37, 112, 0.5)',
+          }}
         >
           {/* El hotel ------------------------------------------------- */}
           <div className="p-6 sm:p-8">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] tenue">
               {textos.hospedajeEtiqueta}
             </p>
-            <h3 className="mt-2 font-display text-2xl font-semibold leading-snug">{HOTEL.nombre}</h3>
+            <h3 className="texto-azul mt-2 text-2xl font-bold leading-snug">{HOTEL.nombre}</h3>
             <p className="mt-2 text-sm leading-relaxed tenue">{HOTEL.direccion}</p>
 
             <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold">

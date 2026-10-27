@@ -89,62 +89,6 @@ export const HOTEL = {
   codigo: 'Convenio CISS',
 } as const;
 
-export interface HitoCalendario {
-  fecha: Record<Idioma, string>;
-  hecho: Record<Idioma, string>;
-  /** Los hitos ya cumplidos se muestran apagados. */
-  iso: string;
-}
-
-export const CALENDARIO: HitoCalendario[] = [
-  {
-    iso: '2026-02-27',
-    fecha: { es: '27 de febrero de 2026', en: '27 February 2026', pt: '27 de fevereiro de 2026' },
-    hecho: { es: 'Lanzamiento de la convocatoria', en: 'Call for papers opens', pt: 'Lançamento da convocatória' },
-  },
-  {
-    iso: '2026-07-06',
-    fecha: { es: '6 de julio de 2026', en: '6 July 2026', pt: '6 de julho de 2026' },
-    hecho: {
-      es: 'Cierre de recepción de borradores y resúmenes',
-      en: 'Deadline for drafts and abstracts',
-      pt: 'Encerramento do recebimento de rascunhos e resumos',
-    },
-  },
-  {
-    iso: '2026-08-26',
-    fecha: { es: 'Del 18 al 26 de agosto de 2026', en: '18–26 August 2026', pt: 'De 18 a 26 de agosto de 2026' },
-    hecho: {
-      es: 'Notificación de trabajos aceptados',
-      en: 'Notification of accepted papers',
-      pt: 'Notificação dos trabalhos aprovados',
-    },
-  },
-  {
-    iso: '2026-10-16',
-    fecha: { es: '16 de octubre de 2026', en: '16 October 2026', pt: '16 de outubro de 2026' },
-    hecho: {
-      es: 'Fecha límite para los trabajos finales',
-      en: 'Deadline for final papers',
-      pt: 'Prazo final para os trabalhos definitivos',
-    },
-  },
-  {
-    iso: '2026-10-23',
-    fecha: { es: '23 de octubre de 2026', en: '23 October 2026', pt: '23 de outubro de 2026' },
-    hecho: {
-      es: 'Publicación de la agenda completa',
-      en: 'Full agenda published',
-      pt: 'Publicação da agenda completa',
-    },
-  },
-  {
-    iso: '2026-11-11',
-    fecha: { es: '11, 12 y 13 de noviembre de 2026', en: '11–13 November 2026', pt: '11, 12 e 13 de novembro de 2026' },
-    hecho: { es: 'Congreso', en: 'Congress', pt: 'Congresso' },
-  },
-];
-
 export interface TextosLanding {
   presentacionTitulo: string;
   presentacion: string[];
@@ -153,8 +97,6 @@ export interface TextosLanding {
   programaTitulo: string;
   programaAyuda: string;
   programaNota: string;
-  calendarioTitulo: string;
-  calendarioAyuda: string;
   sedeTitulo: string;
   sedeAyuda: string;
   verEnMapa: string;
@@ -184,7 +126,6 @@ export interface TextosLanding {
   irAlRegistro: string;
   verAgenda: string;
   descargarAgenda: string;
-  cumplido: string;
 }
 
 export const LANDING: Record<Idioma, TextosLanding> = {
@@ -200,8 +141,6 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     programaTitulo: 'Agenda',
     programaAyuda: 'Tres días de sesiones en la sede del CIESS. Elija un día y abra cada mesa para ver sus ponencias, con su autoría y país.',
     programaNota: 'Agenda sujeta a cambios; esta página muestra la versión vigente.',
-    calendarioTitulo: 'Fechas importantes',
-    calendarioAyuda: 'Del lanzamiento de la convocatoria a los tres días de sesiones.',
     sedeTitulo: 'Cómo llegar',
     sedeAyuda:
       'Las sesiones presenciales se celebran en la sede del CIESS, en la Ciudad de México. Quien participe en línea recibirá el enlace de conexión antes del Congreso.',
@@ -234,7 +173,6 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     irAlRegistro: 'Ir al registro',
     verAgenda: 'Ver agenda',
     descargarAgenda: 'Descargar la agenda (PDF)',
-    cumplido: 'Cumplido',
   },
   en: {
     presentacionTitulo: 'About the Congress',
@@ -248,8 +186,6 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     programaTitulo: 'Agenda',
     programaAyuda: 'Three days of sessions at the CIESS headquarters. Pick a day and open each panel to see its papers, with their authors and country.',
     programaNota: 'Agenda subject to change; this page shows the current version.',
-    calendarioTitulo: 'Key dates',
-    calendarioAyuda: 'From the opening of the call for papers to the three days of sessions.',
     sedeTitulo: 'Getting there',
     sedeAyuda:
       'In-person sessions are held at the CIESS headquarters in Mexico City. Online participants will receive the connection link before the Congress.',
@@ -282,7 +218,6 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     irAlRegistro: 'Go to registration',
     verAgenda: 'View agenda',
     descargarAgenda: 'Download the agenda (PDF)',
-    cumplido: 'Completed',
   },
   pt: {
     presentacionTitulo: 'Sobre o Congresso',
@@ -296,8 +231,6 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     programaTitulo: 'Agenda',
     programaAyuda: 'Três dias de sessões na sede do CIESS. Escolha um dia e abra cada mesa para ver os seus trabalhos, com autoria e país.',
     programaNota: 'Agenda sujeita a alterações; esta página mostra a versão vigente.',
-    calendarioTitulo: 'Datas importantes',
-    calendarioAyuda: 'Do lançamento da convocatória aos três dias de sessões.',
     sedeTitulo: 'Como chegar',
     sedeAyuda:
       'As sessões presenciais acontecem na sede do CIESS, na Cidade do México. Quem participar on-line receberá o link de conexão antes do Congresso.',
@@ -330,7 +263,6 @@ export const LANDING: Record<Idioma, TextosLanding> = {
     irAlRegistro: 'Ir para a inscrição',
     verAgenda: 'Ver agenda',
     descargarAgenda: 'Baixar a agenda (PDF)',
-    cumplido: 'Concluído',
   },
 };
 
