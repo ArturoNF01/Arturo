@@ -85,7 +85,7 @@ export function PaginaLogin({
       <main className="relative z-10 flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-md">
           <div className="mb-6 text-center text-slate-900 dark:text-white">
-            <LogoCiess className="mx-auto h-14 sm:h-16" />
+            <LogoCiess className="mx-auto h-9 sm:h-11" />
             <h1 className="mt-4 text-xl font-bold leading-tight">{t.congreso.titulo}</h1>
             <p className="mt-2 text-sm italic text-ciess-700 dark:text-ciess-200">{t.congreso.subtitulo}</p>
             <p className="mt-2 text-sm text-slate-600 dark:text-white/70">{t.login.subtitulo}</p>

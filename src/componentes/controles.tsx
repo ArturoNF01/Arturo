@@ -84,11 +84,11 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
         {/* Sólo los logos. El título del congreso estaba aquí cortado a
             «1er Congreso de Estud…», que no dice nada, y encima repetía lo
             primero que se lee en la portada. El hueco lo aprovecha el menú. */}
-        <Link href="/" className="shrink-0" aria-label={t.congreso.titulo}>
-          <LogoCiess className="h-9 sm:h-11" />
+        <Link href="/" className="min-w-0" aria-label={t.congreso.titulo}>
+          <LogoCiess className="h-7 sm:h-9" />
         </Link>
 
-        <nav className="ml-auto hidden items-center gap-1 md:flex">
+        <nav className="ml-auto hidden items-center gap-1 xl:flex">
           {enlaces.map((e) => (
             <Link
               key={e.href}
@@ -102,16 +102,19 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
 
         {/* En pantallas anchas, todo a la vista. En las estrechas sólo el
             botón del menú: el idioma y el tema se consultan una vez y no
-            merecen el sitio que ocupaban en una barra de 390 píxeles. */}
-        <div className="ml-auto flex items-center gap-2 md:ml-2">
-          <div className="hidden items-center gap-2 md:flex">
+            merecen el sitio que ocupaban en una barra de 390 píxeles. El
+            corte está en 1280 y no en 768 porque el logotipo mide 342 px:
+            entre 768 y 1180 la barra completa no cabía y dejaba el idioma y
+            el tema fuera de la pantalla. */}
+        <div className="ml-auto flex items-center gap-2 xl:ml-2">
+          <div className="hidden items-center gap-2 xl:flex">
             <SelectorIdioma compacto />
             <BotonTema />
           </div>
 
           <button
             type="button"
-            className="boton-secundario !px-2.5 !py-2 md:hidden"
+            className="boton-secundario !px-2.5 !py-2 xl:hidden"
             aria-expanded={abierto}
             aria-controls="menu-movil"
             aria-label={t.nav.menu}
@@ -127,7 +130,7 @@ export function Encabezado({ variante = 'publico' }: { variante?: 'publico' | 'p
       {abierto && (
         <nav
           id="menu-movil"
-          className="border-t px-4 pb-4 md:hidden"
+          className="border-t px-4 pb-4 xl:hidden"
           style={{ borderColor: 'var(--borde)' }}
         >
           {enlaces.map((e) => (
@@ -166,7 +169,7 @@ export function PieDePagina() {
             quien convoca. El acceso al panel no está en ninguno: va abajo. */}
         <div className="grid gap-8 sm:grid-cols-[auto,1fr,auto] sm:items-start sm:gap-12">
           <div>
-            <LogoCiess className="h-9" />
+            <LogoCiess className="h-8 sm:h-9" />
             <p className="mt-3 max-w-xs text-xs leading-relaxed tenue">{t.congreso.titulo}</p>
           </div>
 
