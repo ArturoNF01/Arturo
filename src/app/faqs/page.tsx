@@ -22,6 +22,7 @@ export default async function Faqs() {
   return (
     <PaginaFaqs
       urlAgenda={configuracion.programa_publicado ? configuracion.url_agenda : ''}
+      urlAgendaPt={configuracion.programa_publicado ? configuracion.url_agenda_pt : ''}
       programaPublicado={configuracion.programa_publicado}
       faqs={visibles}
     />

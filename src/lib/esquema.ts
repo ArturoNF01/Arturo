@@ -280,6 +280,7 @@ export const esquemaConfiguracion = z.object({
   registro_abierto: z.boolean().optional(),
   fecha_limite_registro: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   url_agenda: z.string().url().optional(),
+  url_agenda_pt: z.string().url().optional().or(z.literal('')),
   url_video_login: z.string().url().optional().or(z.literal('')),
   url_sesion_zoom: z.string().url().optional().or(z.literal('')),
   programa_publicado: z.boolean().optional(),

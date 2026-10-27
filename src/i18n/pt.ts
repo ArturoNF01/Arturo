@@ -390,6 +390,8 @@ export const pt: Diccionario = {
       programaPublicadoAyuda: 'Enquanto estiver desligado, a agenda não é exibida no site e os e-mails de confirmação saem sem o botão de download. Ligue quando o PDF definitivo estiver no seu endereço.',
       fechaLimite: 'Prazo final de inscrição',
       urlAgenda: 'URL da agenda (PDF)',
+      urlAgendaPt: 'URL da agenda em português (PDF)',
+      urlAgendaPtAyuda: 'É exibida a quem usa o site em português e enviada por e-mail a quem se inscreve nesse idioma. Se estiver vazia, usa-se a agenda geral.',
       correoContacto: 'E-mail de contato',
       ocupados: '{n} ocupadas de {total}',
     },

@@ -454,6 +454,8 @@ export const es = {
       programaPublicadoAyuda: 'Mientras esté apagado, la agenda no se enseña en el sitio y los acuses salen sin el botón de descarga. Enciéndalo cuando el PDF definitivo esté en su dirección.',
       fechaLimite: 'Fecha límite de registro',
       urlAgenda: 'URL de la agenda (PDF)',
+      urlAgendaPt: 'URL de la agenda en portugués (PDF)',
+      urlAgendaPtAyuda: 'La ven quienes tienen el sitio en portugués y la reciben en su correo quienes se registran en ese idioma. Vacía, se usa la agenda general.',
       correoContacto: 'Correo de contacto',
       ocupados: '{n} ocupados de {total}',
     },

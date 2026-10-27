@@ -93,7 +93,7 @@ export function PaginaInicio({
         {/* Se enseña sólo cuando el comité lo da por publicado: el PDF se
             corrige hasta el último momento, y un programa viejo a la vista
             manda gente a la sala equivocada. */}
-        {configuracion.programa_publicado && <Programa urlAgenda={configuracion.url_agenda} />}
+        {configuracion.programa_publicado && <Programa urlAgenda={configuracion.url_agenda} urlAgendaPt={configuracion.url_agenda_pt} />}
 
         {/* Calendario --------------------------------------------------- */}
         <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">

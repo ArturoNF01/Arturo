@@ -87,6 +87,7 @@ export function PanelCupos({
     programa_publicado: configuracion.programa_publicado,
     fecha_limite_registro: configuracion.fecha_limite_registro,
     url_agenda: configuracion.url_agenda,
+    url_agenda_pt: configuracion.url_agenda_pt,
     url_video_login: configuracion.url_video_login,
     url_sesion_zoom: configuracion.url_sesion_zoom,
     correo_contacto: configuracion.correo_contacto,
@@ -117,6 +118,7 @@ export function PanelCupos({
         programa_publicado: valores.programa_publicado,
         fecha_limite_registro: valores.fecha_limite_registro,
         url_agenda: valores.url_agenda,
+        url_agenda_pt: valores.url_agenda_pt,
         url_video_login: valores.url_video_login,
         url_sesion_zoom: valores.url_sesion_zoom,
         correo_contacto: valores.correo_contacto,
@@ -294,6 +296,15 @@ export function PanelCupos({
             />
           </label>
           <label className="block sm:col-span-2">
+            <span className="etiqueta">{t.panel.cupos.urlAgendaPt}</span>
+            <input
+              type="url" className="campo"
+              value={valores.url_agenda_pt}
+              onChange={(e) => setValores({ ...valores, url_agenda_pt: e.target.value })}
+            />
+            <span className="ayuda">{t.panel.cupos.urlAgendaPtAyuda}</span>
+          </label>
+          <label className="block sm:col-span-2">
             <span className="etiqueta">Sala del seminario web (enlace directo)</span>
             <input
               type="url" className="campo"
@@ -352,6 +363,11 @@ export function PanelCupos({
           <a href={valores.url_agenda} target="_blank" rel="noreferrer" className="boton-secundario !py-2 !text-xs">
             {t.panel.agenda.descargar}
           </a>
+          {valores.url_agenda_pt && (
+            <a href={valores.url_agenda_pt} target="_blank" rel="noreferrer" className="boton-secundario !py-2 !text-xs">
+              {t.panel.agenda.descargar} · PT
+            </a>
+          )}
           {mensaje && <span className="text-xs tenue">{mensaje}</span>}
         </div>
         <p className="ayuda mt-3">{t.panel.agenda.provisional}</p>

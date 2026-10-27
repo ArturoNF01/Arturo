@@ -27,6 +27,10 @@ export const CONFIG = {
      en qué sala es cada mesa, no la invitación a mandar trabajos. */
   urlAgenda:
     'https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026.pdf',
+  /* La misma agenda en portugués: la ve quien tiene el sitio en ese idioma y
+     la recibe quien se registra en él. */
+  urlAgendaPt:
+    'https://home.ciess.org/wp-content/uploads/2026/10/Programa_Congreso_RIUSS_2026_PT.pdf',
 
   zonaHoraria: 'America/Mexico_City',
   versionAvisoPrivacidad: '1.2',

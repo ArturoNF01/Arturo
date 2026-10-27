@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useApp } from '@/componentes/proveedores';
 import { LANDING } from '@/lib/landing';
+import { urlAgendaSegunIdioma } from '@/lib/agenda';
 import {
   MESA_POR_NUMERO, PAISES, PROGRAMA, RESUMEN, SALAS, TEXTOS_PROGRAMA,
   agruparPorHorario, unirAutores,
@@ -199,7 +200,7 @@ function Fila({ sesion, mostrarSala }: { sesion: Sesion; mostrarSala: boolean })
   );
 }
 
-export function Programa({ urlAgenda }: { urlAgenda: string }) {
+export function Programa({ urlAgenda, urlAgendaPt }: { urlAgenda: string; urlAgendaPt?: string }) {
   const { idioma } = useApp();
   const textos = LANDING[idioma];
   const ui = TEXTOS_PROGRAMA[idioma];
@@ -380,7 +381,12 @@ export function Programa({ urlAgenda }: { urlAgenda: string }) {
         </ol>
 
         <div className="mt-10 flex flex-wrap items-center gap-4">
-          <a href={urlAgenda} target="_blank" rel="noopener noreferrer" className="boton-secundario">
+          <a
+            href={urlAgendaSegunIdioma({ general: urlAgenda, pt: urlAgendaPt }, idioma)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="boton-secundario"
+          >
             {textos.descargarAgenda}
           </a>
           <p className="ayuda !mt-0">{textos.programaNota}</p>

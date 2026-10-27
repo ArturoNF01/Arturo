@@ -10,6 +10,8 @@ export interface ConfiguracionPublica {
   programa_publicado: boolean;
   fecha_limite_registro: string;
   url_agenda: string;
+  /** La agenda en portugués; vacía, se usa la general. */
+  url_agenda_pt: string;
   url_video_login: string;
   url_sesion_zoom: string;
   correo_contacto: string;
@@ -30,6 +32,7 @@ const RESPALDO: ConfiguracionPublica = {
   programa_publicado: false,
   fecha_limite_registro: CONFIG.fechaLimiteRegistro,
   url_agenda: CONFIG.urlAgenda,
+  url_agenda_pt: CONFIG.urlAgendaPt,
   url_video_login: CONFIG.urlVideoLogin,
   url_sesion_zoom: 'https://us02web.zoom.us/j/83396553628',
   correo_contacto: process.env.CORREO_CONTACTO ?? 'congreso@ciess.org',
@@ -64,6 +67,7 @@ export async function leerConfiguracion(): Promise<ConfiguracionPublica> {
       programa_publicado: leer<boolean>('programa_publicado', RESPALDO.programa_publicado),
       fecha_limite_registro: leer<string>('fecha_limite_registro', RESPALDO.fecha_limite_registro),
       url_agenda: leer<string>('url_agenda', RESPALDO.url_agenda),
+      url_agenda_pt: leer<string>('url_agenda_pt', RESPALDO.url_agenda_pt),
       url_video_login: leer<string>('url_video_login', RESPALDO.url_video_login),
       url_sesion_zoom: leer<string>('url_sesion_zoom', RESPALDO.url_sesion_zoom),
       correo_contacto: leer<string>('correo_contacto', RESPALDO.correo_contacto),

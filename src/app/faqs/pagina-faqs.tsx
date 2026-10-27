@@ -5,13 +5,16 @@ import { Encabezado, PieDePagina } from '@/componentes/controles';
 import { useApp } from '@/componentes/proveedores';
 import { traducir, type Faq } from '@/lib/contenido';
 import { LANDING, SEDE_MAPA_EMBED, SEDE_MAPA_ENLACE } from '@/lib/landing';
+import { urlAgendaSegunIdioma } from '@/lib/agenda';
 
 export function PaginaFaqs({
   urlAgenda,
+  urlAgendaPt,
   programaPublicado,
   faqs,
 }: {
   urlAgenda: string;
+  urlAgendaPt?: string;
   programaPublicado: boolean;
   faqs: Faq[];
 }) {
@@ -62,7 +65,12 @@ export function PaginaFaqs({
             aria-label={t.faq.buscar}
           />
           {programaPublicado && (
-            <a href={urlAgenda} target="_blank" rel="noreferrer" className="boton-secundario shrink-0">
+            <a
+              href={urlAgendaSegunIdioma({ general: urlAgenda, pt: urlAgendaPt }, idioma)}
+              target="_blank"
+              rel="noreferrer"
+              className="boton-secundario shrink-0"
+            >
               {t.faq.verAgenda}
             </a>
           )}

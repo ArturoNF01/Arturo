@@ -2,6 +2,7 @@ import 'server-only';
 import { Resend } from 'resend';
 import { unaFila } from '@/lib/bd/conexion';
 import { CONFIG, urlSitio } from '@/lib/config';
+import { urlAgendaSegunIdioma } from '@/lib/agenda';
 import { etiquetaDe } from '@/lib/opciones';
 import { obtenerDiccionario } from '@/i18n';
 import { nombrePerfil, perfilPorClave, registroMinimo, type Modalidad } from '@/lib/perfiles';
@@ -26,6 +27,8 @@ export interface DatosCorreo {
   correoContacto: string;
   fechaLimite: string;
   urlAgenda: string;
+  /** La agenda en portugués: la recibe quien se registró en ese idioma. */
+  urlAgendaPt?: string;
   /** La sala del seminario web: el enlace con el que se entra a las sesiones. */
   urlSesionZoom?: string;
   /**
@@ -42,6 +45,8 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
   const idioma = (r.idioma as string) ?? 'es';
   const t = obtenerDiccionario(idioma);
   const modalidad = r.modalidad === 'en_linea' ? t.modalidad.en_linea : t.modalidad.presencial;
+  // La agenda en el idioma de quien recibe el correo, no en el de quien lo manda.
+  const urlAgenda = urlAgendaSegunIdioma({ general: datos.urlAgenda, pt: datos.urlAgendaPt }, idioma);
 
   return {
     folio: String(r.folio ?? ''),
@@ -90,7 +95,7 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
 <p style="margin:12px 0 0;font-size:13px;color:#4a5b6e;word-break:break-all;">${datos.urlSesionZoom}</p>
 </div>`
         : '',
-    url_agenda: datos.urlAgenda,
+    url_agenda: urlAgenda,
     // El programa, para todo el mundo: quien expone quiere ver en qué mesa
     // quedó y a qué hora, y quien asiste, qué va a oír. Es el único bloque
     // que no depende del perfil ni de la modalidad.
@@ -98,11 +103,11 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
     // Va con el botón perfilado y no relleno, para que no compita con el de
     // la sala del seminario cuando los dos salen en el mismo correo: uno es
     // la puerta y el otro es el folleto.
-    agenda_bloque: datos.urlAgenda && datos.programaPublicado
+    agenda_bloque: urlAgenda && datos.programaPublicado
       ? `<div style="margin:20px 0;padding:16px;border-radius:8px;border:1px solid #cfdcea;">
 <p style="margin:0 0 8px;font-weight:bold;color:#16283d;">${t.confirmacion.agendaTitulo}</p>
 <p style="margin:0 0 12px;">${t.confirmacion.agendaTexto}</p>
-<p style="margin:0;"><a href="${datos.urlAgenda}" style="display:inline-block;padding:9px 16px;border-radius:6px;border:1px solid #2e5c8a;color:#2e5c8a;text-decoration:none;font-weight:bold;">${t.confirmacion.agendaBoton}</a></p>
+<p style="margin:0;"><a href="${urlAgenda}" style="display:inline-block;padding:9px 16px;border-radius:6px;border:1px solid #2e5c8a;color:#2e5c8a;text-decoration:none;font-weight:bold;">${t.confirmacion.agendaBoton}</a></p>
 </div>`
       : '',
     url_sitio: urlSitio(),

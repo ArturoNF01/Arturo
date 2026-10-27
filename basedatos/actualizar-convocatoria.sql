@@ -127,6 +127,16 @@ insert into configuracion (clave, valor, descripcion) values
    'Enseña la agenda en el sitio y el botón de descarga en los acuses')
 on conflict (clave) do nothing;
 
+-- La agenda en portugués.
+--
+-- Quien tiene el sitio en portugués descarga ésta, y quien se registra en ese
+-- idioma la recibe en su acuse. Con `do nothing`, lo que el comité escriba en
+-- el panel —incluso dejarla vacía, para volver a la general— no se pisa.
+insert into configuracion (clave, valor, descripcion) values
+  ('url_agenda_pt', '"https://home.ciess.org/wp-content/uploads/2026/10/Programa_Congreso_RIUSS_2026_PT.pdf"'::jsonb,
+   'PDF de la agenda en portugués; vacío = se usa el general')
+on conflict (clave) do nothing;
+
 -- La agenda definitiva.
 --
 -- Pasó por tres direcciones: la convocatoria de marzo, la agenda
