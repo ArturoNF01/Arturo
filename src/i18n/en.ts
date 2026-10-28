@@ -389,6 +389,8 @@ export const en: Diccionario = {
       programaPublicadoAyuda: 'While this is off, the agenda is not shown on the site and confirmation emails go out without the download button. Turn it on once the final PDF is at its address.',
       fechaLimite: 'Registration deadline',
       urlAgenda: 'Agenda URL (PDF)',
+      urlAgendaEn: 'English agenda URL (PDF)',
+      urlAgendaEnAyuda: 'Shown to visitors using the site in English and emailed to people who register in that language. If empty, the general agenda is used.',
       urlAgendaPt: 'Portuguese agenda URL (PDF)',
       urlAgendaPtAyuda: 'Shown to visitors using the site in Portuguese and emailed to people who register in that language. If empty, the general agenda is used.',
       correoContacto: 'Contact e-mail',

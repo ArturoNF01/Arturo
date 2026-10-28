@@ -10,11 +10,13 @@ import { urlAgendaSegunIdioma } from '@/lib/agenda';
 export function PaginaFaqs({
   urlAgenda,
   urlAgendaPt,
+  urlAgendaEn,
   programaPublicado,
   faqs,
 }: {
   urlAgenda: string;
   urlAgendaPt?: string;
+  urlAgendaEn?: string;
   programaPublicado: boolean;
   faqs: Faq[];
 }) {
@@ -66,7 +68,7 @@ export function PaginaFaqs({
           />
           {programaPublicado && (
             <a
-              href={urlAgendaSegunIdioma({ general: urlAgenda, pt: urlAgendaPt }, idioma)}
+              href={urlAgendaSegunIdioma({ general: urlAgenda, pt: urlAgendaPt, en: urlAgendaEn }, idioma)}
               target="_blank"
               rel="noreferrer"
               className="boton-secundario shrink-0"

@@ -87,7 +87,11 @@ export function PaginaInicio({
             corrige hasta el último momento, y una agenda vieja a la vista
             manda gente a la sala equivocada. */}
         {configuracion.programa_publicado && (
-          <Programa urlAgenda={configuracion.url_agenda} urlAgendaPt={configuracion.url_agenda_pt} />
+          <Programa
+            urlAgenda={configuracion.url_agenda}
+            urlAgendaPt={configuracion.url_agenda_pt}
+            urlAgendaEn={configuracion.url_agenda_en}
+          />
         )}
 
         {/* Sede ---------------------------------------------------------- */}

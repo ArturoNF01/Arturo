@@ -10,6 +10,7 @@ const { variablesDeRegistro } = await import('@/lib/servidor/correo');
 
 const GENERAL = 'https://ejemplo.org/Agenda.pdf';
 const PT = 'https://ejemplo.org/Programa_PT.pdf';
+const EN = 'https://ejemplo.org/Programa_EN.pdf';
 
 function variables(idioma: string, urlAgendaPt: string | null = PT, programaPublicado = true) {
   return variablesDeRegistro({
@@ -19,6 +20,7 @@ function variables(idioma: string, urlAgendaPt: string | null = PT, programaPubl
     fechaLimite: '2026-10-30',
     urlAgenda: GENERAL,
     urlAgendaPt: urlAgendaPt ?? undefined,
+    urlAgendaEn: EN,
     programaPublicado,
   });
 }
@@ -31,12 +33,17 @@ describe('la agenda en el acuse, según el idioma del registro', () => {
     expect(v.agenda_bloque).not.toContain(GENERAL);
   });
 
-  it('en español y en inglés, la general', () => {
-    for (const idioma of ['es', 'en']) {
-      const v = variables(idioma);
-      expect(v.url_agenda, idioma).toBe(GENERAL);
-      expect(v.agenda_bloque, idioma).toContain(`href="${GENERAL}"`);
-    }
+  it('quien se registró en inglés recibe la agenda en inglés', () => {
+    const v = variables('en');
+    expect(v.url_agenda).toBe(EN);
+    expect(v.agenda_bloque).toContain(`href="${EN}"`);
+    expect(v.agenda_bloque).not.toContain(GENERAL);
+  });
+
+  it('en español, la general', () => {
+    const v = variables('es');
+    expect(v.url_agenda).toBe(GENERAL);
+    expect(v.agenda_bloque).toContain(`href="${GENERAL}"`);
   });
 
   it('sin versión en portugués, cae a la general en vez de dejar el botón sin enlace', () => {

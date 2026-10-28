@@ -15,7 +15,16 @@ begin;
 
 update configuracion set valor = '"2026-11-11"'::jsonb where clave = 'congreso_fecha_inicio';
 update configuracion set valor = '"2026-11-13"'::jsonb where clave = 'congreso_fecha_fin';
-update configuracion set valor = '"2026-10-30"'::jsonb where clave = 'fecha_limite_registro';
+
+-- La fecha límite de inscripción: el lunes 2 de noviembre de 2026.
+--
+-- Con condición, como el aforo de más abajo: esto corre en cada despliegue, y
+-- sin ella la fecha que el comité pusiera en el panel volvería a ésta en el
+-- siguiente. Se lleva a la nueva desde las dos que el sistema trajo antes (la
+-- de reserva del código y la del 30 de octubre) y a partir de ahí manda el panel.
+update configuracion set valor = '"2026-11-02"'::jsonb
+ where clave = 'fecha_limite_registro'
+   and valor in ('"2026-05-15"'::jsonb, '"2026-10-30"'::jsonb);
 
 update configuracion set valor =
   '{"es": "11, 12 y 13 de noviembre de 2026", "en": "11-13 November 2026", "pt": "11, 12 e 13 de novembro de 2026"}'::jsonb
@@ -59,7 +68,7 @@ update aviso_privacidad
 -- como un borrador. La casilla sigue en el panel para cuando haga falta.
 update faqs set provisional = false where provisional;
 
--- El aforo presencial sube de 60 a 100.
+-- El aforo presencial sube de 60 a 100, y de ahí a 120.
 --
 -- Con condición, y no como estaba. Esto corre en cada despliegue, y mientras
 -- fue una orden sin condición el número del panel era decorativo: el comité lo
@@ -68,6 +77,10 @@ update faqs set provisional = false where provisional;
 -- partir de ahí manda el panel, que es donde se decide un aforo.
 update configuracion set valor = '100'::jsonb
  where clave = 'cupos_presenciales' and valor = '60'::jsonb;
+
+-- Y de 100 a 120, con la misma condición: sólo si sigue en 100.
+update configuracion set valor = '120'::jsonb
+ where clave = 'cupos_presenciales' and valor = '100'::jsonb;
 
 -- Las preguntas frecuentes que hablaban de la agenda como algo por publicar.
 --
@@ -133,6 +146,8 @@ on conflict (clave) do nothing;
 -- idioma la recibe en su acuse. Con `do nothing`, lo que el comité escriba en
 -- el panel —incluso dejarla vacía, para volver a la general— no se pisa.
 insert into configuracion (clave, valor, descripcion) values
+  ('url_agenda_en', '"https://home.ciess.org/wp-content/uploads/2026/10/Programa_Congreso_RIUSS_2026_EN.pdf"'::jsonb,
+   'PDF de la agenda en inglés; vacío = se usa el general'),
   ('url_agenda_pt', '"https://home.ciess.org/wp-content/uploads/2026/10/Programa_Congreso_RIUSS_2026_PT.pdf"'::jsonb,
    'PDF de la agenda en portugués; vacío = se usa el general')
 on conflict (clave) do nothing;

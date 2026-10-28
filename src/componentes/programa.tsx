@@ -192,7 +192,13 @@ function Fila({ sesion, mostrarSala }: { sesion: Sesion; mostrarSala: boolean })
   );
 }
 
-export function Programa({ urlAgenda, urlAgendaPt }: { urlAgenda: string; urlAgendaPt?: string }) {
+export function Programa({
+  urlAgenda, urlAgendaPt, urlAgendaEn,
+}: {
+  urlAgenda: string;
+  urlAgendaPt?: string;
+  urlAgendaEn?: string;
+}) {
   const { idioma } = useApp();
   const textos = LANDING[idioma];
   const ui = TEXTOS_PROGRAMA[idioma];
@@ -255,7 +261,7 @@ export function Programa({ urlAgenda, urlAgendaPt }: { urlAgenda: string; urlAge
 
           <div className="flex flex-col items-start gap-2 sm:items-end">
             <a
-              href={urlAgendaSegunIdioma({ general: urlAgenda, pt: urlAgendaPt }, idioma)}
+              href={urlAgendaSegunIdioma({ general: urlAgenda, pt: urlAgendaPt, en: urlAgendaEn }, idioma)}
               target="_blank"
               rel="noopener noreferrer"
               className="portada-boton portada-boton-registro"

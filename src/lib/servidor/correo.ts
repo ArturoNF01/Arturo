@@ -29,6 +29,8 @@ export interface DatosCorreo {
   urlAgenda: string;
   /** La agenda en portugués: la recibe quien se registró en ese idioma. */
   urlAgendaPt?: string;
+  /** La agenda en inglés: la recibe quien se registró en ese idioma. */
+  urlAgendaEn?: string;
   /** La sala del seminario web: el enlace con el que se entra a las sesiones. */
   urlSesionZoom?: string;
   /**
@@ -46,7 +48,10 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
   const t = obtenerDiccionario(idioma);
   const modalidad = r.modalidad === 'en_linea' ? t.modalidad.en_linea : t.modalidad.presencial;
   // La agenda en el idioma de quien recibe el correo, no en el de quien lo manda.
-  const urlAgenda = urlAgendaSegunIdioma({ general: datos.urlAgenda, pt: datos.urlAgendaPt }, idioma);
+  const urlAgenda = urlAgendaSegunIdioma(
+    { general: datos.urlAgenda, pt: datos.urlAgendaPt, en: datos.urlAgendaEn },
+    idioma,
+  );
 
   return {
     folio: String(r.folio ?? ''),

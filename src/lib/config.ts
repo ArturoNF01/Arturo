@@ -5,7 +5,7 @@
  * Panel → Cupos y configuración y Panel → Contenido del sitio.
  */
 export const CONFIG = {
-  fechaLimiteRegistro: '2026-05-15', // respaldo; el valor vigente vive en la base
+  fechaLimiteRegistro: '2026-11-02', // respaldo; el valor vigente vive en la base
 
   /** Respaldo del límite de semblanza para la réplica en Sheets. */
   limiteSemblanzaPalabras: 60,
@@ -31,6 +31,8 @@ export const CONFIG = {
      la recibe quien se registra en él. */
   urlAgendaPt:
     'https://home.ciess.org/wp-content/uploads/2026/10/Programa_Congreso_RIUSS_2026_PT.pdf',
+  urlAgendaEn:
+    'https://home.ciess.org/wp-content/uploads/2026/10/Programa_Congreso_RIUSS_2026_EN.pdf',
 
   zonaHoraria: 'America/Mexico_City',
   versionAvisoPrivacidad: '1.2',

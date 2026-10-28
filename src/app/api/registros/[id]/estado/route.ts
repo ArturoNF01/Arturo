@@ -75,6 +75,7 @@ export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{
       fechaLimite: configuracion.fecha_limite_registro,
       urlAgenda: configuracion.url_agenda,
       urlAgendaPt: configuracion.url_agenda_pt,
+      urlAgendaEn: configuracion.url_agenda_en,
     });
     if (correo.enviado) {
       await consultar('update registros set correo_enviado_en = now() where id = $1', [id]);

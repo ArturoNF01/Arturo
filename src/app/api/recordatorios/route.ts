@@ -82,6 +82,7 @@ async function ejecutar(forzarClave?: string) {
       fechaLimite: configuracion.fecha_limite_registro,
       urlAgenda: configuracion.url_agenda,
       urlAgendaPt: configuracion.url_agenda_pt,
+      urlAgendaEn: configuracion.url_agenda_en,
       programaPublicado: configuracion.programa_publicado,
       // Quien se registró hace medio año ya perdió su acuse: el recordatorio
       // vuelve a llevarle el registro de Zoom, que es de donde sale su enlace.

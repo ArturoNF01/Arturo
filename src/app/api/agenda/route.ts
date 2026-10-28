@@ -8,12 +8,12 @@ export const dynamic = 'force-dynamic';
  * Enlace estable a la agenda del congreso. El destino se cambia desde el
  * panel sin tocar el código ni los enlaces ya repartidos.
  *
- * Va a la versión en portugués si el visitante tiene el sitio en ese idioma,
- * que es lo que dice la cookie que deja el selector de idioma.
+ * Va a la versión en inglés o en portugués si el visitante tiene el sitio en
+ * ese idioma, que es lo que dice la cookie que deja el selector de idioma.
  */
 export async function GET(peticion: NextRequest) {
-  const { url_agenda, url_agenda_pt } = await leerConfiguracion();
+  const { url_agenda, url_agenda_pt, url_agenda_en } = await leerConfiguracion();
   const idioma = peticion.cookies.get('congreso.idioma')?.value ?? 'es';
-  const destino = urlAgendaSegunIdioma({ general: url_agenda, pt: url_agenda_pt }, idioma);
+  const destino = urlAgendaSegunIdioma({ general: url_agenda, pt: url_agenda_pt, en: url_agenda_en }, idioma);
   return NextResponse.redirect(destino, { status: 307 });
 }
