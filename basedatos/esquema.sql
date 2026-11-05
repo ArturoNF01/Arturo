@@ -477,7 +477,8 @@ null = sin límite'),
   ('url_agenda_en', '"https://home.ciess.org/wp-content/uploads/2026/10/Programa_Congreso_RIUSS_2026_EN.pdf"'::jsonb, 'PDF de la agenda en inglés; vacío = se usa el general'),
   ('url_video_login', '"https://home.ciess.org/wp-content/uploads/2026/03/1er-Congreso-de-Estudios-Interamericanos-de-Seguridad-Social-B.mp4"'::jsonb, 'Video de fondo del login'),
   ('correo_contacto', '"ciess.cooperacion@ciss-bienestar.org"'::jsonb, 'Correo de contacto del comité organizador'),
-  ('url_sesion_zoom', '"https://us02web.zoom.us/j/83396553628"'::jsonb, 'Sala del seminario web: el enlace con el que entra el público en línea')
+  ('url_sesion_zoom', '"https://us02web.zoom.us/j/83396553628"'::jsonb, 'Sala del seminario web: el enlace con el que entra el público en línea'),
+  ('url_sesion_meet', '"https://meet.google.com/gfa-wwhs-eep?hs=151"'::jsonb, 'Sala de Google Meet de las salas de la planta baja (comisiones y sesiones)')
 on conflict (clave) do nothing;
 drop trigger if exists trg_config_actualizado on configuracion;
 create trigger trg_config_actualizado before update on configuracion

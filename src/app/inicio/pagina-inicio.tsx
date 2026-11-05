@@ -91,6 +91,8 @@ export function PaginaInicio({
             urlAgenda={configuracion.url_agenda}
             urlAgendaPt={configuracion.url_agenda_pt}
             urlAgendaEn={configuracion.url_agenda_en}
+            urlZoom={configuracion.url_sesion_zoom}
+            urlMeet={configuracion.url_sesion_meet}
           />
         )}
 

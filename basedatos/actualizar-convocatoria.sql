@@ -241,6 +241,17 @@ update configuracion
    set descripcion = 'Sala del seminario web: el enlace con el que entra el público en línea'
  where clave = 'url_sesion_zoom' and descripcion <> 'Sala del seminario web: el enlace con el que entra el público en línea';
 
+-- La sala de Meet.
+--
+-- En la agenda, lo que pasa en el Auditorio se sigue por Zoom y lo que pasa en las
+-- salas de la planta baja (comisiones y sesiones), por Meet. Con `do nothing`: si el
+-- comité cambia el enlace en el panel —o lo deja vacío para quitar el botón—, el
+-- siguiente despliegue no lo pisa. No toca ningún registro.
+insert into configuracion (clave, valor, descripcion) values
+  ('url_sesion_meet', '"https://meet.google.com/gfa-wwhs-eep?hs=151"'::jsonb,
+   'Sala de Google Meet de las salas de la planta baja (comisiones y sesiones)')
+on conflict (clave) do nothing;
+
 -- Y fuera la del registro, que ya no lee nadie. Dejarla sería peor que
 -- borrarla: un campo en el panel que no hace nada acaba usándose.
 delete from configuracion where clave = 'url_registro_zoom';

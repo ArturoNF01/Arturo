@@ -470,6 +470,30 @@
 main:has(> .seccion-azul:last-child) + .pie-azul,
 main.seccion-azul + .pie-azul { margin-top: 0; }
 
+/* El botón para entrar a una sesión en línea (Zoom o Meet): relleno, como el día
+   elegido de la agenda; en oscuro, dorado con letra marina. */
+.boton-union {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 0.5rem;
+  background-color: var(--azul-marino);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  transition: transform 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+.boton-union:hover {
+  transform: translateY(-1px);
+  background-color: var(--azul-banner);
+  box-shadow: 0 6px 14px -8px var(--azul-marino);
+}
+.dark .boton-union { background-color: var(--dorado); color: var(--azul-marino); }
+.dark .boton-union:hover { background-color: #d9c48a; box-shadow: 0 6px 14px -8px var(--dorado); }
+
 @layer base {
   html { scroll-behavior: smooth; }
   body {

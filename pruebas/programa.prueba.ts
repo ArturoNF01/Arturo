@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MESAS, MESA_POR_NUMERO, PAISES, PROGRAMA, RESUMEN, SALAS, TEXTOS_PROGRAMA,
-  agruparPorHorario, unirAutores, type Ponencia, type Sesion,
+  MESAS, MESA_POR_NUMERO, PAISES, PLATAFORMA_POR_SALA, PROGRAMA, RESUMEN, SALAS, TEXTOS_PROGRAMA,
+  agruparPorHorario, plataformaDe, unirAutores, type Ponencia, type Sesion,
 } from '@/lib/programa';
 
 /**
@@ -79,14 +79,14 @@ describe('el programa publicado', () => {
   });
 
   it('las cuentas que se enseñan arriba salen de los datos', () => {
-    expect(RESUMEN).toEqual({ dias: 3, mesas: 11, ponencias: 47, paises: 12 });
+    expect(RESUMEN).toEqual({ dias: 3, mesas: 11, ponencias: 45, paises: 12 });
   });
 
   it('cada mesa lleva las ponencias que dice el programa impreso', () => {
-    // Cuatro, cinco, cinco, cuatro, cuatro, cuatro, tres, cuatro, cuatro, cinco, cinco.
-    // La versión anterior traía una más en la mesa 1 y otra en la 7: si alguien
+    // Cuatro, cinco, cinco, cuatro, cuatro, cuatro, tres, cuatro, tres, cuatro, cinco.
+    // La versión anterior traía una más en la mesa 9 y otra en la 10: si alguien
     // vuelve a pegar un título retirado, esta cuenta se descuadra.
-    expect(MESAS.map((m) => m.ponencias.length)).toEqual([4, 5, 5, 4, 4, 4, 3, 4, 4, 5, 5]);
+    expect(MESAS.map((m) => m.ponencias.length)).toEqual([4, 5, 5, 4, 4, 4, 3, 4, 3, 4, 5]);
   });
 
   it('toda sala y todo país usados existen, y toda ponencia tiene autor y título', () => {
@@ -113,7 +113,8 @@ describe('el programa publicado', () => {
       ] as [string, Record<string, string>][]),
       ...todas.flatMap(({ s }) => [
         ...(s.actividad ? [[`${s.horario} actividad`, s.actividad] as [string, Record<string, string>]] : []),
-        ...(s.participantes ?? []).map((p) => [`apertura ${p.nombre}`, p.cargo] as [string, Record<string, string>]),
+        ...(s.participantes ?? []).map((p, i) => [`apertura participante ${i + 1}`, p.cargo] as [string, Record<string, string>]),
+        ...(s.ponente ? [[`${s.horario} ponente`, s.ponente.cargo] as [string, Record<string, string>]] : []),
       ]),
     ];
     for (const [que, texto] of textos) {
@@ -134,20 +135,78 @@ describe('el programa publicado', () => {
     }
   });
 
-  it('la apertura conserva su horario, su sala y su nombre, y no lista a nadie por ahora', () => {
-    // El comité pidió quitar los nombres hasta tener la lista definitiva y
-    // mantener lo demás. Cuando llegue la lista, esta prueba se cambia por la
-    // que cuente a quienes abren el Congreso.
+  it('la apertura conserva su horario y su sala, y lista los siete cargos del programa', () => {
     const apertura = todas.find(({ s }) => s.tipo === 'apertura')!.s;
     expect(apertura.horario).toBe('09:00–09:30');
     expect(apertura.sala).toBe('auditorio');
     expect(apertura.actividad?.es).toBe('Sesión de apertura');
-    expect(apertura.participantes).toBeUndefined();
+    // El programa da cargos, no personas: presidencia y secretaría general de la CISS,
+    // dirección del CIESS y las cuatro coordinaciones de mesa de la RIUSS.
+    expect(apertura.participantes).toHaveLength(7);
+    for (const p of apertura.participantes!) {
+      expect(p.nombre, 'sin nombre hasta que el comité lo mande').toBeUndefined();
+      for (const idioma of IDIOMAS) expect(p.cargo[idioma].trim().length).toBeGreaterThan(10);
+    }
   });
 
-  it('sólo la apertura puede llevar lista de participantes', () => {
+  it('la conferencia magistral trae a su ponente, con nombre y cargo', () => {
+    const conferencia = todas.find(({ s }) => s.tipo === 'conferencia')!.s;
+    expect(conferencia.horario).toBe('09:30–10:30');
+    expect(conferencia.ponente?.nombre).toBe('Héctor J. Villarreal');
+    for (const idioma of IDIOMAS) expect(conferencia.ponente?.cargo[idioma]).toContain('Monterrey');
+  });
+
+  it('sólo la apertura lleva lista de participantes y sólo la conferencia lleva ponente', () => {
     for (const { s } of todas) {
       if (s.participantes) expect(s.tipo, s.horario).toBe('apertura');
+      if (s.ponente) expect(s.tipo, s.horario).toBe('conferencia');
+    }
+  });
+
+  it('cada ponencia dice si se presenta en persona o en línea, salvo tres que el programa no dice', () => {
+    const todasLasPonencias = MESAS.flatMap((m) => m.ponencias);
+    const cuenta = (v: string | undefined) => todasLasPonencias.filter((p) => p.participacion === v).length;
+    // Del programa: 23 presenciales, 19 virtuales y 3 sin indicar (no se supone nada).
+    expect(cuenta('presencial')).toBe(23);
+    expect(cuenta('virtual')).toBe(19);
+    expect(cuenta(undefined)).toBe(3);
+    for (const p of todasLasPonencias) {
+      if (p.participacion) expect(['presencial', 'virtual']).toContain(p.participacion);
+    }
+  });
+});
+
+describe('por dónde se entra a cada sesión', () => {
+  it('el Auditorio va por Zoom y las salas de la planta baja por Meet', () => {
+    expect(PLATAFORMA_POR_SALA).toEqual({ lobby: null, auditorio: 'zoom', comisiones: 'meet', sesiones: 'meet' });
+  });
+
+  it('cada mesa lleva la plataforma de su sala: Zoom las 1, 2, 3, 5, 7, 9 y 11; Meet las 4, 6, 8 y 10', () => {
+    const plataforma = (n: number) => plataformaDe(todas.find(({ s }) => s.mesa === n)!.s);
+    for (const n of [1, 2, 3, 5, 7, 9, 11]) expect(plataforma(n), `mesa ${n}`).toBe('zoom');
+    for (const n of [4, 6, 8, 10]) expect(plataforma(n), `mesa ${n}`).toBe('meet');
+  });
+
+  it('el registro y el almuerzo no llevan botón, aunque tengan sala; lo demás con sala, sí', () => {
+    for (const { s } of todas) {
+      if (s.tipo === 'registro' || s.tipo === 'pausa') expect(plataformaDe(s), s.horario).toBeNull();
+      else expect(plataformaDe(s), `${s.horario} ${s.tipo}`).not.toBeNull();
+    }
+  });
+
+  it('la apertura, la conferencia y la clausura van por Zoom; las mesas de trabajo del miércoles, por Meet', () => {
+    for (const { s } of todas) {
+      if (['apertura', 'conferencia', 'clausura'].includes(s.tipo)) expect(plataformaDe(s), s.tipo).toBe('zoom');
+      if (s.tipo === 'trabajo') expect(plataformaDe(s), s.actividad?.es).toBe('meet');
+    }
+  });
+
+  it('los textos del botón existen en los tres idiomas', () => {
+    for (const idioma of IDIOMAS) {
+      expect(TEXTOS_PROGRAMA[idioma].unirse.zoom).toContain('Zoom');
+      expect(TEXTOS_PROGRAMA[idioma].unirse.meet).toContain('Meet');
+      expect(TEXTOS_PROGRAMA[idioma].participacion.presencial.length).toBeGreaterThan(0);
+      expect(TEXTOS_PROGRAMA[idioma].participacion.virtual.length).toBeGreaterThan(0);
     }
   });
 });

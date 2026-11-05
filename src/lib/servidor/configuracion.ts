@@ -16,6 +16,8 @@ export interface ConfiguracionPublica {
   url_agenda_en: string;
   url_video_login: string;
   url_sesion_zoom: string;
+  /** La sala de Meet de las salas de la planta baja; vacía, esas sesiones no llevan botón. */
+  url_sesion_meet: string;
   correo_contacto: string;
   ocupado_presencial: number;
   ocupado_en_linea: number;
@@ -38,6 +40,7 @@ const RESPALDO: ConfiguracionPublica = {
   url_agenda_en: CONFIG.urlAgendaEn,
   url_video_login: CONFIG.urlVideoLogin,
   url_sesion_zoom: 'https://us02web.zoom.us/j/83396553628',
+  url_sesion_meet: 'https://meet.google.com/gfa-wwhs-eep?hs=151',
   correo_contacto: process.env.CORREO_CONTACTO ?? 'congreso@ciess.org',
   ocupado_presencial: 0,
   ocupado_en_linea: 0,
@@ -74,6 +77,7 @@ export async function leerConfiguracion(): Promise<ConfiguracionPublica> {
       url_agenda_en: leer<string>('url_agenda_en', RESPALDO.url_agenda_en),
       url_video_login: leer<string>('url_video_login', RESPALDO.url_video_login),
       url_sesion_zoom: leer<string>('url_sesion_zoom', RESPALDO.url_sesion_zoom),
+      url_sesion_meet: leer<string>('url_sesion_meet', RESPALDO.url_sesion_meet),
       correo_contacto: leer<string>('correo_contacto', RESPALDO.correo_contacto),
       ocupado_presencial: Number(cupos?.ocupado_presencial ?? 0),
       ocupado_en_linea: Number(cupos?.ocupado_en_linea ?? 0),

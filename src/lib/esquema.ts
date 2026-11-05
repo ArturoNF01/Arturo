@@ -284,6 +284,7 @@ export const esquemaConfiguracion = z.object({
   url_agenda_en: z.string().url().optional().or(z.literal('')),
   url_video_login: z.string().url().optional().or(z.literal('')),
   url_sesion_zoom: z.string().url().optional().or(z.literal('')),
+  url_sesion_meet: z.string().url().optional().or(z.literal('')),
   programa_publicado: z.boolean().optional(),
   correo_contacto: z.string().email().optional(),
 

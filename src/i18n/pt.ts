@@ -390,6 +390,8 @@ export const pt: Diccionario = {
       programaPublicadoAyuda: 'Enquanto estiver desligado, a agenda não é exibida no site e os e-mails de confirmação saem sem o botão de download. Ligue quando o PDF definitivo estiver no seu endereço.',
       fechaLimite: 'Prazo final de inscrição',
       urlAgenda: 'URL da agenda (PDF)',
+      urlMeet: 'Sala do Google Meet (link direto)',
+      urlMeetAyuda: 'Botão «Entrar pelo Meet» da agenda: aparece nas sessões da sala de comissões e da sala de sessões. As do Auditório usam o link do Zoom. Se estiver vazio, essas sessões não mostram botão.',
       urlAgendaEn: 'URL da agenda em inglês (PDF)',
       urlAgendaEnAyuda: 'É exibida a quem usa o site em inglês e enviada por e-mail a quem se inscreve nesse idioma. Se estiver vazia, usa-se a agenda geral.',
       urlAgendaPt: 'URL da agenda em português (PDF)',

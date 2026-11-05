@@ -91,6 +91,7 @@ export function PanelCupos({
     url_agenda_en: configuracion.url_agenda_en,
     url_video_login: configuracion.url_video_login,
     url_sesion_zoom: configuracion.url_sesion_zoom,
+    url_sesion_meet: configuracion.url_sesion_meet,
     correo_contacto: configuracion.correo_contacto,
     limite_registros_por_huella: limiteHuella.toString(),
   });
@@ -123,6 +124,7 @@ export function PanelCupos({
         url_agenda_en: valores.url_agenda_en,
         url_video_login: valores.url_video_login,
         url_sesion_zoom: valores.url_sesion_zoom,
+        url_sesion_meet: valores.url_sesion_meet,
         correo_contacto: valores.correo_contacto,
         limite_registros_por_huella: Number(valores.limite_registros_por_huella),
         congreso_nombre: datos.nombre,
@@ -328,6 +330,15 @@ export function PanelCupos({
               registro aparte en Zoom que mandaba un enlace personal y se retiró. Si se deja
               vacío, esas personas se quedan sin saber cómo conectarse.
             </span>
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="etiqueta">{t.panel.cupos.urlMeet}</span>
+            <input
+              type="url" className="campo"
+              value={valores.url_sesion_meet}
+              onChange={(e) => setValores({ ...valores, url_sesion_meet: e.target.value })}
+            />
+            <span className="ayuda">{t.panel.cupos.urlMeetAyuda}</span>
           </label>
           <label className="block sm:col-span-2">
             <span className="etiqueta">Video de fondo (login y formulario)</span>

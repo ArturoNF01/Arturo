@@ -454,6 +454,8 @@ export const es = {
       programaPublicadoAyuda: 'Mientras esté apagado, la agenda no se enseña en el sitio y los acuses salen sin el botón de descarga. Enciéndalo cuando el PDF definitivo esté en su dirección.',
       fechaLimite: 'Fecha límite de registro',
       urlAgenda: 'URL de la agenda (PDF)',
+      urlMeet: 'Sala de Google Meet (enlace directo)',
+      urlMeetAyuda: 'Botón «Unirse por Meet» de la agenda: lo llevan las sesiones de la sala de comisiones y de la sala de sesiones. Las del Auditorio llevan el de Zoom. Vacío, esas sesiones no muestran botón.',
       urlAgendaEn: 'URL de la agenda en inglés (PDF)',
       urlAgendaEnAyuda: 'La ven quienes tienen el sitio en inglés y la reciben en su correo quienes se registran en ese idioma. Vacía, se usa la agenda general.',
       urlAgendaPt: 'URL de la agenda en portugués (PDF)',

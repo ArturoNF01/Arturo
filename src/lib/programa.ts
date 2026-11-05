@@ -74,6 +74,12 @@ export interface Ponencia {
   /** «y colaboradores»: va al final de la lista, no como un autor más. */
   colaboradores?: true;
   pais: ClavePais;
+  /**
+   * Cómo participa quien presenta, según el programa. Se omite cuando el
+   * programa no lo dice —hoy son tres ponencias—, y entonces no se muestra
+   * nada: no se supone.
+   */
+  participacion?: 'presencial' | 'virtual';
 }
 
 export interface Mesa {
@@ -93,19 +99,19 @@ export const MESAS: Mesa[] = [
     ponencias: [
       {
         titulo: 'Reducción de jornada laboral y seguridad social en México ¿qué nos dice la evidencia antes de que empiece la cuenta regresiva?',
-        autores: ['Luis Felipe Pérez Gómez'], pais: 'mx',
+        autores: ['Luis Felipe Pérez Gómez'], pais: 'mx', participacion: 'presencial',
       },
       {
-        titulo: 'Voluntariedad previsional y acceso al aseguramiento de trabajadores independientes en Hispanoamérica.',
-        autores: ['Ángel Edoardo Ruiz Buenrostro'], pais: 'mx',
+        titulo: 'La voluntariedad previsional de la Seguridad Social y su restricción de acceso al aseguramiento de trabajadores independientes en Hispanoamérica.',
+        autores: ['Ángel Edoardo Ruiz Buenrostro'], pais: 'mx', participacion: 'virtual',
       },
       {
         titulo: 'Migración Laboral: retos y oportunidades para la protección social.',
-        autores: ['José Gabriel Martínez'], pais: 'mx',
+        autores: ['José Gabriel Martínez'], pais: 'mx', participacion: 'presencial',
       },
       {
         titulo: 'Modelado markoviano de aportes previsionales con estados enriquecidos.',
-        autores: ['Sebastian Grillo'], pais: 'py',
+        autores: ['Sebastian Grillo'], pais: 'py', participacion: 'virtual',
       },
     ],
   },
@@ -119,23 +125,23 @@ export const MESAS: Mesa[] = [
     ponencias: [
       {
         titulo: '¿Es la PGU chilena un modelo exportable o un caso excepcional? Lecciones para el diseño de pensiones no contributivas en América Latina.',
-        autores: ['Soledad Hormazábal', 'Pedro Pizarro'], pais: 'cl',
+        autores: ['Soledad Hormazábal', 'Pedro Pizarro'], pais: 'cl', participacion: 'presencial',
       },
       {
         titulo: 'Reformas pensionales subsidiarias del sistema de capitalización individual.',
-        autores: ['María Ascensión Morales Ramírez'], pais: 'mx',
+        autores: ['María Ascensión Morales Ramírez'], pais: 'mx', participacion: 'presencial',
       },
       {
         titulo: 'Cobertura y financiamiento en la política previsional reciente. Los casos de Argentina, Chile y Colombia.',
-        autores: ['Nelson Cardozo', 'Sergio Carpenter'], pais: 'ar',
+        autores: ['Nelson Cardozo', 'Sergio Carpenter'], pais: 'ar', participacion: 'virtual',
       },
       {
         titulo: 'Los desafíos de la seguridad social en América Latina: restricciones estructurales para la garantía sostenible de los derechos sociales. Evidencia a partir del sistema pensional colombiano.',
-        autores: ['Flor Esther Salazar Guatibonza'], pais: 'co',
+        autores: ['Flor Esther Salazar Guatibonza'], pais: 'co', participacion: 'presencial',
       },
       {
         titulo: 'Salario Mínimo, reglas contributivas y segmentación pensional en Colombia.',
-        autores: ['Jorge Armando Rodríguez'], pais: 'co',
+        autores: ['Jorge Armando Rodríguez'], pais: 'co', participacion: 'presencial',
       },
     ],
   },
@@ -149,7 +155,7 @@ export const MESAS: Mesa[] = [
     ponencias: [
       {
         titulo: 'Políticas Previsionales y desigualdades de género en Argentina. Reconocimiento de Aportes por Tareas de Cuidados.',
-        autores: ['Sandra Montiel', 'Camila Machado'], pais: 'ar',
+        autores: ['Sandra Montiel', 'Camila Machado'], pais: 'ar', participacion: 'virtual',
       },
       {
         titulo: 'Desigualdades de género en el acceso a las pensiones en México.',
@@ -157,15 +163,15 @@ export const MESAS: Mesa[] = [
       },
       {
         titulo: 'Tutela constitucional del viudo, diferenciación por razón de género y acceso a la pensión en la jurisprudencia del Tribunal Constitucional del Perú.',
-        autores: ['L. Alberto Huamán Ordoñez', 'Javier H. Espinoza Escobar'], pais: 'pe',
+        autores: ['L. Alberto Huamán Ordoñez', 'Javier H. Espinoza Escobar'], pais: 'pe', participacion: 'virtual',
       },
       {
         titulo: 'El rol histórico de la prestación de pensión por fallecimiento en la Argentina. Su comparación con los países del Cono Sur. El impacto ante posibles reformas. El reto de la sostenibilidad, atención a las nuevas dinámicas laborales y las brechas de género.',
-        autores: ['Nuria Ape', 'Bruno Bagnarelli'], pais: 'ar',
+        autores: ['Nuria Ape', 'Bruno Bagnarelli'], pais: 'ar', participacion: 'virtual',
       },
       {
-        titulo: 'The ‘Transnational Turn’ in Social Protection Policy: A case study of Belizean women as caregivers in the United States.',
-        autores: ['Melanie C. Smith'], pais: 'bz',
+        titulo: 'A Transnational Approach to Social Protection Policy: The Case of Belizean women as caregivers in the United States',
+        autores: ['Melanie C. Smith'], pais: 'bz', participacion: 'virtual',
       },
     ],
   },
@@ -179,20 +185,19 @@ export const MESAS: Mesa[] = [
     ponencias: [
       {
         titulo: 'Del abordaje fragmentado al ecosistema colaborativo: Innovación pública y gobernanza colaborativa para el envejecimiento saludable y la seguridad social en Costa Rica.',
-        autores: ['Lourdes Arce Espinoza', 'Lizette Brenes Bonilla', 'Daniela Jiménez Obando'], pais: 'cr',
+        autores: ['Lourdes Arce Espinoza', 'Lizette Brenes Bonilla', 'Daniela Jiménez Obando'], pais: 'cr', participacion: 'virtual',
       },
       {
         titulo: 'Saúde, proteção social e dependência nas Américas: desafios comparados de Brasil, Argentina, Colômbia e México.',
-        autores: ['Paulo Borges Mathias Costa', 'Paulo Henrique de Almeida Rodriguez'], pais: 'br',
+        autores: ['Paulo Borges Mathias Costa', 'Paulo Henrique de Almeida Rodriguez'], pais: 'br', participacion: 'virtual',
       },
       {
         titulo: 'Esperanza de vida y esperanza de vida libre de discapacidad en México según condición de seguridad social.',
-        autores: ['Héctor García-Hernández', 'Hortensia Reyes-Morales', 'Guillermo Salinas-Escudero', 'Marcela Agudelo-Botero'],
-        pais: 'mx',
+        autores: ['Héctor García-Hernández', 'Hortensia Reyes-Morales', 'Guillermo Salinas-Escudero', 'Marcela Agudelo-Botero'], pais: 'mx', participacion: 'presencial',
       },
       {
         titulo: 'Del tratamiento de la enfermedad a la protección de la capacidad funcional: el cuidado como nuevo riesgo social en México.',
-        autores: ['María Luisa Mussot López'], pais: 'mx',
+        autores: ['María Luisa Mussot López'], pais: 'mx', participacion: 'presencial',
       },
     ],
   },
@@ -205,20 +210,20 @@ export const MESAS: Mesa[] = [
     },
     ponencias: [
       {
-        titulo: 'Portabilidad pensionaria y fiscalidad internacional: derechos de seguridad social de mexicanos en el extranjero bajo el régimen de pensión Ley 73 del Seguro Social mexicano.',
-        autores: ['Laura Gabriela Sánchez Hernández'], pais: 'mx',
+        titulo: 'Portabilidad pensionaria de mexicanos en el extranjero, Ley 1973 del Instituto Mexicano del Seguro Social',
+        autores: ['Laura Gabriela Sánchez Hernández'], pais: 'mx', participacion: 'virtual',
       },
       {
         titulo: 'Cajas profesionales y precariedad previsional en Argentina: una respuesta federal y sectorial frente a la insuficiencia del régimen nacional.',
-        autores: ['Julia Tamara Toyos'], pais: 'ar',
+        autores: ['Julia Tamara Toyos'], pais: 'ar', participacion: 'presencial',
       },
       {
         titulo: 'Emergencia económica, vulneración de derechos previsionales y justicia para personas mayores: hacia un modelo multinivel de tutela efectiva frente a la litigiosidad y la demora judicial.',
-        autores: ['Julia Tamara Toyos'], pais: 'ar',
+        autores: ['Julia Tamara Toyos'], pais: 'ar', participacion: 'presencial',
       },
       {
         titulo: 'La fragmentación del derecho a la seguridad social en México: Un análisis de descomposición de la desigualdad del ingreso, 2024.',
-        autores: ['Marco Antonio Pérez Méndez', 'Jocabed Sánchez Martínez'], pais: 'mx',
+        autores: ['Marco Antonio Pérez Méndez', 'Jocabed Sánchez Martínez'], pais: 'mx', participacion: 'virtual',
       },
     ],
   },
@@ -232,19 +237,19 @@ export const MESAS: Mesa[] = [
     ponencias: [
       {
         titulo: 'Reconfigurar el Contrato Social: Innovaciones en el Financiamiento de la Seguridad Social en América Latina y el Caribe.',
-        autores: ['Ann Sibelle Rodriguez Mininni'], pais: 'uy',
+        autores: ['Ann Sibelle Rodriguez Mininni'], pais: 'uy', participacion: 'presencial',
       },
       {
         titulo: 'El Banco del Instituto Ecuatoriano de Seguridad Social, BIESS, y su incidencia en la economía ecuatoriana.',
-        autores: ['Marco Patricio Naranjo Chiriboga', 'Alejandro David Muñoz Briceño'], pais: 'ec',
+        autores: ['Marco Patricio Naranjo Chiriboga', 'Alejandro David Muñoz Briceño'], pais: 'ec', participacion: 'presencial',
       },
       {
         titulo: 'Situación actual del ahorro voluntario e inversiones en infraestructura con recursos de las Afores.',
-        autores: ['Juana Isabel Vera López'], pais: 'mx',
+        autores: ['Juana Isabel Vera López'], pais: 'mx', participacion: 'virtual',
       },
       {
         titulo: 'Cofinanciamiento de la seguridad social: el FONSAP y la sostenibilidad de los medicamentos de VIH y tuberculosis en República Dominicana.',
-        autores: ['Claudia Valdez', 'Leticia Martínez Martiñón'], pais: 'do',
+        autores: ['Claudia Valdez', 'Leticia Martínez Martiñón'], pais: 'do', participacion: 'presencial',
       },
     ],
   },
@@ -258,15 +263,15 @@ export const MESAS: Mesa[] = [
     ponencias: [
       {
         titulo: 'Invisibilidad y segregación de género en el modelo de cárceles productivas.',
-        autores: ['Alejandra Arias Vergara', 'Valentina Giraldo'], pais: 'co',
+        autores: ['Alejandra Arias Vergara', 'Valentina Giraldo'], pais: 'co', participacion: 'presencial',
       },
       {
-        titulo: '¿Servicio Social o precarización? Seguridad social en penas comunitarias en Colombia, México y Estados Unidos.',
-        autores: ['Sergio Ramírez García', 'María Camila Ocampo'], pais: 'co',
+        titulo: '¿Servicio Social o precarización? Seguridad social en penas comunitarias en Colombia y México',
+        autores: ['Sergio Ramírez García', 'María Camila Ocampo'], pais: 'co', participacion: 'presencial',
       },
       {
         titulo: 'Soberanía Identitaria en el mundo del trabajo: De la crítica teórica a la justicia restaurativa laboral.',
-        autores: ['Juan Camilo Ospina Botero'], pais: 'co',
+        autores: ['Juan Camilo Ospina Botero'], pais: 'co', participacion: 'presencial',
       },
     ],
   },
@@ -280,20 +285,19 @@ export const MESAS: Mesa[] = [
     ponencias: [
       {
         titulo: '¿El derecho a un entorno de trabajo seguro y saludable es un nuevo piso civilizatorio?',
-        autores: ['Claudio San Juan'], pais: 'ar',
+        autores: ['Claudio San Juan'], pais: 'ar', participacion: 'virtual',
       },
       {
         titulo: 'Seguridad y Salud en el Trabajo de Plataformas: Estudio comparado entre Argentina y Brasil.',
-        autores: ['Nuria Ape', 'Bruno Bagnarelli'], pais: 'ar',
+        autores: ['Nuria Ape', 'Bruno Bagnarelli'], pais: 'ar', participacion: 'virtual',
       },
       {
-        titulo: 'Enfoque de género y riesgos laborales en Colombia, Ecuador y Perú: análisis comparativo en el primer cuarto del siglo XXI.',
-        autores: ['Diana Marcela Roa Baquero'], pais: 'co',
+        titulo: 'Incorporación del enfoque de género en los marcos normativos de seguridad y salud en el trabajo en Colombia, Ecuador y Perú: análisis documental comparado, 2000-2025.',
+        autores: ['Diana Marcela Roa Baquero'], pais: 'co', participacion: 'virtual',
       },
       {
         titulo: 'Factores de riesgo laborales, problemas de salud y acceso a la seguridad social en trabajadores del comercio informal: una revisión sistemática.',
-        autores: ['Valeria I. Torrijos-García', 'María F. Núñez-Velázquez', 'Anakaren Varela-Pérez'],
-        colaboradores: true, pais: 'mx',
+        autores: ['Valeria I. Torrijos-García', 'María F. Núñez-Velázquez', 'Anakaren Varela-Pérez'], colaboradores: true, pais: 'mx', participacion: 'presencial',
       },
     ],
   },
@@ -307,23 +311,15 @@ export const MESAS: Mesa[] = [
     ponencias: [
       {
         titulo: 'Indicadores de dictaminación en un hospital de la Cd. de México.',
-        autores: ['Mitzi Daniela Durán Sánchez', 'Gladys Martínez Santiago'], pais: 'mx',
+        autores: ['Mitzi Daniela Durán Sánchez', 'Gladys Martínez Santiago'], pais: 'mx', participacion: 'presencial',
       },
       {
         titulo: 'Prevalencia de diabetes mellitus y obesidad en trabajadores con enfermedades músculo esqueléticas de origen laboral y no laboral.',
-        autores: ['Elida Edith Fuentes Zamarrón', 'Yascara Hernández Hernández'], pais: 'mx',
+        autores: ['Elida Edith Fuentes Zamarrón', 'Yascara Hernández Hernández'], pais: 'mx', participacion: 'virtual',
       },
       {
         titulo: 'Relación del estrés laboral y riesgo de ideación suicida en médicos residentes en un hospital de segundo nivel en Puebla.',
-        autores: [
-          'Witney Arlette Águila Corona', 'Elizabeth Cuevas Soria',
-          'Francisco Roberto Céspedes Castillo', 'Itzel Gutiérrez Gabriel',
-        ],
-        pais: 'mx',
-      },
-      {
-        titulo: 'Post-diagnosis trajectories in treatment, adiposity, glycaemic control, and dietary behaviour among adults with type 2 diabetes in Mexico.',
-        autores: ['Ernesto del Castillo'], pais: 'mx',
+        autores: ['Witney Arlette Águila Corona', 'Elizabeth Cuevas Soria', 'Francisco Roberto Céspedes Castillo', 'Itzel Gutiérrez Gabriel'], pais: 'mx', participacion: 'virtual',
       },
     ],
   },
@@ -337,15 +333,11 @@ export const MESAS: Mesa[] = [
     ponencias: [
       {
         titulo: 'Gobernanza Digital de los Sistemas de Pensiones en las Américas: Hacia un Modelo Interamericano para la Universalización del Derecho a la Seguridad Social.',
-        autores: ['Ángel Luis Delgado De La Matta'], pais: 'pe',
-      },
-      {
-        titulo: 'Entre innovación y resistencia: aceptación de inteligencia artificial en la atención de enfermería.',
-        autores: ['Lourdes Arce Espinoza', 'Greibin Villegas Barahona', 'Gioconda Vargas Morúa'], pais: 'cr',
+        autores: ['Ángel Luis Delgado De La Matta'], pais: 'pe', participacion: 'virtual',
       },
       {
         titulo: 'Seguridad social y centralidad de la persona humana en la era de la inteligencia artificial: suficiencia de ingresos y sostenibilidad social.',
-        autores: ['María Alejandra Austerlitz'], pais: 'ar',
+        autores: ['María Alejandra Austerlitz'], pais: 'ar', participacion: 'presencial',
       },
       {
         titulo: 'Gobernanza territorial y optimización de la toma de decisiones en la administración pública indígena: un modelo basado en datos para la sostenibilidad y la inclusión social en un resguardo indígena de Colombia.',
@@ -353,7 +345,7 @@ export const MESAS: Mesa[] = [
       },
       {
         titulo: 'La alfabetización en seguridad social como una nueva dimensión de análisis de los sistemas de protección social: fundamentos conceptuales y propuesta metodológica para su medición.',
-        autores: ['Miriam Concepción García Canseco'], pais: 'mx',
+        autores: ['Miriam Concepción García Canseco'], pais: 'mx', participacion: 'presencial',
       },
     ],
   },
@@ -366,25 +358,24 @@ export const MESAS: Mesa[] = [
     },
     ponencias: [
       {
-        titulo: 'El acceso a salud no asegura la equidad en México.',
+        titulo: 'El acceso a la salud no asegura la equidad en México.',
         autores: ['Abraham Granados Martínez'], pais: 'mx',
       },
       {
         titulo: 'Gasto de bolsillo en salud en personas mayores mexicanas según su condición de seguridad social.',
-        autores: ['Héctor García-Hernández', 'Hortensia Reyes-Morales', 'Guillermo Salinas-Escudero', 'Marcela Agudelo-Botero'],
-        pais: 'mx',
+        autores: ['Héctor García-Hernández', 'Hortensia Reyes-Morales', 'Guillermo Salinas-Escudero', 'Marcela Agudelo-Botero'], pais: 'mx', participacion: 'presencial',
       },
       {
         titulo: 'Impacto del Gasto Público en Salud en el Crecimiento Económico Mexicano.',
-        autores: ['Willis Ruiz Marín', 'Alejandro Moreno Jiménez', 'Jesús Antonio López Cabrera'], pais: 'mx',
+        autores: ['Willis Ruiz Marín', 'Alejandro Moreno Jiménez', 'Jesús Antonio López Cabrera'], pais: 'mx', participacion: 'presencial',
       },
       {
         titulo: 'Per cápita diferenciado por riesgo en el seguro familiar de salud. Diseño, implementación y evaluación de una metodología actuarial para la equidad y sostenibilidad en el régimen Contributivo de la República Dominicana.',
-        autores: ['Leticia Martínez Martiñón'], pais: 'do',
+        autores: ['Leticia Martínez Martiñón'], pais: 'do', participacion: 'presencial',
       },
       {
-        titulo: 'Dados Públicos, vazios assistenciais e seguridade social em saúde: o observatório SUS-ES e a rede de urgência e emergência no Espírito Santo.',
-        autores: ['Paulo Borges Mathias Costa', 'Paulo Henrique de Almeida Rodriguez'], pais: 'br',
+        titulo: 'Distribuição municipal de componentes cadastrados da Rede de Urgência e Emergência no Espírito Santo em janeiro de 2026.',
+        autores: ['Paulo Borges Mathias Costa', 'Henrique de Souza Bressiani', 'Lorenzo Mol Massariol'], pais: 'br', participacion: 'virtual',
       },
     ],
   },
@@ -404,7 +395,11 @@ export type TipoSesion =
   | 'clausura';
 
 export interface Participante {
-  nombre: string;
+  /**
+   * Se omite cuando el programa sólo da el cargo, sin la persona (la apertura
+   * lista «Presidencia de la CISS», no un nombre): entonces el cargo es lo que se lee.
+   */
+  nombre?: string;
   cargo: Texto;
 }
 
@@ -416,8 +411,33 @@ export interface Sesion {
   /** Todas menos las mesas, que se nombran por su número. */
   actividad?: Texto;
   mesa?: number;
-  /** Quiénes abren el Congreso, con su cargo. Sólo la sesión de apertura, y sólo cuando el comité la da. */
+  /** Quiénes abren el Congreso, con su cargo. Sólo la sesión de apertura. */
   participantes?: Participante[];
+  /** Quien da la conferencia magistral. Sólo la sesión de tipo «conferencia». */
+  ponente?: Participante;
+}
+
+/**
+ * Por dónde se sigue cada sala a distancia: lo que pasa en el Auditorio se
+ * transmite por Zoom y lo que pasa en las salas de la planta baja, por Meet.
+ * Los enlaces no van aquí: son del comité y se editan desde el panel
+ * (`url_sesion_zoom`, `url_sesion_meet`).
+ */
+export type PlataformaEnLinea = 'zoom' | 'meet';
+
+export const PLATAFORMA_POR_SALA: Record<ClaveSala, PlataformaEnLinea | null> = {
+  lobby: null,
+  auditorio: 'zoom',
+  comisiones: 'meet',
+  sesiones: 'meet',
+};
+
+/** Sesiones a las que se entra en línea: no el registro ni el almuerzo. */
+const SIN_ENLACE: ReadonlySet<TipoSesion> = new Set<TipoSesion>(['registro', 'pausa']);
+
+export function plataformaDe(sesion: Sesion): PlataformaEnLinea | null {
+  if (!sesion.sala || SIN_ENLACE.has(sesion.tipo)) return null;
+  return PLATAFORMA_POR_SALA[sesion.sala];
 }
 
 export interface DiaPrograma {
@@ -495,9 +515,59 @@ export const PROGRAMA: DiaPrograma[] = [
       {
         horario: '09:00–09:30', tipo: 'apertura', sala: 'auditorio',
         actividad: { es: 'Sesión de apertura', en: 'Opening session', pt: 'Sessão de abertura' },
-        // Sin lista de participantes por ahora: el comité mandará la definitiva.
-        // Cuando llegue, va aquí como `participantes: [{ nombre, cargo }]` y la
-        // tarjeta vuelve a poder desplegarse sola.
+        // El programa da los cargos de quienes abren, no sus nombres. Si algún
+        // día manda los nombres, van en `nombre` junto a cada cargo.
+        participantes: [
+          {
+            cargo: {
+              es: 'Presidencia de la Conferencia Interamericana de Seguridad Social (CISS)',
+              en: 'Presidency of the Inter-American Conference on Social Security (CISS)',
+              pt: 'Presidência da Conferência Interamericana de Seguridade Social (CISS)',
+            },
+          },
+          {
+            cargo: {
+              es: 'Secretaria General de la Conferencia Interamericana de Seguridad Social (CISS)',
+              en: 'Secretary General of the Inter-American Conference on Social Security (CISS)',
+              pt: 'Secretária-Geral da Conferência Interamericana de Seguridade Social (CISS)',
+            },
+          },
+          {
+            cargo: {
+              es: 'Dirección del Centro Interamericano de Estudios de Seguridad Social (CIESS)',
+              en: 'Directorate of the Inter-American Center for Social Security Studies (CIESS)',
+              pt: 'Direção do Centro Interamericano de Estudos de Seguridade Social (CIESS)',
+            },
+          },
+          {
+            cargo: {
+              es: 'Coordinador (a) de la Mesa de Salud (RIUSS)',
+              en: 'Coordinator of the Health Working Group (RIUSS)',
+              pt: 'Coordenador(a) da Mesa de Saúde (RIUSS)',
+            },
+          },
+          {
+            cargo: {
+              es: 'Coordinador (a) de la Mesa de Pensiones (RIUSS)',
+              en: 'Coordinator of the Pensions Working Group (RIUSS)',
+              pt: 'Coordenador(a) da Mesa de Pensões (RIUSS)',
+            },
+          },
+          {
+            cargo: {
+              es: 'Coordinador (a) de la Mesa de Riesgos Laborales (RIUSS)',
+              en: 'Coordinator of the Occupational Risks Working Group (RIUSS)',
+              pt: 'Coordenador(a) da Mesa de Riscos do Trabalho (RIUSS)',
+            },
+          },
+          {
+            cargo: {
+              es: 'Coordinador (a) de la Mesa de Cuidados (RIUSS)',
+              en: 'Coordinator of the Care Working Group (RIUSS)',
+              pt: 'Coordenador(a) da Mesa de Cuidados (RIUSS)',
+            },
+          },
+        ],
       },
       {
         horario: '09:30–10:30', tipo: 'conferencia', sala: 'auditorio',
@@ -505,6 +575,14 @@ export const PROGRAMA: DiaPrograma[] = [
           es: 'La seguridad social en las Américas en el primer cuarto del siglo XXI: avances, transformaciones y desafíos persistentes',
           en: 'Social security in the Americas in the first quarter of the 21st century: progress, transformations and persistent challenges',
           pt: 'A seguridade social nas Américas no primeiro quarto do século XXI: avanços, transformações e desafios persistentes',
+        },
+        ponente: {
+          nombre: 'Héctor J. Villarreal',
+          cargo: {
+            es: 'Profesor-investigador, Escuela de Gobierno y Transformación Pública, Tecnológico de Monterrey, México',
+            en: 'Professor-researcher, School of Government and Public Transformation, Tecnológico de Monterrey, Mexico',
+            pt: 'Professor-pesquisador, Escola de Governo e Transformação Pública, Tecnológico de Monterrey, México',
+          },
         },
       },
       { horario: '10:30–12:30', tipo: 'mesa', mesa: 1, sala: 'auditorio' },
@@ -608,13 +686,16 @@ export interface TextosPrograma {
   conferencia: string;
   participan: string;
   ponencias: string;
+  ponente: string;
+  participacion: { presencial: string; virtual: string };
+  unirse: { zoom: string; meet: string };
   resumen: { dias: string; mesas: string; ponencias: string; paises: string };
 }
 
 export const TEXTOS_PROGRAMA: Record<Idioma, TextosPrograma> = {
   es: {
     selector: 'Día de la agenda',
-    leyenda: 'El color indica la sala',
+    leyenda: 'Salas',
     paralelo: 'Al mismo tiempo',
     desplegar: 'Desplegar todo',
     contraer: 'Contraer todo',
@@ -622,11 +703,14 @@ export const TEXTOS_PROGRAMA: Record<Idioma, TextosPrograma> = {
     conferencia: 'Conferencia magistral',
     participan: 'participantes',
     ponencias: 'ponencias',
+    ponente: 'Ponente',
+    participacion: { presencial: 'Presencial', virtual: 'Virtual' },
+    unirse: { zoom: 'Unirse por Zoom', meet: 'Unirse por Meet' },
     resumen: { dias: 'días', mesas: 'mesas temáticas', ponencias: 'ponencias', paises: 'países' },
   },
   en: {
     selector: 'Day of the agenda',
-    leyenda: 'Colour shows the room',
+    leyenda: 'Rooms',
     paralelo: 'At the same time',
     desplegar: 'Expand all',
     contraer: 'Collapse all',
@@ -634,11 +718,14 @@ export const TEXTOS_PROGRAMA: Record<Idioma, TextosPrograma> = {
     conferencia: 'Keynote lecture',
     participan: 'participants',
     ponencias: 'papers',
+    ponente: 'Speaker',
+    participacion: { presencial: 'In person', virtual: 'Virtual' },
+    unirse: { zoom: 'Join on Zoom', meet: 'Join on Meet' },
     resumen: { dias: 'days', mesas: 'thematic panels', ponencias: 'papers', paises: 'countries' },
   },
   pt: {
     selector: 'Dia da agenda',
-    leyenda: 'A cor indica a sala',
+    leyenda: 'Salas',
     paralelo: 'Ao mesmo tempo',
     desplegar: 'Expandir tudo',
     contraer: 'Recolher tudo',
@@ -646,6 +733,9 @@ export const TEXTOS_PROGRAMA: Record<Idioma, TextosPrograma> = {
     conferencia: 'Conferência magistral',
     participan: 'participantes',
     ponencias: 'trabalhos',
+    ponente: 'Palestrante',
+    participacion: { presencial: 'Presencial', virtual: 'Virtual' },
+    unirse: { zoom: 'Entrar pelo Zoom', meet: 'Entrar pelo Meet' },
     resumen: { dias: 'dias', mesas: 'mesas temáticas', ponencias: 'trabalhos', paises: 'países' },
   },
 };

@@ -6,8 +6,8 @@ import { LANDING } from '@/lib/landing';
 import { urlAgendaSegunIdioma } from '@/lib/agenda';
 import {
   MESA_POR_NUMERO, PAISES, PROGRAMA, RESUMEN, SALAS, TEXTOS_PROGRAMA,
-  agruparPorHorario, unirAutores,
-  type ClaveSala, type Mesa, type Sesion,
+  agruparPorHorario, plataformaDe, unirAutores,
+  type ClaveSala, type Mesa, type PlataformaEnLinea, type Sesion,
 } from '@/lib/programa';
 
 /**
@@ -54,6 +54,42 @@ function Sala({ sala }: { sala: ClaveSala }) {
   );
 }
 
+function IconoVideo() {
+  return (
+    <svg
+      aria-hidden width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"
+    >
+      <rect x="2" y="6" width="13" height="12" rx="2" />
+      <path d="m22 8-7 4 7 4V8Z" />
+    </svg>
+  );
+}
+
+/**
+ * El botón para entrar a la sesión en línea: Zoom para el Auditorio, Meet para
+ * las salas de la planta baja. Si el comité no ha puesto el enlace, no hay botón.
+ */
+function BotonEnLinea({
+  sesion, enlaces,
+}: {
+  sesion: Sesion;
+  enlaces: Record<PlataformaEnLinea, string>;
+}) {
+  const { idioma } = useApp();
+  const plataforma = plataformaDe(sesion);
+  const url = plataforma ? enlaces[plataforma] : '';
+  if (!plataforma || !url) return null;
+  return (
+    <div className="px-4 pb-3.5">
+      <a href={url} target="_blank" rel="noopener noreferrer" className="boton-union">
+        <IconoVideo />
+        {TEXTOS_PROGRAMA[idioma].unirse[plataforma]}
+      </a>
+    </div>
+  );
+}
+
 function Flecha({ abierta }: { abierta: boolean }) {
   return (
     <svg
@@ -75,6 +111,7 @@ function Flecha({ abierta }: { abierta: boolean }) {
 
 function ListaPonencias({ mesa }: { mesa: Mesa }) {
   const { idioma } = useApp();
+  const ui = TEXTOS_PROGRAMA[idioma];
   return (
     <ol className="space-y-3.5">
       {mesa.ponencias.map((ponencia, i) => (
@@ -89,6 +126,12 @@ function ListaPonencias({ mesa }: { mesa: Mesa }) {
               <span className="pais-chip ml-2 inline-block whitespace-nowrap rounded-full px-2 py-px text-[11px] leading-snug">
                 {PAISES[ponencia.pais][idioma]}
               </span>
+              {/* Cómo participa, según el programa; si no lo dice, no se supone. */}
+              {ponencia.participacion && (
+                <span className="sala-chip ml-1.5 !px-2 !py-px text-[11px]">
+                  {ui.participacion[ponencia.participacion]}
+                </span>
+              )}
             </p>
           </div>
         </li>
@@ -98,12 +141,13 @@ function ListaPonencias({ mesa }: { mesa: Mesa }) {
 }
 
 function Tarjeta({
-  sesion, abierta, alternar, mostrarSala,
+  sesion, abierta, alternar, mostrarSala, enlaces,
 }: {
   sesion: Sesion;
   abierta: boolean;
   alternar: (clave: string) => void;
   mostrarSala: boolean;
+  enlaces: Record<PlataformaEnLinea, string>;
 }) {
   const { idioma } = useApp();
   const ui = TEXTOS_PROGRAMA[idioma];
@@ -128,6 +172,13 @@ function Tarjeta({
           <span className="texto-dorado block text-[11px] font-bold uppercase tracking-wide">{etiqueta}</span>
         )}
         <span className={`texto-azul block text-sm font-semibold leading-snug ${etiqueta ? 'mt-0.5' : ''}`}>{titulo}</span>
+        {sesion.ponente && (
+          <span className="mt-2 block text-xs leading-snug">
+            <span className="font-semibold">{ui.ponente}.</span>{' '}
+            <span className="texto-azul font-semibold">{sesion.ponente.nombre}</span>
+            <span className="tenue">, {sesion.ponente.cargo[idioma]}</span>
+          </span>
+        )}
         {((mostrarSala && sesion.sala) || cuenta) && (
           <span className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
             {mostrarSala && sesion.sala && <Sala sala={sesion.sala} />}
@@ -155,6 +206,10 @@ function Tarjeta({
         <div className="flex items-start gap-3 p-4">{cabecera}</div>
       )}
 
+      {/* Fuera del botón que despliega: un enlace dentro de un botón no es válido
+          y se pulsaría uno por otro. */}
+      <BotonEnLinea sesion={sesion} enlaces={enlaces} />
+
       {clave && abierta && (
         <div
           id={`programa-${clave}`}
@@ -163,10 +218,18 @@ function Tarjeta({
           {mesa && <ListaPonencias mesa={mesa} />}
           {sesion.participantes && (
             <ul className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              {sesion.participantes.map((p) => (
-                <li key={p.nombre}>
-                  <p className="text-sm font-medium">{p.nombre}</p>
-                  <p className="text-xs leading-snug tenue">{p.cargo[idioma]}</p>
+              {sesion.participantes.map((p, i) => (
+                <li key={p.nombre ?? i}>
+                  {/* Con nombre: el nombre arriba y el cargo debajo. Sin nombre,
+                      que es como llega hoy la apertura, el cargo es lo que se lee. */}
+                  {p.nombre ? (
+                    <>
+                      <p className="text-sm font-medium">{p.nombre}</p>
+                      <p className="text-xs leading-snug tenue">{p.cargo[idioma]}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm font-medium leading-snug">{p.cargo[idioma]}</p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -193,13 +256,17 @@ function Fila({ sesion, mostrarSala }: { sesion: Sesion; mostrarSala: boolean })
 }
 
 export function Programa({
-  urlAgenda, urlAgendaPt, urlAgendaEn,
+  urlAgenda, urlAgendaPt, urlAgendaEn, urlZoom = '', urlMeet = '',
 }: {
   urlAgenda: string;
   urlAgendaPt?: string;
   urlAgendaEn?: string;
+  /** Las salas para seguir las sesiones en línea; vacías, no hay botón. */
+  urlZoom?: string;
+  urlMeet?: string;
 }) {
   const { idioma } = useApp();
+  const enlaces: Record<PlataformaEnLinea, string> = { zoom: urlZoom, meet: urlMeet };
   const textos = LANDING[idioma];
   const ui = TEXTOS_PROGRAMA[idioma];
 
@@ -380,6 +447,7 @@ export function Programa({
                         abierta={clave !== null && abiertas.has(clave)}
                         alternar={alternar}
                         mostrarSala={!salaUnica}
+                        enlaces={enlaces}
                       />
                     );
                   })}
