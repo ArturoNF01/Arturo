@@ -8,7 +8,7 @@ import { urlAgendaSegunIdioma } from '@/lib/agenda';
 import { AvisoConstancia } from '@/componentes/aviso-constancia';
 import {
   MESA_POR_NUMERO, PAISES, PROGRAMA, RESUMEN, SALAS, TEXTOS_PROGRAMA,
-  agruparPorHorario, esHibrida, plataformaDe, unirAutores,
+  agruparPorHorario, enlaceDe, esHibrida, plataformaDe, unirAutores,
   type ClavePais, type ClaveSala, type Mesa, type PlataformaEnLinea, type Sesion,
 } from '@/lib/programa';
 
@@ -80,7 +80,7 @@ function BotonEnLinea({
 }) {
   const { idioma } = useApp();
   const plataforma = plataformaDe(sesion);
-  const url = plataforma ? enlaces[plataforma] : '';
+  const url = enlaceDe(sesion, enlaces);
   if (!plataforma || !url) return null;
   return (
     <div className="px-4 pb-3.5">

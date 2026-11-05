@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   MESAS, MESA_POR_NUMERO, PAISES, PLATAFORMA_POR_SALA, PROGRAMA, RESUMEN, SALAS, TEXTOS_PROGRAMA,
-  agruparPorHorario, esHibrida, plataformaDe, unirAutores, type Ponencia, type Sesion,
+  agruparPorHorario, enlaceDe, esHibrida, plataformaDe, unirAutores, type Ponencia, type Sesion,
 } from '@/lib/programa';
 
 /**
@@ -190,10 +190,39 @@ describe('por dónde se entra a cada sesión', () => {
     expect(PLATAFORMA_POR_SALA).toEqual({ lobby: null, auditorio: 'zoom', comisiones: 'meet', sesiones: 'meet' });
   });
 
-  it('cada mesa lleva la plataforma de su sala: Zoom las 1, 2, 3, 5, 7, 9 y 11; Meet las 4, 6, 8 y 10', () => {
+  it('cada mesa lleva la plataforma de su sala, salvo la 4: Zoom las 1, 2, 3, 4, 5, 7, 9 y 11; Meet las 6, 8 y 10', () => {
     const plataforma = (n: number) => plataformaDe(todas.find(({ s }) => s.mesa === n)!.s);
-    for (const n of [1, 2, 3, 5, 7, 9, 11]) expect(plataforma(n), `mesa ${n}`).toBe('zoom');
-    for (const n of [4, 6, 8, 10]) expect(plataforma(n), `mesa ${n}`).toBe('meet');
+    for (const n of [1, 2, 3, 4, 5, 7, 9, 11]) expect(plataforma(n), `mesa ${n}`).toBe('zoom');
+    for (const n of [6, 8, 10]) expect(plataforma(n), `mesa ${n}`).toBe('meet');
+  });
+
+  it('la mesa 4 se hace en la sala de sesiones pero se transmite por su propia sala de Zoom', () => {
+    const mesa4 = todas.find(({ s }) => s.mesa === 4)!.s;
+    expect(mesa4.sala, 'la sala no cambia').toBe('sesiones');
+    expect(mesa4.horario).toBe('15:30–17:30');
+    const generales = { zoom: 'https://zoom.example/general', meet: 'https://meet.example/general' };
+    expect(enlaceDe(mesa4, generales)).toBe('https://us02web.zoom.us/j/82897635427');
+    // Ni la sala general de Zoom ni la de Meet se la pisan, vacías o no.
+    expect(enlaceDe(mesa4, { zoom: '', meet: '' })).toBe('https://us02web.zoom.us/j/82897635427');
+  });
+
+  it('las demás sesiones siguen entrando por el enlace general de su plataforma', () => {
+    const generales = { zoom: 'https://zoom.example/general', meet: 'https://meet.example/general' };
+    for (const { s } of todas) {
+      if (s.mesa === 4) continue;
+      expect(s.enlace, `${s.horario} ${s.tipo}`).toBeUndefined();
+      const plataforma = plataformaDe(s);
+      expect(enlaceDe(s, generales), `${s.horario} ${s.tipo}`).toBe(plataforma ? generales[plataforma] : '');
+    }
+  });
+
+  it('un enlace propio es https y de la plataforma que dice la sesión', () => {
+    for (const { s } of todas) {
+      if (!s.enlace) continue;
+      expect(s.enlace).toMatch(/^https:\/\//);
+      if (plataformaDe(s) === 'zoom') expect(new URL(s.enlace).hostname).toMatch(/(^|\.)zoom\.us$/);
+      if (plataformaDe(s) === 'meet') expect(new URL(s.enlace).hostname).toBe('meet.google.com');
+    }
   });
 
   it('el registro y el almuerzo no llevan botón, aunque tengan sala; lo demás con sala, sí', () => {

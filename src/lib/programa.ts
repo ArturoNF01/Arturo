@@ -421,6 +421,13 @@ export interface Sesion {
    * pidió el comité (y así viene el enlace en el programa).
    */
   plataforma?: PlataformaEnLinea;
+  /**
+   * Una sala propia para esa sesión, cuando no se entra por la general de su
+   * plataforma. Va aquí y no en el panel porque es de una sola sesión, como el
+   * resto de la agenda; los enlaces generales (`url_sesion_zoom`,
+   * `url_sesion_meet`) siguen siendo del panel.
+   */
+  enlace?: string;
 }
 
 /**
@@ -444,6 +451,17 @@ const SIN_ENLACE: ReadonlySet<TipoSesion> = new Set<TipoSesion>(['registro', 'pa
 export function plataformaDe(sesion: Sesion): PlataformaEnLinea | null {
   if (!sesion.sala || SIN_ENLACE.has(sesion.tipo)) return null;
   return sesion.plataforma ?? PLATAFORMA_POR_SALA[sesion.sala];
+}
+
+/**
+ * El enlace al que lleva el botón de una sesión: el suyo, si lo tiene, y si
+ * no el general de su plataforma. Vacío si la sesión no se sigue en línea o si
+ * el comité aún no ha puesto la sala general.
+ */
+export function enlaceDe(sesion: Sesion, generales: Record<PlataformaEnLinea, string>): string {
+  const plataforma = plataformaDe(sesion);
+  if (!plataforma) return '';
+  return sesion.enlace ?? generales[plataforma] ?? '';
 }
 
 /**
@@ -605,7 +623,12 @@ export const PROGRAMA: DiaPrograma[] = [
       { horario: '12:30–14:30', tipo: 'mesa', mesa: 2, sala: 'auditorio' },
       { horario: '14:30–15:30', tipo: 'pausa', actividad: ALMUERZO },
       { horario: '15:30–17:30', tipo: 'mesa', mesa: 3, sala: 'auditorio' },
-      { horario: '15:30–17:30', tipo: 'mesa', mesa: 4, sala: 'sesiones' },
+      // La mesa 4 se transmite por una sala de Zoom propia, aunque se haga en
+      // la sala de sesiones, que por sí sola iría por Meet.
+      {
+        horario: '15:30–17:30', tipo: 'mesa', mesa: 4, sala: 'sesiones',
+        plataforma: 'zoom', enlace: 'https://us02web.zoom.us/j/82897635427',
+      },
     ],
   },
   {
