@@ -136,7 +136,17 @@
   line-height: 1.25;
   color: var(--texto);
 }
-.pais-chip { background-color: color-mix(in srgb, var(--marca) 10%, transparent); }
+/* La bandera de cada ponencia. El borde fino evita que las franjas blancas
+   (Perú, Paraguay) se pierdan sobre el fondo claro de la tarjeta. */
+.bandera {
+  display: inline-block;
+  width: 1.5rem;
+  height: 1rem;
+  vertical-align: -0.2em;
+  border-radius: 2px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--marca) 22%, transparent);
+}
 
 /* El dorado del programa impreso, oscurecido hasta que se lea como texto. */
 .texto-dorado { color: var(--dorado-texto); }

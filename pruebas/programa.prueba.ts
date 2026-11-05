@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   MESAS, MESA_POR_NUMERO, PAISES, PLATAFORMA_POR_SALA, PROGRAMA, RESUMEN, SALAS, TEXTOS_PROGRAMA,
@@ -87,6 +89,13 @@ describe('el programa publicado', () => {
     // La versión anterior traía una más en la mesa 9 y otra en la 10: si alguien
     // vuelve a pegar un título retirado, esta cuenta se descuadra.
     expect(MESAS.map((m) => m.ponencias.length)).toEqual([4, 5, 5, 4, 4, 4, 3, 4, 3, 4, 5]);
+  });
+
+  it('todo país del programa tiene su bandera en public/banderas', () => {
+    // Sin el archivo, la agenda enseñaría una imagen rota donde antes iba el nombre.
+    for (const clave of Object.keys(PAISES)) {
+      expect(existsSync(join(process.cwd(), 'public', 'banderas', `${clave}.svg`)), clave).toBe(true);
+    }
   });
 
   it('toda sala y todo país usados existen, y toda ponencia tiene autor y título', () => {

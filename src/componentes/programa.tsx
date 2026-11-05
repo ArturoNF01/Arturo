@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- SVG de 24×16 px: next/image no aporta nada */
 import { useState } from 'react';
 import { useApp } from '@/componentes/proveedores';
 import { LANDING } from '@/lib/landing';
@@ -8,7 +9,7 @@ import { AvisoConstancia } from '@/componentes/aviso-constancia';
 import {
   MESA_POR_NUMERO, PAISES, PROGRAMA, RESUMEN, SALAS, TEXTOS_PROGRAMA,
   agruparPorHorario, esHibrida, plataformaDe, unirAutores,
-  type ClaveSala, type Mesa, type PlataformaEnLinea, type Sesion,
+  type ClavePais, type ClaveSala, type Mesa, type PlataformaEnLinea, type Sesion,
 } from '@/lib/programa';
 
 /**
@@ -17,7 +18,7 @@ import {
  * No reproduce el PDF: lo aprovecha. Un día a la vez en lugar de tres tablas
  * seguidas, las sesiones paralelas lado a lado en lugar de dos filas con la
  * misma hora, y las ponencias de cada mesa plegadas hasta que alguien las
- * abre —son cuarenta y nueve, y desplegadas todas serían una pared—.
+ * abre —son cuarenta y cinco, y desplegadas todas serían una pared—.
  *
  * Lleva los colores del programa impreso —azul marino y dorado— y una sola
  * tipografía. Las sesiones paralelas se distinguen por la etiqueta de su sala
@@ -110,6 +111,28 @@ function Flecha({ abierta }: { abierta: boolean }) {
   );
 }
 
+/**
+ * La bandera del país de la ponencia, en SVG y no en emoji: en Windows los
+ * emojis de bandera salen como dos letras («MX»), justo donde más se consulta
+ * la agenda. El nombre queda en `alt` y en `title` para lectores de pantalla y
+ * para quien pase el cursor.
+ */
+function Bandera({ pais }: { pais: ClavePais }) {
+  const { idioma } = useApp();
+  const nombre = PAISES[pais][idioma];
+  return (
+    <img
+      src={`/banderas/${pais}.svg`}
+      alt={nombre}
+      title={nombre}
+      width={24}
+      height={16}
+      loading="lazy"
+      className="bandera ml-2"
+    />
+  );
+}
+
 function ListaPonencias({ mesa }: { mesa: Mesa }) {
   const { idioma } = useApp();
   const ui = TEXTOS_PROGRAMA[idioma];
@@ -124,9 +147,7 @@ function ListaPonencias({ mesa }: { mesa: Mesa }) {
             <p className="text-sm font-medium leading-snug">{ponencia.titulo}</p>
             <p className="texto-azul mt-1 text-xs leading-relaxed">
               {unirAutores(ponencia, idioma)}
-              <span className="pais-chip ml-2 inline-block whitespace-nowrap rounded-full px-2 py-px text-[11px] leading-snug">
-                {PAISES[ponencia.pais][idioma]}
-              </span>
+              <Bandera pais={ponencia.pais} />
               {/* Cómo participa, según el programa; si no lo dice, no se supone. */}
               {ponencia.participacion && (
                 <span className="sala-chip ml-1.5 !px-2 !py-px text-[11px]">
