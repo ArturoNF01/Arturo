@@ -722,6 +722,24 @@ export async function resincronizarRegistro(registro: Registro): Promise<void> {
   }
 }
 
+/**
+ * Los registros con sólo los campos que leen las pestañas espejo, cada uno con
+ * su número de orden. El número se calcula igual que en el alta —posición por
+ * fecha de alta entre todos los registros— y por eso se numera sobre la tabla
+ * entera antes de cualquier filtro.
+ */
+async function leerRegistrosParaLista(): Promise<Record<string, unknown>[]> {
+  return consultar<Record<string, unknown>>(
+    `select nombres, apellidos, pais_residencia, institucion, modalidad, perfil, numero_en_hoja
+       from (
+             select nombres, apellidos, pais_residencia, institucion, modalidad, perfil,
+                    row_number() over (order by creado_en, id) as numero_en_hoja
+               from registros
+            ) as ordenados
+      order by numero_en_hoja`,
+  );
+}
+
 /** Cuántas filas van en cada escritura al poner al día una pestaña espejo. */
 const FILAS_POR_ESCRITURA = 1000;
 
@@ -751,18 +769,7 @@ export async function cuadrarPestanasEspejo(): Promise<Record<string, number>> {
   await asegurarHojas(idLibro);
   const sheets = clienteSheets();
 
-  // Sólo los campos que estas pestañas leen. El número se calcula igual que
-  // en el alta —posición por fecha de alta entre todos los registros— y por
-  // eso se numera sobre la tabla entera antes de cualquier filtro.
-  const registros = await consultar<Record<string, unknown>>(
-    `select nombres, apellidos, pais_residencia, institucion, modalidad, perfil, numero_en_hoja
-       from (
-             select nombres, apellidos, pais_residencia, institucion, modalidad, perfil,
-                    row_number() over (order by creado_en, id) as numero_en_hoja
-               from registros
-            ) as ordenados
-      order by numero_en_hoja`,
-  );
+  const registros = await leerRegistrosParaLista();
 
   // Una sola lectura de la estructura del libro para todas las pestañas
   // espejo: de aquí salen su id y las reglas de color que ya tienen.
@@ -840,5 +847,238 @@ export async function cuadrarPestanasEspejo(): Promise<Record<string, number>> {
       );
     }
   }
+  return resultado;
+}
+
+/**
+ * Los folios que genera el sistema: REG-20261105-A1B2C3 (los antiguos llevan
+ * cuatro caracteres al final). Sólo una fila con un folio así se da por de un
+ * registro: una nota que el comité escriba a mano en la hoja no lo cumple, y
+ * no se toca.
+ */
+const FOLIO_DEL_SISTEMA = /^REG-\d{8}-[A-Z0-9]+$/;
+
+export interface ResultadoAlineacion {
+  /** Cuántas filas se quitaron de cada pestaña por ser de registros que ya no existen. */
+  quitadas: Record<string, number>;
+  /** Cuántos números de orden se corrigieron. */
+  renumeradas: number;
+  /** Cuántas filas completamente en blanco se quitaron de entre los datos. */
+  enBlanco: number;
+  /** Las pestañas espejo que se vaciaron para volver a llenarse desde la base. */
+  reconstruidas: string[];
+  /** Si no se tocó la hoja, por qué. */
+  omitido?: string;
+}
+
+/** Tramos de números consecutivos: [3,4,5,9] → [[3,5],[9,9]]. */
+function tramos(numeros: number[]): [number, number][] {
+  const salida: [number, number][] = [];
+  for (const n of [...numeros].sort((a, b) => a - b)) {
+    const ultimo = salida[salida.length - 1];
+    if (ultimo && n === ultimo[1] + 1) ultimo[1] = n;
+    else salida.push([n, n]);
+  }
+  return salida;
+}
+
+/**
+ * Pone la hoja al día con los registros que se dieron de baja desde el panel.
+ *
+ * Dar de baja un registro lo borra de la base y nada más: su fila seguía en la
+ * hoja, y todos los que venían detrás conservaban un N.º que ya no era el suyo
+ * —el número es la posición entre los registros que hay—. Esto lo arregla sin
+ * rehacer la hoja entera, que vaciaría también lo que el comité haya escrito a
+ * mano en las pestañas de trabajo:
+ *
+ *  1. En REG, PAR y PSE quita las filas cuyo folio ya no está en la base, y
+ *     las que quedaron completamente en blanco entre los datos: la tabla no
+ *     tiene huecos.
+ *  2. Corrige la columna A —sólo esa— de las que quedan: la numeración sigue
+ *     seguida, 1, 2, 3…, sin saltos donde se quitó un registro.
+ *  3. La lista de registrados es una copia: si no coincide con la base —una
+ *     fila de más, un hueco, un número fuera de orden—, se vacía y se vuelve
+ *     a llenar, ya en orden y sin huecos.
+ *
+ * Es la base la que manda, y sólo se quitan filas de la hoja: ningún registro
+ * se toca. Cuatro guardas, porque borra:
+ *  - una base sin registros no se toma por una orden de vaciar la hoja;
+ *  - sólo se quita lo que tiene un folio del sistema;
+ *  - no se quitan más de `maximo` registros de una vez —un respaldo viejo
+ *    restaurado por error parecería cientos de bajas—, salvo `forzar`;
+ *  - lo que está en la base y aún no en la hoja se deja: lo copia la
+ *    sincronización de siempre.
+ */
+export async function alinearHojaConLaBase(
+  { forzar = false, maximo = 10 }: { forzar?: boolean; maximo?: number } = {},
+): Promise<ResultadoAlineacion> {
+  const idLibro = process.env.GOOGLE_SHEETS_ID;
+  if (!googleConfigurado() || !idLibro) throw new Error('Google Sheets no está configurado.');
+
+  const resultado: ResultadoAlineacion = { quitadas: {}, renumeradas: 0, enBlanco: 0, reconstruidas: [] };
+
+  const base = await consultar<{ folio: string; numero: string }>(
+    `select folio, row_number() over (order by creado_en, id) as numero
+       from registros
+      order by numero`,
+  );
+  if (base.length === 0) {
+    resultado.omitido = 'La base no tiene registros: no se toca la hoja.';
+    return resultado;
+  }
+  const numeroDe = new Map(base.map((r) => [String(r.folio), Number(r.numero)]));
+
+  await asegurarHojas(idLibro);
+  const sheets = clienteSheets();
+
+  // --- 1 y 2. Las pestañas de trabajo, que llevan el folio en la columna B.
+  const conFolio = Object.keys(HOJAS).filter((n) => CLAVE_DE_FILA[n].por === 'folio');
+  const leidas = await conEspera(() =>
+    sheets.spreadsheets.values.batchGet({
+      spreadsheetId: idLibro,
+      ranges: conFolio.map((n) => rangoDe(n, 'A2:AZ')),
+    }),
+  );
+  const filasDe = new Map(
+    conFolio.map((n, i) => [n, (leidas.data.valueRanges?.[i]?.values ?? []) as unknown[][]]),
+  );
+
+  // Las filas de registros dados de baja, por pestaña (número de fila de la hoja).
+  const sobrantes = new Map<string, number[]>();
+  const foliosQuitados = new Set<string>();
+  for (const [nombre, filas] of filasDe) {
+    const lista: number[] = [];
+    filas.forEach((fila, i) => {
+      const folio = String(fila[1] ?? '');
+      // Una fila sin una sola celda escrita no es de nadie: es un hueco. Se
+      // distingue de una con notas a mano porque se lee la fila entera.
+      if (fila.every((celda) => String(celda ?? '').trim() === '')) {
+        lista.push(i + 2);
+        resultado.enBlanco += 1;
+      } else if (FOLIO_DEL_SISTEMA.test(folio) && !numeroDe.has(folio)) {
+        lista.push(i + 2); // +2: la fila 1 son los títulos
+        foliosQuitados.add(folio);
+      }
+    });
+    if (lista.length > 0) sobrantes.set(nombre, lista);
+  }
+
+  if (foliosQuitados.size > maximo && !forzar) {
+    throw new Error(
+      `Se quitarían ${foliosQuitados.size} registros de la hoja, más de ${maximo} de una vez. ` +
+        'Si la base está bien y es lo que se espera: npm run sincronizar -- --forzar',
+    );
+  }
+
+  if (sobrantes.size > 0) {
+    const libro = await conEspera(() =>
+      sheets.spreadsheets.get({
+        spreadsheetId: idLibro,
+        fields: 'sheets(properties(sheetId,title,gridProperties))',
+      }),
+    );
+    const peticiones: Record<string, unknown>[] = [];
+    for (const [nombre, filas] of sobrantes) {
+      const props = libro.data.sheets?.find((h) => h.properties?.title === nombre)?.properties;
+      const sheetId = props?.sheetId;
+      if (sheetId === undefined || sheetId === null) continue;
+      // Google no deja borrar todas las filas no inmovilizadas: si lo que se
+      // quita es todo lo que hay debajo de los títulos, antes se añade una en blanco.
+      if (props?.gridProperties?.rowCount !== undefined && props.gridProperties.rowCount !== null &&
+          filas.length >= props.gridProperties.rowCount - 1) {
+        peticiones.push({ appendDimension: { sheetId, dimension: 'ROWS', length: 1 } });
+      }
+      // De abajo arriba, para que quitar una no mueva de sitio a la siguiente.
+      for (const [desde, hasta] of tramos(filas).reverse()) {
+        peticiones.push({
+          deleteDimension: { range: { sheetId, dimension: 'ROWS', startIndex: desde - 1, endIndex: hasta } },
+        });
+      }
+      resultado.quitadas[nombre] = filas.length;
+    }
+    if (peticiones.length > 0) {
+      await conEspera(() =>
+        sheets.spreadsheets.batchUpdate({ spreadsheetId: idLibro, requestBody: { requests: peticiones } }),
+      );
+    }
+  }
+
+  // El número de orden de las que quedan. Sólo la columna A, y sólo las
+  // celdas que no coinciden: lo demás de la fila no se lee ni se escribe.
+  const correcciones: { range: string; values: number[][] }[] = [];
+  for (const [nombre, filas] of filasDe) {
+    const quitadas = new Set(sobrantes.get(nombre) ?? []);
+    let desplazamiento = 0;
+    const cambios: { fila: number; numero: number }[] = [];
+    filas.forEach((fila, i) => {
+      const filaOriginal = i + 2;
+      if (quitadas.has(filaOriginal)) {
+        desplazamiento += 1;
+        return;
+      }
+      const esperado = numeroDe.get(String(fila[1] ?? ''));
+      if (esperado !== undefined && Number(fila[0]) !== esperado) {
+        cambios.push({ fila: filaOriginal - desplazamiento, numero: esperado });
+      }
+    });
+    // Las filas consecutivas se escriben juntas: una sola celda por tramo
+    // sería una escritura de más por cada una.
+    const porFila = new Map(cambios.map((c) => [c.fila, c.numero]));
+    for (const [desde, hasta] of tramos(cambios.map((c) => c.fila))) {
+      correcciones.push({
+        range: rangoDe(nombre, `A${desde}:A${hasta}`),
+        values: Array.from({ length: hasta - desde + 1 }, (_, k) => [porFila.get(desde + k) as number]),
+      });
+    }
+    resultado.renumeradas += cambios.length;
+  }
+  if (correcciones.length > 0) {
+    await conEspera(() =>
+      sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: idLibro,
+        requestBody: { valueInputOption: 'RAW', data: correcciones },
+      }),
+    );
+  }
+
+  // --- 3. Las pestañas espejo: lo que tengan que no sea la base, se rehace.
+  const registros = await leerRegistrosParaLista();
+  const esperadas = new Map(registros.map((r) => [Number(r.numero_en_hoja), filaDeLista(r)]));
+  for (const hoja of PESTANAS_ESPEJO) {
+    const columnas = HOJAS[hoja].length;
+    const leida = await conEspera(() =>
+      sheets.spreadsheets.values.get({
+        spreadsheetId: idLibro,
+        range: rangoDe(hoja, `A2:${String.fromCharCode(64 + columnas)}`),
+      }),
+    );
+    const vistos = new Set<number>();
+    let distinta = false;
+    let anterior = 0;
+    for (const fila of (leida.data.values ?? []) as unknown[][]) {
+      const numero = Number(fila[0]);
+      // Un hueco, o un número que no sube: la lista ha de leerse seguida y en orden.
+      if (!Number.isFinite(numero) || numero <= anterior) {
+        distinta = true;
+        break;
+      }
+      anterior = numero;
+      const esperada = esperadas.get(numero);
+      if (!esperada || vistos.has(numero)) {
+        distinta = true;
+        break;
+      }
+      vistos.add(numero);
+      if (esperada.some((celda, j) => String(fila[j] ?? '') !== String(celda))) {
+        distinta = true;
+        break;
+      }
+    }
+    if (distinta) {
+      await reconstruirPestanaEspejo(idLibro, hoja);
+      resultado.reconstruidas.push(hoja);
+    }
+  }
+
   return resultado;
 }

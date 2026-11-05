@@ -6,6 +6,7 @@
  *   npm run sincronizar -- --callado  # sin ruido si no había nada (cron)
  *   npm run sincronizar -- --rehacer  # vacía la hoja y la escribe entera
  *   npm run sincronizar -- --vaciar   # sólo la vacía, sin escribir nada
+ *   npm run sincronizar -- --forzar   # quita de la hoja más de 10 bajas de una vez
  *
  * Hace lo mismo que el botón del panel, pero desde el servidor. Esa es la
  * razón de que exista: si el panel no abre, o la sesión caducó, la hoja se
@@ -44,9 +45,8 @@ async function principal() {
   // Se importan aquí, ya cargado el entorno: el módulo de la base abre la
   // conexión con lo que encuentre en el momento de cargarse.
   const { consultar } = await import('../src/lib/bd/conexion');
-  const { cuadrarPestanasEspejo, revisarLibro, sincronizarRegistros, vaciarHojas } = await import(
-    '../src/lib/servidor/sheets'
-  );
+  const { alinearHojaConLaBase, cuadrarPestanasEspejo, revisarLibro, sincronizarRegistros, vaciarHojas } =
+    await import('../src/lib/servidor/sheets');
   const { googleConfigurado } = await import('../src/lib/servidor/google');
 
   const problema = faltante(googleConfigurado());
@@ -70,6 +70,24 @@ async function principal() {
     const añadidas = await cuadrarPestanasEspejo();
     for (const [hoja, n] of Object.entries(añadidas)) {
       if (n > 0) decir(`${hoja}: se añadieron ${n} filas que faltaban.`);
+    }
+  };
+
+  // Los registros que se dieron de baja desde el panel se quitan de la hoja, y
+  // los N.º de los que quedan se corrigen. Dar de baja sólo borraba de la base:
+  // la fila seguía en la hoja y todas las de detrás tenían un número que ya no
+  // era el suyo. Esto sí se dice aunque sea desde cron: es un cambio en la hoja
+  // y quien la lea mañana tiene que poder saber por qué cambió.
+  const alinearConLaBase = async () => {
+    const r = await alinearHojaConLaBase({ forzar: process.argv.includes('--forzar') });
+    if (r.omitido) decir(r.omitido);
+    for (const [hoja, n] of Object.entries(r.quitadas)) {
+      console.log(`${hoja}: se quitaron ${n} filas de registros que ya no existen.`);
+    }
+    if (r.enBlanco > 0) console.log(`Se quitaron ${r.enBlanco} filas en blanco.`);
+    if (r.renumeradas > 0) console.log(`Se corrigieron ${r.renumeradas} números de orden (N.º).`);
+    for (const hoja of r.reconstruidas) {
+      console.log(`${hoja}: no coincidía con la base y se volvió a escribir.`);
     }
   };
 
@@ -105,6 +123,7 @@ async function principal() {
     // por bueno: la hoja se quedaba con las de antes y nadie se enteraba
     // hasta que alguien se registraba y su alta fallaba.
     await revisarLibro();
+    await alinearConLaBase();
     await cuadrarEspejos();
     decir('No hay nada pendiente, y la hoja tiene las columnas de ahora.');
     return;
@@ -141,7 +160,10 @@ async function principal() {
   }
 
   decir(`Copiados ${copiados} registros a la hoja.`);
-  if (fallidos.length === 0) await cuadrarEspejos();
+  if (fallidos.length === 0) {
+    await alinearConLaBase();
+    await cuadrarEspejos();
+  }
   if (fallidos.length > 0) {
     const motivos = [...new Set(fallidos.map((f) => f.motivo))];
     console.error(`\nNo se pudieron copiar ${fallidos.length}:`);
