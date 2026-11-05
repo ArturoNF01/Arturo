@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { diccionarios } from '@/i18n';
 import { FAQS } from '@/i18n/faqs';
+import { partirNegritas } from '@/lib/negritas';
 
 vi.mock('@/lib/bd/conexion', () => ({
   unaFila: async () => null,
@@ -69,6 +70,41 @@ describe('el aviso de la constancia', () => {
       expect(faq.respuesta, idioma).toMatch(REQUISITO[idioma].asistencia);
       expect(faq.respuesta, idioma).not.toMatch(REQUISITO[idioma].viejo);
     }
+  });
+});
+
+describe('«registrarse» en negritas', () => {
+  const VERBO = { es: 'registrarse', en: 'register', pt: 'inscrever-se' } as const;
+
+  it('el aviso marca en negritas sólo el verbo de registrarse, en los tres idiomas', () => {
+    for (const idioma of IDIOMAS) {
+      const tramos = partirNegritas(diccionarios[idioma].constancia.texto);
+      const negritas = tramos.filter((t) => t.negrita);
+      expect(negritas.map((t) => t.texto), idioma).toEqual([VERBO[idioma]]);
+      // Y lo demás sigue ahí, sin asteriscos sueltos.
+      expect(tramos.map((t) => t.texto).join(''), idioma).not.toContain('*');
+      expect(tramos.map((t) => t.texto).join(''), idioma).toMatch(REQUISITO[idioma].asistencia);
+    }
+  });
+
+  it('el texto que va tal cual al correo y a la pantalla de confirmación no lleva marcas', () => {
+    // El bloque del correo mete `recordatorio` en HTML sin pasarlo por partirNegritas: un
+    // asterisco ahí se vería literal en la bandeja de entrada.
+    for (const idioma of IDIOMAS) {
+      const c = diccionarios[idioma].constancia;
+      for (const clave of ['titulo', 'recordatorio', 'ir'] as const) {
+        expect(c[clave], `${idioma}.${clave}`).not.toContain('**');
+      }
+    }
+  });
+
+  it('partirNegritas reparte el texto en tramos y no pierde nada', () => {
+    expect(partirNegritas('a **b** c')).toEqual([
+      { texto: 'a ', negrita: false }, { texto: 'b', negrita: true }, { texto: ' c', negrita: false },
+    ]);
+    expect(partirNegritas('sin marcas')).toEqual([{ texto: 'sin marcas', negrita: false }]);
+    expect(partirNegritas('**todo**')).toEqual([{ texto: 'todo', negrita: true }]);
+    expect(partirNegritas('')).toEqual([]);
   });
 });
 

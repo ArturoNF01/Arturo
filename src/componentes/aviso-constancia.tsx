@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { Fragment } from 'react';
 import { useApp } from '@/componentes/proveedores';
+import { partirNegritas } from '@/lib/negritas';
 
 /**
  * El aviso de que la constancia exige registrarse y un porcentaje de asistencia mínimo del 80 %.
@@ -40,7 +42,16 @@ export function AvisoConstancia({
       </svg>
       <div className="min-w-0">
         <p className={`text-sm font-bold ${alAzul ? 'text-white' : 'texto-azul'}`}>{t.constancia.titulo}</p>
-        <p className={`mt-0.5 text-sm leading-relaxed ${alAzul ? 'text-white/85' : ''}`}>{t.constancia.texto}</p>
+        <p className={`mt-0.5 text-sm leading-relaxed ${alAzul ? 'text-white/85' : ''}`}>
+          {/* «registrarse» va en negritas: es lo único que la persona tiene que hacer. */}
+          {partirNegritas(t.constancia.texto).map((tramo, i) =>
+            tramo.negrita ? (
+              <strong key={i} className={alAzul ? 'font-bold text-white' : 'font-bold'}>{tramo.texto}</strong>
+            ) : (
+              <Fragment key={i}>{tramo.texto}</Fragment>
+            ),
+          )}
+        </p>
         {conBoton && (
           <Link
             href="/registro"
