@@ -24,6 +24,9 @@ const llamadas: {
 /** Los folios que la hoja simulada tiene ya escritos, en orden. */
 let foliosEnLaHoja: string[] = [];
 
+/** Los números de orden que tiene ya la lista de registrados, fila a fila. */
+let numerosEnLaLista: number[] = [];
+
 /**
  * La cuadrícula de cada pestaña: cuántas filas tiene y cuántas están
  * inmovilizadas. Hace falta para reproducir una regla de Google que no se ve
@@ -62,9 +65,18 @@ let librosConPestanas: string[] | null = null;
 
 /** Las pestañas del libro simulado. El sheetId de cada una es su posición. */
 const PESTANAS = [
-  'REG_Respuestas', 'PAR_Participantes', 'ALO_Alojamiento',
+  'REG_Respuestas', 'Resumen Registro', 'PAR_Participantes', 'ALO_Alojamiento',
   'TRA_Traslados', 'PSE_Personificadores_Semblanzas', 'ALI_Restricciones',
 ];
+
+/**
+ * La pestaña de un rango como lo escribe Google: «'Resumen Registro'!A1» lleva
+ * el nombre entre comillas porque tiene un espacio, y la API las quita al
+ * resolverlo. El doble hace lo mismo.
+ */
+function pestanaDe(rango: string): string {
+  return rango.split('!')[0].replace(/^'(.*)'$/, '$1').replace(/''/g, "'");
+}
 
 function filaUno(nombre: string): string[] {
   return hojaConMemoria ? hojaConMemoria[nombre] ?? [] : encabezadosDeLaHoja(nombre);
@@ -139,7 +151,7 @@ vi.mock('googleapis', () => ({
             if (hojaConMemoria) {
               const { data } = (p as { requestBody: { data: { range: string; values: string[][] }[] } }).requestBody;
               for (const { range, values } of data) {
-                const nombre = range.split('!')[0];
+                const nombre = pestanaDe(range);
                 const antes = hojaConMemoria[nombre] ?? [];
                 // Sheets sustituye celda a celda: lo que caiga más allá de
                 // lo escrito se queda donde estaba.
@@ -152,15 +164,22 @@ vi.mock('googleapis', () => ({
           batchGet: async ({ ranges }: { ranges: string[] }) => ({
             data: (llamadas.encabezados += 1, {
               valueRanges: (llamadas.orden.push('leer'), ranges).map((r) => {
-                const fila = filaUno(r.split('!')[0]);
+                const fila = filaUno(pestanaDe(r));
                 return { values: fila.length ? [fila] : [] };
               }),
             }),
           }),
           update: async (p: unknown) => { llamadas.update.push(p); return { data: {} }; },
-          // La columna que se pida de B2 hacia abajo: los folios que la hoja
-          // simulada dice tener, uno por fila.
-          get: async () => ({ data: { values: foliosEnLaHoja.map((f) => [f]) } }),
+          // La columna que se pida de la fila 2 hacia abajo: los folios que la
+          // hoja simulada dice tener, uno por fila; y, en la lista de
+          // registrados, que no lleva folio, sus números de orden.
+          get: async ({ range }: { range: string }) => ({
+            data: {
+              values: range.startsWith("'Resumen Registro'!")
+                ? numerosEnLaLista.map((n) => [String(n)])
+                : foliosEnLaHoja.map((f) => [f]),
+            },
+          }),
         },
       },
     }),
@@ -451,16 +470,17 @@ describe('copiar muchos registros de una vez', () => {
     olvidarRevisionDelLibro();
   });
 
-  it('cuarenta y dos registros son tres escrituras, no noventa', async () => {
+  it('cuarenta y dos registros son cuatro escrituras, no noventa', async () => {
     const { sincronizarRegistros } = await import('@/lib/servidor/sheets');
     const muchos = Array.from({ length: 42 }, (_, i) =>
       ponente({ folio: `REG-2026-${i}`, id: `0f5d3f64-4b9c-4f0e-9a2a-7d4b1e2c3a${String(i).padStart(2, '0')}` }),
     );
     await sincronizarRegistros(muchos);
 
-    // Una por pestaña: REG, PAR y PSE. Con el límite en sesenta por minuto,
-    // la diferencia entre tres y noventa y seis es que la hoja se escriba.
-    expect(llamadas.append).toHaveLength(3);
+    // Una por pestaña: REG, la lista de registrados, PAR y PSE. Con el límite
+    // en sesenta por minuto, la diferencia entre cuatro y ciento treinta es
+    // que la hoja se escriba.
+    expect(llamadas.append).toHaveLength(4);
   });
 
   it('y las filas van todas, en el orden en que llegaron y numeradas', async () => {
@@ -534,7 +554,7 @@ describe('rehacer la hoja la deja con una sola fila', () => {
     const borrados = llamadas.batchUpdate
       .flatMap((p) => (p as { requestBody: { requests?: { deleteDimension?: { range: { startIndex: number; endIndex: number } } }[] } }).requestBody.requests ?? [])
       .filter((r) => r.deleteDimension);
-    expect(borrados.length, 'una por pestaña del sistema').toBe(3);
+    expect(borrados.length, 'una por pestaña del sistema').toBe(4);
     for (const { deleteDimension } of borrados) {
       expect(deleteDimension!.range.startIndex, 'la fila 1 se respeta').toBe(1);
       expect(deleteDimension!.range.endIndex).toBe(50);
@@ -577,7 +597,7 @@ describe('rehacer la hoja y, a continuación, un alta normal', () => {
     const pedidas = llamadas.batchUpdate
       .flatMap((p) => (p as { requestBody: { requests?: { appendDimension?: { length: number } }[] } }).requestBody.requests ?? [])
       .filter((r) => r.appendDimension);
-    expect(pedidas.length, 'una por pestaña del sistema').toBe(3);
+    expect(pedidas.length, 'una por pestaña del sistema').toBe(4);
     for (const { appendDimension } of pedidas) expect(appendDimension!.length).toBe(1000);
   });
 
@@ -586,7 +606,7 @@ describe('rehacer la hoja y, a continuación, un alta normal', () => {
     await vaciarHojas();
     llamadas.append = [];
     await expect(sincronizarRegistro(ponente())).resolves.toBeUndefined();
-    expect(llamadas.append.length, 'sus tres filas').toBe(3);
+    expect(llamadas.append.length, 'sus cuatro filas').toBe(4);
   });
 });
 
@@ -618,6 +638,7 @@ describe('una hoja con más columnas que el formulario de ahora', () => {
     hojaConMemoria = {
       // La de antes: los encabezados de ahora y, detrás, los que se retiraron.
       REG_Respuestas: [...HOJAS.REG_Respuestas, 'Semblanza', 'Fotografía', 'Autoriza publicación'],
+      'Resumen Registro': [...HOJAS['Resumen Registro']],
       PAR_Participantes: [...HOJAS.PAR_Participantes],
       PSE_Personificadores_Semblanzas: [...HOJAS.PSE_Personificadores_Semblanzas],
     };
@@ -646,7 +667,7 @@ describe('una hoja con más columnas que el formulario de ahora', () => {
     await expect(
       sincronizarRegistros([ponente({ folio: 'REG-A' }), ponente({ folio: 'REG-B' })]),
     ).resolves.toBeUndefined();
-    expect(llamadas.append).toHaveLength(3);
+    expect(llamadas.append).toHaveLength(4);
   });
 });
 
@@ -678,13 +699,13 @@ describe('la fila de títulos queda fija', () => {
     const fijadas = peticiones
       .map((r) => (r as { updateSheetProperties?: { properties: { gridProperties: { frozenRowCount: number } } } }).updateSheetProperties)
       .filter(Boolean);
-    expect(fijadas.length, 'una por pestaña del sistema').toBe(3);
+    expect(fijadas.length, 'una por pestaña del sistema').toBe(4);
     for (const f of fijadas) expect(f!.properties.gridProperties.frozenRowCount).toBe(1);
 
     const negritas = peticiones
       .map((r) => (r as { repeatCell?: { range: { startRowIndex: number; endRowIndex: number }; cell: { userEnteredFormat: { textFormat: { bold: boolean } } } } }).repeatCell)
       .filter(Boolean);
-    expect(negritas.length).toBe(3);
+    expect(negritas.length).toBe(4);
     for (const n of negritas) {
       expect(n!.cell.userEnteredFormat.textFormat.bold).toBe(true);
       expect(n!.range.startRowIndex, 'sólo la fila 1').toBe(0);
@@ -706,8 +727,63 @@ describe('la fila de títulos queda fija', () => {
       .flatMap((p) => (p as { requestBody: { requests?: { addSheet?: { properties: { gridProperties?: { frozenRowCount: number } } } }[] } }).requestBody.requests ?? [])
       .map((r) => r.addSheet)
       .filter(Boolean);
-    expect(creadas.length, 'las dos que faltaban').toBe(2);
+    expect(creadas.length, 'las tres que faltaban').toBe(3);
     for (const c of creadas) expect(c!.properties.gridProperties?.frozenRowCount).toBe(1);
+  });
+
+  it('la lista de registrados se crea en segundo lugar, detrás de REG_Respuestas', async () => {
+    const { HOJAS } = await import('@/lib/normalizacion');
+    encabezadosDeLaHoja = (nombre) => HOJAS[nombre] ?? [];
+    librosConPestanas = ['REG_Respuestas'];
+    const { olvidarRevisionDelLibro, revisarLibro } = await import('@/lib/servidor/sheets');
+    olvidarRevisionDelLibro();
+
+    await revisarLibro();
+
+    const creadas = llamadas.batchUpdate
+      .flatMap((p) => (p as { requestBody: { requests?: { addSheet?: { properties: { title: string; index?: number } } }[] } }).requestBody.requests ?? [])
+      .map((r) => r.addSheet?.properties)
+      .filter(Boolean);
+    const lista = creadas.find((c) => c!.title === 'Resumen Registro');
+    expect(lista, 'se creó la lista').toBeDefined();
+    expect(lista!.index, 'justo después de REG_Respuestas, que es la primera').toBe(1);
+    // Las demás no piden sitio: van al final, como siempre.
+    for (const c of creadas.filter((c) => c!.title !== 'Resumen Registro')) {
+      expect(c!.index, c!.title).toBeUndefined();
+    }
+  });
+
+  it('y la que se crea con sus títulos nace ya con el color de Modalidad', async () => {
+    const { HOJAS } = await import('@/lib/normalizacion');
+    encabezadosDeLaHoja = (nombre) => HOJAS[nombre] ?? [];
+    librosConPestanas = ['REG_Respuestas'];
+    const { olvidarRevisionDelLibro, revisarLibro } = await import('@/lib/servidor/sheets');
+    olvidarRevisionDelLibro();
+
+    await revisarLibro();
+
+    const reglas = llamadas.batchUpdate
+      .flatMap((p) => (p as { requestBody: { requests?: Record<string, unknown>[] } }).requestBody.requests ?? [])
+      .map((r) => r.addConditionalFormatRule as {
+        rule: {
+          ranges: { startColumnIndex: number; endColumnIndex: number }[];
+          booleanRule: { condition: { type: string; values: { userEnteredValue: string }[] };
+            format: { backgroundColor: { red: number; green: number; blue: number } } };
+        };
+      } | undefined)
+      .filter(Boolean);
+    expect(reglas, 'una por modalidad').toHaveLength(2);
+    const color = (texto: string) => reglas.find((r) => r!.rule.booleanRule.condition.values[0].userEnteredValue === texto)!;
+    const hex = ({ red, green, blue }: { red: number; green: number; blue: number }) =>
+      '#' + [red, green, blue].map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('');
+    expect(hex(color('Presencial').rule.booleanRule.format.backgroundColor)).toBe('#d9ead3');
+    expect(hex(color('En línea').rule.booleanRule.format.backgroundColor)).toBe('#c9daf8');
+    // Sólo la columna Modalidad (la E, índice 4).
+    for (const r of reglas) {
+      expect(r!.rule.ranges[0].startColumnIndex).toBe(4);
+      expect(r!.rule.ranges[0].endColumnIndex).toBe(5);
+      expect(r!.rule.booleanRule.condition.type).toBe('TEXT_EQ');
+    }
   });
 });
 
@@ -736,11 +812,15 @@ describe('un registro corregido se queda en su sitio', () => {
 
   afterEach(() => {
     foliosEnLaHoja = [];
+    numerosEnLaLista = [];
   });
 
   it('se escribe encima de la fila que ya tenía, sin moverla al final', async () => {
     // Tercera fila de datos, es decir, la 4 de la hoja.
     foliosEnLaHoja = ['REG-OTRO-1', 'REG-OTRO-2', 'REG-20260916-AB12', 'REG-OTRO-3'];
+    // En la lista no hay folio: el registro se reconoce por su número de orden
+    // (aquí el 1, que es el que da la consulta simulada), que está en la 3.ª fila de datos.
+    numerosEnLaLista = [9, 5, 1, 7];
     const { resincronizarRegistro } = await import('@/lib/servidor/sheets');
     await resincronizarRegistro(ponente());
 
@@ -748,16 +828,22 @@ describe('un registro corregido se queda en su sitio', () => {
       (p) => (p as { range: string }).range.startsWith('REG_Respuestas'),
     ) as { range: string };
     expect(reg.range, 'su fila de siempre').toBe('REG_Respuestas!A4');
+    const lista = llamadas.update.find(
+      (p) => (p as { range: string }).range.startsWith("'Resumen Registro'"),
+    ) as { range: string };
+    expect(lista.range, 'y en la lista, por su número, entre comillas por el espacio')
+      .toBe("'Resumen Registro'!A4");
     expect(llamadas.append, 'y no se añade nada al final').toHaveLength(0);
   });
 
   it('y si no estaba, entra al final', async () => {
     foliosEnLaHoja = ['REG-OTRO-1', 'REG-OTRO-2'];
+    numerosEnLaLista = [5, 6];
     const { resincronizarRegistro } = await import('@/lib/servidor/sheets');
     await resincronizarRegistro(ponente());
 
     expect(llamadas.update, 'nada que sobrescribir').toHaveLength(0);
-    expect(llamadas.append.length, 'sus tres filas, al final').toBe(3);
+    expect(llamadas.append.length, 'sus cuatro filas, al final').toBe(4);
   });
 });
 

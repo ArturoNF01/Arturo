@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { HOJAS, contarPalabras, filasDeRegistro } from '@/lib/normalizacion';
+import {
+  CLAVE_DE_FILA, COLORES_MODALIDAD, COLOCAR_DESPUES_DE, HOJAS, HOJA_LISTA, PESTANAS_ESPEJO,
+  contarPalabras, filaDeLista, filasDeRegistro, rangoDe,
+} from '@/lib/normalizacion';
 
 /** Registro mínimo con los valores canónicos que guarda el formulario. */
 function registro(extra: Record<string, unknown> = {}) {
@@ -37,13 +40,14 @@ describe('contarPalabras', () => {
 });
 
 describe('las pestañas del libro', () => {
-  it('son las tres que el formulario puede llenar', () => {
+  it('son las cuatro que el formulario puede llenar', () => {
     // Fueron seis. ALO, TRA y ALI salieron con el hospedaje, la recepción en
     // el aeropuerto y el régimen alimentario: sin esos campos no había de
     // dónde sacar una fila, y una pestaña que nunca se escribe se lee como
-    // un sistema averiado.
+    // un sistema averiado. «Resumen Registro» es la lista para leer de un
+    // vistazo, y va en segundo lugar, detrás de REG_Respuestas.
     expect(Object.keys(HOJAS)).toEqual([
-      'REG_Respuestas', 'PAR_Participantes', 'PSE_Personificadores_Semblanzas',
+      'REG_Respuestas', 'Resumen Registro', 'PAR_Participantes', 'PSE_Personificadores_Semblanzas',
     ]);
   });
 
@@ -76,7 +80,9 @@ function celda(fila: (string | number)[], hoja: keyof typeof HOJAS | string, col
 describe('filasDeRegistro', () => {
   it('siempre produce la respuesta completa y la fila de participantes', () => {
     const filas = filasDeRegistro(registro({ perfil: 'publico_general' }));
-    expect(Object.keys(filas)).toEqual(['REG_Respuestas', 'PAR_Participantes']);
+    expect(Object.keys(filas).sort()).toEqual(
+      ['PAR_Participantes', 'REG_Respuestas', 'Resumen Registro'],
+    );
   });
 
   it('lleva el folio en la columna B de todas las pestañas, sea cual sea su título', () => {
@@ -84,12 +90,19 @@ describe('filasDeRegistro', () => {
     // El título cambia de pestaña a pestaña —«Folio» en una, «ID» en las
     // otras—, pero el sitio es siempre el mismo, y es el sitio lo que busca
     // `resincronizarRegistro`.
-    const filas = filasDeRegistro(registro());
+    const filas = filasDeRegistro(registro({ numero_en_hoja: 7 }));
     for (const [hoja, valores] of Object.entries(filas)) {
       for (const fila of valores) {
-        expect(fila[1], hoja).toBe('REG-20260401-AB12');
+        // La lista de registrados no lleva folio —sólo sus cinco columnas—:
+        // ahí la fila se encuentra por el número de la columna A.
+        if (CLAVE_DE_FILA[hoja].por === 'numero') expect(fila[0], hoja).toBe(7);
+        else expect(fila[1], hoja).toBe('REG-20260401-AB12');
       }
     }
+  });
+
+  it('toda pestaña dice por dónde se encuentra la fila de un registro', () => {
+    for (const hoja of Object.keys(HOJAS)) expect(CLAVE_DE_FILA[hoja], hoja).toBeDefined();
   });
 
   it('y delante de él, el número de orden, que es por donde se cuenta la hoja', () => {
@@ -208,5 +221,74 @@ describe('filasDeRegistro', () => {
     const [fila] = filasDeRegistro(registro({})).PSE_Personificadores_Semblanzas;
     expect(celda(fila, 'PSE_Personificadores_Semblanzas', 'Fotografía')).toBe('');
     expect(celda(fila, 'PSE_Personificadores_Semblanzas', 'Semblanza')).toBe('');
+  });
+});
+
+describe('la lista de registrados', () => {
+  it('se llama «Resumen Registro» y tiene sólo las cinco columnas pedidas', () => {
+    expect(HOJA_LISTA).toBe('Resumen Registro');
+    expect(HOJAS[HOJA_LISTA]).toEqual(['N.º', 'Nombre', 'País', 'Institución', 'Modalidad']);
+  });
+
+  it('va en segundo lugar: se crea detrás de REG_Respuestas', () => {
+    expect(Object.keys(HOJAS)[1]).toBe(HOJA_LISTA);
+    expect(COLOCAR_DESPUES_DE[HOJA_LISTA]).toBe('REG_Respuestas');
+  });
+
+  it('es un espejo: entra todo registro, sea cual sea su perfil', () => {
+    expect(PESTANAS_ESPEJO).toEqual([HOJA_LISTA]);
+    for (const perfil of ['ponente', 'publico_general', 'asistente', 'conferencista']) {
+      const filas = filasDeRegistro(registro({ perfil, numero_en_hoja: 3 }));
+      expect(filas[HOJA_LISTA], perfil).toHaveLength(1);
+    }
+  });
+
+  it('lleva número, nombre completo, país, institución y modalidad', () => {
+    expect(filaDeLista(registro({ numero_en_hoja: 12 }))).toEqual([
+      12, 'Ana Ruiz Montaño', 'Brasil', 'Universidad Nacional', 'Presencial',
+    ]);
+    expect(filaDeLista(registro({ modalidad: 'en_linea' }))[4]).toBe('En línea');
+  });
+
+  it('el país va tal como lo escribió la persona', () => {
+    expect(filaDeLista(registro({ pais_residencia: 'méxico' }))[2]).toBe('méxico');
+  });
+
+  it('aguanta los datos que faltan sin escribir «null» ni «undefined»', () => {
+    const fila = filaDeLista({ modalidad: 'presencial', nombres: null, apellidos: undefined });
+    expect(fila).toEqual(['', '', '', '', 'Presencial']);
+    for (const celda of fila) expect(String(celda)).not.toMatch(/null|undefined/);
+  });
+
+  it('colapsa los espacios que sobran en el nombre', () => {
+    expect(filaDeLista(registro({ nombres: ' Ana  María ', apellidos: ' Ruiz   Montaño ' }))[1])
+      .toBe('Ana María Ruiz Montaño');
+  });
+
+  it('colorea Modalidad: verde para presencial y azul para en línea', () => {
+    expect(COLORES_MODALIDAD).toEqual([
+      { texto: 'Presencial', fondo: '#d9ead3' },
+      { texto: 'En línea', fondo: '#c9daf8' },
+    ]);
+    // El texto de la regla es el mismo que escribe la celda.
+    const textos = [
+      filaDeLista(registro({ modalidad: 'presencial' }))[4],
+      filaDeLista(registro({ modalidad: 'en_linea' }))[4],
+    ];
+    expect(COLORES_MODALIDAD.map((c) => c.texto)).toEqual(textos);
+  });
+});
+
+describe('rangoDe', () => {
+  it('deja como estaban los nombres sin espacios', () => {
+    expect(rangoDe('REG_Respuestas', 'A1')).toBe('REG_Respuestas!A1');
+  });
+
+  it('entrecomilla el nombre con espacio: Google no entiende «Resumen Registro!A1»', () => {
+    expect(rangoDe('Resumen Registro', 'A2:A')).toBe("'Resumen Registro'!A2:A");
+  });
+
+  it('dobla la comilla que haya dentro del nombre', () => {
+    expect(rangoDe("Lista d'Ana", '1:1')).toBe("'Lista d''Ana'!1:1");
   });
 });

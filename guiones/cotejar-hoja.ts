@@ -33,7 +33,7 @@ function enumerar(valores: string[], tope = 10): string {
 
 async function principal() {
   const { consultar } = await import('../src/lib/bd/conexion');
-  const { HOJAS, filasDeRegistro } = await import('../src/lib/normalizacion');
+  const { HOJAS, filasDeRegistro, rangoDe } = await import('../src/lib/normalizacion');
   const { cotejarCeldas, cotejarEncabezados, cotejarFolios } = await import('../src/lib/cotejo');
   const { clienteSheets, googleConfigurado } = await import('../src/lib/servidor/google');
 
@@ -56,7 +56,7 @@ async function principal() {
   // acaban al final de la hoja, debajo de todo.
   const primeras = await sheets.spreadsheets.values.batchGet({
     spreadsheetId: idLibro,
-    ranges: [...nombres.map((n) => `${n}!1:1`), ...nombres.map((n) => `${n}!A:A`)],
+    ranges: [...nombres.map((n) => rangoDe(n, '1:1')), ...nombres.map((n) => rangoDe(n, 'A:A'))],
   });
 
   const enLaHoja: Record<string, string[]> = {};

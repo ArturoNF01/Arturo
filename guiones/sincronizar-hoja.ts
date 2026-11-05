@@ -44,7 +44,9 @@ async function principal() {
   // Se importan aquí, ya cargado el entorno: el módulo de la base abre la
   // conexión con lo que encuentre en el momento de cargarse.
   const { consultar } = await import('../src/lib/bd/conexion');
-  const { revisarLibro, sincronizarRegistros, vaciarHojas } = await import('../src/lib/servidor/sheets');
+  const { cuadrarPestanasEspejo, revisarLibro, sincronizarRegistros, vaciarHojas } = await import(
+    '../src/lib/servidor/sheets'
+  );
   const { googleConfigurado } = await import('../src/lib/servidor/google');
 
   const problema = faltante(googleConfigurado());
@@ -58,6 +60,17 @@ async function principal() {
   const callado = process.argv.includes('--callado');
   const decir = (mensaje: string) => {
     if (!callado) console.log(mensaje);
+  };
+
+  // Las pestañas que son copia de la base (la lista de registrados) se ponen
+  // al día en cada pasada, haya o no pendientes: una pestaña recién creada
+  // nace vacía y sus registros ya constan como copiados, así que ninguna otra
+  // ruta se los volvería a mandar. Sólo añade lo que falta.
+  const cuadrarEspejos = async () => {
+    const añadidas = await cuadrarPestanasEspejo();
+    for (const [hoja, n] of Object.entries(añadidas)) {
+      if (n > 0) decir(`${hoja}: se añadieron ${n} filas que faltaban.`);
+    }
   };
 
   const numerico = process.argv.slice(2).find((a) => /^\d+$/.test(a));
@@ -92,6 +105,7 @@ async function principal() {
     // por bueno: la hoja se quedaba con las de antes y nadie se enteraba
     // hasta que alguien se registraba y su alta fallaba.
     await revisarLibro();
+    await cuadrarEspejos();
     decir('No hay nada pendiente, y la hoja tiene las columnas de ahora.');
     return;
   }
@@ -127,6 +141,7 @@ async function principal() {
   }
 
   decir(`Copiados ${copiados} registros a la hoja.`);
+  if (fallidos.length === 0) await cuadrarEspejos();
   if (fallidos.length > 0) {
     const motivos = [...new Set(fallidos.map((f) => f.motivo))];
     console.error(`\nNo se pudieron copiar ${fallidos.length}:`);

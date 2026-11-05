@@ -1,7 +1,10 @@
 import 'server-only';
 import { clienteSheets, googleConfigurado } from './google';
 import { consultar } from '@/lib/bd/conexion';
-import { HOJAS, filasDeRegistro } from '@/lib/normalizacion';
+import {
+  CLAVE_DE_FILA, COLORES_MODALIDAD, COLOCAR_DESPUES_DE, HOJAS, HOJA_LISTA, PESTANAS_ESPEJO,
+  filaDeLista, filasDeRegistro, rangoDe,
+} from '@/lib/normalizacion';
 import { leerDatosCongreso, leerEjes } from './contenido';
 import { traducir } from '@/lib/contenido';
 
@@ -90,7 +93,7 @@ async function leerPrimeraFila(idLibro: string, nombres: string[]): Promise<Map<
   const leidos = await conEspera(() =>
     sheets.spreadsheets.values.batchGet({
       spreadsheetId: idLibro,
-      ranges: nombres.map((n) => `${n}!1:1`),
+      ranges: nombres.map((n) => rangoDe(n, '1:1')),
     }),
   );
   return new Map(
@@ -110,7 +113,7 @@ async function escribirEncabezados(idLibro: string, nombres: string[]): Promise<
       spreadsheetId: idLibro,
       requestBody: {
         valueInputOption: 'RAW',
-        data: nombres.map((nombre) => ({ range: `${nombre}!A1`, values: [HOJAS[nombre]] })),
+        data: nombres.map((nombre) => ({ range: rangoDe(nombre, 'A1'), values: [HOJAS[nombre]] })),
       },
     }),
   );
@@ -149,6 +152,62 @@ function peticionesDeTitulos(sheetId: number | null | undefined) {
       },
     },
   ];
+}
+
+/** «#d9ead3» como lo pide Google: tres números de 0 a 1. */
+function colorDeHex(hex: string) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return { red: ((n >> 16) & 255) / 255, green: ((n >> 8) & 255) / 255, blue: (n & 255) / 255 };
+}
+
+type ReglaDeFormato = {
+  ranges?: { sheetId?: number | null; startColumnIndex?: number | null; endColumnIndex?: number | null }[] | null;
+  booleanRule?: { condition?: { type?: string | null; values?: { userEnteredValue?: string | null }[] | null } | null } | null;
+};
+
+/**
+ * El color de fondo de la columna «Modalidad» de la lista de registrados.
+ *
+ * Va como formato condicional y no celda por celda: así una fila que entra
+ * mañana, o una modalidad que se corrige desde el panel, toma su color sin
+ * que haya que volver a llamar a Google. Pintar cada alta sería una
+ * escritura más por registro contra un límite de sesenta por minuto.
+ *
+ * Es idempotente: sólo pide las reglas que la pestaña aún no tiene para ese
+ * texto en esa columna. Si alguien cambia a mano el color de una, no se le
+ * vuelve a pisar —ya tiene regla—, igual que en el resto del libro manda lo
+ * que se edita.
+ */
+function peticionesDeColorModalidad(sheetId: number, existentes: ReglaDeFormato[] = []) {
+  const columna = HOJAS[HOJA_LISTA].indexOf('Modalidad');
+  const yaPuestas = new Set(
+    existentes
+      .filter((r) =>
+        (r.ranges ?? []).some(
+          (rango) =>
+            (rango.sheetId ?? 0) === sheetId &&
+            (rango.startColumnIndex ?? 0) <= columna &&
+            columna < (rango.endColumnIndex ?? Infinity),
+        ),
+      )
+      .filter((r) => r.booleanRule?.condition?.type === 'TEXT_EQ')
+      .map((r) => r.booleanRule?.condition?.values?.[0]?.userEnteredValue),
+  );
+
+  return COLORES_MODALIDAD.filter(({ texto }) => !yaPuestas.has(texto)).map(({ texto, fondo }) => ({
+    addConditionalFormatRule: {
+      index: 0,
+      rule: {
+        // De la fila 2 hacia abajo y sin tope: la fila 1 son los títulos y
+        // las filas que lleguen después ya entran dentro.
+        ranges: [{ sheetId, startRowIndex: 1, startColumnIndex: columna, endColumnIndex: columna + 1 }],
+        booleanRule: {
+          condition: { type: 'TEXT_EQ', values: [{ userEnteredValue: texto }] },
+          format: { backgroundColor: colorDeHex(fondo) },
+        },
+      },
+    },
+  }));
 }
 
 /**
@@ -251,12 +310,21 @@ async function asegurarHojas(idLibro: string) {
 
   const faltantes = Object.keys(HOJAS).filter((nombre) => !existentes.has(nombre));
   if (faltantes.length > 0) {
+    // Dónde va cada pestaña nueva: justo detrás de la que se le indica, si esa
+    // ya está en el libro. Las demás —y ésta, si su ancla tampoco existe—
+    // van al final, en el orden de HOJAS.
+    const titulos = (libro.data.sheets ?? []).map((h) => h.properties?.title);
+    const lugarDe = (title: string): { index?: number } => {
+      const ancla = COLOCAR_DESPUES_DE[title];
+      const i = ancla ? titulos.indexOf(ancla) : -1;
+      return i >= 0 ? { index: i + 1 } : {};
+    };
     const creadas = await conEspera(() =>
       sheets.spreadsheets.batchUpdate({
         spreadsheetId: idLibro,
         requestBody: {
           requests: faltantes.map((title) => ({
-            addSheet: { properties: { title, gridProperties: { frozenRowCount: 1 } } },
+            addSheet: { properties: { title, ...lugarDe(title), gridProperties: { frozenRowCount: 1 } } },
           })),
         },
       }),
@@ -266,13 +334,19 @@ async function asegurarHojas(idLibro: string) {
     // Una pestaña recién creada estrena sus títulos con el mismo aspecto que
     // las demás, sin esperar a que alguien rehaga el libro.
     const nuevas = (creadas.data.replies ?? [])
-      .map((r) => r.addSheet?.properties?.sheetId)
-      .filter((id) => id !== null && id !== undefined);
+      .map((r, i) => ({ nombre: faltantes[i], id: r.addSheet?.properties?.sheetId }))
+      .filter((n): n is { nombre: string; id: number } => n.id !== null && n.id !== undefined);
     if (nuevas.length > 0) {
       await conEspera(() =>
         sheets.spreadsheets.batchUpdate({
           spreadsheetId: idLibro,
-          requestBody: { requests: nuevas.flatMap((id) => peticionesDeTitulos(id)) },
+          requestBody: {
+            requests: nuevas.flatMap(({ nombre, id }) => [
+              ...peticionesDeTitulos(id),
+              // La lista de registrados nace ya con los colores de Modalidad.
+              ...(nombre === HOJA_LISTA ? peticionesDeColorModalidad(id) : []),
+            ]),
+          },
         }),
       );
     }
@@ -370,7 +444,7 @@ export async function sincronizarRegistros(registros: Registro[]): Promise<void>
     await conEspera(() =>
       sheets.spreadsheets.values.append({
         spreadsheetId: idLibro,
-        range: `${hoja}!A1`,
+        range: rangoDe(hoja, 'A1'),
         valueInputOption: 'USER_ENTERED',
         insertDataOption: 'INSERT_ROWS',
         requestBody: { values: valores },
@@ -527,13 +601,18 @@ export async function resincronizarRegistro(registro: Registro): Promise<void> {
     (libro.data.sheets ?? []).map((h) => [h.properties?.title ?? '', h.properties?.sheetId ?? 0]),
   );
 
+  const numero = String(numeros.get(String(registro.id)) ?? '');
+
   for (const hoja of Object.keys(HOJAS)) {
-    // El folio vive en la columna B: la A lleva el número de orden.
-    const columnaFolio = await conEspera(() =>
-      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: `${hoja}!B2:B` }),
+    // El folio vive en la columna B (la A lleva el número de orden); la lista
+    // de registrados no tiene folio y se busca por el número de la A.
+    const { columna, por } = CLAVE_DE_FILA[hoja];
+    const buscado = por === 'numero' ? numero : folio;
+    const columnaClave = await conEspera(() =>
+      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: rangoDe(hoja, `${columna}2:${columna}`) }),
     );
-    const suyas = (columnaFolio.data.values ?? [])
-      .map((fila, i) => (String(fila[0] ?? '') === folio ? i + 2 : -1)) // +2: la 1 es encabezado
+    const suyas = (columnaClave.data.values ?? [])
+      .map((fila, i) => (buscado !== '' && String(fila[0] ?? '') === buscado ? i + 2 : -1)) // +2: la 1 es encabezado
       .filter((n) => n > 0);
 
     const valores = filas[hoja]?.map((fila) => fila.map(blindar));
@@ -542,7 +621,7 @@ export async function resincronizarRegistro(registro: Registro): Promise<void> {
       await conEspera(() =>
         sheets.spreadsheets.values.update({
           spreadsheetId: idLibro,
-          range: `${hoja}!A${suyas[0]}`,
+          range: rangoDe(hoja, `A${suyas[0]}`),
           valueInputOption: 'USER_ENTERED',
           requestBody: { values: valores },
         }),
@@ -578,7 +657,7 @@ export async function resincronizarRegistro(registro: Registro): Promise<void> {
       await conEspera(() =>
         sheets.spreadsheets.values.append({
           spreadsheetId: idLibro,
-          range: `${hoja}!A1`,
+          range: rangoDe(hoja, 'A1'),
           valueInputOption: 'USER_ENTERED',
           insertDataOption: 'INSERT_ROWS',
           requestBody: { values: valores },
@@ -586,4 +665,124 @@ export async function resincronizarRegistro(registro: Registro): Promise<void> {
       );
     }
   }
+}
+
+/** Cuántas filas van en cada escritura al poner al día una pestaña espejo. */
+const FILAS_POR_ESCRITURA = 1000;
+
+/**
+ * Deja las pestañas espejo con una fila por cada registro de la base.
+ *
+ * Existe porque una pestaña nueva nace vacía y los registros que ya existían
+ * están marcados como copiados: ninguna de las rutas de siempre los vuelve a
+ * mandar. Esto compara el número de orden de cada registro contra la columna
+ * A de la pestaña y escribe sólo los que faltan. Puede correr cuantas veces
+ * se quiera: la segunda no encuentra nada que añadir y no toca la hoja.
+ *
+ * Sólo añade. No borra filas, no reescribe las que hay y no toca ninguna otra
+ * pestaña, ni la base. Si alguien quita una fila a mano, vuelve en la
+ * siguiente pasada —es una copia de la base, y la base manda—.
+ *
+ * Si lo añadido queda por debajo de números mayores —entró un alta nueva
+ * antes de que se pusiera al día la pestaña— se ordena por la columna A, para
+ * que la lista se lea de arriba abajo en el orden en que se registraron.
+ *
+ * Devuelve cuántas filas añadió a cada pestaña.
+ */
+export async function cuadrarPestanasEspejo(): Promise<Record<string, number>> {
+  const idLibro = process.env.GOOGLE_SHEETS_ID;
+  if (!googleConfigurado() || !idLibro) throw new Error('Google Sheets no está configurado.');
+
+  await asegurarHojas(idLibro);
+  const sheets = clienteSheets();
+
+  // Sólo los campos que estas pestañas leen. El número se calcula igual que
+  // en el alta —posición por fecha de alta entre todos los registros— y por
+  // eso se numera sobre la tabla entera antes de cualquier filtro.
+  const registros = await consultar<Record<string, unknown>>(
+    `select nombres, apellidos, pais_residencia, institucion, modalidad, numero_en_hoja
+       from (
+             select nombres, apellidos, pais_residencia, institucion, modalidad,
+                    row_number() over (order by creado_en, id) as numero_en_hoja
+               from registros
+            ) as ordenados
+      order by numero_en_hoja`,
+  );
+
+  // Una sola lectura de la estructura del libro para todas las pestañas
+  // espejo: de aquí salen su id y las reglas de color que ya tienen.
+  const libro = await conEspera(() =>
+    sheets.spreadsheets.get({
+      spreadsheetId: idLibro,
+      fields: 'sheets(properties(sheetId,title),conditionalFormats)',
+    }),
+  );
+
+  const resultado: Record<string, number> = {};
+  for (const hoja of PESTANAS_ESPEJO) {
+    const leida = await conEspera(() =>
+      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: rangoDe(hoja, 'A2:A') }),
+    );
+    const enLaHoja = new Set(
+      (leida.data.values ?? []).map((fila) => Number(fila[0])).filter((n) => Number.isFinite(n) && n > 0),
+    );
+
+    const faltan = registros.filter((r) => !enLaHoja.has(Number(r.numero_en_hoja)));
+    resultado[hoja] = faltan.length;
+
+    if (faltan.length > 0) {
+      const filas = faltan.map((r) => filaDeLista(r).map(blindar));
+      for (let desde = 0; desde < filas.length; desde += FILAS_POR_ESCRITURA) {
+        await conEspera(() =>
+          sheets.spreadsheets.values.append({
+            spreadsheetId: idLibro,
+            range: rangoDe(hoja, 'A1'),
+            valueInputOption: 'USER_ENTERED',
+            insertDataOption: 'INSERT_ROWS',
+            requestBody: { values: filas.slice(desde, desde + FILAS_POR_ESCRITURA) },
+          }),
+        );
+      }
+    }
+
+    const pestana = libro.data.sheets?.find((h) => h.properties?.title === hoja);
+    const sheetId = pestana?.properties?.sheetId;
+    if (sheetId === undefined || sheetId === null) continue;
+
+    const primeraVez = faltan.length > 0 && enLaHoja.size === 0;
+    const desordenada =
+      faltan.length > 0 && enLaHoja.size > 0 && Math.max(...enLaHoja) > Number(faltan[0].numero_en_hoja);
+    const columnas = HOJAS[hoja].length;
+
+    const peticiones = [
+      // Los colores de Modalidad, si la pestaña aún no los tiene: también
+      // una lista que ya existía antes de pedirlos.
+      ...(hoja === HOJA_LISTA
+        ? peticionesDeColorModalidad(sheetId, (pestana?.conditionalFormats ?? []) as ReglaDeFormato[])
+        : []),
+      ...(desordenada
+        ? [{
+            sortRange: {
+              range: { sheetId, startRowIndex: 1, startColumnIndex: 0, endColumnIndex: columnas },
+              sortSpecs: [{ dimensionIndex: 0, sortOrder: 'ASCENDING' }],
+            },
+          }]
+        : []),
+      // Anchos a la medida la primera vez que se llena; después se respetan
+      // los que alguien haya puesto a mano.
+      ...(primeraVez
+        ? [{
+            autoResizeDimensions: {
+              dimensions: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: columnas },
+            },
+          }]
+        : []),
+    ];
+    if (peticiones.length > 0) {
+      await conEspera(() =>
+        sheets.spreadsheets.batchUpdate({ spreadsheetId: idLibro, requestBody: { requests: peticiones } }),
+      );
+    }
+  }
+  return resultado;
 }

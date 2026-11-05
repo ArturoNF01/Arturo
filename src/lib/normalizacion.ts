@@ -3,8 +3,8 @@ import { etiquetaEs, etiquetasEs } from './opciones';
 
 /**
  * Normalización de un registro hacia las pestañas del libro de seguimiento
- * (REG, PAR, PSE), con la misma forma que producía el script de Google Apps
- * Script original.
+ * (REG, PAR, PSE y LIS), con la misma forma que producía el script de Google
+ * Apps Script original.
  *
  * Eran seis pestañas. ALO, TRA y ALI se retiraron cuando el formulario dejó
  * de preguntar hospedaje, recepción en el aeropuerto y régimen alimentario:
@@ -14,6 +14,9 @@ import { etiquetaEs, etiquetasEs } from './opciones';
  *
  * Es lógica pura y sin dependencias del servidor, para poder probarla.
  */
+/** La lista de registrados: la pestaña que se lee de un vistazo. */
+export const HOJA_LISTA = 'Resumen Registro';
+
 export const HOJAS: Record<string, string[]> = {
   REG_Respuestas: [
     'N.º',
@@ -27,6 +30,10 @@ export const HOJAS: Record<string, string[]> = {
     'Ciudad de origen', 'Fecha de llegada', 'Fecha de salida',
     'Consentimiento', 'Estado',
   ],
+  // La lista para leer de un vistazo: todos los registrados, con lo mínimo
+  // para saber quién es y cómo participa. Las otras pestañas son de trabajo
+  // —llevan correo, teléfono, resúmenes— y no se prestan a enseñarse así.
+  [HOJA_LISTA]: ['N.º', 'Nombre', 'País', 'Institución', 'Modalidad'],
   PAR_Participantes: [
     'N.º',
     'ID', 'Marca temporal', 'Apellidos y nombre', 'Institución', 'Procedencia',
@@ -39,6 +46,67 @@ export const HOJAS: Record<string, string[]> = {
     'Fotografía', 'Semblanza', 'Semblanza recibida', 'Personificador impreso',
     'Responsable de edición', 'Responsable de impresión', 'Plazo recomendado',
   ],
+};
+
+/**
+ * Las pestañas que son un espejo de la base: una fila por registro, sin
+ * excepción, y que por eso se pueden cuadrar solas.
+ *
+ * REG, PAR y PSE no: PSE sólo lleva a quien sale en el programa, y las
+ * tres admiten que alguien las vacíe o las ordene a propósito. Cuadrar
+ * una pestaña es volver a escribirle lo que le falta, y eso sólo es
+ * correcto donde faltar significa «no llegó».
+ */
+/**
+ * Tras qué pestaña se coloca una pestaña al crearla. Sólo al crearla: si
+ * alguien la mueve después, se queda donde la puso.
+ */
+export const COLOCAR_DESPUES_DE: Record<string, string> = {
+  [HOJA_LISTA]: 'REG_Respuestas',
+};
+
+/**
+ * Un rango de Google con el nombre de la pestaña bien escrito.
+ *
+ * Un nombre con espacio —«Resumen Registro»— tiene que ir entre comillas
+ * simples, y una comilla dentro del nombre se dobla; sin eso Google contesta
+ * «Unable to parse range» y la fila no llega. Los nombres de siempre
+ * (REG_Respuestas…) se dejan como estaban.
+ */
+export function rangoDe(pestana: string, celdas: string): string {
+  const nombre = /^[A-Za-z0-9_]+$/.test(pestana) ? pestana : `'${pestana.replace(/'/g, "''")}'`;
+  return `${nombre}!${celdas}`;
+}
+
+export const PESTANAS_ESPEJO = [HOJA_LISTA] as const;
+
+/**
+ * El fondo de la celda de «Modalidad» en la lista de registrados: verde para
+ * quien viene a la sede, azul para quien sigue en línea. Es lo único que se
+ * colorea de la lista, y sólo esa columna.
+ *
+ * Los textos salen del mismo diccionario que escribe la celda, no de una
+ * copia: si se cambia cómo se llama una modalidad, el color la sigue.
+ */
+export const COLORES_MODALIDAD: { texto: string; fondo: string }[] = [
+  { texto: es.modalidad.presencial, fondo: '#d9ead3' },
+  { texto: es.modalidad.en_linea, fondo: '#c9daf8' },
+];
+
+/**
+ * Por qué columna se encuentra la fila de un registro al corregirlo.
+ *
+ * Las tres pestañas de trabajo llevan el folio en la columna B. La lista
+ * de registrados no lo lleva —sólo tiene las cinco columnas que se pidieron—,
+ * así que se busca por el número de orden de la columna A. Ese número es la
+ * posición del registro entre todos los de la base, y los registros no se
+ * borran: sigue apuntando al mismo.
+ */
+export const CLAVE_DE_FILA: Record<string, { columna: 'A' | 'B'; por: 'folio' | 'numero' }> = {
+  REG_Respuestas: { columna: 'B', por: 'folio' },
+  PAR_Participantes: { columna: 'B', por: 'folio' },
+  PSE_Personificadores_Semblanzas: { columna: 'B', por: 'folio' },
+  [HOJA_LISTA]: { columna: 'A', por: 'numero' },
 };
 
 type Registro = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -116,6 +184,28 @@ function numeroDeOrden(r: Registro): string | number {
   return Number.isFinite(numero) && numero > 0 ? numero : '';
 }
 
+/**
+ * La fila de la lista de registrados.
+ *
+ * Es una función aparte porque la usan dos caminos: el alta, que la saca
+ * junto con las demás, y la puesta al día de la pestaña, que sólo necesita
+ * estos cinco campos y no tiene por qué traer el registro entero.
+ *
+ * El nombre va como se lee, «Ana Ruiz Montaño», y no como se ordena
+ * («Ruiz Montaño, Ana»): esta lista se mira, no se alfabetiza. El país es
+ * lo que la persona escribió, tal cual.
+ */
+export function filaDeLista(r: Registro): (string | number)[] {
+  const limpio = (v: unknown) => String(v ?? '').replace(/\s+/g, ' ').trim();
+  return [
+    numeroDeOrden(r),
+    limpio(`${limpio(r.nombres)} ${limpio(r.apellidos)}`),
+    limpio(r.pais_residencia),
+    limpio(r.institucion),
+    nombreDeModalidad(r.modalidad),
+  ];
+}
+
 /** Filas normalizadas que corresponden a un registro. */
 export function filasDeRegistro(r: Registro): Record<string, (string | number)[][]> {
   const persona = `${r.apellidos ?? ''}, ${r.nombres ?? ''}`;
@@ -166,6 +256,8 @@ export function filasDeRegistro(r: Registro): Record<string, (string | number)[]
       'Semblanza recibida T-4 sem · personificador impreso T-1 sem',
     ]];
   }
+
+  filas[HOJA_LISTA] = [filaDeLista(r)];
 
   return filas;
 }
