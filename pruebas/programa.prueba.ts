@@ -194,11 +194,32 @@ describe('por dónde se entra a cada sesión', () => {
     }
   });
 
-  it('la apertura, la conferencia y la clausura van por Zoom; las mesas de trabajo del miércoles, por Meet', () => {
+  it('la apertura, la conferencia y la clausura van por Zoom, y también todo el miércoles', () => {
     for (const { s } of todas) {
       if (['apertura', 'conferencia', 'clausura'].includes(s.tipo)) expect(plataformaDe(s), s.tipo).toBe('zoom');
-      if (s.tipo === 'trabajo') expect(plataformaDe(s), s.actividad?.es).toBe('meet');
     }
+    // El miércoles es en la sala de comisiones, que por sí sola llevaría Meet; el comité
+    // pidió que todo ese día vaya por Zoom.
+    const miercoles = PROGRAMA.find((d) => d.iso === '2026-11-11')!.sesiones;
+    const conBoton = miercoles.filter((s) => s.tipo === 'trabajo');
+    expect(conBoton).toHaveLength(5);
+    for (const s of conBoton) expect(plataformaDe(s), s.actividad?.es).toBe('zoom');
+    // Y el cambio es sólo de ese día: la misma sala el viernes sigue yendo por Meet.
+    expect(plataformaDe(todas.find(({ s }) => s.mesa === 6)!.s)).toBe('meet');
+  });
+
+  it('cada mesa de trabajo del miércoles es híbrida; la reunión general, que no es una mesa, no lo dice', () => {
+    const trabajo = todas.filter(({ s }) => s.tipo === 'trabajo').map(({ s }) => s);
+    expect(trabajo.filter((s) => s.hibrida).map((s) => s.actividad?.es)).toEqual([
+      'Mesa de Trabajo RIUSS – Salud',
+      'Mesa de Trabajo RIUSS – Pensiones',
+      'Mesa de Trabajo RIUSS – Riesgos Laborales',
+      'Mesa de Trabajo RIUSS – Cuidados',
+    ]);
+    expect(trabajo.find((s) => s.actividad?.es === 'Reunión General de la RIUSS')?.hibrida).toBeUndefined();
+    for (const { s } of todas) if (s.hibrida) expect(s.tipo, s.horario).toBe('trabajo');
+    for (const idioma of IDIOMAS) expect(TEXTOS_PROGRAMA[idioma].hibrida.length, idioma).toBeGreaterThan(10);
+    expect(TEXTOS_PROGRAMA.es.hibrida).toBe('Híbrida (presencial y virtual)');
   });
 
   it('los textos del botón existen en los tres idiomas', () => {

@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { unaFila } from '@/lib/bd/conexion';
 import { CONFIG, urlSitio } from '@/lib/config';
 import { urlAgendaSegunIdioma } from '@/lib/agenda';
+import { plazosEnPalabras } from '@/lib/fechas';
 import { etiquetaDe } from '@/lib/opciones';
 import { obtenerDiccionario } from '@/i18n';
 import { nombrePerfil, perfilPorClave, registroMinimo, type Modalidad } from '@/lib/perfiles';
@@ -77,6 +78,9 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
     sede: String(r.sede ?? ''),
     fechas: String(r.fechas ?? ''),
     fecha_limite: datos.fechaLimite,
+    // El plazo ya dicho en una frase, o «en cualquier momento» si el registro no tiene fecha límite.
+    plazo_edicion: plazosEnPalabras(datos.fechaLimite, idioma).edicion,
+    plazo_reenvio: plazosEnPalabras(datos.fechaLimite, idioma).reenvio,
     url_edicion: `${urlSitio()}/confirmacion/${r.id}?token=${r.token_edicion}`,
     url_zoom: datos.urlSesionZoom ?? '',
     // El enlace de la sala va en el acuse de quien sigue la transmisión y en

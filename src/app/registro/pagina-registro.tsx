@@ -6,6 +6,7 @@ import { useApp } from '@/componentes/proveedores';
 import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import { traducir, type DatosCongreso } from '@/lib/contenido';
 import { VideoFondo } from '@/componentes/video-fondo';
+import { hayFechaLimite } from '@/lib/fechas';
 
 export function PaginaRegistro({
   configuracion,
@@ -15,8 +16,11 @@ export function PaginaRegistro({
   congreso: DatosCongreso;
 }) {
   const { t, idioma } = useApp();
-  const limite = fechaLegible(configuracion.fecha_limite_registro, idioma);
-  const quedan = diasHasta(configuracion.fecha_limite_registro);
+  // Sin fecha límite el registro se mantiene abierto y no hay nada que anunciar.
+  const limite = hayFechaLimite(configuracion.fecha_limite_registro)
+    ? fechaLegible(configuracion.fecha_limite_registro, idioma)
+    : null;
+  const quedan = limite ? diasHasta(configuracion.fecha_limite_registro) : null;
 
   return (
     <>
@@ -61,18 +65,20 @@ export function PaginaRegistro({
 
           <p className="mt-6 text-base leading-relaxed text-white/85">{t.formulario.intro}</p>
 
-          <div className="vidrio mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1 !rounded-lg border-l-4 px-4 py-3"
-               style={{ borderLeftColor: 'var(--dorado)' }}>
-            <span className="text-xs uppercase tracking-wide text-white/70">
-              {t.formulario.fechaLimite}
-            </span>
-            <span className="text-base font-semibold text-white">{limite}</span>
-            {quedan !== null && quedan >= 0 && (
-              <span className="text-xs text-white/70">
-                {quedan === 0 ? t.formulario.limiteHoy : t.formulario.limiteDias(quedan)}
+          {limite && (
+            <div className="vidrio mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1 !rounded-lg border-l-4 px-4 py-3"
+                 style={{ borderLeftColor: 'var(--dorado)' }}>
+              <span className="text-xs uppercase tracking-wide text-white/70">
+                {t.formulario.fechaLimite}
               </span>
-            )}
-          </div>
+              <span className="text-base font-semibold text-white">{limite}</span>
+              {quedan !== null && quedan >= 0 && (
+                <span className="text-xs text-white/70">
+                  {quedan === 0 ? t.formulario.limiteHoy : t.formulario.limiteDias(quedan)}
+                </span>
+              )}
+            </div>
+          )}
         </section>
         <FormularioRegistro configuracion={configuracion} congreso={congreso} />
         </div>

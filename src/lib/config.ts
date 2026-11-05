@@ -5,7 +5,10 @@
  * Panel → Cupos y configuración y Panel → Contenido del sitio.
  */
 export const CONFIG = {
-  fechaLimiteRegistro: '2026-11-02', // respaldo; el valor vigente vive en la base
+  // Sin fecha límite: el registro se mantiene abierto (lo pidió el comité). Vacía quiere decir
+  // «sin plazo»; si se vuelve a poner una fecha, se pone desde el panel. Es el respaldo; el
+  // valor vigente vive en la base.
+  fechaLimiteRegistro: '',
 
   /** Respaldo del límite de semblanza para la réplica en Sheets. */
   limiteSemblanzaPalabras: 60,

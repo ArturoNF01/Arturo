@@ -3,6 +3,7 @@ import { conActor, consultar } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { esquemaPlantilla } from '@/lib/esquema';
 import { aplicarPlantilla, envolverHtml } from '@/lib/servidor/correo';
+import { plazosEnPalabras } from '@/lib/fechas';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
 import { urlSitio } from '@/lib/config';
 import { Resend } from 'resend';
@@ -87,6 +88,8 @@ export async function POST(peticion: NextRequest) {
     rol: 'Ponencia en mesa temática',
     fecha: new Date().toLocaleDateString('es-MX'),
     fecha_limite: configuracion.fecha_limite_registro,
+    plazo_edicion: plazosEnPalabras(configuracion.fecha_limite_registro, 'es').edicion,
+    plazo_reenvio: plazosEnPalabras(configuracion.fecha_limite_registro, 'es').reenvio,
     url_edicion: `${urlSitio()}/confirmacion/demo?token=demo`,
     url_agenda: configuracion.url_agenda,
     url_sitio: urlSitio(),

@@ -179,9 +179,10 @@ function Tarjeta({
             <span className="tenue">, {sesion.ponente.cargo[idioma]}</span>
           </span>
         )}
-        {((mostrarSala && sesion.sala) || cuenta) && (
+        {((mostrarSala && sesion.sala) || cuenta || sesion.hibrida) && (
           <span className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
             {mostrarSala && sesion.sala && <Sala sala={sesion.sala} />}
+            {sesion.hibrida && <span className="sala-chip">{ui.hibrida}</span>}
             {cuenta && <span className="text-xs font-medium tenue">{cuenta}</span>}
           </span>
         )}

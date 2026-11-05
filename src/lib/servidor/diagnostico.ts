@@ -1,7 +1,7 @@
 import 'server-only';
 import { consultar } from '@/lib/bd/conexion';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
-import { diaEnMexico } from '@/lib/fechas';
+import { diaEnMexico, hayFechaLimite } from '@/lib/fechas';
 import { leerDatosCongreso } from '@/lib/servidor/contenido';
 
 /**
@@ -141,7 +141,10 @@ export async function diagnosticar(): Promise<Informe> {
     leerDatosCongreso().catch(() => null),
   ]);
 
-  const limitePasado = Boolean(configuracion && configuracion.fecha_limite_registro < hoy);
+  // Sin fecha límite el registro sigue abierto: no hay nada que haya «pasado».
+  const limitePasado = Boolean(
+    configuracion && hayFechaLimite(configuracion.fecha_limite_registro) && configuracion.fecha_limite_registro < hoy,
+  );
   const congresoPasado = Boolean(congreso && congreso.fecha_inicio < hoy);
   const fechas: Variable[] = [
     { nombre: 'fecha_limite_registro', presente: !limitePasado, obligatoria: true },
@@ -222,6 +225,8 @@ export async function diagnosticar(): Promise<Informe> {
           ? `La fecha límite de registro (${configuracion?.fecha_limite_registro}) ya pasó: se siguen aceptando registros, pero nadie puede editar el suyo.`
           : congresoPasado
           ? `La fecha del congreso (${congreso?.fecha_inicio}) ya pasó, así que los recordatorios no se envían.`
+          : configuracion && !hayFechaLimite(configuracion.fecha_limite_registro)
+          ? `Congreso el ${congreso?.fecha_inicio}; el registro sigue abierto, sin fecha límite.`
           : `Congreso el ${congreso?.fecha_inicio}; el registro cierra el ${configuracion?.fecha_limite_registro}.`,
       siguiente:
         'Poner las fechas definitivas en Panel → Cupos y configuración.',

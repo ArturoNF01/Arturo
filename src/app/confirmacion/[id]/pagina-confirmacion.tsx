@@ -1,5 +1,6 @@
 'use client';
 
+import { hayFechaLimite } from '@/lib/fechas';
 import { useState } from 'react';
 import { Encabezado, PieDePagina } from '@/componentes/controles';
 import { FormularioRegistro } from '@/componentes/formulario-registro';
@@ -118,7 +119,9 @@ export function PaginaConfirmacion({
           </div>
           {puedeEditar && (
             <p className="ayuda mt-3">
-              {interpolar(t.confirmacion.editarAyuda, { fecha: configuracion.fecha_limite_registro })}
+              {hayFechaLimite(configuracion.fecha_limite_registro)
+                ? interpolar(t.confirmacion.editarAyuda, { fecha: configuracion.fecha_limite_registro })
+                : t.confirmacion.editarAyudaSinLimite}
             </p>
           )}
           <p className="ayuda mt-1">

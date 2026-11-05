@@ -278,7 +278,8 @@ export const esquemaConfiguracion = z.object({
   cupos_presenciales: z.number().int().min(0).nullable().optional(),
   cupos_en_linea: z.number().int().min(0).nullable().optional(),
   registro_abierto: z.boolean().optional(),
-  fecha_limite_registro: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  // Vacía = sin fecha límite: el registro se mantiene abierto.
+  fecha_limite_registro: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal('')).optional(),
   url_agenda: z.string().url().optional(),
   url_agenda_pt: z.string().url().optional().or(z.literal('')),
   url_agenda_en: z.string().url().optional().or(z.literal('')),

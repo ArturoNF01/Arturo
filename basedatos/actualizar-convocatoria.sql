@@ -16,15 +16,57 @@ begin;
 update configuracion set valor = '"2026-11-11"'::jsonb where clave = 'congreso_fecha_inicio';
 update configuracion set valor = '"2026-11-13"'::jsonb where clave = 'congreso_fecha_fin';
 
--- La fecha límite de inscripción: el lunes 2 de noviembre de 2026.
+-- Sin fecha límite de inscripción: el registro se mantiene abierto.
 --
--- Con condición, como el aforo de más abajo: esto corre en cada despliegue, y
--- sin ella la fecha que el comité pusiera en el panel volvería a ésta en el
--- siguiente. Se lleva a la nueva desde las dos que el sistema trajo antes (la
--- de reserva del código y la del 30 de octubre) y a partir de ahí manda el panel.
-update configuracion set valor = '"2026-11-02"'::jsonb
+-- El comité pidió quitar el plazo del 2 de noviembre. «Vacía» quiere decir «sin plazo»: el
+-- formulario no enseña ninguna fecha, cada persona puede editar su registro cuando quiera
+-- y los correos dicen «en cualquier momento».
+--
+-- Con condición, como el aforo de más abajo: esto corre en cada despliegue, y sin ella la
+-- fecha que el comité pusiera después en el panel volvería a quedar vacía. Sólo se vacía si
+-- sigue en alguna de las tres fechas que el sistema trajo (la de reserva del código, la del 30
+-- de octubre y la del 2 de noviembre); a partir de ahí manda el panel. No toca ningún registro.
+update configuracion set valor = '""'::jsonb
  where clave = 'fecha_limite_registro'
-   and valor in ('"2026-05-15"'::jsonb, '"2026-10-30"'::jsonb);
+   and valor in ('"2026-05-15"'::jsonb, '"2026-10-30"'::jsonb, '"2026-11-02"'::jsonb);
+
+update configuracion
+   set descripcion = 'Fecha límite de registro y de edición; vacía = el registro sigue abierto, sin límite'
+ where clave = 'fecha_limite_registro' and descripcion = 'Fecha límite de registro y de edición';
+
+-- Los correos no repiten la fecha pelada: con el plazo vacío una frase como «hasta el .»
+-- quedaría rota. Llevan `{{plazo_edicion}}` / `{{plazo_reenvio}}`, que con fecha dicen lo mismo
+-- que antes («hasta el 2 de noviembre de 2026») y sin fecha, «en cualquier momento» / «a la
+-- brevedad». Es un reemplazo exacto de la frase sembrada, así que lo que el comité haya
+-- reescrito a su manera no se toca, y repetirlo no cambia nada.
+update plantillas_correo set cuerpo_html = replace(cuerpo_html, 'hasta el {{fecha_limite}}', '{{plazo_edicion}}')
+ where idioma = 'es' and clave in ('confirmacion_registro', 'registro_confirmado')
+   and cuerpo_html like '%hasta el {{fecha_limite}}%';
+update plantillas_correo set cuerpo_html = replace(cuerpo_html, 'until {{fecha_limite}}', '{{plazo_edicion}}')
+ where idioma = 'en' and clave in ('confirmacion_registro', 'registro_confirmado')
+   and cuerpo_html like '%until {{fecha_limite}}%';
+update plantillas_correo set cuerpo_html = replace(cuerpo_html, 'até {{fecha_limite}}', '{{plazo_edicion}}')
+ where idioma = 'pt' and clave in ('confirmacion_registro', 'registro_confirmado')
+   and cuerpo_html like '%até {{fecha_limite}}%';
+update plantillas_correo set cuerpo_html = replace(cuerpo_html, 'antes del {{fecha_limite}}', '{{plazo_reenvio}}')
+ where idioma = 'es' and clave = 'ponencia_aceptada_con_cambios'
+   and cuerpo_html like '%antes del {{fecha_limite}}%';
+update plantillas_correo set cuerpo_html = replace(cuerpo_html, 'before {{fecha_limite}}', '{{plazo_reenvio}}')
+ where idioma = 'en' and clave = 'ponencia_aceptada_con_cambios'
+   and cuerpo_html like '%before {{fecha_limite}}%';
+update plantillas_correo set cuerpo_html = replace(cuerpo_html, 'até {{fecha_limite}}', '{{plazo_reenvio}}')
+ where idioma = 'pt' and clave = 'ponencia_aceptada_con_cambios'
+   and cuerpo_html like '%até {{fecha_limite}}%';
+
+-- La pregunta frecuente sobre editar el registro hablaba de «la fecha límite». Mismo criterio
+-- que las demás: sólo si conserva el texto sembrado.
+update faqs
+   set respuesta = jsonb_build_object(
+         'es', 'Sí. Al terminar el registro recibirá un folio y un enlace personal de edición, que también llega en el correo de confirmación. Puede modificar sus datos con ese enlace en cualquier momento; el registro se mantiene abierto, sin fecha límite.',
+         'en', 'Yes. When you finish registering you receive a reference number and a personal editing link, which also arrives in the confirmation e-mail. You can amend your details with that link at any time; registration remains open, with no deadline.',
+         'pt', 'Sim. Ao concluir a inscrição você recebe um protocolo e um link pessoal de edição, que também chega no e-mail de confirmação. Você pode alterar seus dados com esse link a qualquer momento; a inscrição continua aberta, sem prazo final.')
+ where clave = 'editar'
+   and respuesta->>'es' like '%hasta la fecha límite de registro; después de esa fecha%';
 
 update configuracion set valor =
   '{"es": "11, 12 y 13 de noviembre de 2026", "en": "11-13 November 2026", "pt": "11, 12 e 13 de novembro de 2026"}'::jsonb

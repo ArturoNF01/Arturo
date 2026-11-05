@@ -23,3 +23,40 @@ export function plazoVigente(fechaLimite: string, ahora: Date = new Date()): boo
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaLimite)) return true;
   return diaEnMexico(ahora) <= fechaLimite;
 }
+
+/** ¿Hay una fecha límite puesta? Vacía —o ilegible— quiere decir que el registro no tiene plazo. */
+export function hayFechaLimite(fechaLimite: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(fechaLimite) && !Number.isNaN(new Date(`${fechaLimite}T12:00:00Z`).getTime());
+}
+
+const LENGUA_DEL_PLAZO = { es: 'es-MX', en: 'en-US', pt: 'pt-BR' } as const;
+
+/**
+ * El plazo ya escrito en la frase del correo, en el idioma de quien lo recibe.
+ *
+ * Con fecha: «hasta el 2 de noviembre de 2026» / «antes del 2 de noviembre de 2026».
+ * Sin fecha límite —el registro se mantiene abierto—: «en cualquier momento» / «a la
+ * brevedad». Las plantillas llevan `{{plazo_edicion}}` y `{{plazo_reenvio}}` y no la fecha
+ * pelada, para que un correo no diga «hasta el .» el día que no haya plazo.
+ */
+export function plazosEnPalabras(
+  fechaLimite: string,
+  idioma: string,
+): { edicion: string; reenvio: string } {
+  const lengua: 'es' | 'en' | 'pt' = idioma === 'en' || idioma === 'pt' ? idioma : 'es';
+  if (!hayFechaLimite(fechaLimite)) {
+    return {
+      es: { edicion: 'en cualquier momento', reenvio: 'a la brevedad' },
+      en: { edicion: 'at any time', reenvio: 'as soon as possible' },
+      pt: { edicion: 'a qualquer momento', reenvio: 'o quanto antes' },
+    }[lengua];
+  }
+  const fecha = new Intl.DateTimeFormat(LENGUA_DEL_PLAZO[lengua], {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  }).format(new Date(`${fechaLimite}T12:00:00Z`));
+  return {
+    es: { edicion: `hasta el ${fecha}`, reenvio: `antes del ${fecha}` },
+    en: { edicion: `until ${fecha}`, reenvio: `before ${fecha}` },
+    pt: { edicion: `até ${fecha}`, reenvio: `até ${fecha}` },
+  }[lengua];
+}

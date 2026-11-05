@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { diaEnMexico, plazoVigente } from '@/lib/fechas';
+import { readFileSync } from 'node:fs';
+import { diaEnMexico, hayFechaLimite, plazoVigente, plazosEnPalabras } from '@/lib/fechas';
+import { esquemaConfiguracion } from '@/lib/esquema';
 
 /**
  * México va a UTC−6 sin horario de verano. El día UTC cambia a las 18:00
@@ -60,5 +62,49 @@ describe('los filtros por fecha del panel', () => {
     ];
     const hastaHoy = aplicarFiltros(registros, { ...FILTROS_VACIOS, desde: '2026-10-27', hasta: '2026-10-27' });
     expect(hastaHoy).toHaveLength(2);
+  });
+});
+
+describe('sin fecha límite: el registro se mantiene abierto', () => {
+  it('vacía o ilegible quiere decir «sin plazo», y con fecha, «hay plazo»', () => {
+    expect(hayFechaLimite('')).toBe(false);
+    expect(hayFechaLimite('pronto')).toBe(false);
+    expect(hayFechaLimite('2026-13-45')).toBe(false);
+    expect(hayFechaLimite('2026-11-02')).toBe(true);
+  });
+
+  it('sin plazo no se cierra nunca: ni la edición de quien ya se registró ni el registro', () => {
+    for (const ahora of ['2026-11-03T12:00:00Z', '2027-01-01T00:00:00Z', '2030-06-01T00:00:00Z']) {
+      expect(plazoVigente('', new Date(ahora)), ahora).toBe(true);
+    }
+  });
+
+  it('los correos dicen «en cualquier momento» y no «hasta el .»', () => {
+    expect(plazosEnPalabras('', 'es')).toEqual({ edicion: 'en cualquier momento', reenvio: 'a la brevedad' });
+    expect(plazosEnPalabras('', 'en')).toEqual({ edicion: 'at any time', reenvio: 'as soon as possible' });
+    expect(plazosEnPalabras('', 'pt')).toEqual({ edicion: 'a qualquer momento', reenvio: 'o quanto antes' });
+  });
+
+  it('con fecha, la frase es la de siempre pero con la fecha legible', () => {
+    expect(plazosEnPalabras('2026-11-02', 'es')).toEqual({
+      edicion: 'hasta el 2 de noviembre de 2026', reenvio: 'antes del 2 de noviembre de 2026',
+    });
+    expect(plazosEnPalabras('2026-11-02', 'en').edicion).toBe('until November 2, 2026');
+    expect(plazosEnPalabras('2026-11-02', 'pt').edicion).toBe('até 2 de novembro de 2026');
+  });
+
+  it('el panel acepta dejar la fecha vacía, y sigue rechazando una fecha mal escrita', () => {
+    expect(esquemaConfiguracion.safeParse({ fecha_limite_registro: '' }).success).toBe(true);
+    expect(esquemaConfiguracion.safeParse({ fecha_limite_registro: '2026-11-02' }).success).toBe(true);
+    expect(esquemaConfiguracion.safeParse({ fecha_limite_registro: '2 de noviembre' }).success).toBe(false);
+  });
+
+  it('las plantillas sembradas no llevan la fecha pelada: usan el plazo ya dicho', () => {
+    const sql = readFileSync('basedatos/esquema.sql', 'utf8');
+    // Sólo puede salir en el comentario que lista las variables y en la semilla de la clave.
+    const lineas = sql.split('\n').filter((l) => l.includes('{{fecha_limite}}') && !l.trimStart().startsWith('--'));
+    expect(lineas, lineas.join('\n')).toEqual([]);
+    expect(sql.match(/\{\{plazo_edicion\}\}/g)).toHaveLength(6 + 1); // 6 en las plantillas + 1 en el comentario
+    expect(sql.match(/\{\{plazo_reenvio\}\}/g)).toHaveLength(3 + 1);
   });
 });

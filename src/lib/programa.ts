@@ -415,6 +415,14 @@ export interface Sesion {
   participantes?: Participante[];
   /** Quien da la conferencia magistral. Sólo la sesión de tipo «conferencia». */
   ponente?: Participante;
+  /** Se sigue en persona y en línea a la vez («híbrida»), según el programa. */
+  hibrida?: true;
+  /**
+   * Cuando la sesión no se sigue por la plataforma que le tocaría por su sala.
+   * El miércoles todo va por Zoom aunque se haga en la sala de comisiones: así lo
+   * pidió el comité (y así viene el enlace en el programa).
+   */
+  plataforma?: PlataformaEnLinea;
 }
 
 /**
@@ -437,7 +445,7 @@ const SIN_ENLACE: ReadonlySet<TipoSesion> = new Set<TipoSesion>(['registro', 'pa
 
 export function plataformaDe(sesion: Sesion): PlataformaEnLinea | null {
   if (!sesion.sala || SIN_ENLACE.has(sesion.tipo)) return null;
-  return PLATAFORMA_POR_SALA[sesion.sala];
+  return sesion.plataforma ?? PLATAFORMA_POR_SALA[sesion.sala];
 }
 
 export interface DiaPrograma {
@@ -476,16 +484,16 @@ export const PROGRAMA: DiaPrograma[] = [
     sesiones: [
       { horario: '08:30–09:00', tipo: 'registro', sala: 'comisiones', actividad: REGISTRO },
       {
-        horario: '09:00–10:30', tipo: 'trabajo', sala: 'comisiones',
+        horario: '09:00–10:30', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom', hibrida: true,
         actividad: { es: 'Mesa de Trabajo RIUSS – Salud', en: 'RIUSS Working Group – Health', pt: 'Mesa de Trabalho RIUSS – Saúde' },
       },
       {
-        horario: '10:30–12:00', tipo: 'trabajo', sala: 'comisiones',
+        horario: '10:30–12:00', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom', hibrida: true,
         actividad: { es: 'Mesa de Trabajo RIUSS – Pensiones', en: 'RIUSS Working Group – Pensions', pt: 'Mesa de Trabalho RIUSS – Pensões' },
       },
       { horario: '12:00–13:00', tipo: 'pausa', actividad: ALMUERZO },
       {
-        horario: '13:00–14:30', tipo: 'trabajo', sala: 'comisiones',
+        horario: '13:00–14:30', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom', hibrida: true,
         actividad: {
           es: 'Mesa de Trabajo RIUSS – Riesgos Laborales',
           en: 'RIUSS Working Group – Occupational Risks',
@@ -493,11 +501,11 @@ export const PROGRAMA: DiaPrograma[] = [
         },
       },
       {
-        horario: '14:30–16:00', tipo: 'trabajo', sala: 'comisiones',
+        horario: '14:30–16:00', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom', hibrida: true,
         actividad: { es: 'Mesa de Trabajo RIUSS – Cuidados', en: 'RIUSS Working Group – Care', pt: 'Mesa de Trabalho RIUSS – Cuidados' },
       },
       {
-        horario: '16:00–17:00', tipo: 'trabajo', sala: 'comisiones',
+        horario: '16:00–17:00', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom',
         actividad: { es: 'Reunión General de la RIUSS', en: 'RIUSS General Meeting', pt: 'Reunião Geral da RIUSS' },
       },
     ],
@@ -687,6 +695,7 @@ export interface TextosPrograma {
   participan: string;
   ponencias: string;
   ponente: string;
+  hibrida: string;
   participacion: { presencial: string; virtual: string };
   unirse: { zoom: string; meet: string };
   resumen: { dias: string; mesas: string; ponencias: string; paises: string };
@@ -704,6 +713,7 @@ export const TEXTOS_PROGRAMA: Record<Idioma, TextosPrograma> = {
     participan: 'participantes',
     ponencias: 'ponencias',
     ponente: 'Ponente',
+    hibrida: 'Híbrida (presencial y virtual)',
     participacion: { presencial: 'Presencial', virtual: 'Virtual' },
     unirse: { zoom: 'Unirse por Zoom', meet: 'Unirse por Meet' },
     resumen: { dias: 'días', mesas: 'mesas temáticas', ponencias: 'ponencias', paises: 'países' },
@@ -719,6 +729,7 @@ export const TEXTOS_PROGRAMA: Record<Idioma, TextosPrograma> = {
     participan: 'participants',
     ponencias: 'papers',
     ponente: 'Speaker',
+    hibrida: 'Hybrid (in person and virtual)',
     participacion: { presencial: 'In person', virtual: 'Virtual' },
     unirse: { zoom: 'Join on Zoom', meet: 'Join on Meet' },
     resumen: { dias: 'days', mesas: 'thematic panels', ponencias: 'papers', paises: 'countries' },
@@ -734,6 +745,7 @@ export const TEXTOS_PROGRAMA: Record<Idioma, TextosPrograma> = {
     participan: 'participantes',
     ponencias: 'trabalhos',
     ponente: 'Palestrante',
+    hibrida: 'Híbrida (presencial e virtual)',
     participacion: { presencial: 'Presencial', virtual: 'Virtual' },
     unirse: { zoom: 'Entrar pelo Zoom', meet: 'Entrar pelo Meet' },
     resumen: { dias: 'dias', mesas: 'mesas temáticas', ponencias: 'trabalhos', paises: 'países' },

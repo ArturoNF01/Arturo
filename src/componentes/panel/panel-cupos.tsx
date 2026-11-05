@@ -282,6 +282,21 @@ export function PanelCupos({
               value={valores.fecha_limite_registro}
               onChange={(e) => setValores({ ...valores, fecha_limite_registro: e.target.value })}
             />
+            <span className="ayuda">
+              {valores.fecha_limite_registro ? (
+                <>
+                  {t.panel.cupos.fechaLimiteAyuda}{' '}
+                  <button
+                    type="button" className="font-semibold underline underline-offset-2"
+                    onClick={() => setValores({ ...valores, fecha_limite_registro: '' })}
+                  >
+                    {t.panel.cupos.sinFechaLimite}
+                  </button>
+                </>
+              ) : (
+                <><strong>{t.panel.cupos.sinFechaLimite}.</strong> {t.panel.cupos.fechaLimiteAyuda}</>
+              )}
+            </span>
           </label>
           <label className="block">
             <span className="etiqueta">{t.panel.cupos.correoContacto}</span>

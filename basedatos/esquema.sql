@@ -471,7 +471,7 @@ insert into configuracion (clave, valor, descripcion) values
 null = sin límite'),
   ('registro_abierto',   'true'::jsonb, 'Permite recibir nuevos registros'),
   ('programa_publicado', 'false'::jsonb, 'Enseña la agenda en el sitio y el botón de descarga en los acuses'),
-  ('fecha_limite_registro', '"2026-11-02"'::jsonb, 'Fecha límite de registro y de edición'),
+  ('fecha_limite_registro', '""'::jsonb, 'Fecha límite de registro y de edición; vacía = el registro sigue abierto, sin límite'),
   ('url_agenda',  '"https://home.ciess.org/wp-content/uploads/2026/10/Agenda_Congreso_RIUSS_2026.pdf"'::jsonb, 'PDF de la agenda general del Congreso'),
   ('url_agenda_pt', '"https://home.ciess.org/wp-content/uploads/2026/10/Programa_Congreso_RIUSS_2026_PT.pdf"'::jsonb, 'PDF de la agenda en portugués; vacío = se usa el general'),
   ('url_agenda_en', '"https://home.ciess.org/wp-content/uploads/2026/10/Programa_Congreso_RIUSS_2026_EN.pdf"'::jsonb, 'PDF de la agenda en inglés; vacío = se usa el general'),
@@ -531,7 +531,7 @@ group by 1 order by 2 desc;
 -- ---------------------------------------------------------------------
 -- Plantillas iniciales (editables desde el panel)
 -- Variables disponibles: {{folio}} {{nombre}} {{perfil}} {{modalidad}}
---                        {{correo}} {{fecha_limite}} {{url_edicion}}
+--                        {{correo}} {{fecha_limite}} {{plazo_edicion}} {{plazo_reenvio}} {{url_edicion}}
 --                        {{url_agenda}} {{url_sitio}} {{correo_contacto}}
 --                        {{zoom_bloque}} {{agenda_bloque}} — bloques ya
 --                        formateados: el sistema decide si salen y con qué
@@ -550,7 +550,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 {{zoom_bloque}}
 {{agenda_bloque}}
-<p>Puede consultar o modificar sus datos hasta el {{fecha_limite}} en el siguiente enlace: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
+<p>Puede consultar o modificar sus datos {{plazo_edicion}} en el siguiente enlace: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>Toda la información del Congreso —la agenda, la sede y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Cualquier corrección posterior debe solicitarse a {{correo_contacto}}.</p>
 <p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
@@ -567,7 +567,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 {{zoom_bloque}}
 {{agenda_bloque}}
-<p>You may review or edit your details until {{fecha_limite}} at the following link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
+<p>You may review or edit your details {{plazo_edicion}} at the following link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>All the Congress information —the agenda, the venue and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Any later correction must be requested at {{correo_contacto}}.</p>
 <p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
@@ -584,7 +584,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 </ul>
 {{zoom_bloque}}
 {{agenda_bloque}}
-<p>Você pode consultar ou alterar seus dados até {{fecha_limite}} no seguinte link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
+<p>Você pode consultar ou alterar seus dados {{plazo_edicion}} no seguinte link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>Todas as informações do Congresso —a agenda, a sede e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
 <p>Qualquer correção posterior deve ser solicitada a {{correo_contacto}}.</p>
 <p>Comitê organizador<br/>CIESS · RIUSS</p>$html$),
@@ -817,7 +817,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Modalidad:</strong> {{modalidad}}</li>
 </ul>
 {{agenda_bloque}}
-<p>Puede consultar o corregir sus datos hasta el {{fecha_limite}} en <a href="{{url_edicion}}">este enlace</a>. La información logística se enviará por esta misma vía.</p>
+<p>Puede consultar o corregir sus datos {{plazo_edicion}} en <a href="{{url_edicion}}">este enlace</a>. La información logística se enviará por esta misma vía.</p>
 <p>Cualquier duda, escriba a {{correo_contacto}}.</p>
 <p>Comité organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -831,7 +831,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Format:</strong> {{modalidad}}</li>
 </ul>
 {{agenda_bloque}}
-<p>You may review or correct your details until {{fecha_limite}} at <a href="{{url_edicion}}">this link</a>. Logistical information will be sent through this same channel.</p>
+<p>You may review or correct your details {{plazo_edicion}} at <a href="{{url_edicion}}">this link</a>. Logistical information will be sent through this same channel.</p>
 <p>For any questions, write to {{correo_contacto}}.</p>
 <p>Organizing committee<br/>CIESS · RIUSS</p>$html$),
 
@@ -845,7 +845,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Modalidade:</strong> {{modalidad}}</li>
 </ul>
 {{agenda_bloque}}
-<p>Você pode consultar ou corrigir seus dados até {{fecha_limite}} <a href="{{url_edicion}}">neste link</a>. As informações logísticas serão enviadas por esta mesma via.</p>
+<p>Você pode consultar ou corrigir seus dados {{plazo_edicion}} <a href="{{url_edicion}}">neste link</a>. As informações logísticas serão enviadas por esta mesma via.</p>
 <p>Em caso de dúvida, escreva para {{correo_contacto}}.</p>
 <p>Comitê organizador<br/>CIESS · RIUSS</p>$html$),
 
@@ -951,21 +951,21 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 
 ('ponencia_aceptada_con_cambios', 'es', 'Ponencia aceptada con cambios · 1er Congreso',
  $html$<p>Estimada persona participante:</p>
-<p>El comité dictaminador <strong>aceptó su propuesta con cambios</strong>. Le pedimos atender las observaciones y reenviar la versión corregida antes del {{fecha_limite}}.</p>
+<p>El comité dictaminador <strong>aceptó su propuesta con cambios</strong>. Le pedimos atender las observaciones y reenviar la versión corregida {{plazo_reenvio}}.</p>
 <ul><li><strong>Folio:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>Puede actualizar su resumen en <a href="{{url_edicion}}">este enlace</a>.</p>
 <p>Comité dictaminador<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_aceptada_con_cambios', 'en', 'Paper accepted with changes · 1st Congress',
  $html$<p>Dear participant,</p>
-<p>The review committee has <strong>accepted your proposal with changes</strong>. Please address the comments and resubmit the corrected version before {{fecha_limite}}.</p>
+<p>The review committee has <strong>accepted your proposal with changes</strong>. Please address the comments and resubmit the corrected version {{plazo_reenvio}}.</p>
 <ul><li><strong>Reference:</strong> {{folio}}</li><li><strong>Title:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>You can update your abstract at <a href="{{url_edicion}}">this link</a>.</p>
 <p>Review committee<br/>CIESS · RIUSS</p>$html$),
 ('ponencia_aceptada_con_cambios', 'pt', 'Trabalho aceito com alterações · 1º Congresso',
  $html$<p>Prezada pessoa participante,</p>
-<p>O comitê avaliador <strong>aceitou sua proposta com alterações</strong>. Pedimos que atenda às observações e reenvie a versão corrigida até {{fecha_limite}}.</p>
+<p>O comitê avaliador <strong>aceitou sua proposta com alterações</strong>. Pedimos que atenda às observações e reenvie a versão corrigida {{plazo_reenvio}}.</p>
 <ul><li><strong>Protocolo:</strong> {{folio}}</li><li><strong>Título:</strong> {{titulo_ponencia}}</li></ul>
 {{comentarios_bloque}}
 <p>Você pode atualizar seu resumo <a href="{{url_edicion}}">neste link</a>.</p>

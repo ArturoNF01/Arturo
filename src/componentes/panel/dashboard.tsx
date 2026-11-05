@@ -9,7 +9,7 @@ import { BarraFiltros } from './filtros';
 import { aplicarFiltros, useRegistros, FILTROS_VACIOS, type Filtros, type RegistroPanel } from './usar-registros';
 import { contarPor, regresionLineal } from '@/lib/graficas';
 import { codigoPais } from '@/lib/paises';
-import { diaEnMexico } from '@/lib/fechas';
+import { diaEnMexico, hayFechaLimite } from '@/lib/fechas';
 import { traducir } from '@/lib/contenido';
 import { useContenidoPanel } from './contexto-panel';
 import { nombrePerfil } from '@/lib/perfiles';
@@ -341,10 +341,13 @@ function construirProyeccion(
     proyectado: i === serie.length - 1 ? d.acumulado : null,
   }));
 
-  const diasHastaLimite = Math.max(
-    0,
-    Math.round((Date.parse(`${fechaLimite}T00:00:00Z`) - Date.parse(`${diaEnMexico()}T00:00:00Z`)) / 86_400_000),
-  );
+  // Sin fecha límite (registro abierto) no hay a qué plazo proyectar: se usa el horizonte de siempre.
+  const diasHastaLimite = hayFechaLimite(fechaLimite)
+    ? Math.max(
+        0,
+        Math.round((Date.parse(`${fechaLimite}T00:00:00Z`) - Date.parse(`${diaEnMexico()}T00:00:00Z`)) / 86_400_000),
+      )
+    : 0;
   const pasos = Math.min(DIAS_PROYECCION, diasHastaLimite || DIAS_PROYECCION);
   const ultimoAcumulado = serie[serie.length - 1].acumulado;
 
