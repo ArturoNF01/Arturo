@@ -320,6 +320,14 @@ export const es = {
     agendaBoton: 'Descargar la agenda (PDF)',
 
   },
+  constancia: {
+    titulo: 'Constancia de participación',
+    // Antes de registrarse: lo que hay que saber para decidir.
+    texto: 'Para recibirla es requisito registrarse y asistir —en persona o en línea— a todas las sesiones. Entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia.',
+    // Ya registrada, la persona sólo necesita el recordatorio de lo que falta.
+    recordatorio: 'Para recibir su constancia de participación es requisito estar registrado —ya lo está— y asistir, en persona o en línea, a todas las sesiones.',
+    ir: 'Ir al registro',
+  },
   faq: {
     titulo: 'Preguntas frecuentes',
     subtitulo: 'Respuestas a lo que más se pregunta sobre el registro, la participación y la estancia. La agenda general ya está publicada.',

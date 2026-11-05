@@ -7,6 +7,7 @@ import type { ConfiguracionPublica } from '@/lib/servidor/configuracion';
 import { traducir, type DatosCongreso } from '@/lib/contenido';
 import { VideoFondo } from '@/componentes/video-fondo';
 import { hayFechaLimite } from '@/lib/fechas';
+import { AvisoConstancia } from '@/componentes/aviso-constancia';
 
 export function PaginaRegistro({
   configuracion,
@@ -64,6 +65,10 @@ export function PaginaRegistro({
           </div>
 
           <p className="mt-6 text-base leading-relaxed text-white/85">{t.formulario.intro}</p>
+
+          <div className="mt-6">
+            <AvisoConstancia variante="azul" />
+          </div>
 
           {limite && (
             <div className="vidrio mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1 !rounded-lg border-l-4 px-4 py-3"

@@ -470,6 +470,17 @@
 main:has(> .seccion-azul:last-child) + .pie-azul,
 main.seccion-azul + .pie-azul { margin-top: 0; }
 
+/* El aviso de la constancia: dorado suave, para que se vea sin gritar. */
+.aviso-constancia {
+  padding: 0.9rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--dorado) 55%, var(--borde));
+  border-left: 4px solid var(--dorado);
+  border-radius: 0.75rem;
+  background-color: color-mix(in srgb, var(--dorado) 16%, var(--fondo-tarjeta));
+  color: var(--texto);
+}
+.aviso-constancia a { color: var(--tinta-azul); }
+
 /* El botón para entrar a una sesión en línea (Zoom o Meet): relleno, como el día
    elegido de la agenda; en oscuro, dorado con letra marina. */
 .boton-union {

@@ -58,6 +58,38 @@ update plantillas_correo set cuerpo_html = replace(cuerpo_html, 'até {{fecha_li
  where idioma = 'pt' and clave = 'ponencia_aceptada_con_cambios'
    and cuerpo_html like '%até {{fecha_limite}}%';
 
+-- La constancia exige registrarse y asistir a todas las sesiones.
+--
+-- Va en el acuse de confirmación y en el de registro confirmado, delante del bloque de la
+-- agenda. Se aplica UNA sola vez, y por eso lleva una marca: esto corre en cada despliegue, y
+-- sin ella una plantilla de la que el comité quitara el bloque desde el panel lo recuperaría en
+-- el siguiente (el panel manda). La marca es una fila más de `configuracion` que ninguna
+-- pantalla enseña; no hay que borrarla.
+do $constancia$
+begin
+  if not exists (select 1 from configuracion where clave = 'migracion_constancia_bloque') then
+    update plantillas_correo
+       set cuerpo_html = replace(cuerpo_html, '{{agenda_bloque}}', '{{constancia_bloque}}' || E'\n' || '{{agenda_bloque}}')
+     where cuerpo_html like '%{{agenda_bloque}}%'
+       and cuerpo_html not like '%{{constancia_bloque}}%';
+
+    insert into configuracion (clave, valor, descripcion)
+    values ('migracion_constancia_bloque', 'true'::jsonb,
+            'Marca interna de una migración ya aplicada: las plantillas de acuse recibieron {{constancia_bloque}}. No borrar.');
+  end if;
+end
+$constancia$;
+
+-- Y la pregunta frecuente de la constancia lo dice. Sólo si conserva el texto sembrado.
+update faqs
+   set respuesta = jsonb_build_object(
+         'es', 'Sí. Para recibir la constancia de participación es requisito registrarse y asistir —en persona o en línea— a todas las sesiones del Congreso; entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia. En el formulario puede indicar el nombre exacto tal como debe aparecer en la constancia. Las condiciones y los plazos de entrega los comunica el comité organizador por correo.',
+         'en', 'Yes. To receive the certificate of participation you must register and attend all the Congress sessions, in person or online; joining Zoom or Meet without registering does not entitle you to a certificate. In the form you can state the exact name as it should appear on the certificate. The conditions and delivery times are communicated by the organizing committee by email.',
+         'pt', 'Sim. Para receber o certificado de participação é necessário inscrever-se e participar de todas as sessões do Congresso, presencialmente ou on-line; entrar no Zoom ou no Meet sem ter se inscrito não dá direito ao certificado. No formulário você pode indicar o nome exato como deve constar no certificado. As condições e os prazos de entrega são comunicados pelo comitê organizador por e-mail.')
+ where clave = 'constancia'
+   and respuesta->>'es' like '%Las condiciones y los plazos de entrega los comunica el comité organizador por correo.%'
+   and respuesta->>'es' not like '%es requisito registrarse%';
+
 -- La pregunta frecuente sobre editar el registro hablaba de «la fecha límite». Mismo criterio
 -- que las demás: sólo si conserva el texto sembrado.
 update faqs

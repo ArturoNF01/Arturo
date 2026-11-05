@@ -282,6 +282,12 @@ export const en: Diccionario = {
     agendaBoton: 'Download the agenda (PDF)',
 
   },
+  constancia: {
+    titulo: 'Certificate of participation',
+    texto: 'To receive it you must register and attend all the sessions, in person or online. Joining Zoom or Meet without registering does not entitle you to a certificate.',
+    recordatorio: 'To receive your certificate of participation you must be registered —you already are— and attend all the sessions, in person or online.',
+    ir: 'Go to registration',
+  },
   faq: {
     titulo: 'Frequently asked questions',
     subtitulo: 'Answers to the most common questions about registration, participation and your stay. The general agenda is now published.',

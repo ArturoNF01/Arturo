@@ -104,6 +104,13 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
 <p style="margin:12px 0 0;font-size:13px;color:#4a5b6e;word-break:break-all;">${datos.urlSesionZoom}</p>
 </div>`
         : '',
+    // El recordatorio de la constancia, para todas las personas registradas, siempre: no depende
+    // del perfil, de la modalidad ni de que la agenda esté publicada. Sin registro y sin asistir a
+    // todas las sesiones no hay constancia, y es mejor que lo lean aquí que descubrirlo después.
+    constancia_bloque: `<div style="margin:20px 0;padding:16px;border-radius:8px;background:#fbf6e9;border:1px solid #e3d3a1;">
+<p style="margin:0 0 8px;font-weight:bold;color:#16283d;">${t.constancia.titulo}</p>
+<p style="margin:0;">${t.constancia.recordatorio}</p>
+</div>`,
     url_agenda: urlAgenda,
     // El programa, para todo el mundo: quien expone quiere ver en qué mesa
     // quedó y a qué hora, y quien asiste, qué va a oír. Es el único bloque

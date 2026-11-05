@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useApp } from '@/componentes/proveedores';
 import { LANDING } from '@/lib/landing';
 import { urlAgendaSegunIdioma } from '@/lib/agenda';
+import { AvisoConstancia } from '@/componentes/aviso-constancia';
 import {
   MESA_POR_NUMERO, PAISES, PROGRAMA, RESUMEN, SALAS, TEXTOS_PROGRAMA,
-  agruparPorHorario, plataformaDe, unirAutores,
+  agruparPorHorario, esHibrida, plataformaDe, unirAutores,
   type ClaveSala, type Mesa, type PlataformaEnLinea, type Sesion,
 } from '@/lib/programa';
 
@@ -179,10 +180,10 @@ function Tarjeta({
             <span className="tenue">, {sesion.ponente.cargo[idioma]}</span>
           </span>
         )}
-        {((mostrarSala && sesion.sala) || cuenta || sesion.hibrida) && (
+        {((mostrarSala && sesion.sala) || cuenta || esHibrida(sesion)) && (
           <span className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
             {mostrarSala && sesion.sala && <Sala sala={sesion.sala} />}
-            {sesion.hibrida && <span className="sala-chip">{ui.hibrida}</span>}
+            {esHibrida(sesion) && <span className="sala-chip">{ui.hibrida}</span>}
             {cuenta && <span className="text-xs font-medium tenue">{cuenta}</span>}
           </span>
         )}
@@ -345,7 +346,13 @@ export function Programa({
           </div>
         </div>
 
-        <ul className="mt-8 flex flex-wrap gap-2.5">
+        {/* El aviso va aquí, junto a los botones de Zoom y Meet que están a la vista: quien
+            entra sin registrarse no recibe constancia, y este es el sitio donde se decide. */}
+        <div className="mt-8">
+          <AvisoConstancia conBoton />
+        </div>
+
+        <ul className="mt-6 flex flex-wrap gap-2.5">
           {(['dias', 'mesas', 'ponencias', 'paises'] as const).map((clave) => (
             <li key={clave} className="ficha-dato flex items-baseline gap-2 px-4 py-2">
               <span className="numero text-2xl font-bold leading-none">{RESUMEN[clave]}</span>

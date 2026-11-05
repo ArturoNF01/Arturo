@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MESAS, MESA_POR_NUMERO, PAISES, PLATAFORMA_POR_SALA, PROGRAMA, RESUMEN, SALAS, TEXTOS_PROGRAMA,
-  agruparPorHorario, plataformaDe, unirAutores, type Ponencia, type Sesion,
+  agruparPorHorario, esHibrida, plataformaDe, unirAutores, type Ponencia, type Sesion,
 } from '@/lib/programa';
 
 /**
@@ -208,18 +208,16 @@ describe('por dónde se entra a cada sesión', () => {
     expect(plataformaDe(todas.find(({ s }) => s.mesa === 6)!.s)).toBe('meet');
   });
 
-  it('cada mesa de trabajo del miércoles es híbrida; la reunión general, que no es una mesa, no lo dice', () => {
-    const trabajo = todas.filter(({ s }) => s.tipo === 'trabajo').map(({ s }) => s);
-    expect(trabajo.filter((s) => s.hibrida).map((s) => s.actividad?.es)).toEqual([
-      'Mesa de Trabajo RIUSS – Salud',
-      'Mesa de Trabajo RIUSS – Pensiones',
-      'Mesa de Trabajo RIUSS – Riesgos Laborales',
-      'Mesa de Trabajo RIUSS – Cuidados',
-    ]);
-    expect(trabajo.find((s) => s.actividad?.es === 'Reunión General de la RIUSS')?.hibrida).toBeUndefined();
-    for (const { s } of todas) if (s.hibrida) expect(s.tipo, s.horario).toBe('trabajo');
+  it('todas las sesiones son híbridas (presencial y virtual); el registro y el almuerzo no son sesiones', () => {
+    for (const { s } of todas) {
+      if (s.tipo === 'registro' || s.tipo === 'pausa') expect(esHibrida(s), s.horario).toBe(false);
+      else expect(esHibrida(s), `${s.horario} ${s.tipo}`).toBe(true);
+    }
+    // 4 mesas de trabajo + reunión general + apertura + conferencia + 11 mesas + clausura.
+    expect(todas.filter(({ s }) => esHibrida(s))).toHaveLength(5 + 2 + 11 + 1);
     for (const idioma of IDIOMAS) expect(TEXTOS_PROGRAMA[idioma].hibrida.length, idioma).toBeGreaterThan(10);
     expect(TEXTOS_PROGRAMA.es.hibrida).toBe('Híbrida (presencial y virtual)');
+    expect(TEXTOS_PROGRAMA.pt.hibrida).toBe('Híbrida (presencial e virtual)');
   });
 
   it('los textos del botón existen en los tres idiomas', () => {

@@ -283,6 +283,12 @@ export const pt: Diccionario = {
     agendaBoton: 'Baixar a agenda (PDF)',
 
   },
+  constancia: {
+    titulo: 'Certificado de participação',
+    texto: 'Para recebê-lo é necessário inscrever-se e participar de todas as sessões, presencialmente ou on-line. Entrar no Zoom ou no Meet sem ter se inscrito não dá direito ao certificado.',
+    recordatorio: 'Para receber o seu certificado de participação é necessário estar inscrito —você já está— e participar de todas as sessões, presencialmente ou on-line.',
+    ir: 'Ir para a inscrição',
+  },
   faq: {
     titulo: 'Perguntas frequentes',
     subtitulo: 'Respostas ao que mais se pergunta sobre a inscrição, a participação e a estadia. A agenda geral já está publicada.',

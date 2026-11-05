@@ -533,7 +533,7 @@ group by 1 order by 2 desc;
 -- Variables disponibles: {{folio}} {{nombre}} {{perfil}} {{modalidad}}
 --                        {{correo}} {{fecha_limite}} {{plazo_edicion}} {{plazo_reenvio}} {{url_edicion}}
 --                        {{url_agenda}} {{url_sitio}} {{correo_contacto}}
---                        {{zoom_bloque}} {{agenda_bloque}} — bloques ya
+--                        {{zoom_bloque}} {{constancia_bloque}} {{agenda_bloque}} — bloques ya
 --                        formateados: el sistema decide si salen y con qué
 --                        aspecto. La plantilla sólo dice dónde van.
 -- ---------------------------------------------------------------------
@@ -549,6 +549,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Modalidad:</strong> {{modalidad}}</li>
 </ul>
 {{zoom_bloque}}
+{{constancia_bloque}}
 {{agenda_bloque}}
 <p>Puede consultar o modificar sus datos {{plazo_edicion}} en el siguiente enlace: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>Toda la información del Congreso —la agenda, la sede y las preguntas frecuentes— está en el sitio: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
@@ -566,6 +567,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Format:</strong> {{modalidad}}</li>
 </ul>
 {{zoom_bloque}}
+{{constancia_bloque}}
 {{agenda_bloque}}
 <p>You may review or edit your details {{plazo_edicion}} at the following link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>All the Congress information —the agenda, the venue and the frequently asked questions— is on the website: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
@@ -583,6 +585,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Modalidade:</strong> {{modalidad}}</li>
 </ul>
 {{zoom_bloque}}
+{{constancia_bloque}}
 {{agenda_bloque}}
 <p>Você pode consultar ou alterar seus dados {{plazo_edicion}} no seguinte link: <a href="{{url_edicion}}">{{url_edicion}}</a></p>
 <p>Todas as informações do Congresso —a agenda, a sede e as perguntas frequentes— estão no site: <a href="{{url_sitio}}">{{url_sitio}}</a>.</p>
@@ -816,6 +819,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Nombre:</strong> {{nombre}}</li>
   <li><strong>Modalidad:</strong> {{modalidad}}</li>
 </ul>
+{{constancia_bloque}}
 {{agenda_bloque}}
 <p>Puede consultar o corregir sus datos {{plazo_edicion}} en <a href="{{url_edicion}}">este enlace</a>. La información logística se enviará por esta misma vía.</p>
 <p>Cualquier duda, escriba a {{correo_contacto}}.</p>
@@ -830,6 +834,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Name:</strong> {{nombre}}</li>
   <li><strong>Format:</strong> {{modalidad}}</li>
 </ul>
+{{constancia_bloque}}
 {{agenda_bloque}}
 <p>You may review or correct your details {{plazo_edicion}} at <a href="{{url_edicion}}">this link</a>. Logistical information will be sent through this same channel.</p>
 <p>For any questions, write to {{correo_contacto}}.</p>
@@ -844,6 +849,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
   <li><strong>Nome:</strong> {{nombre}}</li>
   <li><strong>Modalidade:</strong> {{modalidad}}</li>
 </ul>
+{{constancia_bloque}}
 {{agenda_bloque}}
 <p>Você pode consultar ou corrigir seus dados {{plazo_edicion}} <a href="{{url_edicion}}">neste link</a>. As informações logísticas serão enviadas por esta mesma via.</p>
 <p>Em caso de dúvida, escreva para {{correo_contacto}}.</p>

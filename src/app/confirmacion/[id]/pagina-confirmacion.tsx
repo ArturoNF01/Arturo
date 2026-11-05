@@ -1,6 +1,7 @@
 'use client';
 
 import { hayFechaLimite } from '@/lib/fechas';
+import { RecordatorioConstancia } from '@/componentes/aviso-constancia';
 import { useState } from 'react';
 import { Encabezado, PieDePagina } from '@/componentes/controles';
 import { FormularioRegistro } from '@/componentes/formulario-registro';
@@ -78,6 +79,8 @@ export function PaginaConfirmacion({
             <p className="text-xs uppercase tracking-wide tenue">{t.confirmacion.folio}</p>
             <p className="mt-1 font-mono text-lg font-bold tracking-tight">{String(registro.folio)}</p>
           </div>
+
+          <RecordatorioConstancia />
 
           {vaAZoom && (
             <div

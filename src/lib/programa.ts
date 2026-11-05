@@ -415,8 +415,6 @@ export interface Sesion {
   participantes?: Participante[];
   /** Quien da la conferencia magistral. Sólo la sesión de tipo «conferencia». */
   ponente?: Participante;
-  /** Se sigue en persona y en línea a la vez («híbrida»), según el programa. */
-  hibrida?: true;
   /**
    * Cuando la sesión no se sigue por la plataforma que le tocaría por su sala.
    * El miércoles todo va por Zoom aunque se haga en la sala de comisiones: así lo
@@ -446,6 +444,16 @@ const SIN_ENLACE: ReadonlySet<TipoSesion> = new Set<TipoSesion>(['registro', 'pa
 export function plataformaDe(sesion: Sesion): PlataformaEnLinea | null {
   if (!sesion.sala || SIN_ENLACE.has(sesion.tipo)) return null;
   return sesion.plataforma ?? PLATAFORMA_POR_SALA[sesion.sala];
+}
+
+/**
+ * Todas las sesiones del Congreso son híbridas: se hacen en una sala y se siguen en
+ * línea (Zoom o Meet) a la vez. El registro y el almuerzo no son sesiones. Es una regla
+ * y no una marca en cada una: si mañana hay una sesión sólo presencial, ésa es la
+ * excepción y se dice aquí.
+ */
+export function esHibrida(sesion: Sesion): boolean {
+  return plataformaDe(sesion) !== null;
 }
 
 export interface DiaPrograma {
@@ -484,16 +492,16 @@ export const PROGRAMA: DiaPrograma[] = [
     sesiones: [
       { horario: '08:30–09:00', tipo: 'registro', sala: 'comisiones', actividad: REGISTRO },
       {
-        horario: '09:00–10:30', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom', hibrida: true,
+        horario: '09:00–10:30', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom',
         actividad: { es: 'Mesa de Trabajo RIUSS – Salud', en: 'RIUSS Working Group – Health', pt: 'Mesa de Trabalho RIUSS – Saúde' },
       },
       {
-        horario: '10:30–12:00', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom', hibrida: true,
+        horario: '10:30–12:00', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom',
         actividad: { es: 'Mesa de Trabajo RIUSS – Pensiones', en: 'RIUSS Working Group – Pensions', pt: 'Mesa de Trabalho RIUSS – Pensões' },
       },
       { horario: '12:00–13:00', tipo: 'pausa', actividad: ALMUERZO },
       {
-        horario: '13:00–14:30', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom', hibrida: true,
+        horario: '13:00–14:30', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom',
         actividad: {
           es: 'Mesa de Trabajo RIUSS – Riesgos Laborales',
           en: 'RIUSS Working Group – Occupational Risks',
@@ -501,7 +509,7 @@ export const PROGRAMA: DiaPrograma[] = [
         },
       },
       {
-        horario: '14:30–16:00', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom', hibrida: true,
+        horario: '14:30–16:00', tipo: 'trabajo', sala: 'comisiones', plataforma: 'zoom',
         actividad: { es: 'Mesa de Trabajo RIUSS – Cuidados', en: 'RIUSS Working Group – Care', pt: 'Mesa de Trabalho RIUSS – Cuidados' },
       },
       {
