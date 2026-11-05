@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * La pestaña «Resumen Registro»: cómo se llena con los registros que ya
- * existían, y que repetirlo no duplica ni borra nada.
+ * existían, que repetirlo no duplica ni borra nada, y qué pasa cuando sus
+ * columnas cambian.
  *
  * Los registros anteriores a la pestaña constan como copiados, así que ninguna
  * de las rutas de siempre se los vuelve a mandar: los recoge
@@ -11,28 +12,44 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 type Peticion = Record<string, unknown>;
+type Regla = {
+  ranges: { sheetId: number; startRowIndex?: number; startColumnIndex: number; endColumnIndex: number; endRowIndex?: number }[];
+  booleanRule: {
+    condition: { type: string; values: { userEnteredValue: string }[] };
+    format?: { backgroundColor: { red: number; green: number; blue: number } };
+  };
+};
+
+const ENCABEZADOS = ['N.º', 'Nombre', 'Perfil', 'País', 'Institución', 'Modalidad'];
+const ANTERIORES = ['N.º', 'Nombre', 'País', 'Institución', 'Modalidad'];
+const ID_LISTA = 2; // el sheetId de «Resumen Registro» en el libro simulado
 
 const estado: {
-  /** Lo que la columna A de la lista tiene ya, fila a fila. */
-  columnaA: (string | number)[];
-  /** Las filas que se han añadido, en el orden en que entraron. */
-  anadidas: (string | number)[][];
-  /** Todas las peticiones de estructura (orden, colores, anchos). */
+  /** Los títulos que la lista tiene en la fila 1. */
+  encabezado: string[];
+  /** Las filas de datos de la lista, tal como están en la hoja. */
+  filas: (string | number)[][];
+  /** Todas las peticiones de estructura, en el orden en que llegaron. */
   peticiones: Peticion[];
   /** Los rangos que se pidieron, tal como los vería Google. */
   rangos: string[];
-  /** Las reglas de color que la pestaña ya tiene. */
-  reglas: unknown[];
-  /** Cuántas lecturas de la estructura del libro se hicieron. */
-  lecturasDelLibro: number;
+  /** Las reglas de color que la lista tiene ahora. */
+  reglas: Regla[];
+  /** Los títulos que se escribieron, por pestaña. */
+  titulosEscritos: Record<string, string[]>;
+  /** Los títulos de REG_Respuestas en el libro simulado. */
+  encabezadoReg: string[];
   /** Si la pestaña existe en el libro simulado. */
   existe: boolean;
-} = { columnaA: [], anadidas: [], peticiones: [], rangos: [], reglas: [], lecturasDelLibro: 0, existe: true };
-
-const ENCABEZADOS = ['N.º', 'Nombre', 'País', 'Institución', 'Modalidad'];
+} = {
+  encabezado: ENCABEZADOS, filas: [], peticiones: [], rangos: [], reglas: [],
+  titulosEscritos: {}, encabezadoReg: ['__otra pestaña__'], existe: true,
+};
 
 /** Registros de la base simulada, ya con su número de orden. */
 let base: Record<string, unknown>[] = [];
+
+const nombreDe = (rango: string) => rango.split('!')[0].replace(/^'(.*)'$/, '$1');
 
 vi.mock('googleapis', () => ({
   google: {
@@ -40,7 +57,6 @@ vi.mock('googleapis', () => ({
     sheets: () => ({
       spreadsheets: {
         get: async () => {
-          estado.lecturasDelLibro += 1;
           const hojas = ['REG_Respuestas', 'PAR_Participantes', 'PSE_Personificadores_Semblanzas'];
           if (estado.existe) hojas.splice(1, 0, 'Resumen Registro');
           return {
@@ -53,33 +69,48 @@ vi.mock('googleapis', () => ({
           };
         },
         batchUpdate: async (p: { requestBody: { requests: Peticion[] } }) => {
-          estado.peticiones.push(...p.requestBody.requests);
+          for (const peticion of p.requestBody.requests) {
+            estado.peticiones.push(peticion);
+            // La hoja simulada hace lo que Google haría con cada una.
+            const borrar = peticion.deleteDimension as { range: { sheetId: number } } | undefined;
+            if (borrar?.range.sheetId === ID_LISTA) estado.filas = [];
+            if (peticion.deleteConditionalFormatRule) estado.reglas.shift();
+            const nueva = peticion.addConditionalFormatRule as { rule: Regla } | undefined;
+            if (nueva) estado.reglas.unshift(nueva.rule);
+            const vaciar = peticion.updateCells as { range: { sheetId: number } } | undefined;
+            if (vaciar?.range.sheetId === ID_LISTA) estado.encabezado = [];
+          }
           return { data: { replies: [] } };
         },
         values: {
           get: async ({ range }: { range: string }) => {
             estado.rangos.push(range);
-            return { data: { values: estado.columnaA.map((n) => [String(n)]) } };
+            return { data: { values: estado.filas.map((f) => [String(f[0])]) } };
           },
           append: async ({ range, requestBody }: { range: string; requestBody: { values: (string | number)[][] } }) => {
             estado.rangos.push(range);
-            estado.anadidas.push(...requestBody.values);
-            // Como Sheets: lo añadido queda debajo, en la columna A.
-            estado.columnaA.push(...requestBody.values.map((f) => f[0]));
+            estado.filas.push(...requestBody.values);
             return { data: {} };
           },
           batchGet: async ({ ranges }: { ranges: string[] }) => ({
             data: {
               valueRanges: ranges.map((r) => {
-                const nombre = r.split('!')[0].replace(/^'(.*)'$/, '$1');
+                const nombre = nombreDe(r);
                 const fila = nombre === 'Resumen Registro'
-                  ? ENCABEZADOS
-                  : ['__otra pestaña__'];
-                return { values: [fila] };
+                  ? estado.encabezado
+                  : nombre === 'REG_Respuestas' ? estado.encabezadoReg : ['__otra pestaña__'];
+                return { values: fila.length ? [fila] : [] };
               }),
             },
           }),
-          batchUpdate: async () => ({ data: {} }),
+          batchUpdate: async ({ requestBody }: { requestBody: { data: { range: string; values: string[][] }[] } }) => {
+            for (const { range, values } of requestBody.data) {
+              const nombre = nombreDe(range);
+              estado.titulosEscritos[nombre] = values[0];
+              if (nombre === 'Resumen Registro') estado.encabezado = values[0];
+            }
+            return { data: {} };
+          },
         },
       },
     }),
@@ -116,6 +147,7 @@ function persona(numero: number, extra: Record<string, unknown> = {}) {
     numero_en_hoja: String(numero), // la base devuelve los bigint como texto
     nombres: `Persona${numero}`,
     apellidos: 'Prueba',
+    perfil: numero % 3 ? 'ponente' : 'conferencista',
     pais_residencia: 'México',
     institucion: 'CIESS',
     modalidad: numero % 2 ? 'presencial' : 'en_linea',
@@ -124,12 +156,13 @@ function persona(numero: number, extra: Record<string, unknown> = {}) {
 }
 
 beforeEach(async () => {
-  estado.columnaA = [];
-  estado.anadidas = [];
+  estado.encabezado = ENCABEZADOS;
+  estado.filas = [];
   estado.peticiones = [];
   estado.rangos = [];
   estado.reglas = [];
-  estado.lecturasDelLibro = 0;
+  estado.titulosEscritos = {};
+  estado.encabezadoReg = ['__otra pestaña__'];
   estado.existe = true;
   base = [];
   process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'cuenta@ejemplo.iam.gserviceaccount.com';
@@ -141,6 +174,7 @@ beforeEach(async () => {
 
 /** Las peticiones de un tipo, sin importar en qué tanda fueron. */
 const de = (clave: string) => estado.peticiones.filter((p) => clave in p).map((p) => p[clave] as never);
+const numeros = () => estado.filas.map((f) => f[0]);
 
 describe('poner al día la lista de registrados', () => {
   it('copia todos los registros que ya existían, numerados y en orden', async () => {
@@ -150,10 +184,10 @@ describe('poner al día la lista de registrados', () => {
     const resultado = await cuadrarPestanasEspejo();
 
     expect(resultado).toEqual({ 'Resumen Registro': 3 });
-    expect(estado.anadidas).toEqual([
-      [1, 'Persona1 Prueba', 'México', 'CIESS', 'Presencial'],
-      [2, 'Persona2 Prueba', 'México', 'CIESS', 'En línea'],
-      [3, 'Persona3 Prueba', 'México', 'CIESS', 'Presencial'],
+    expect(estado.filas).toEqual([
+      [1, 'Persona1 Prueba', 'Ponente', 'México', 'CIESS', 'Presencial'],
+      [2, 'Persona2 Prueba', 'Ponente', 'México', 'CIESS', 'En línea'],
+      [3, 'Persona3 Prueba', 'Conferencista', 'México', 'CIESS', 'Presencial'],
     ]);
   });
 
@@ -171,12 +205,10 @@ describe('poner al día la lista de registrados', () => {
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
 
     await cuadrarPestanasEspejo();
-    const tras1 = estado.anadidas.length;
     const segunda = await cuadrarPestanasEspejo();
 
     expect(segunda).toEqual({ 'Resumen Registro': 0 });
-    expect(estado.anadidas).toHaveLength(tras1);
-    expect(estado.columnaA).toEqual([1, 2]);
+    expect(numeros()).toEqual([1, 2]);
   });
 
   it('un registro nuevo entra solo en la siguiente pasada, sin repetir los anteriores', async () => {
@@ -188,22 +220,23 @@ describe('poner al día la lista de registrados', () => {
     const resultado = await cuadrarPestanasEspejo();
 
     expect(resultado['Resumen Registro']).toBe(1);
-    expect(estado.columnaA).toEqual([1, 2, 3]);
+    expect(numeros()).toEqual([1, 2, 3]);
   });
 
   it('sólo añade lo que falta: completa los huecos sin tocar lo que ya está', async () => {
-    estado.columnaA = [1, 2, 4];
+    estado.filas = [[1, 'a'], [2, 'b'], [4, 'd']];
     base = [persona(1), persona(2), persona(3), persona(4)];
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
 
     await cuadrarPestanasEspejo();
 
-    expect(estado.anadidas.map((f) => f[0])).toEqual([3]);
+    expect(estado.filas.slice(0, 3)).toEqual([[1, 'a'], [2, 'b'], [4, 'd']]);
+    expect(numeros().slice(3)).toEqual([3]);
   });
 
   it('si la lista ya tenía números mayores, la ordena por la columna A al terminar', async () => {
     // Entró un alta (la 5) antes de que se pusiera al día la pestaña.
-    estado.columnaA = [5];
+    estado.filas = [[5, 'x']];
     base = [persona(1), persona(2), persona(5)];
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
 
@@ -216,7 +249,7 @@ describe('poner al día la lista de registrados', () => {
   });
 
   it('si ya está ordenada no la reordena, ni toca los anchos que alguien puso', async () => {
-    estado.columnaA = [1, 2];
+    estado.filas = [[1, 'a'], [2, 'b']];
     base = [persona(1), persona(2), persona(3)];
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
 
@@ -226,18 +259,18 @@ describe('poner al día la lista de registrados', () => {
     expect(de('autoResizeDimensions')).toHaveLength(0);
   });
 
-  it('la primera vez que se llena, ajusta el ancho de sus cinco columnas', async () => {
+  it('la primera vez que se llena, ajusta el ancho de sus seis columnas', async () => {
     base = [persona(1)];
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
     await cuadrarPestanasEspejo();
 
     const anchos = de('autoResizeDimensions') as { dimensions: { startIndex: number; endIndex: number } }[];
     expect(anchos).toHaveLength(1);
-    expect(anchos[0].dimensions).toMatchObject({ startIndex: 0, endIndex: 5 });
+    expect(anchos[0].dimensions).toMatchObject({ startIndex: 0, endIndex: 6 });
   });
 
-  it('nunca borra: ninguna petición quita filas ni vacía celdas', async () => {
-    estado.columnaA = [1];
+  it('con la pestaña al día nunca borra: ninguna petición quita filas ni vacía celdas', async () => {
+    estado.filas = [[1, 'a']];
     base = [persona(1), persona(2)];
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
     await cuadrarPestanasEspejo();
@@ -254,8 +287,8 @@ describe('poner al día la lista de registrados', () => {
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
     await cuadrarPestanasEspejo();
 
-    expect(estado.anadidas[0][1]).toMatch(/^'=/);
-    expect(estado.anadidas[0][3]).toMatch(/^'\+/);
+    expect(estado.filas[0][1]).toMatch(/^'=/);
+    expect(estado.filas[0][4]).toMatch(/^'\+/);
   });
 
   it('con más de mil registros escribe por tandas de mil', async () => {
@@ -265,7 +298,7 @@ describe('poner al día la lista de registrados', () => {
 
     const escrituras = estado.rangos.filter((r) => r.endsWith('!A1'));
     expect(escrituras).toHaveLength(3);
-    expect(estado.columnaA).toHaveLength(2500);
+    expect(estado.filas).toHaveLength(2500);
   });
 });
 
@@ -273,42 +306,32 @@ describe('los colores de Modalidad', () => {
   const rgb = (c: { red: number; green: number; blue: number }) =>
     '#' + [c.red, c.green, c.blue].map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
 
-  type Regla = {
-    index: number;
-    rule: {
-      ranges: { sheetId: number; startRowIndex: number; startColumnIndex: number; endColumnIndex: number; endRowIndex?: number }[];
-      booleanRule: {
-        condition: { type: string; values: { userEnteredValue: string }[] };
-        format: { backgroundColor: { red: number; green: number; blue: number } };
-      };
-    };
-  };
-
   it('presencial se pinta verde #d9ead3 y en línea azul #c9daf8', async () => {
     base = [persona(1)];
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
     await cuadrarPestanasEspejo();
 
-    const reglas = de('addConditionalFormatRule') as Regla[];
     const porTexto = Object.fromEntries(
-      reglas.map((r) => [r.rule.booleanRule.condition.values[0].userEnteredValue, rgb(r.rule.booleanRule.format.backgroundColor)]),
+      estado.reglas.map((r) => [r.booleanRule.condition.values[0].userEnteredValue, rgb(r.booleanRule.format!.backgroundColor)]),
     );
     expect(porTexto).toEqual({ Presencial: '#d9ead3', 'En línea': '#c9daf8' });
   });
 
-  it('sólo en la columna Modalidad, de la fila 2 hacia abajo y sin tope', async () => {
+  it('sólo en la columna Modalidad (la F), de la fila 2 hacia abajo y sin tope', async () => {
     base = [persona(1)];
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
     await cuadrarPestanasEspejo();
 
-    for (const r of de('addConditionalFormatRule') as Regla[]) {
-      const [rango] = r.rule.ranges;
-      expect(rango.startColumnIndex, 'columna E').toBe(4);
-      expect(rango.endColumnIndex).toBe(5);
+    expect(estado.reglas).toHaveLength(2);
+    for (const r of estado.reglas) {
+      const [rango] = r.ranges;
+      expect(rango.startColumnIndex, 'columna F').toBe(5);
+      expect(rango.endColumnIndex).toBe(6);
+      expect(ENCABEZADOS[rango.startColumnIndex]).toBe('Modalidad');
       expect(rango.startRowIndex, 'la fila 1 son los títulos').toBe(1);
       // Sin fila final: las filas que lleguen mañana ya quedan dentro.
       expect(rango.endRowIndex).toBeUndefined();
-      expect(r.rule.booleanRule.condition.type).toBe('TEXT_EQ');
+      expect(r.booleanRule.condition.type).toBe('TEXT_EQ');
     }
   });
 
@@ -326,29 +349,24 @@ describe('los colores de Modalidad', () => {
     base = [persona(1)];
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
     await cuadrarPestanasEspejo();
-    const puestas = de('addConditionalFormatRule') as Regla[];
-
-    // La hoja ya las tiene: la siguiente pasada no pide ninguna.
-    estado.reglas = puestas.map((r) => ({
-      ranges: r.rule.ranges,
-      booleanRule: r.rule.booleanRule,
-    }));
     estado.peticiones = [];
+
     await cuadrarPestanasEspejo();
 
     expect(de('addConditionalFormatRule')).toHaveLength(0);
+    expect(estado.reglas).toHaveLength(2);
   });
 
   it('si falta una sola, pone sólo esa', async () => {
     estado.reglas = [{
-      ranges: [{ sheetId: 2, startRowIndex: 1, startColumnIndex: 4, endColumnIndex: 5 }],
+      ranges: [{ sheetId: ID_LISTA, startRowIndex: 1, startColumnIndex: 5, endColumnIndex: 6 }],
       booleanRule: { condition: { type: 'TEXT_EQ', values: [{ userEnteredValue: 'Presencial' }] } },
     }];
     base = [persona(1)];
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
     await cuadrarPestanasEspejo();
 
-    const nuevas = de('addConditionalFormatRule') as Regla[];
+    const nuevas = de('addConditionalFormatRule') as { rule: Regla }[];
     expect(nuevas.map((r) => r.rule.booleanRule.condition.values[0].userEnteredValue)).toEqual(['En línea']);
   });
 
@@ -358,12 +376,104 @@ describe('los colores de Modalidad', () => {
     await cuadrarPestanasEspejo();
 
     expect(de('addConditionalFormatRule')).toHaveLength(2);
-    expect(estado.anadidas).toHaveLength(0);
+    expect(estado.filas).toHaveLength(0);
+  });
+});
+
+describe('si la pestaña ya existía con otras columnas', () => {
+  /** La lista como la dejó la versión anterior: cinco columnas, sin Perfil. */
+  function listaAnterior() {
+    estado.encabezado = ANTERIORES;
+    estado.filas = [
+      [1, 'Persona1 Prueba', 'México', 'CIESS', 'Presencial'],
+      [2, 'Persona2 Prueba', 'México', 'CIESS', 'En línea'],
+    ];
+    // Sus colores apuntaban a la columna E, donde estaba Modalidad.
+    estado.reglas = ['Presencial', 'En línea'].map((texto) => ({
+      ranges: [{ sheetId: ID_LISTA, startRowIndex: 1, startColumnIndex: 4, endColumnIndex: 5 }],
+      booleanRule: { condition: { type: 'TEXT_EQ', values: [{ userEnteredValue: texto }] } },
+    }));
+    base = [persona(1), persona(2), persona(3)];
+  }
+
+  it('no se niega a escribir: se reconstruye sola con las columnas de ahora', async () => {
+    listaAnterior();
+    const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
+
+    await expect(cuadrarPestanasEspejo()).resolves.toEqual({ 'Resumen Registro': 3 });
+
+    expect(estado.encabezado).toEqual(ENCABEZADOS);
+    expect(estado.filas).toEqual([
+      [1, 'Persona1 Prueba', 'Ponente', 'México', 'CIESS', 'Presencial'],
+      [2, 'Persona2 Prueba', 'Ponente', 'México', 'CIESS', 'En línea'],
+      [3, 'Persona3 Prueba', 'Conferencista', 'México', 'CIESS', 'Presencial'],
+    ]);
+  });
+
+  it('el color pasa a la columna nueva de Modalidad y no queda ninguna regla en la vieja', async () => {
+    listaAnterior();
+    const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
+    await cuadrarPestanasEspejo();
+
+    expect(estado.reglas).toHaveLength(2);
+    for (const r of estado.reglas) {
+      expect(r.ranges[0].startColumnIndex).toBe(5);
+      expect(r.ranges[0].endColumnIndex).toBe(6);
+    }
+  });
+
+  it('sólo toca su pestaña: no vacía ni borra filas de ninguna otra', async () => {
+    listaAnterior();
+    const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
+    await cuadrarPestanasEspejo();
+
+    const hojas = [...de('deleteDimension'), ...de('updateCells'), ...de('appendDimension')]
+      .map((p: { range?: { sheetId: number }; sheetId?: number }) => p.range?.sheetId ?? p.sheetId);
+    expect(hojas.length).toBeGreaterThan(0);
+    for (const id of hojas) expect(id, 'sólo la lista').toBe(ID_LISTA);
+    // Ni los títulos de las demás se reescriben.
+    expect(Object.keys(estado.titulosEscritos)).toEqual(['Resumen Registro']);
+  });
+
+  it('la segunda pasada ya no reconstruye nada', async () => {
+    listaAnterior();
+    const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
+    await cuadrarPestanasEspejo();
+    estado.peticiones = [];
+
+    await cuadrarPestanasEspejo();
+
+    expect(de('deleteDimension')).toHaveLength(0);
+    expect(de('deleteConditionalFormatRule')).toHaveLength(0);
+    expect(numeros()).toEqual([1, 2, 3]);
+  });
+
+  it('el alta de una persona tampoco se bloquea por eso', async () => {
+    listaAnterior();
+    const { sincronizarRegistro } = await import('@/lib/servidor/sheets');
+
+    const alta = {
+      id: '0f5d3f64-4b9c-4f0e-9a2a-7d4b1e2c3a55', folio: 'REG-1', creado_en: '2026-11-05T18:00:00.000Z',
+      perfil: 'ponente', modalidad: 'presencial', idioma: 'es', apellidos: 'Ruiz', nombres: 'Ana',
+      correo: 'ana@ejemplo.org', institucion: 'UNAM', procedencia: 'nacional', pais_residencia: 'México',
+      consentimiento_datos: true, estado: 'en_proceso',
+    };
+    await expect(sincronizarRegistro(alta)).resolves.toBeUndefined();
+    expect(estado.encabezado).toEqual(ENCABEZADOS);
+  });
+
+  it('una pestaña de trabajo con otras columnas sigue pidiendo rehacer, sin tocar la lista', async () => {
+    estado.encabezadoReg = ['columna', 'de', 'antes'];
+    base = [persona(1)];
+    const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');
+
+    await expect(cuadrarPestanasEspejo()).rejects.toThrow(/columnas anteriores en REG_Respuestas/);
+    expect(estado.filas).toHaveLength(0);
   });
 });
 
 describe('cuando la pestaña no existe todavía', () => {
-  it('se crea detrás de REG_Respuestas, con título fijo y sus colores', async () => {
+  it('se crea detrás de REG_Respuestas, con título fijo', async () => {
     estado.existe = false;
     base = [persona(1)];
     const { cuadrarPestanasEspejo } = await import('@/lib/servidor/sheets');

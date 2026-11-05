@@ -33,7 +33,7 @@ export const HOJAS: Record<string, string[]> = {
   // La lista para leer de un vistazo: todos los registrados, con lo mínimo
   // para saber quién es y cómo participa. Las otras pestañas son de trabajo
   // —llevan correo, teléfono, resúmenes— y no se prestan a enseñarse así.
-  [HOJA_LISTA]: ['N.º', 'Nombre', 'País', 'Institución', 'Modalidad'],
+  [HOJA_LISTA]: ['N.º', 'Nombre', 'Perfil', 'País', 'Institución', 'Modalidad'],
   PAR_Participantes: [
     'N.º',
     'ID', 'Marca temporal', 'Apellidos y nombre', 'Institución', 'Procedencia',
@@ -193,13 +193,15 @@ function numeroDeOrden(r: Registro): string | number {
  *
  * El nombre va como se lee, «Ana Ruiz Montaño», y no como se ordena
  * («Ruiz Montaño, Ana»): esta lista se mira, no se alfabetiza. El país es
- * lo que la persona escribió, tal cual.
+ * lo que la persona escribió, tal cual, y el perfil, con el nombre que lleva
+ * en el formulario («Ponente», no «ponente»), igual que en REG_Respuestas.
  */
 export function filaDeLista(r: Registro): (string | number)[] {
   const limpio = (v: unknown) => String(v ?? '').replace(/\s+/g, ' ').trim();
   return [
     numeroDeOrden(r),
     limpio(`${limpio(r.nombres)} ${limpio(r.apellidos)}`),
+    nombreDePerfil(r.perfil),
     limpio(r.pais_residencia),
     limpio(r.institucion),
     nombreDeModalidad(r.modalidad),

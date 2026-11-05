@@ -778,10 +778,10 @@ describe('la fila de títulos queda fija', () => {
       '#' + [red, green, blue].map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('');
     expect(hex(color('Presencial').rule.booleanRule.format.backgroundColor)).toBe('#d9ead3');
     expect(hex(color('En línea').rule.booleanRule.format.backgroundColor)).toBe('#c9daf8');
-    // Sólo la columna Modalidad (la E, índice 4).
+    // Sólo la columna Modalidad (la F, índice 5).
     for (const r of reglas) {
-      expect(r!.rule.ranges[0].startColumnIndex).toBe(4);
-      expect(r!.rule.ranges[0].endColumnIndex).toBe(5);
+      expect(r!.rule.ranges[0].startColumnIndex).toBe(5);
+      expect(r!.rule.ranges[0].endColumnIndex).toBe(6);
       expect(r!.rule.booleanRule.condition.type).toBe('TEXT_EQ');
     }
   });

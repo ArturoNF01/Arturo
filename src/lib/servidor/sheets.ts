@@ -249,6 +249,15 @@ async function comprobarEncabezados(
     }
   }
 
+  // Una pestaña espejo con otras columnas no pide «rehacer la hoja»: no
+  // guarda nada que no esté en la base, así que se reconstruye sola —sin
+  // tocar las demás pestañas— y `cuadrarPestanasEspejo` la vuelve a llenar.
+  // Rehacer el libro entero por una columna de la lista de registrados
+  // vaciaría REG, PAR y PSE para nada.
+  const espejos = desfasadas.filter((n) => (PESTANAS_ESPEJO as readonly string[]).includes(n));
+  for (const nombre of espejos) await reconstruirPestanaEspejo(idLibro, nombre);
+  desfasadas.splice(0, desfasadas.length, ...desfasadas.filter((n) => !espejos.includes(n)));
+
   if (desfasadas.length > 0) {
     throw new Error(
       `La hoja tiene las columnas anteriores en ${desfasadas.join(', ')}. ` +
@@ -469,6 +478,102 @@ export async function sincronizarRegistro(registro: Registro): Promise<void> {
 }
 
 /**
+ * Las peticiones que dejan una pestaña con una sola fila: la de los títulos.
+ *
+ * El orden de estas peticiones no es decorativo; Google aplica la tanda en el
+ * orden en que va y rechaza la tanda entera si una no vale. Las usan rehacer
+ * el libro entero y reconstruir una pestaña espejo.
+ */
+function peticionesDeVaciado(props: {
+  sheetId?: number | null;
+  gridProperties?: { rowCount?: number | null } | null;
+} | undefined): Record<string, unknown>[] {
+  const sheetId = props?.sheetId;
+  const filas = props?.gridProperties?.rowCount ?? 0;
+  const lista: Record<string, unknown>[] = [];
+
+  // 1. Los paneles inmovilizados, antes que nada. Una hoja con medio libro
+  //    congelado no deja desplazarse, y hay que dejarla en uno/cero antes
+  //    de tocar las filas para saber contra qué se está borrando.
+  lista.push(...peticionesDeTitulos(sheetId).filter((p) => 'updateSheetProperties' in p));
+
+  // 2. Las filas en blanco, antes de borrar y no después: Google no deja
+  //    «borrar todas las filas no inmovilizadas», y con la fila 1 congelada
+  //    quitar de la 2 a la última es justo eso. Pidiéndolas antes siempre
+  //    quedan supervivientes y el borrado es legal. Se añaden al final, así
+  //    que no mueven de sitio a las que vamos a borrar.
+  lista.push({ appendDimension: { sheetId, dimension: 'ROWS', length: FILAS_EN_BLANCO } });
+
+  // 3. Ahora sí, fuera los datos de antes.
+  if (filas > 1) {
+    lista.push({
+      deleteDimension: {
+        range: { sheetId, dimension: 'ROWS', startIndex: 1, endIndex: filas },
+      },
+    });
+  }
+
+  // 4. Y la fila 1 entera, que se reescribe a continuación.
+  //
+  //    Sin esto, rehacer la hoja no la arreglaba: escribir treinta
+  //    encabezados sobre una fila que tenía treinta y seis —la forma del
+  //    formulario anterior, con semblanza, fotografía y autorizaciones—
+  //    sustituye los treinta primeros y deja los seis últimos intactos. La
+  //    comprobación lee la fila entera, cuenta treinta y seis donde espera
+  //    treinta, y concluye que la hoja sigue con las columnas de antes. Y
+  //    como la salida de eso es «reescríbala con --rehacer», el remedio se
+  //    acusaba a sí mismo: ninguna fila volvía a entrar nunca.
+  lista.push({
+    updateCells: {
+      range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
+      fields: 'userEnteredValue',
+      rows: [],
+    },
+  });
+
+  // 5. El aspecto de la fila de títulos, que no depende de lo que diga.
+  lista.push(...peticionesDeTitulos(sheetId).filter((p) => 'repeatCell' in p));
+  return lista;
+}
+
+/**
+ * Deja una pestaña espejo vacía, con los títulos de ahora y sin las reglas de
+ * color que apuntaban a la disposición de antes.
+ *
+ * Se llama cuando sus títulos ya no son los que escribe el sistema —se añadió
+ * o se movió una columna—. Esa pestaña no guarda nada que no esté en la base:
+ * es una copia, y `cuadrarPestanasEspejo` la vuelve a llenar entera, en orden,
+ * en la misma pasada del guion de sincronización. Las demás pestañas ni se
+ * miran, y la base tampoco.
+ *
+ * Las reglas de color se quitan porque van pegadas a un índice de columna: tras
+ * mover «Modalidad» seguirían pintando la que ahora es otra cosa.
+ */
+async function reconstruirPestanaEspejo(idLibro: string, nombre: string): Promise<void> {
+  const sheets = clienteSheets();
+  const libro = await conEspera(() =>
+    sheets.spreadsheets.get({
+      spreadsheetId: idLibro,
+      fields: 'sheets(properties(sheetId,title,gridProperties),conditionalFormats)',
+    }),
+  );
+  const pestana = libro.data.sheets?.find((h) => h.properties?.title === nombre);
+  const sheetId = pestana?.properties?.sheetId;
+  if (sheetId === undefined || sheetId === null) return;
+
+  const reglas = pestana?.conditionalFormats?.length ?? 0;
+  const peticiones = [
+    // Cada borrado desplaza a las demás: siempre se quita la primera.
+    ...Array.from({ length: reglas }, () => ({ deleteConditionalFormatRule: { sheetId, index: 0 } })),
+    ...peticionesDeVaciado(pestana?.properties),
+  ];
+  await conEspera(() =>
+    sheets.spreadsheets.batchUpdate({ spreadsheetId: idLibro, requestBody: { requests: peticiones } }),
+  );
+  await escribirEncabezados(idLibro, [nombre]);
+}
+
+/**
  * Deja cada pestaña con una sola fila: la de los encabezados de ahora.
  *
  * Hace falta cuando lo que cambia es *cómo* se escribe una celda —y no el
@@ -495,57 +600,7 @@ export async function vaciarHojas(): Promise<void> {
   );
   const presentes = Object.keys(HOJAS).filter((nombre) => propiedades.has(nombre));
 
-  // El orden de estas peticiones no es decorativo; Google aplica la tanda en
-  // el orden en que va y rechaza la tanda entera si una no vale.
-  const peticiones = presentes.flatMap((nombre) => {
-    const props = propiedades.get(nombre);
-    const sheetId = props?.sheetId;
-    const filas = props?.gridProperties?.rowCount ?? 0;
-    const lista: Record<string, unknown>[] = [];
-
-    // 1. Los paneles inmovilizados, antes que nada. Una hoja con medio libro
-    //    congelado no deja desplazarse, y hay que dejarla en uno/cero antes
-    //    de tocar las filas para saber contra qué se está borrando.
-    lista.push(...peticionesDeTitulos(sheetId).filter((p) => 'updateSheetProperties' in p));
-
-    // 2. Las filas en blanco, antes de borrar y no después: Google no deja
-    //    «borrar todas las filas no inmovilizadas», y con la fila 1 congelada
-    //    quitar de la 2 a la última es justo eso. Pidiéndolas antes siempre
-    //    quedan supervivientes y el borrado es legal. Se añaden al final, así
-    //    que no mueven de sitio a las que vamos a borrar.
-    lista.push({ appendDimension: { sheetId, dimension: 'ROWS', length: FILAS_EN_BLANCO } });
-
-    // 3. Ahora sí, fuera los datos de antes.
-    if (filas > 1) {
-      lista.push({
-        deleteDimension: {
-          range: { sheetId, dimension: 'ROWS', startIndex: 1, endIndex: filas },
-        },
-      });
-    }
-
-    // 4. Y la fila 1 entera, que se reescribe a continuación.
-    //
-    //    Sin esto, rehacer la hoja no la arreglaba: escribir treinta
-    //    encabezados sobre una fila que tenía treinta y seis —la forma del
-    //    formulario anterior, con semblanza, fotografía y autorizaciones—
-    //    sustituye los treinta primeros y deja los seis últimos intactos. La
-    //    comprobación lee la fila entera, cuenta treinta y seis donde espera
-    //    treinta, y concluye que la hoja sigue con las columnas de antes. Y
-    //    como la salida de eso es «reescríbala con --rehacer», el remedio se
-    //    acusaba a sí mismo: ninguna fila volvía a entrar nunca.
-    lista.push({
-      updateCells: {
-        range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
-        fields: 'userEnteredValue',
-        rows: [],
-      },
-    });
-
-    // 5. El aspecto de la fila de títulos, que no depende de lo que diga.
-    lista.push(...peticionesDeTitulos(sheetId).filter((p) => 'repeatCell' in p));
-    return lista;
-  });
+  const peticiones = presentes.flatMap((nombre) => peticionesDeVaciado(propiedades.get(nombre)));
 
   if (peticiones.length > 0) {
     await conEspera(() =>
@@ -700,9 +755,9 @@ export async function cuadrarPestanasEspejo(): Promise<Record<string, number>> {
   // en el alta —posición por fecha de alta entre todos los registros— y por
   // eso se numera sobre la tabla entera antes de cualquier filtro.
   const registros = await consultar<Record<string, unknown>>(
-    `select nombres, apellidos, pais_residencia, institucion, modalidad, numero_en_hoja
+    `select nombres, apellidos, pais_residencia, institucion, modalidad, perfil, numero_en_hoja
        from (
-             select nombres, apellidos, pais_residencia, institucion, modalidad,
+             select nombres, apellidos, pais_residencia, institucion, modalidad, perfil,
                     row_number() over (order by creado_en, id) as numero_en_hoja
                from registros
             ) as ordenados
@@ -752,6 +807,7 @@ export async function cuadrarPestanasEspejo(): Promise<Record<string, number>> {
     const primeraVez = faltan.length > 0 && enLaHoja.size === 0;
     const desordenada =
       faltan.length > 0 && enLaHoja.size > 0 && Math.max(...enLaHoja) > Number(faltan[0].numero_en_hoja);
+
     const columnas = HOJAS[hoja].length;
 
     const peticiones = [

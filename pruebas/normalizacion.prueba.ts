@@ -225,9 +225,9 @@ describe('filasDeRegistro', () => {
 });
 
 describe('la lista de registrados', () => {
-  it('se llama «Resumen Registro» y tiene sólo las cinco columnas pedidas', () => {
+  it('se llama «Resumen Registro» y tiene sólo las seis columnas pedidas, con Perfil tras Nombre', () => {
     expect(HOJA_LISTA).toBe('Resumen Registro');
-    expect(HOJAS[HOJA_LISTA]).toEqual(['N.º', 'Nombre', 'País', 'Institución', 'Modalidad']);
+    expect(HOJAS[HOJA_LISTA]).toEqual(['N.º', 'Nombre', 'Perfil', 'País', 'Institución', 'Modalidad']);
   });
 
   it('va en segundo lugar: se crea detrás de REG_Respuestas', () => {
@@ -243,20 +243,35 @@ describe('la lista de registrados', () => {
     }
   });
 
-  it('lleva número, nombre completo, país, institución y modalidad', () => {
+  it('lleva número, nombre completo, perfil, país, institución y modalidad, en ese orden', () => {
     expect(filaDeLista(registro({ numero_en_hoja: 12 }))).toEqual([
-      12, 'Ana Ruiz Montaño', 'Brasil', 'Universidad Nacional', 'Presencial',
+      12, 'Ana Ruiz Montaño', 'Ponente', 'Brasil', 'Universidad Nacional', 'Presencial',
     ]);
-    expect(filaDeLista(registro({ modalidad: 'en_linea' }))[4]).toBe('En línea');
+    expect(filaDeLista(registro({ modalidad: 'en_linea' }))[5]).toBe('En línea');
+  });
+
+  it('cada celda cae bajo su título', () => {
+    const fila = filaDeLista(registro({ numero_en_hoja: 3 }));
+    const en = (titulo: string) => fila[HOJAS[HOJA_LISTA].indexOf(titulo)];
+    expect(en('Nombre')).toBe('Ana Ruiz Montaño');
+    expect(en('Perfil')).toBe('Ponente');
+    expect(en('País')).toBe('Brasil');
+    expect(en('Institución')).toBe('Universidad Nacional');
+    expect(en('Modalidad')).toBe('Presencial');
+  });
+
+  it('el perfil se lee con su nombre del formulario, no con la clave', () => {
+    expect(filaDeLista(registro({ perfil: 'conferencista' }))[2]).toBe('Conferencista');
+    expect(filaDeLista(registro({ perfil: 'ponente' }))[2]).not.toBe('ponente');
   });
 
   it('el país va tal como lo escribió la persona', () => {
-    expect(filaDeLista(registro({ pais_residencia: 'méxico' }))[2]).toBe('méxico');
+    expect(filaDeLista(registro({ pais_residencia: 'méxico' }))[3]).toBe('méxico');
   });
 
   it('aguanta los datos que faltan sin escribir «null» ni «undefined»', () => {
     const fila = filaDeLista({ modalidad: 'presencial', nombres: null, apellidos: undefined });
-    expect(fila).toEqual(['', '', '', '', 'Presencial']);
+    expect(fila).toEqual(['', '', '', '', '', 'Presencial']);
     for (const celda of fila) expect(String(celda)).not.toMatch(/null|undefined/);
   });
 
@@ -272,8 +287,8 @@ describe('la lista de registrados', () => {
     ]);
     // El texto de la regla es el mismo que escribe la celda.
     const textos = [
-      filaDeLista(registro({ modalidad: 'presencial' }))[4],
-      filaDeLista(registro({ modalidad: 'en_linea' }))[4],
+      filaDeLista(registro({ modalidad: 'presencial' }))[5],
+      filaDeLista(registro({ modalidad: 'en_linea' }))[5],
     ];
     expect(COLORES_MODALIDAD.map((c) => c.texto)).toEqual(textos);
   });
