@@ -251,7 +251,7 @@ describe('dos registros dados de baja desde el panel', () => {
 
     const r = await alinearHojaConLaBase();
 
-    expect(r).toEqual({ quitadas: {}, renumeradas: 0, enBlanco: 0, reconstruidas: [] });
+    expect(r).toEqual({ quitadas: {}, renumeradas: 0, enBlanco: 0, reconstruidas: [], folios: [] });
     expect(estado.peticiones).toHaveLength(0);
     expect(estado.correcciones).toHaveLength(0);
   });
@@ -273,7 +273,7 @@ describe('con la hoja ya al día', () => {
 
     const r = await alinearHojaConLaBase();
 
-    expect(r).toEqual({ quitadas: {}, renumeradas: 0, enBlanco: 0, reconstruidas: [] });
+    expect(r).toEqual({ quitadas: {}, renumeradas: 0, enBlanco: 0, reconstruidas: [], folios: [] });
     expect(estado.peticiones).toHaveLength(0);
     expect(estado.correcciones).toHaveLength(0);
   });
@@ -486,5 +486,78 @@ describe('la pestaña «Resumen Registro» también va seguida y sin huecos', ()
 
     expect(numeros('Resumen Registro')).toEqual([1, 2, 3]);
     expect(estado.filas['Resumen Registro'][2][1]).toBe('Persona4 Prueba');
+  });
+});
+
+describe('antes de forzar una limpieza grande', () => {
+  /** 14 bajas de golpe, como las que frenó la guarda en el servidor. */
+  function catorceBajas() {
+    hojaCon(Array.from({ length: 20 }, (_, i) => persona(i + 1)));
+    base = Array.from({ length: 6 }, (_, i) => persona(i + 1)); // quedan 6, se fueron 14
+  }
+
+  it('el aviso lista los folios que se quitarían, para poder reconocerlos', async () => {
+    catorceBajas();
+    const { alinearHojaConLaBase } = await import('@/lib/servidor/sheets');
+
+    const error = await alinearHojaConLaBase().then(() => null, (e: Error) => e);
+
+    expect(error?.message).toMatch(/Se quitarían 14 registros/);
+    for (const n of [7, 14, 20]) expect(error?.message, `folio ${n}`).toContain(f(n));
+    expect(error?.message).toMatch(/--forzar/);
+    expect(error?.message).toMatch(/no los reconoce/i);
+    // Y no se tocó la hoja.
+    expect(estado.filas.REG_Respuestas).toHaveLength(20);
+  });
+
+  it('con una lista larga corta a 20 y dice cuántos más hay', async () => {
+    hojaCon(Array.from({ length: 40 }, (_, i) => persona(i + 1)));
+    base = [persona(1)];
+    const { alinearHojaConLaBase } = await import('@/lib/servidor/sheets');
+
+    const error = await alinearHojaConLaBase().then(() => null, (e: Error) => e);
+
+    expect(error?.message).toMatch(/… y 19 más/);
+  });
+
+  it('simular dice qué se quitaría y no escribe nada', async () => {
+    catorceBajas();
+    const { alinearHojaConLaBase } = await import('@/lib/servidor/sheets');
+
+    const r = await alinearHojaConLaBase({ simular: true });
+
+    expect(r.simulado).toBe(true);
+    expect(r.folios).toHaveLength(14);
+    expect(r.folios).toEqual([...r.folios].sort());
+    expect(r.folios).toContain(f(20));
+    expect(r.quitadas.REG_Respuestas).toBe(14);
+    // Ni una fila quitada, ni una petición, ni un número corregido.
+    expect(estado.filas.REG_Respuestas).toHaveLength(20);
+    expect(estado.peticiones).toHaveLength(0);
+    expect(estado.correcciones).toHaveLength(0);
+  });
+
+  it('simular también cuenta lo que corregiría y no reconstruye la lista', async () => {
+    hojaCon([1, 2, 3, 4].map(persona));
+    base = [persona(1), persona(3), persona(4)];
+    const { alinearHojaConLaBase } = await import('@/lib/servidor/sheets');
+
+    const r = await alinearHojaConLaBase({ simular: true });
+
+    expect(r.renumeradas).toBeGreaterThan(0);
+    expect(r.reconstruidas).toEqual(['Resumen Registro']);
+    expect(numeros('Resumen Registro')).toEqual([1, 2, 3, 4]); // sigue como estaba
+    expect(estado.peticiones).toHaveLength(0);
+  });
+
+  it('con forzar quita las 14 y deja los folios apuntados en el resultado', async () => {
+    catorceBajas();
+    const { alinearHojaConLaBase } = await import('@/lib/servidor/sheets');
+
+    const r = await alinearHojaConLaBase({ forzar: true });
+
+    expect(folios('REG_Respuestas')).toEqual([1, 2, 3, 4, 5, 6].map(f));
+    expect(r.folios).toHaveLength(14);
+    expect(r.simulado).toBeUndefined();
   });
 });

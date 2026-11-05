@@ -195,6 +195,13 @@ fi
 printf '\n'
 if [ "$fallo_copia" = "sí" ]; then
   printf '   \033[33mLa copia a la hoja falló; el motivo está unas líneas más arriba.\033[0m\n'
+  aviso "Si dice «Se quitarían N registros de la hoja»: la hoja tiene filas de"
+  aviso "registros que ya no están en la base, y son más de 10. No se borra nada"
+  aviso "sola una limpieza así. Vea cuáles son, sin tocar nada:"
+  aviso "  cd $RAIZ && sudo -u $USUARIO npm run sincronizar -- --simular"
+  aviso "y, si son los que dio de baja, quítelos de la hoja:"
+  aviso "  cd $RAIZ && sudo -u $USUARIO npm run sincronizar -- --forzar"
+  aviso ""
   aviso "Si dice que la hoja «tiene las columnas anteriores», es que esta versión"
   aviso "cambió las columnas del libro. Se arregla reescribiéndolo entero:"
   aviso "  sudo bash ${ORIGEN:-$RAIZ/guiones/servidor/poner-al-dia.sh} --rehacer"

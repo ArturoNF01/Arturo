@@ -6,6 +6,7 @@
  *   npm run sincronizar -- --callado  # sin ruido si no había nada (cron)
  *   npm run sincronizar -- --rehacer  # vacía la hoja y la escribe entera
  *   npm run sincronizar -- --vaciar   # sólo la vacía, sin escribir nada
+ *   npm run sincronizar -- --simular  # dice qué quitaría de la hoja, sin tocar nada
  *   npm run sincronizar -- --forzar   # quita de la hoja más de 10 bajas de una vez
  *
  * Hace lo mismo que el botón del panel, pero desde el servidor. Esa es la
@@ -84,6 +85,8 @@ async function principal() {
     for (const [hoja, n] of Object.entries(r.quitadas)) {
       console.log(`${hoja}: se quitaron ${n} filas de registros que ya no existen.`);
     }
+    // Queda en el registro de la tarea qué registros eran, por si hay que revisarlo después.
+    if (r.folios.length > 0) console.log(`Registros quitados de la hoja: ${r.folios.join(', ')}`);
     if (r.enBlanco > 0) console.log(`Se quitaron ${r.enBlanco} filas en blanco.`);
     if (r.renumeradas > 0) console.log(`Se corrigieron ${r.renumeradas} números de orden (N.º).`);
     for (const hoja of r.reconstruidas) {
@@ -93,6 +96,25 @@ async function principal() {
 
   const numerico = process.argv.slice(2).find((a) => /^\d+$/.test(a));
   const tope = Math.min(Math.max(Number(numerico) || 500, 1), 5000);
+
+  // Decir qué se quitaría de la hoja por registros dados de baja, sin tocar
+  // nada: para comprobar la lista antes de forzar una limpieza grande.
+  if (process.argv.includes('--simular')) {
+    const r = await alinearHojaConLaBase({ simular: true });
+    if (r.omitido) {
+      console.log(r.omitido);
+      return;
+    }
+    const total = Object.values(r.quitadas).reduce((a, b) => a + b, 0);
+    console.log(`Se quitarían ${r.folios.length} registros (${total} filas en total):`);
+    for (const folio of r.folios) console.log(`  ${folio}`);
+    for (const [hoja, n] of Object.entries(r.quitadas)) console.log(`  ${hoja}: ${n} filas`);
+    if (r.enBlanco > 0) console.log(`Filas en blanco que se quitarían: ${r.enBlanco}`);
+    if (r.renumeradas > 0) console.log(`N.º que se corregirían: ${r.renumeradas}`);
+    for (const hoja of r.reconstruidas) console.log(`${hoja}: se volvería a escribir entera.`);
+    console.log('No se tocó nada. Si la lista es la que espera: npm run sincronizar -- --forzar');
+    return;
+  }
 
   // Dejar la hoja en blanco, con sus encabezados y nada más. Se usa al
   // limpiar el congreso antes de abrir el registro de verdad.

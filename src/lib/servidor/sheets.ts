@@ -867,8 +867,12 @@ export interface ResultadoAlineacion {
   enBlanco: number;
   /** Las pestañas espejo que se vaciaron para volver a llenarse desde la base. */
   reconstruidas: string[];
+  /** Los folios de los registros cuyas filas se quitaron (o se quitarían, si fue una simulación). */
+  folios: string[];
   /** Si no se tocó la hoja, por qué. */
   omitido?: string;
+  /** Verdadero si sólo se calculó lo que pasaría: no se escribió nada. */
+  simulado?: boolean;
 }
 
 /** Tramos de números consecutivos: [3,4,5,9] → [[3,5],[9,9]]. */
@@ -910,12 +914,13 @@ function tramos(numeros: number[]): [number, number][] {
  *    sincronización de siempre.
  */
 export async function alinearHojaConLaBase(
-  { forzar = false, maximo = 10 }: { forzar?: boolean; maximo?: number } = {},
+  { forzar = false, maximo = 10, simular = false }:
+    { forzar?: boolean; maximo?: number; simular?: boolean } = {},
 ): Promise<ResultadoAlineacion> {
   const idLibro = process.env.GOOGLE_SHEETS_ID;
   if (!googleConfigurado() || !idLibro) throw new Error('Google Sheets no está configurado.');
 
-  const resultado: ResultadoAlineacion = { quitadas: {}, renumeradas: 0, enBlanco: 0, reconstruidas: [] };
+  const resultado: ResultadoAlineacion = { quitadas: {}, renumeradas: 0, enBlanco: 0, reconstruidas: [], folios: [] };
 
   const base = await consultar<{ folio: string; numero: string }>(
     `select folio, row_number() over (order by creado_en, id) as numero
@@ -963,10 +968,19 @@ export async function alinearHojaConLaBase(
     if (lista.length > 0) sobrantes.set(nombre, lista);
   }
 
-  if (foliosQuitados.size > maximo && !forzar) {
+  resultado.folios = [...foliosQuitados].sort();
+  resultado.simulado = simular || undefined;
+
+  // Con la lista a la vista, quien lee el aviso puede comprobar que son los
+  // que dio de baja: 14 folios que reconoce se confirman; 14 que no, son
+  // motivo para parar y mirar la base antes de tocar nada.
+  if (foliosQuitados.size > maximo && !forzar && !simular) {
+    const vistos = resultado.folios.slice(0, 20).join(', ');
+    const resto = resultado.folios.length > 20 ? ` … y ${resultado.folios.length - 20} más` : '';
     throw new Error(
-      `Se quitarían ${foliosQuitados.size} registros de la hoja, más de ${maximo} de una vez. ` +
-        'Si la base está bien y es lo que se espera: npm run sincronizar -- --forzar',
+      `Se quitarían ${foliosQuitados.size} registros de la hoja, más de ${maximo} de una vez: ${vistos}${resto}. ` +
+        'Si son los que dio de baja: npm run sincronizar -- --forzar. ' +
+        'Si no los reconoce, no lo fuerce: puede que la base no sea la de siempre.',
     );
   }
 
@@ -996,7 +1010,7 @@ export async function alinearHojaConLaBase(
       }
       resultado.quitadas[nombre] = filas.length;
     }
-    if (peticiones.length > 0) {
+    if (peticiones.length > 0 && !simular) {
       await conEspera(() =>
         sheets.spreadsheets.batchUpdate({ spreadsheetId: idLibro, requestBody: { requests: peticiones } }),
       );
@@ -1032,7 +1046,7 @@ export async function alinearHojaConLaBase(
     }
     resultado.renumeradas += cambios.length;
   }
-  if (correcciones.length > 0) {
+  if (correcciones.length > 0 && !simular) {
     await conEspera(() =>
       sheets.spreadsheets.values.batchUpdate({
         spreadsheetId: idLibro,
@@ -1075,7 +1089,7 @@ export async function alinearHojaConLaBase(
       }
     }
     if (distinta) {
-      await reconstruirPestanaEspejo(idLibro, hoja);
+      if (!simular) await reconstruirPestanaEspejo(idLibro, hoja);
       resultado.reconstruidas.push(hoja);
     }
   }
