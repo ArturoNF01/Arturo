@@ -48,11 +48,17 @@ describe('el aviso de la constancia', () => {
     );
   });
 
-  it('antes de registrarse avisa que entrar a Zoom o a Meet sin registro no da constancia', () => {
+  it('no amenaza al público: ya no dice que entrar a Zoom o a Meet sin registro no da constancia', () => {
+    // Se quitó para no ser tan tajantes. El requisito es el mismo —registrarse y el 80 %—; lo
+    // que no está es la frase que lo decía en negativo.
     for (const idioma of IDIOMAS) {
-      const { texto } = diccionarios[idioma].constancia;
-      expect(texto, idioma).toMatch(/Zoom/);
-      expect(texto, idioma).toMatch(/Meet/);
+      const { texto, recordatorio } = diccionarios[idioma].constancia;
+      for (const t of [texto, recordatorio]) {
+        expect(t, idioma).not.toMatch(/Zoom|Meet/);
+        expect(t, idioma).not.toMatch(/no da derecho|does not entitle|não dá direito/i);
+      }
+      const faq = FAQS[idioma].find((f) => f.id === 'constancia')!;
+      expect(faq.respuesta, `faq ${idioma}`).not.toMatch(/Zoom|Meet/);
     }
   });
 
@@ -102,12 +108,27 @@ describe('lo que se siembra y se migra', () => {
     expect(migracion).toMatch(/if not exists \(select 1 from configuracion where clave = 'migracion_constancia_bloque'\)/);
   });
 
+  it('ninguna migración vuelve a escribir la frase de Zoom o Meet en la pregunta frecuente', () => {
+    // La única mención que queda es la del replace que la quita.
+    const sinComentarios = migracion.split('\n').filter((l) => !l.trimStart().startsWith('--')).join('\n');
+    const escrituras = sinComentarios.match(/'es', 'Sí\. Para recibir la constancia[^']*'/g) ?? [];
+    expect(escrituras.length).toBeGreaterThanOrEqual(2);
+    for (const e of escrituras) expect(e).not.toMatch(/Zoom|Meet/);
+  });
+
+  it('la que quita la frase lo hace con un replace exacto y sólo donde está', () => {
+    const quita = migracion.match(/update faqs[\s\S]*?replace\(respuesta->>'es'[\s\S]*?;\n/)?.[0] ?? '';
+    expect(quita).toMatch(/replace\(respuesta->>'es', '; entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia\.', '\.'\)/);
+    expect(quita).toMatch(/where clave = 'constancia'/);
+    expect(quita).toMatch(/like '%; entrar a Zoom o a Meet/);
+  });
+
   it('la pregunta frecuente de la constancia se actualiza sin pisar lo que el comité reescribió', () => {
     // Dos migraciones —la del texto original y la de la versión anterior— que escriben el
     // requisito vigente y sólo actúan si la fila conserva su texto de antes.
     const todas = migracion.match(/update faqs[\s\S]*?where clave = 'constancia'[\s\S]*?;/g) ?? [];
     // (Hay otra, más antigua, que siembra la pregunta sin el requisito; no es de éstas.)
-    const actualizaciones = todas.filter((u) => /80%/.test(u));
+    const actualizaciones = todas.filter((u) => /80%/.test(u) && !/replace\(/.test(u));
     expect(actualizaciones).toHaveLength(2);
     for (const u of actualizaciones) {
       expect(u).toMatch(/80%/);

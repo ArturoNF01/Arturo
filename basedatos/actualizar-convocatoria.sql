@@ -84,9 +84,9 @@ $constancia$;
 -- (Escribe ya el requisito vigente: el 80 % de asistencia.)
 update faqs
    set respuesta = jsonb_build_object(
-         'es', 'Sí. Para recibir la constancia de participación es requisito registrarse y tener un porcentaje de asistencia mínimo del 80%, en persona o en línea; entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia. En el formulario puede indicar el nombre exacto tal como debe aparecer en la constancia. Las condiciones y los plazos de entrega los comunica el comité organizador por correo.',
-         'en', 'Yes. To receive the certificate of participation you must register and have a minimum attendance of 80%, in person or online; joining Zoom or Meet without registering does not entitle you to a certificate. In the form you can state the exact name as it should appear on the certificate. The conditions and delivery times are communicated by the organizing committee by email.',
-         'pt', 'Sim. Para receber o certificado de participação é necessário inscrever-se e ter uma frequência mínima de 80%, presencialmente ou on-line; entrar no Zoom ou no Meet sem ter se inscrito não dá direito ao certificado. No formulário você pode indicar o nome exato como deve constar no certificado. As condições e os prazos de entrega são comunicados pelo comitê organizador por e-mail.')
+         'es', 'Sí. Para recibir la constancia de participación es requisito registrarse y tener un porcentaje de asistencia mínimo del 80%, en persona o en línea. En el formulario puede indicar el nombre exacto tal como debe aparecer en la constancia. Las condiciones y los plazos de entrega los comunica el comité organizador por correo.',
+         'en', 'Yes. To receive the certificate of participation you must register and have a minimum attendance of 80%, in person or online. In the form you can state the exact name as it should appear on the certificate. The conditions and delivery times are communicated by the organizing committee by email.',
+         'pt', 'Sim. Para receber o certificado de participação é necessário inscrever-se e ter uma frequência mínima de 80%, presencialmente ou on-line. No formulário você pode indicar o nome exato como deve constar no certificado. As condições e os prazos de entrega são comunicados pelo comitê organizador por e-mail.')
  where clave = 'constancia'
    and respuesta->>'es' like '%Las condiciones y los plazos de entrega los comunica el comité organizador por correo.%'
    and respuesta->>'es' not like '%es requisito registrarse%';
@@ -96,11 +96,29 @@ update faqs
 -- Sólo si la pregunta conserva ese texto: lo que el comité haya reescrito en el panel no se toca.
 update faqs
    set respuesta = jsonb_build_object(
-         'es', 'Sí. Para recibir la constancia de participación es requisito registrarse y tener un porcentaje de asistencia mínimo del 80%, en persona o en línea; entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia. En el formulario puede indicar el nombre exacto tal como debe aparecer en la constancia. Las condiciones y los plazos de entrega los comunica el comité organizador por correo.',
-         'en', 'Yes. To receive the certificate of participation you must register and have a minimum attendance of 80%, in person or online; joining Zoom or Meet without registering does not entitle you to a certificate. In the form you can state the exact name as it should appear on the certificate. The conditions and delivery times are communicated by the organizing committee by email.',
-         'pt', 'Sim. Para receber o certificado de participação é necessário inscrever-se e ter uma frequência mínima de 80%, presencialmente ou on-line; entrar no Zoom ou no Meet sem ter se inscrito não dá direito ao certificado. No formulário você pode indicar o nome exato como deve constar no certificado. As condições e os prazos de entrega são comunicados pelo comitê organizador por e-mail.')
+         'es', 'Sí. Para recibir la constancia de participación es requisito registrarse y tener un porcentaje de asistencia mínimo del 80%, en persona o en línea. En el formulario puede indicar el nombre exacto tal como debe aparecer en la constancia. Las condiciones y los plazos de entrega los comunica el comité organizador por correo.',
+         'en', 'Yes. To receive the certificate of participation you must register and have a minimum attendance of 80%, in person or online. In the form you can state the exact name as it should appear on the certificate. The conditions and delivery times are communicated by the organizing committee by email.',
+         'pt', 'Sim. Para receber o certificado de participação é necessário inscrever-se e ter uma frequência mínima de 80%, presencialmente ou on-line. No formulário você pode indicar o nome exato como deve constar no certificado. As condições e os prazos de entrega são comunicados pelo comitê organizador por e-mail.')
  where clave = 'constancia'
    and respuesta->>'es' like '%es requisito registrarse y asistir —en persona o en línea— a todas las sesiones del Congreso%';
+
+-- La pregunta frecuente de la constancia decía también que entrar a Zoom o a Meet sin haberse
+-- registrado no da derecho a constancia. Se quita esa frase, para no sonar tan tajantes con el
+-- público; el requisito (registrarse y el 80 % de asistencia) se queda.
+--
+-- Sólo se quita la frase, con un replace exacto, y no se reescribe la respuesta entera: si el
+-- comité retocó el resto del texto desde el panel, eso se respeta. Si la frase ya no está (porque
+-- la base recibió ya el texto sin ella, o la quitó el comité), no se toca nada.
+update faqs
+   set respuesta = jsonb_build_object(
+         'es', replace(respuesta->>'es', '; entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia.', '.'),
+         'en', replace(respuesta->>'en', '; joining Zoom or Meet without registering does not entitle you to a certificate.', '.'),
+         'pt', replace(respuesta->>'pt', '; entrar no Zoom ou no Meet sem ter se inscrito não dá direito ao certificado.', '.'))
+ where clave = 'constancia'
+   and respuesta->>'es' is not null and respuesta->>'en' is not null and respuesta->>'pt' is not null
+   and (   respuesta->>'es' like '%; entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia.%'
+        or respuesta->>'en' like '%; joining Zoom or Meet without registering does not entitle you to a certificate.%'
+        or respuesta->>'pt' like '%; entrar no Zoom ou no Meet sem ter se inscrito não dá direito ao certificado.%');
 
 -- La pregunta frecuente sobre editar el registro hablaba de «la fecha límite». Mismo criterio
 -- que las demás: sólo si conserva el texto sembrado.
