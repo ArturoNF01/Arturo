@@ -323,9 +323,9 @@ export const es = {
   constancia: {
     titulo: 'Constancia de participación',
     // Antes de registrarse: lo que hay que saber para decidir.
-    texto: 'Para recibirla es requisito registrarse y asistir —en persona o en línea— a todas las sesiones. Entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia.',
+    texto: 'Para recibirla es requisito registrarse y tener un porcentaje de asistencia mínimo del 80%, en persona o en línea. Entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia.',
     // Ya registrada, la persona sólo necesita el recordatorio de lo que falta.
-    recordatorio: 'Para recibir su constancia de participación es requisito estar registrado —ya lo está— y asistir, en persona o en línea, a todas las sesiones.',
+    recordatorio: 'Para recibir su constancia de participación es requisito estar registrado y tener un porcentaje de asistencia mínimo del 80%, en persona o en línea.',
     ir: 'Ir al registro',
   },
   faq: {

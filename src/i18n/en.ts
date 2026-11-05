@@ -284,8 +284,8 @@ export const en: Diccionario = {
   },
   constancia: {
     titulo: 'Certificate of participation',
-    texto: 'To receive it you must register and attend all the sessions, in person or online. Joining Zoom or Meet without registering does not entitle you to a certificate.',
-    recordatorio: 'To receive your certificate of participation you must be registered —you already are— and attend all the sessions, in person or online.',
+    texto: 'To receive it you must register and have a minimum attendance of 80%, in person or online. Joining Zoom or Meet without registering does not entitle you to a certificate.',
+    recordatorio: 'To receive your certificate of participation you must be registered and have a minimum attendance of 80%, in person or online.',
     ir: 'Go to registration',
   },
   faq: {

@@ -58,7 +58,7 @@ update plantillas_correo set cuerpo_html = replace(cuerpo_html, 'até {{fecha_li
  where idioma = 'pt' and clave = 'ponencia_aceptada_con_cambios'
    and cuerpo_html like '%até {{fecha_limite}}%';
 
--- La constancia exige registrarse y asistir a todas las sesiones.
+-- La constancia exige registrarse y un 80 % de asistencia como mínimo.
 --
 -- Va en el acuse de confirmación y en el de registro confirmado, delante del bloque de la
 -- agenda. Se aplica UNA sola vez, y por eso lleva una marca: esto corre en cada despliegue, y
@@ -81,14 +81,26 @@ end
 $constancia$;
 
 -- Y la pregunta frecuente de la constancia lo dice. Sólo si conserva el texto sembrado.
+-- (Escribe ya el requisito vigente: el 80 % de asistencia.)
 update faqs
    set respuesta = jsonb_build_object(
-         'es', 'Sí. Para recibir la constancia de participación es requisito registrarse y asistir —en persona o en línea— a todas las sesiones del Congreso; entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia. En el formulario puede indicar el nombre exacto tal como debe aparecer en la constancia. Las condiciones y los plazos de entrega los comunica el comité organizador por correo.',
-         'en', 'Yes. To receive the certificate of participation you must register and attend all the Congress sessions, in person or online; joining Zoom or Meet without registering does not entitle you to a certificate. In the form you can state the exact name as it should appear on the certificate. The conditions and delivery times are communicated by the organizing committee by email.',
-         'pt', 'Sim. Para receber o certificado de participação é necessário inscrever-se e participar de todas as sessões do Congresso, presencialmente ou on-line; entrar no Zoom ou no Meet sem ter se inscrito não dá direito ao certificado. No formulário você pode indicar o nome exato como deve constar no certificado. As condições e os prazos de entrega são comunicados pelo comitê organizador por e-mail.')
+         'es', 'Sí. Para recibir la constancia de participación es requisito registrarse y tener un porcentaje de asistencia mínimo del 80%, en persona o en línea; entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia. En el formulario puede indicar el nombre exacto tal como debe aparecer en la constancia. Las condiciones y los plazos de entrega los comunica el comité organizador por correo.',
+         'en', 'Yes. To receive the certificate of participation you must register and have a minimum attendance of 80%, in person or online; joining Zoom or Meet without registering does not entitle you to a certificate. In the form you can state the exact name as it should appear on the certificate. The conditions and delivery times are communicated by the organizing committee by email.',
+         'pt', 'Sim. Para receber o certificado de participação é necessário inscrever-se e ter uma frequência mínima de 80%, presencialmente ou on-line; entrar no Zoom ou no Meet sem ter se inscrito não dá direito ao certificado. No formulário você pode indicar o nome exato como deve constar no certificado. As condições e os prazos de entrega são comunicados pelo comitê organizador por e-mail.')
  where clave = 'constancia'
    and respuesta->>'es' like '%Las condiciones y los plazos de entrega los comunica el comité organizador por correo.%'
    and respuesta->>'es' not like '%es requisito registrarse%';
+
+-- El requisito cambió: antes se pedía asistir a todas las sesiones y ahora basta un porcentaje
+-- de asistencia mínimo del 80 %. Alcanza a las bases que ya habían recibido el texto anterior.
+-- Sólo si la pregunta conserva ese texto: lo que el comité haya reescrito en el panel no se toca.
+update faqs
+   set respuesta = jsonb_build_object(
+         'es', 'Sí. Para recibir la constancia de participación es requisito registrarse y tener un porcentaje de asistencia mínimo del 80%, en persona o en línea; entrar a Zoom o a Meet sin haberse registrado no da derecho a constancia. En el formulario puede indicar el nombre exacto tal como debe aparecer en la constancia. Las condiciones y los plazos de entrega los comunica el comité organizador por correo.',
+         'en', 'Yes. To receive the certificate of participation you must register and have a minimum attendance of 80%, in person or online; joining Zoom or Meet without registering does not entitle you to a certificate. In the form you can state the exact name as it should appear on the certificate. The conditions and delivery times are communicated by the organizing committee by email.',
+         'pt', 'Sim. Para receber o certificado de participação é necessário inscrever-se e ter uma frequência mínima de 80%, presencialmente ou on-line; entrar no Zoom ou no Meet sem ter se inscrito não dá direito ao certificado. No formulário você pode indicar o nome exato como deve constar no certificado. As condições e os prazos de entrega são comunicados pelo comitê organizador por e-mail.')
+ where clave = 'constancia'
+   and respuesta->>'es' like '%es requisito registrarse y asistir —en persona o en línea— a todas las sesiones del Congreso%';
 
 -- La pregunta frecuente sobre editar el registro hablaba de «la fecha límite». Mismo criterio
 -- que las demás: sólo si conserva el texto sembrado.

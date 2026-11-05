@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useApp } from '@/componentes/proveedores';
 
 /**
- * El aviso de que la constancia exige registrarse y asistir a todas las sesiones.
+ * El aviso de que la constancia exige registrarse y un porcentaje de asistencia mínimo del 80 %.
  *
  * Es lo que más gente se pierde: el enlace de Zoom y el de Meet están a la vista en
  * la agenda y cualquiera puede entrar sin registrarse, pero sin registro no hay
