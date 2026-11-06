@@ -43,17 +43,23 @@ const CON_DISEÑO_DE_COMUNICADO: ReadonlySet<string> = new Set(['comunicado']);
 
 /**
  * La envoltura del comunicado: replica el estilo del PDF que preparó el comité
- * —banner azul marino con la curva dorada y el nombre del Congreso, título en
- * negritas, cuerpo en una sola columna y el adorno azul y dorado abajo a la
- * derecha—, pero como correo y no como adjunto.
+ * —banner azul marino con la curva dorada y el nombre del Congreso, los logos de la RIUSS y del
+ * CIESS a la derecha, cuerpo justificado y el adorno azul y dorado abajo a la derecha—, pero
+ * como correo y no como adjunto.
  *
- * Está hecha como los correos de verdad, no como una página: tablas, estilos en
- * línea y dos imágenes alojadas en el sitio (`/correo/…`). Por eso hay que pasarle
- * la dirección del sitio, y por eso el banner lleva un texto alternativo con el
- * mismo nombre: quien tiene las imágenes bloqueadas sigue leyendo de qué es el correo.
+ * Está hecha como los correos de verdad, no como una página: tablas, estilos en línea y tres
+ * imágenes alojadas en el sitio (`/correo/…`). Por eso hay que pasarle la dirección del sitio, y
+ * por eso el banner lleva un texto alternativo con el mismo nombre: quien tiene las imágenes
+ * bloqueadas sigue leyendo de qué es el correo.
  *
- * Tipografía: Work Sans, como el sitio y el PDF, con Arial de respaldo —casi ningún
- * cliente de correo descarga fuentes—.
+ * Lo único que va en una hoja de estilos es lo que sólo ahí se puede decir: el ajuste al celular.
+ * Banner y logos van lado a lado y en una pantalla estrecha se apilan —el banner a todo el ancho,
+ * para que se lea el nombre del Congreso—, y el texto justificado pasa a alinearse a la izquierda,
+ * porque en una columna de 300 px la justificación abre huecos entre palabras. Los clientes que no
+ * leen esa hoja (varios de escritorio) muestran la versión ancha, que sigue siendo correcta.
+ *
+ * Tipografía: Work Sans, como el sitio y el PDF, con Arial de respaldo —casi ningún cliente de
+ * correo descarga fuentes—.
  */
 export function envolverComunicado(
   contenido: string,
@@ -63,17 +69,33 @@ export function envolverComunicado(
   const fuente = "'Work Sans',Arial,Helvetica,sans-serif";
   return `<!doctype html>
 <html lang="${idioma}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light"><title>${titulo}</title></head>
+<meta name="color-scheme" content="light"><title>${titulo}</title>
+<style>
+@media only screen and (max-width:480px){
+  .m-bloque{display:block!important;width:100%!important;}
+  .m-logos{text-align:left!important;padding:14px 20px 0!important;}
+  .m-logos img{max-width:240px!important;margin:0!important;}
+  .m-cuerpo{padding:22px 20px 8px!important;text-align:left!important;}
+}
+</style></head>
 <body style="margin:0;padding:0;background:#eef2f8;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f8;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
              style="max-width:620px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:${fuente};color:#111111;">
-        <tr><td align="left" style="padding:0;line-height:0;font-size:0;">
-          <img src="${base}/correo/comunicado-cabecera.png" width="400" height="101" alt="${titulo}"
-               style="display:block;width:100%;max-width:400px;height:auto;border:0;background:#012269;color:#ffffff;font-family:${fuente};font-size:15px;font-weight:bold;line-height:1.3;">
+        <tr><td style="padding:0;line-height:0;font-size:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td class="m-bloque" width="62%" valign="middle" align="left" style="padding:0;line-height:0;font-size:0;">
+              <img src="${base}/correo/comunicado-cabecera.png" width="384" height="97" alt="${titulo}"
+                   style="display:block;width:100%;max-width:400px;height:auto;border:0;background:#002269;color:#ffffff;font-family:${fuente};font-size:15px;font-weight:bold;line-height:1.3;">
+            </td>
+            <td class="m-bloque m-logos" width="38%" valign="middle" align="right" style="padding:0;line-height:0;font-size:0;">
+              <img src="${base}/correo/comunicado-logos.png" width="236" height="80" alt="RIUSS · CIESS"
+                   style="display:block;width:100%;max-width:260px;height:auto;border:0;margin-left:auto;">
+            </td>
+          </tr></table>
         </td></tr>
-        <tr><td style="padding:30px 32px 16px;font-family:${fuente};font-size:16px;line-height:1.65;color:#111111;">${contenido}</td></tr>
+        <tr><td class="m-cuerpo" style="padding:30px 32px 16px;font-family:${fuente};font-size:16px;line-height:1.65;color:#111111;text-align:justify;">${contenido}</td></tr>
         <tr><td align="right" style="padding:0;line-height:0;font-size:0;">
           <img src="${base}/correo/comunicado-pie.png" width="340" height="121" alt=""
                style="display:block;width:100%;max-width:340px;height:auto;border:0;margin-left:auto;">
@@ -124,6 +146,7 @@ export const MAXIMO_DESTINATARIOS_DE_PRUEBA = 10;
 
 export function destinatariosDePrueba(
   texto: string,
+  maximo: number = MAXIMO_DESTINATARIOS_DE_PRUEBA,
 ): { validos: string[]; invalidos: string[]; excede: boolean } {
   const partes = texto.split(/[\s,;]+/).map((p) => p.trim()).filter(Boolean);
   const validos: string[] = [];
@@ -133,5 +156,5 @@ export function destinatariosDePrueba(
     if (!/^[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]{2,}$/.test(direccion)) invalidos.push(parte);
     else if (!validos.includes(direccion)) validos.push(direccion);
   }
-  return { validos, invalidos, excede: validos.length > MAXIMO_DESTINATARIOS_DE_PRUEBA };
+  return { validos, invalidos, excede: validos.length > maximo };
 }

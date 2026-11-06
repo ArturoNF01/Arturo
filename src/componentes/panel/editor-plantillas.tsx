@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '@/componentes/proveedores';
 import { interpolar } from '@/i18n';
+import { esPlantillaMasiva } from '@/lib/comunicados';
+import { EnvioComunicado } from './envio-comunicado';
 import { IDIOMAS, diccionarios, type Idioma } from '@/i18n';
 
 interface Plantilla {
@@ -115,6 +117,16 @@ export function EditorPlantillas() {
     return () => clearTimeout(espera);
   }, [clave, idiomaPlantilla, asuntoBorrador, cuerpoBorrador]);
 
+  // ¿Hay algo sin guardar en esta plantilla, en cualquiera de sus idiomas? El envío manda lo guardado.
+  const hayCambiosSinGuardar = Object.entries(edicion).some(([llaveEditada, valores]) => {
+    const [claveEditada, idiomaEditado] = llaveEditada.split('|');
+    const guardada = plantillas.find((p) => p.clave === claveEditada && p.idioma === idiomaEditado);
+    return (
+      claveEditada === clave && Boolean(guardada) &&
+      (guardada!.asunto !== valores.asunto || guardada!.cuerpo_html !== valores.cuerpo_html)
+    );
+  });
+
   const claves = [...new Set(plantillas.map((p) => p.clave))];
 
   return (
@@ -226,6 +238,11 @@ export function EditorPlantillas() {
             />
           </div>
         </div>
+      )}
+
+      {/* Sólo las plantillas pensadas para mandarse a mucha gente llevan envío. */}
+      {esPlantillaMasiva(clave) && (
+        <EnvioComunicado clave={clave} idioma={idiomaPlantilla} sinGuardar={hayCambiosSinGuardar} />
       )}
     </div>
   );

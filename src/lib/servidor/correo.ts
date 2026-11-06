@@ -134,6 +134,24 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
   };
 }
 
+/**
+ * El correo de un registro ya armado —asunto y HTML— con la plantilla que se le pase.
+ *
+ * Es el armado de `enviarCorreoRegistro` sin leer la plantilla de la base ni enviar: lo usan los
+ * envíos masivos, que llevan la plantilla congelada en la campaña, y deja el armado en un solo
+ * sitio para que lo enviado, la vista previa y la prueba no puedan diferir.
+ */
+export function armarCorreoConPlantilla(
+  datos: DatosCorreo,
+  plantilla: { asunto: string; cuerpo_html: string },
+): { asunto: string; html: string } {
+  const idioma = (datos.registro.idioma as string) ?? 'es';
+  const t = obtenerDiccionario(idioma);
+  return componerCorreo(datos.clave, plantilla, variablesDeRegistro(datos), {
+    titulo: t.congreso.titulo, urlBase: urlSitio(), idioma,
+  });
+}
+
 /** Envía un correo a partir de la plantilla guardada en el panel. */
 export async function enviarCorreoRegistro(datos: DatosCorreo): Promise<{ enviado: boolean; error?: string }> {
   const clave = process.env.RESEND_API_KEY;
@@ -162,13 +180,8 @@ export async function enviarCorreoRegistro(datos: DatosCorreo): Promise<{ enviad
 
   if (!plantilla) return { enviado: false, error: `Sin plantilla ${datos.clave}/${idioma}.` };
 
-  const variables = variablesDeRegistro(datosConEje);
-  const t = obtenerDiccionario(idioma);
-
   // El mismo armado que usa la vista previa del panel y el correo de prueba.
-  const correo = componerCorreo(datos.clave, plantilla, variables, {
-    titulo: t.congreso.titulo, urlBase: urlSitio(), idioma,
-  });
+  const correo = armarCorreoConPlantilla(datosConEje, plantilla);
 
   try {
     const resend = new Resend(clave);

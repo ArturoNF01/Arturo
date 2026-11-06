@@ -53,7 +53,7 @@ describe('el texto del comunicado', () => {
     'Constancia de participación',
     'Se otorgará una constancia a quienes acrediten al menos el 80% de asistencia a las mesas temáticas del 12 y 13 de noviembre. Cuando dos mesas se realicen en el mismo horario, podrán elegir la de su interés y su asistencia contará para ese bloque.',
     'Participación presencial',
-    'Les esperamos en la sede del CIESS, en calle San Ramón s/n, colonia San Jerónimo Lídice, C.P. 10200, Ciudad de México. Les pedimos llegar unos minutos antes y firmar la lista de asistencia de cada sesión en la mesa de registro ubicada a la entrada del auditorio o de la sala correspondiente.',
+    'Les esperamos en la sede del CIESS, en calle San Ramón s/n, colonia San Jerónimo Lídice, C.P. 10200, Ciudad de México. Durante la sesión se distribuirá un código QR con el que podrán registrar su asistencia para cada sesión.',
     'Participación en línea',
     'Para conectarse, consulten la agenda del Congreso y seleccionen el enlace de la sesión a la que desean asistir. La plataforma registrará automáticamente su asistencia. Para que podamos identificarla correctamente, les pedimos ingresar con el nombre completo que utilizaron al inscribirse y conectarse desde el inicio de cada sesión. El registro de la plataforma se utilizará para verificar el cumplimiento del requisito de asistencia para la constancia.',
     'Muchas gracias por sumarse a este encuentro que hemos preparado en conjunto desde la RIUSS. Nos alegra compartir estos días de intercambio con quienes nos acompañarán en la sede y con quienes se conectarán desde distintos países.',
@@ -76,10 +76,25 @@ describe('el texto del comunicado', () => {
       'jueves 12 y el viernes 13', 'los horarios, las salas y los enlaces de acceso a las sesiones virtuales',
       'Ciudad de México', '80% de asistencia a las mesas temáticas del 12 y 13 de noviembre',
       'calle San Ramón s/n, colonia San Jerónimo Lídice, C.P. 10200, Ciudad de México',
-      'firmar la lista de asistencia de cada sesión', 'enlace de la sesión',
+      'código QR con el que podrán registrar su asistencia para cada sesión.', 'enlace de la sesión',
       'nombre completo que utilizaron al inscribirse',
     ]) {
       expect(html, frase).toContain(`<strong>${frase}</strong>`);
+    }
+  });
+
+  it('lleva los colores del PDF: título, subtítulos y firma en azul marino; saludo y firma en dorado', () => {
+    for (const idioma of IDIOMAS) {
+      const html = sembrada(idioma).cuerpo_html;
+      // Título (h1) y los tres subtítulos, en azul marino.
+      expect(html.match(/<h1 style="[^"]*color:#002269;/g), `título ${idioma}`).toHaveLength(1);
+      expect(html.match(/font-size:18px;[^"]*font-weight:bold;color:#002269;/g), `subtítulos ${idioma}`).toHaveLength(3);
+      // El saludo en dorado y la firma en azul y dorado.
+      expect(html, `saludo ${idioma}`).toMatch(/<p style="[^"]*font-weight:bold;color:#a08536;">/);
+      expect(html.match(/<span style="color:#002269;">/g), `firma ${idioma}`).toHaveLength(1);
+      expect(html.match(/<span style="color:#a08536;">/g), `firma dorada ${idioma}`).toHaveLength(1);
+      // Ya no queda el negro del primer diseño en el título.
+      expect(html, idioma).not.toContain('color:#111111;">' + sembrada(idioma).cuerpo_html.match(/<h1[^>]*>([^<]*)/)![1]);
     }
   });
 
@@ -138,10 +153,33 @@ describe('el diseño del comunicado', () => {
     expect(html.indexOf('<p>Hola</p>')).toBeLessThan(html.indexOf('comunicado-pie'));
   });
 
-  it('está hecho como un correo: tablas y estilos en línea, sin hojas de estilo ni scripts', () => {
+  it('lleva también los logos de la RIUSS y del CIESS, a la derecha del banner', () => {
+    const html = envolverComunicado('<p>x</p>', { titulo: 'T', urlBase: URL });
+    expect(html).toContain(`src="${URL}/correo/comunicado-logos.png"`);
+    expect(html).toMatch(/<img[^>]*alt="RIUSS · CIESS"/);
+    expect(html.indexOf('comunicado-cabecera')).toBeLessThan(html.indexOf('comunicado-logos'));
+  });
+
+  it('justifica el cuerpo, como el PDF, y en el celular lo alinea a la izquierda', () => {
+    const html = envolverComunicado('<p>x</p>', { titulo: 'T', urlBase: URL });
+    expect(html).toMatch(/class="m-cuerpo"[^>]*text-align:justify/);
+    expect(html).toMatch(/@media only screen and \(max-width:480px\)[\s\S]*\.m-cuerpo\{[^}]*text-align:left!important/);
+  });
+
+  it('en el celular apila banner y logos, para que se lea el nombre del Congreso', () => {
+    const html = envolverComunicado('<p>x</p>', { titulo: 'T', urlBase: URL });
+    expect(html).toMatch(/\.m-bloque\{display:block!important;width:100%!important;\}/);
+    expect(html.match(/class="m-bloque/g)).toHaveLength(2);
+  });
+
+  it('está hecho como un correo: tablas y estilos en línea; la única hoja de estilos es el ajuste al celular', () => {
     const html = envolverComunicado('<p>x</p>', { titulo: 'T', urlBase: URL });
     expect(html).toMatch(/<table role="presentation"/);
-    expect(html).not.toMatch(/<style|<script|<link /i);
+    expect(html).not.toMatch(/<script|<link /i);
+    // Una sola hoja, y entera dentro de una consulta de pantalla: nada que se aplique en general.
+    const hojas = html.match(/<style>[\s\S]*?<\/style>/g) ?? [];
+    expect(hojas).toHaveLength(1);
+    expect((hojas[0] ?? '').replace(/<\/?style>/g, '').trim()).toMatch(/^@media only screen and \(max-width:480px\)\{[\s\S]*\}$/);
     expect(html).toMatch(/Work Sans/);
     expect(html).toMatch(/Arial/); // respaldo: casi ningún cliente descarga fuentes
   });
@@ -150,7 +188,7 @@ describe('el diseño del comunicado', () => {
     const html = envolverComunicado('<p>x</p>', { titulo: 'T', urlBase: URL });
     expect(html).toContain('max-width:620px');
     expect(html).toMatch(/viewport/);
-    expect(html.match(/height:auto/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(html.match(/height:auto/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
   it('sólo el comunicado lleva este diseño: los acuses conservan el suyo', () => {
@@ -161,14 +199,23 @@ describe('el diseño del comunicado', () => {
     expect(acuse).toContain('CIESS · Centro Interamericano de Estudios de Seguridad Social');
   });
 
-  it('las dos imágenes existen en el sitio, son PNG y pesan poco', () => {
-    for (const nombre of ['comunicado-cabecera.png', 'comunicado-pie.png']) {
+  it('las tres imágenes existen en el sitio, son PNG y pesan poco', () => {
+    for (const nombre of ['comunicado-cabecera.png', 'comunicado-logos.png', 'comunicado-pie.png']) {
       const ruta = join('public', 'correo', nombre);
       expect(existsSync(ruta), nombre).toBe(true);
       const bytes = readFileSync(ruta);
       expect(bytes.subarray(1, 4).toString(), nombre).toBe('PNG');
       expect(statSync(ruta).size, nombre).toBeLessThan(150_000);
     }
+  });
+});
+
+describe('el asunto de la prueba', () => {
+  it('es el mismo que el del envío real: la prueba no le antepone «[prueba]» ni nada', () => {
+    const fuente = readFileSync('src/app/api/plantillas/route.ts', 'utf8');
+    expect(fuente).not.toMatch(/\[prueba\]/i);
+    // El asunto sale de `componerCorreo`, igual que en el envío masivo y en el de cada registro.
+    expect(fuente).toMatch(/subject:\s*correo\.asunto/);
   });
 });
 
@@ -194,22 +241,40 @@ describe('las pruebas de envío', () => {
 });
 
 describe('nada lo envía por su cuenta', () => {
-  /** Todos los archivos de código, salvo las pruebas. */
+  /** Todos los archivos de código de un directorio. */
   function archivos(dir: string): string[] {
     return readdirSync(dir).flatMap((nombre) => {
       const ruta = join(dir, nombre);
-      return statSync(ruta).isDirectory() ? archivos(ruta) : /\.(ts|tsx)$/.test(nombre) ? [ruta] : [];
+      return statSync(ruta).isDirectory() ? archivos(ruta) : /\.(ts|tsx|sh)$/.test(nombre) ? [ruta] : [];
     });
   }
+  const menciona = (ruta: string) => /['"`]comunicado['"`]|comunicados/.test(readFileSync(ruta, 'utf8'));
 
-  it("'comunicado' sólo aparece donde se declara, se envuelve o se muestra; ningún flujo lo manda", () => {
+  it('ningún flujo automático lo toca: ni el alta, ni los recordatorios, ni el cron, ni la hoja', () => {
+    // El comunicado sale sólo de un envío que alguien confirma en el panel. Estos son los caminos que
+    // corren solos o por otra razón; si alguno lo mencionara, habría un envío sin que nadie lo pida.
+    const automaticos = [
+      ...archivos('src/app/api/registros'),
+      ...archivos('src/app/api/recordatorios'),
+      ...archivos('src/app/api/sincronizar'),
+      ...archivos('src/app/api/acuses'),
+      ...archivos('guiones'),
+      'src/lib/recordatorios.ts',
+    ];
+    const infractores = automaticos.filter(menciona).map((r) => r.replaceAll('\\', '/'));
+    expect(infractores).toEqual([]);
+  });
+
+  it("sólo el código de envíos y la plantilla nombran 'comunicado' como clave", () => {
     const usos = archivos('src')
       .filter((ruta) => /['"`]comunicado['"`]/.test(readFileSync(ruta, 'utf8')))
       .map((ruta) => ruta.replaceAll('\\', '/'))
       .sort();
-    // (El nombre en el selector del panel es una clave de objeto, sin comillas: no cuenta.)
     expect(usos).toEqual([
-      'src/lib/plantillas.ts', // la envoltura
+      'src/app/api/comunicados/audiencia/route.ts', // la clave por omisión del envío
+      'src/app/api/comunicados/route.ts',
+      'src/lib/comunicados.ts', // la lista de plantillas que se pueden mandar en masa
+      'src/lib/plantillas.ts', // la envoltura propia
       'src/lib/servidor/correo.ts', // el tipo de plantilla
     ]);
   });

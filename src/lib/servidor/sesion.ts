@@ -46,6 +46,9 @@ export function permisos(rol: RolPanel | undefined) {
     consultarSql: alMenos(rol, 'cientifico_datos'),
     editarRegistros: alMenos(rol, 'organizador'),
     editarPlantillas: alMenos(rol, 'organizador'),
+    // Mandar un comunicado a toda la gente registrada: no se recoge, así que lo hace quien
+    // organiza, con una confirmación escrita en el panel.
+    enviarComunicados: alMenos(rol, 'organizador'),
     editarConfiguracion: alMenos(rol, 'organizador'),
     verAuditoria: alMenos(rol, 'organizador'),
     eliminarRegistros: alMenos(rol, 'superadmin'),

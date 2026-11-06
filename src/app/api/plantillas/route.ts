@@ -62,7 +62,8 @@ export async function PUT(peticion: NextRequest) {
  * Por omisión va al propio usuario del panel; con `destinatarios` —direcciones
  * separadas por coma o espacio— va a quienes tengan que revisarlo, hasta diez: así
  * el comité puede ver el correo en su bandeja antes de aprobarlo. Sale una copia
- * por dirección, marcada «[prueba]», y nunca a nadie de la base de registros.
+ * por dirección, con el asunto exacto que tendrá el envío real —sin ninguna marca—, para que el
+ * comité lo vea como lo verá la gente, y nunca a nadie de la base de registros.
  */
 export async function POST(peticion: NextRequest) {
   const usuario = await usuarioActual();
@@ -110,7 +111,7 @@ export async function POST(peticion: NextRequest) {
     destinos.map((para) => ({
       from: remitente,
       to: para,
-      subject: `[prueba] ${correo.asunto}`,
+      subject: correo.asunto,
       html: correo.html,
     })),
   );

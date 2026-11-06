@@ -1091,57 +1091,100 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 ('comunicado', 'es',
  'Acceso a las sesiones, asistencia y constancias · 1er Congreso de Estudios Interamericanos de Seguridad Social',
  $html$<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#ffffff;">Horarios y salas, cómo asistir en la sede o en línea y requisitos para la constancia de participación.</div>
-<h1 style="margin:0 0 22px;font-size:24px;line-height:1.25;font-weight:bold;color:#111111;">Acceso a las sesiones, asistencia y constancias</h1>
-<p style="margin:0 0 16px;">Estimadas y estimados participantes:</p>
+<h1 style="margin:0 0 20px;font-size:26px;line-height:1.25;font-weight:bold;color:#002269;text-align:left;">Acceso a las sesiones, asistencia y constancias</h1>
+<p style="margin:0 0 18px;font-weight:bold;color:#a08536;">Estimadas y estimados participantes:</p>
 <p style="margin:0 0 16px;">Nos dará mucho gusto contar con su participación en el <strong>Primer Congreso de Estudios Interamericanos de Seguridad Social</strong>, que se realizará del <strong>11 al 13 de noviembre de 2026</strong> en <strong>modalidad híbrida</strong>, con actividades presenciales y en línea.</p>
 <p style="margin:0 0 16px;">El <strong>miércoles 11 de noviembre</strong> se llevarán a cabo las mesas de trabajo y la reunión general de la RIUSS. El <strong>jueves 12 y el viernes 13</strong> tendrán lugar las mesas temáticas de ponencias. En la <a href="{{url_sitio}}/#agenda" style="color:#467886;text-decoration:underline;">agenda del Congreso</a> encontrarán <strong>los horarios, las salas y los enlaces de acceso a las sesiones virtuales</strong>. Todos los horarios corresponden a la <strong>Ciudad de México</strong>.</p>
-<p style="margin:24px 0 8px;font-weight:bold;">Constancia de participación</p>
+<p style="margin:26px 0 8px;font-size:18px;line-height:1.35;font-weight:bold;color:#002269;text-align:left;">Constancia de participación</p>
 <p style="margin:0 0 16px;">Se otorgará una constancia a quienes acrediten al menos el <strong>80% de asistencia a las mesas temáticas del 12 y 13 de noviembre</strong>. Cuando dos mesas se realicen en el mismo horario, podrán elegir la de su interés y su asistencia contará para ese bloque.</p>
-<p style="margin:24px 0 8px;font-weight:bold;">Participación presencial</p>
-<p style="margin:0 0 16px;">Les esperamos en la sede del CIESS, en <strong>calle San Ramón s/n, colonia San Jerónimo Lídice, C.P. 10200, Ciudad de México</strong>. Les pedimos llegar unos minutos antes y <strong>firmar la lista de asistencia de cada sesión</strong> en la mesa de registro ubicada a la entrada del auditorio o de la sala correspondiente.</p>
-<p style="margin:24px 0 8px;font-weight:bold;">Participación en línea</p>
+<p style="margin:26px 0 8px;font-size:18px;line-height:1.35;font-weight:bold;color:#002269;text-align:left;">Participación presencial</p>
+<p style="margin:0 0 16px;">Les esperamos en la sede del CIESS, en <strong>calle San Ramón s/n, colonia San Jerónimo Lídice, C.P. 10200, Ciudad de México</strong>. Durante la sesión se distribuirá un <strong>código QR con el que podrán registrar su asistencia para cada sesión.</strong></p>
+<p style="margin:26px 0 8px;font-size:18px;line-height:1.35;font-weight:bold;color:#002269;text-align:left;">Participación en línea</p>
 <p style="margin:0 0 16px;">Para conectarse, consulten la <a href="{{url_sitio}}/#agenda" style="color:#467886;text-decoration:underline;">agenda del Congreso</a> y seleccionen el <strong>enlace de la sesión</strong> a la que desean asistir. La plataforma registrará automáticamente su asistencia. Para que podamos identificarla correctamente, les pedimos ingresar con el <strong>nombre completo que utilizaron al inscribirse</strong> y conectarse desde el inicio de cada sesión. El registro de la plataforma se utilizará para verificar el cumplimiento del requisito de asistencia para la constancia.</p>
 <p style="margin:0 0 16px;">Muchas gracias por sumarse a este encuentro que hemos preparado en conjunto desde la RIUSS. Nos alegra compartir estos días de intercambio con quienes nos acompañarán en la sede y con quienes se conectarán desde distintos países.</p>
 <p style="margin:0 0 16px;">Un cordial saludo,</p>
-<p style="margin:0 0 24px;font-weight:bold;">Comité Organizador<br/>Congreso de la RIUSS | CIESS</p>
-<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#5b6b7f;">Para dudas o aclaraciones, escríbanos a {{correo_contacto}}.</p>$html$),
+<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Comité Organizador</span><br/><span style="color:#a08536;">Congreso de la RIUSS | CIESS</span></p>
+<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#5b6b7f;text-align:left;">Para dudas o aclaraciones, escríbanos a {{correo_contacto}}.</p>$html$),
 
 ('comunicado', 'en',
  'Access to the sessions, attendance and certificates · 1st Congress of Inter-American Social Security Studies',
  $html$<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#ffffff;">Schedules and rooms, how to attend in person or online, and the requirements for the certificate of participation.</div>
-<h1 style="margin:0 0 22px;font-size:24px;line-height:1.25;font-weight:bold;color:#111111;">Access to the sessions, attendance and certificates</h1>
-<p style="margin:0 0 16px;">Dear participants:</p>
+<h1 style="margin:0 0 20px;font-size:26px;line-height:1.25;font-weight:bold;color:#002269;text-align:left;">Access to the sessions, attendance and certificates</h1>
+<p style="margin:0 0 18px;font-weight:bold;color:#a08536;">Dear participants:</p>
 <p style="margin:0 0 16px;">We look forward to your participation in the <strong>First Congress of Inter-American Social Security Studies</strong>, to be held from <strong>11 to 13 November 2026</strong> in <strong>hybrid format</strong>, with in-person and online activities.</p>
 <p style="margin:0 0 16px;">On <strong>Wednesday 11 November</strong> the working groups and the general RIUSS meeting will take place. On <strong>Thursday 12 and Friday 13</strong> the thematic panels with paper presentations will be held. In the <a href="{{url_sitio}}/#agenda" style="color:#467886;text-decoration:underline;">Congress agenda</a> you will find <strong>the schedules, the rooms and the access links to the virtual sessions</strong>. All times are <strong>Mexico City</strong> time.</p>
-<p style="margin:24px 0 8px;font-weight:bold;">Certificate of participation</p>
+<p style="margin:26px 0 8px;font-size:18px;line-height:1.35;font-weight:bold;color:#002269;text-align:left;">Certificate of participation</p>
 <p style="margin:0 0 16px;">A certificate will be awarded to those who attend at least <strong>80% of the thematic panels on 12 and 13 November</strong>. When two panels are held at the same time, you may choose the one that interests you and your attendance will count for that time block.</p>
-<p style="margin:24px 0 8px;font-weight:bold;">In-person participation</p>
-<p style="margin:0 0 16px;">We look forward to welcoming you at the CIESS headquarters, at <strong>calle San Ramón s/n, colonia San Jerónimo Lídice, C.P. 10200, Mexico City</strong>. Please arrive a few minutes early and <strong>sign the attendance sheet for each session</strong> at the registration desk located at the entrance of the auditorium or the corresponding room.</p>
-<p style="margin:24px 0 8px;font-weight:bold;">Online participation</p>
+<p style="margin:26px 0 8px;font-size:18px;line-height:1.35;font-weight:bold;color:#002269;text-align:left;">In-person participation</p>
+<p style="margin:0 0 16px;">We look forward to welcoming you at the CIESS headquarters, at <strong>calle San Ramón s/n, colonia San Jerónimo Lídice, C.P. 10200, Mexico City</strong>. During the session a <strong>QR code will be distributed with which you can record your attendance for each session.</strong></p>
+<p style="margin:26px 0 8px;font-size:18px;line-height:1.35;font-weight:bold;color:#002269;text-align:left;">Online participation</p>
 <p style="margin:0 0 16px;">To connect, please consult the <a href="{{url_sitio}}/#agenda" style="color:#467886;text-decoration:underline;">Congress agenda</a> and select the <strong>link for the session</strong> you wish to attend. The platform will automatically record your attendance. So that we can identify you correctly, please log in with the <strong>full name you used when registering</strong> and connect from the start of each session. The platform record will be used to verify compliance with the attendance requirement for the certificate.</p>
 <p style="margin:0 0 16px;">Thank you very much for joining this meeting, which we have prepared together from RIUSS. We are glad to share these days of exchange with those who will be with us at the venue and those who will connect from different countries.</p>
 <p style="margin:0 0 16px;">Kind regards,</p>
-<p style="margin:0 0 24px;font-weight:bold;">Organizing Committee<br/>RIUSS Congress | CIESS</p>
-<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#5b6b7f;">For questions or clarifications, write to us at {{correo_contacto}}.</p>$html$),
+<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Organizing Committee</span><br/><span style="color:#a08536;">RIUSS Congress | CIESS</span></p>
+<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#5b6b7f;text-align:left;">For questions or clarifications, write to us at {{correo_contacto}}.</p>$html$),
 
 ('comunicado', 'pt',
  'Acesso às sessões, frequência e certificados · 1º Congresso de Estudos Interamericanos de Seguridade Social',
  $html$<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#ffffff;">Horários e salas, como participar presencialmente ou on-line e requisitos para o certificado de participação.</div>
-<h1 style="margin:0 0 22px;font-size:24px;line-height:1.25;font-weight:bold;color:#111111;">Acesso às sessões, frequência e certificados</h1>
-<p style="margin:0 0 16px;">Prezadas e prezados participantes:</p>
+<h1 style="margin:0 0 20px;font-size:26px;line-height:1.25;font-weight:bold;color:#002269;text-align:left;">Acesso às sessões, frequência e certificados</h1>
+<p style="margin:0 0 18px;font-weight:bold;color:#a08536;">Prezadas e prezados participantes:</p>
 <p style="margin:0 0 16px;">Teremos grande prazer em contar com a sua participação no <strong>Primeiro Congresso de Estudos Interamericanos de Seguridade Social</strong>, que será realizado de <strong>11 a 13 de novembro de 2026</strong> em <strong>formato híbrido</strong>, com atividades presenciais e on-line.</p>
 <p style="margin:0 0 16px;">Na <strong>quarta-feira, 11 de novembro</strong>, serão realizadas as mesas de trabalho e a reunião geral da RIUSS. Na <strong>quinta-feira, 12, e na sexta-feira, 13</strong>, ocorrerão as mesas temáticas de trabalhos. Na <a href="{{url_sitio}}/#agenda" style="color:#467886;text-decoration:underline;">agenda do Congresso</a> vocês encontrarão <strong>os horários, as salas e os links de acesso às sessões virtuais</strong>. Todos os horários correspondem à <strong>Cidade do México</strong>.</p>
-<p style="margin:24px 0 8px;font-weight:bold;">Certificado de participação</p>
+<p style="margin:26px 0 8px;font-size:18px;line-height:1.35;font-weight:bold;color:#002269;text-align:left;">Certificado de participação</p>
 <p style="margin:0 0 16px;">Será concedido certificado a quem comprovar pelo menos <strong>80% de frequência nas mesas temáticas de 12 e 13 de novembro</strong>. Quando duas mesas ocorrerem no mesmo horário, poderão escolher a de seu interesse e a sua presença será contabilizada para esse bloco.</p>
-<p style="margin:24px 0 8px;font-weight:bold;">Participação presencial</p>
-<p style="margin:0 0 16px;">Aguardamos vocês na sede do CIESS, na <strong>calle San Ramón s/n, colonia San Jerónimo Lídice, C.P. 10200, Cidade do México</strong>. Pedimos que cheguem alguns minutos antes e <strong>assinem a lista de presença de cada sessão</strong> na mesa de registro localizada na entrada do auditório ou da sala correspondente.</p>
-<p style="margin:24px 0 8px;font-weight:bold;">Participação on-line</p>
+<p style="margin:26px 0 8px;font-size:18px;line-height:1.35;font-weight:bold;color:#002269;text-align:left;">Participação presencial</p>
+<p style="margin:0 0 16px;">Aguardamos vocês na sede do CIESS, na <strong>calle San Ramón s/n, colonia San Jerónimo Lídice, C.P. 10200, Cidade do México</strong>. Durante a sessão será distribuído um <strong>código QR com o qual poderão registrar a sua presença em cada sessão.</strong></p>
+<p style="margin:26px 0 8px;font-size:18px;line-height:1.35;font-weight:bold;color:#002269;text-align:left;">Participação on-line</p>
 <p style="margin:0 0 16px;">Para se conectar, consultem a <a href="{{url_sitio}}/#agenda" style="color:#467886;text-decoration:underline;">agenda do Congresso</a> e selecionem o <strong>link da sessão</strong> a que desejam assistir. A plataforma registrará automaticamente a sua presença. Para que possamos identificá-la corretamente, pedimos que entrem com o <strong>nome completo que utilizaram ao se inscrever</strong> e se conectem desde o início de cada sessão. O registro da plataforma será utilizado para verificar o cumprimento do requisito de frequência para o certificado.</p>
 <p style="margin:0 0 16px;">Muito obrigado por participar deste encontro, que preparamos em conjunto a partir da RIUSS. É uma alegria compartilhar estes dias de intercâmbio com quem nos acompanhará na sede e com quem se conectará de diferentes países.</p>
 <p style="margin:0 0 16px;">Um cordial abraço,</p>
-<p style="margin:0 0 24px;font-weight:bold;">Comitê Organizador<br/>Congresso da RIUSS | CIESS</p>
-<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#5b6b7f;">Em caso de dúvida ou esclarecimento, escreva para {{correo_contacto}}.</p>$html$)
+<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Comitê Organizador</span><br/><span style="color:#a08536;">Congresso da RIUSS | CIESS</span></p>
+<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#5b6b7f;text-align:left;">Em caso de dúvida ou esclarecimento, escreva para {{correo_contacto}}.</p>$html$)
 on conflict (clave, idioma) do nothing;
+
+-- ---------------------------------------------------------------------
+-- Envíos masivos (comunicados): qué se mandó, a quién y cómo le fue.
+--
+-- Una campaña es un envío lanzado desde el panel; cada fila de `envios_campana` es una persona.
+-- La llave (campaña, correo) hace imposible mandar dos veces el mismo correo dentro de una
+-- campaña, y el estado de cada fila permite parar y seguir: si el envío se interrumpe —se cierra
+-- el navegador, Resend corta por límite diario— lo pendiente queda pendiente y se reanuda sin
+-- repetir a nadie.
+--
+-- La campaña guarda el texto tal como se envió (`plantilla`): si alguien edita la plantilla a
+-- medio envío, las personas restantes reciben el mismo texto que las primeras, y queda constancia
+-- de qué se mandó.
+-- ---------------------------------------------------------------------
+create table if not exists campanas_correo (
+  id          uuid primary key default gen_random_uuid(),
+  /** La plantilla que se envió: 'comunicado'. */
+  clave       text not null,
+  audiencia   text not null check (audiencia in ('todos', 'ponentes', 'lista')),
+  /** {"es": {"asunto": …, "cuerpo_html": …}, "en": …, "pt": …} tal como se mandó. */
+  plantilla   jsonb not null,
+  creada_por  uuid references usuarios_panel(id) on delete set null,
+  creada_en   timestamptz not null default now(),
+  total       integer not null check (total >= 0),
+  estado      text not null default 'en_curso' check (estado in ('en_curso', 'terminada'))
+);
+create index if not exists campanas_correo_clave_idx on campanas_correo (clave, creada_en desc);
+
+create table if not exists envios_campana (
+  campana_id   uuid not null references campanas_correo(id) on delete cascade,
+  /** En minúsculas. */
+  correo       text not null,
+  /** Si la dirección es de un registro; la baja del registro no borra la huella del envío. */
+  registro_id  uuid references registros(id) on delete set null,
+  idioma       text not null default 'es' check (idioma in ('es', 'en', 'pt')),
+  estado       text not null default 'pendiente' check (estado in ('pendiente', 'enviando', 'enviado', 'error')),
+  error        text,
+  reclamado_en timestamptz,
+  enviado_en   timestamptz,
+  primary key (campana_id, correo)
+);
+create index if not exists envios_campana_estado_idx on envios_campana (campana_id, estado);
+create index if not exists envios_campana_correo_idx on envios_campana (correo) where estado = 'enviado';
 
 -- ---------------------------------------------------------------------
 -- Avance de los envíos, para el panel
