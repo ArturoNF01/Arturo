@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { urlSitio } from '@/lib/config';
 import {
   MAXIMO_DESTINATARIOS_DE_PRUEBA, componerCorreo, destinatariosDePrueba,
-  envolverComunicado, envolverSegunClave,
+  envolverCorreo,
 } from '@/lib/plantillas';
 
 vi.mock('@/lib/bd/conexion', () => ({
@@ -127,7 +127,7 @@ describe('el texto del comunicado', () => {
         programaPublicado: true,
       });
       const { asunto, cuerpo_html } = sembrada(idioma);
-      const correo = componerCorreo('comunicado', { asunto, cuerpo_html }, variables, {
+      const correo = componerCorreo({ asunto, cuerpo_html }, variables, {
         titulo: 'Congreso', urlBase: 'https://congreso.example.org', idioma,
       });
       expect(correo.asunto, idioma).not.toMatch(/\{\{/);
@@ -139,11 +139,11 @@ describe('el texto del comunicado', () => {
   });
 });
 
-describe('el diseño del comunicado', () => {
+describe('el diseño común de los correos (el del comunicado)', () => {
   const URL = 'https://congreso.example.org';
 
   it('lleva el banner y el adorno del PDF como imágenes con dirección completa', () => {
-    const html = envolverComunicado('<p>Hola</p>', { titulo: '1er Congreso', urlBase: `${URL}/` });
+    const html = envolverCorreo('<p>Hola</p>', { titulo: '1er Congreso', urlBase: `${URL}/` });
     expect(html).toContain(`src="${URL}/correo/comunicado-cabecera.png"`);
     expect(html).toContain(`src="${URL}/correo/comunicado-pie.png"`);
     // El banner dice de qué es el correo aunque el cliente bloquee las imágenes.
@@ -154,26 +154,26 @@ describe('el diseño del comunicado', () => {
   });
 
   it('lleva también los logos de la RIUSS y del CIESS, a la derecha del banner', () => {
-    const html = envolverComunicado('<p>x</p>', { titulo: 'T', urlBase: URL });
+    const html = envolverCorreo('<p>x</p>', { titulo: 'T', urlBase: URL });
     expect(html).toContain(`src="${URL}/correo/comunicado-logos.png"`);
     expect(html).toMatch(/<img[^>]*alt="RIUSS · CIESS"/);
     expect(html.indexOf('comunicado-cabecera')).toBeLessThan(html.indexOf('comunicado-logos'));
   });
 
   it('justifica el cuerpo, como el PDF, y en el celular lo alinea a la izquierda', () => {
-    const html = envolverComunicado('<p>x</p>', { titulo: 'T', urlBase: URL });
+    const html = envolverCorreo('<p>x</p>', { titulo: 'T', urlBase: URL });
     expect(html).toMatch(/class="m-cuerpo"[^>]*text-align:justify/);
     expect(html).toMatch(/@media only screen and \(max-width:480px\)[\s\S]*\.m-cuerpo\{[^}]*text-align:left!important/);
   });
 
   it('en el celular apila banner y logos, para que se lea el nombre del Congreso', () => {
-    const html = envolverComunicado('<p>x</p>', { titulo: 'T', urlBase: URL });
+    const html = envolverCorreo('<p>x</p>', { titulo: 'T', urlBase: URL });
     expect(html).toMatch(/\.m-bloque\{display:block!important;width:100%!important;\}/);
     expect(html.match(/class="m-bloque/g)).toHaveLength(2);
   });
 
   it('está hecho como un correo: tablas y estilos en línea; la única hoja de estilos es el ajuste al celular', () => {
-    const html = envolverComunicado('<p>x</p>', { titulo: 'T', urlBase: URL });
+    const html = envolverCorreo('<p>x</p>', { titulo: 'T', urlBase: URL });
     expect(html).toMatch(/<table role="presentation"/);
     expect(html).not.toMatch(/<script|<link /i);
     // Una sola hoja, y entera dentro de una consulta de pantalla: nada que se aplique en general.
@@ -185,18 +185,10 @@ describe('el diseño del comunicado', () => {
   });
 
   it('se adapta al móvil: ancho de hasta 620 px y las imágenes se encogen', () => {
-    const html = envolverComunicado('<p>x</p>', { titulo: 'T', urlBase: URL });
+    const html = envolverCorreo('<p>x</p>', { titulo: 'T', urlBase: URL });
     expect(html).toContain('max-width:620px');
     expect(html).toMatch(/viewport/);
     expect(html.match(/height:auto/g)?.length).toBeGreaterThanOrEqual(3);
-  });
-
-  it('sólo el comunicado lleva este diseño: los acuses conservan el suyo', () => {
-    const com = envolverSegunClave('comunicado', '<p>x</p>', { titulo: 'T', urlBase: URL });
-    const acuse = envolverSegunClave('confirmacion_registro', '<p>x</p>', { titulo: 'T', urlBase: URL });
-    expect(com).toContain('comunicado-cabecera');
-    expect(acuse).not.toContain('comunicado-cabecera');
-    expect(acuse).toContain('CIESS · Centro Interamericano de Estudios de Seguridad Social');
   });
 
   it('las tres imágenes existen en el sitio, son PNG y pesan poco', () => {
@@ -274,7 +266,6 @@ describe('nada lo envía por su cuenta', () => {
       'src/app/api/comunicados/audiencia/route.ts', // la clave por omisión del envío
       'src/app/api/comunicados/route.ts',
       'src/lib/comunicados.ts', // la lista de plantillas que se pueden mandar en masa
-      'src/lib/plantillas.ts', // la envoltura propia
       'src/lib/servidor/correo.ts', // el tipo de plantilla
     ]);
   });

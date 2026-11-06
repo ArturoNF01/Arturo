@@ -55,7 +55,7 @@ export async function correoDeMuestra({
     programaPublicado: configuracion.programa_publicado,
   });
 
-  return componerCorreo(clave, plantilla, variables, {
+  return componerCorreo(plantilla, variables, {
     titulo: t.congreso.titulo, urlBase: urlSitio(), idioma,
   });
 }

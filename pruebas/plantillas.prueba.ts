@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aplicarPlantilla, envolverHtml } from '@/lib/plantillas';
+import { aplicarPlantilla, envolverCorreo } from '@/lib/plantillas';
 
 describe('aplicarPlantilla', () => {
   const variables = {
@@ -30,16 +30,16 @@ describe('aplicarPlantilla', () => {
   });
 });
 
-describe('envolverHtml', () => {
+describe('envolverCorreo', () => {
   it('produce un documento completo con el contenido dentro', () => {
-    const html = envolverHtml('<p>Hola</p>', 'Congreso');
+    const html = envolverCorreo('<p>Hola</p>', { titulo: 'Congreso', urlBase: 'https://ejemplo.org' });
     expect(html.startsWith('<!doctype html>')).toBe(true);
     expect(html).toContain('<p>Hola</p>');
     expect(html).toContain('Congreso');
   });
 
   it('declara la codificación y el ancho, que es lo que necesitan los clientes de correo', () => {
-    const html = envolverHtml('', 'x');
+    const html = envolverCorreo('', { titulo: 'x', urlBase: 'https://ejemplo.org' });
     expect(html).toContain('charset="utf-8"');
     expect(html).toContain('width=device-width');
   });

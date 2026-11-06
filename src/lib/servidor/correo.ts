@@ -9,7 +9,7 @@ import { obtenerDiccionario } from '@/i18n';
 import { nombrePerfil, perfilPorClave, registroMinimo, type Modalidad } from '@/lib/perfiles';
 import { leerEjes } from './contenido';
 import { traducir } from '@/lib/contenido';
-import { aplicarPlantilla, componerCorreo, envolverHtml } from '@/lib/plantillas';
+import { aplicarPlantilla, componerCorreo, envolverCorreo, estilizarCuerpo, tituloDeAsunto } from '@/lib/plantillas';
 
 export type ClavePlantilla =
   | 'confirmacion_registro'
@@ -71,7 +71,7 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
     // Bloque ya formateado: una plantilla no debería tener que decidir si
     // hay comentarios o no.
     comentarios_bloque: r.dictamen_comentarios
-      ? `<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #2e5c8a;background:#f2f5f9;">${
+      ? `<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #c7ae6f;background:#eef2f8;">${
           String(r.dictamen_comentarios).replace(/[&<>]/g, (c) =>
             ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] ?? c,
           ).replace(/\n/g, '<br>')
@@ -100,18 +100,18 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
         perfilPorClave(String(r.perfil ?? '')),
         r.modalidad === 'en_linea' ? 'en_linea' : ('presencial' as Modalidad),
       )
-        ? `<div style="margin:20px 0;padding:16px;border-radius:8px;background:#eef3f9;border:1px solid #cfdcea;">
-<p style="margin:0 0 8px;font-weight:bold;color:#16283d;">${t.confirmacion.zoomTitulo}</p>
+        ? `<div style="margin:20px 0;padding:16px;border-radius:8px;background:#eef2f8;border:1px solid #cfd8ea;">
+<p style="margin:0 0 8px;font-weight:bold;color:#002269;">${t.confirmacion.zoomTitulo}</p>
 <p style="margin:0 0 12px;">${t.confirmacion.zoomTexto}</p>
-<p style="margin:0;"><a href="${datos.urlSesionZoom}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#2e5c8a;color:#ffffff;text-decoration:none;font-weight:bold;">${t.confirmacion.zoomBoton}</a></p>
-<p style="margin:12px 0 0;font-size:13px;color:#4a5b6e;word-break:break-all;">${datos.urlSesionZoom}</p>
+<p style="margin:0;"><a href="${datos.urlSesionZoom}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#002269;color:#ffffff;text-decoration:none;font-weight:bold;">${t.confirmacion.zoomBoton}</a></p>
+<p style="margin:12px 0 0;font-size:13px;color:#5b6b7f;word-break:break-all;">${datos.urlSesionZoom}</p>
 </div>`
         : '',
     // El recordatorio de la constancia, para todas las personas registradas, siempre: no depende
     // del perfil, de la modalidad ni de que la agenda esté publicada. Sin registro y sin un 80 % de
     // asistencia como mínimo no hay constancia, y es mejor que lo lean aquí que descubrirlo después.
     constancia_bloque: `<div style="margin:20px 0;padding:16px;border-radius:8px;background:#fbf6e9;border:1px solid #e3d3a1;">
-<p style="margin:0 0 8px;font-weight:bold;color:#16283d;">${t.constancia.titulo}</p>
+<p style="margin:0 0 8px;font-weight:bold;color:#002269;">${t.constancia.titulo}</p>
 <p style="margin:0;">${t.constancia.recordatorio}</p>
 </div>`,
     url_agenda: urlAgenda,
@@ -123,10 +123,10 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
     // la sala del seminario cuando los dos salen en el mismo correo: uno es
     // la puerta y el otro es el folleto.
     agenda_bloque: urlAgenda && datos.programaPublicado
-      ? `<div style="margin:20px 0;padding:16px;border-radius:8px;border:1px solid #cfdcea;">
-<p style="margin:0 0 8px;font-weight:bold;color:#16283d;">${t.confirmacion.agendaTitulo}</p>
+      ? `<div style="margin:20px 0;padding:16px;border-radius:8px;border:1px solid #cfd8ea;">
+<p style="margin:0 0 8px;font-weight:bold;color:#002269;">${t.confirmacion.agendaTitulo}</p>
 <p style="margin:0 0 12px;">${t.confirmacion.agendaTexto}</p>
-<p style="margin:0;"><a href="${urlAgenda}" style="display:inline-block;padding:9px 16px;border-radius:6px;border:1px solid #2e5c8a;color:#2e5c8a;text-decoration:none;font-weight:bold;">${t.confirmacion.agendaBoton}</a></p>
+<p style="margin:0;"><a href="${urlAgenda}" style="display:inline-block;padding:9px 16px;border-radius:6px;border:1px solid #002269;color:#002269;text-decoration:none;font-weight:bold;">${t.confirmacion.agendaBoton}</a></p>
 </div>`
       : '',
     url_sitio: urlSitio(),
@@ -147,7 +147,7 @@ export function armarCorreoConPlantilla(
 ): { asunto: string; html: string } {
   const idioma = (datos.registro.idioma as string) ?? 'es';
   const t = obtenerDiccionario(idioma);
-  return componerCorreo(datos.clave, plantilla, variablesDeRegistro(datos), {
+  return componerCorreo(plantilla, variablesDeRegistro(datos), {
     titulo: t.congreso.titulo, urlBase: urlSitio(), idioma,
   });
 }
@@ -220,7 +220,9 @@ export async function enviarCorreoSimple({
       from: remitente,
       to: para,
       subject: asunto,
-      html: envolverHtml(html, obtenerDiccionario('es').congreso.titulo),
+      html: envolverCorreo(estilizarCuerpo(html, { titulo: tituloDeAsunto(asunto) }), {
+        titulo: obtenerDiccionario('es').congreso.titulo, urlBase: urlSitio(), idioma: 'es',
+      }),
     });
     if (error) return { enviado: false, error: error.message };
     return { enviado: true };
@@ -229,4 +231,4 @@ export async function enviarCorreoSimple({
   }
 }
 
-export { aplicarPlantilla, envolverHtml };
+export { aplicarPlantilla };

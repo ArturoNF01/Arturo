@@ -111,9 +111,9 @@ describe('el programa en los acuses', () => {
       programaPublicado: true,
       urlSesionZoom: SALA,
     });
-    expect(v.zoom_bloque).toContain('background:#2e5c8a');
-    expect(v.agenda_bloque).toContain('border:1px solid #2e5c8a');
-    expect(v.agenda_bloque).not.toContain('background:#2e5c8a');
+    expect(v.zoom_bloque).toContain('background:#002269');
+    expect(v.agenda_bloque).toContain('border:1px solid #002269');
+    expect(v.agenda_bloque).not.toContain('background:#002269');
   });
 
   it('mientras el comité no lo dé por publicado, el acuse sale sin botón', () => {

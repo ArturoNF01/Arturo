@@ -50,7 +50,8 @@ const CUALES = [
 async function principal() {
   const pedido = process.argv[2];
   const { variablesDeRegistro } = await import('../src/lib/servidor/correo');
-  const { aplicarPlantilla, envolverHtml } = await import('../src/lib/plantillas');
+  const { aplicarPlantilla, componerCorreo } = await import('../src/lib/plantillas');
+  const { urlSitio } = await import('../src/lib/config');
   const { unaFila } = await import('../src/lib/bd/conexion');
   const { obtenerDiccionario } = await import('../src/i18n');
 
@@ -86,7 +87,8 @@ async function principal() {
     });
 
     const asunto = aplicarPlantilla(plantilla.asunto, variables);
-    const cuerpo = envolverHtml(aplicarPlantilla(plantilla.cuerpo_html, variables), t.congreso.titulo);
+    // La misma función que usa el envío: lo que se ve aquí es lo que sale.
+    const cuerpo = componerCorreo(plantilla, variables, { titulo: t.congreso.titulo, urlBase: urlSitio(), idioma: 'es' }).html;
 
     // Encima del correo va la cabecera que enseñaría un cliente de correo:
     // sin remitente y asunto, una captura del cuerpo no dice de qué correo es.

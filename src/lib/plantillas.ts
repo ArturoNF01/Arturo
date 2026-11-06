@@ -10,42 +10,12 @@ export function aplicarPlantilla(plantilla: string, variables: Record<string, st
   );
 }
 
-/** Envoltura HTML sobria y compatible con clientes de correo. */
-export function envolverHtml(contenido: string, titulo: string): string {
-  return `<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${titulo}</title></head>
-<body style="margin:0;padding:0;background:#f2f5f9;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f5f9;padding:24px 12px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-             style="max-width:620px;background:#ffffff;border-radius:12px;overflow:hidden;
-                    font-family:Arial,Helvetica,sans-serif;color:#16283d;">
-        <tr><td style="background:#2e5c8a;padding:20px 28px;color:#ffffff;font-size:14px;font-weight:bold;">
-          ${titulo}
-        </td></tr>
-        <tr><td style="padding:28px;font-size:15px;line-height:1.6;">${contenido}</td></tr>
-        <tr><td style="padding:18px 28px;background:#f2f5f9;font-size:12px;color:#5b6b7f;">
-          CIESS · Centro Interamericano de Estudios de Seguridad Social
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-}
-
 /**
- * Las plantillas que llevan el diseño del comunicado del Congreso en vez de la
- * envoltura sobria de los acuses: la cabecera azul y dorada del PDF del comité y
- * su adorno de pie. Las demás no cambian de aspecto.
- */
-const CON_DISEÑO_DE_COMUNICADO: ReadonlySet<string> = new Set(['comunicado']);
-
-/**
- * La envoltura del comunicado: replica el estilo del PDF que preparó el comité
+ * La envoltura de todos los correos del Congreso: replica el estilo del PDF que preparó el comité
  * —banner azul marino con la curva dorada y el nombre del Congreso, los logos de la RIUSS y del
  * CIESS a la derecha, cuerpo justificado y el adorno azul y dorado abajo a la derecha—, pero
- * como correo y no como adjunto.
+ * como correo y no como adjunto. Es la de los acuses, los dictámenes, el recordatorio, el
+ * comunicado y los enlaces de acceso al panel: ninguno lleva ya otra.
  *
  * Está hecha como los correos de verdad, no como una página: tablas, estilos en línea y tres
  * imágenes alojadas en el sitio (`/correo/…`). Por eso hay que pasarle la dirección del sitio, y
@@ -61,7 +31,7 @@ const CON_DISEÑO_DE_COMUNICADO: ReadonlySet<string> = new Set(['comunicado']);
  * Tipografía: Work Sans, como el sitio y el PDF, con Arial de respaldo —casi ningún cliente de
  * correo descarga fuentes—.
  */
-export function envolverComunicado(
+export function envolverCorreo(
   contenido: string,
   { titulo, urlBase, idioma = 'es' }: { titulo: string; urlBase: string; idioma?: string },
 ): string {
@@ -106,15 +76,68 @@ export function envolverComunicado(
 </body></html>`;
 }
 
-/** La envoltura que le toca a cada plantilla. */
-export function envolverSegunClave(
-  clave: string,
-  contenido: string,
-  { titulo, urlBase, idioma }: { titulo: string; urlBase: string; idioma?: string },
-): string {
-  return CON_DISEÑO_DE_COMUNICADO.has(clave)
-    ? envolverComunicado(contenido, { titulo, urlBase, idioma })
-    : envolverHtml(contenido, titulo);
+/**
+ * El título que encabeza el correo: lo primero del asunto, antes del « · » que lo
+ * une con el nombre del Congreso («Registro recibido · 1er Congreso…» → «Registro recibido»).
+ * Así el título y el asunto no pueden decir cosas distintas, y quien edite el asunto en el panel
+ * cambia también el título.
+ */
+export function tituloDeAsunto(asunto: string): string {
+  return asunto.split(' · ')[0].trim();
+}
+
+const ES_SALUDO = /[:,]$/;
+const ES_FIRMA = /^(comit[eéê]|organizing committee|review committee)/i;
+const ESTILO_P = 'margin:0 0 16px;';
+const ESTILO_ENLACE = 'color:#467886;text-decoration:underline;word-break:break-word;';
+const ESTILO_TITULO = 'margin:0 0 20px;font-size:26px;line-height:1.25;font-weight:bold;color:#002269;text-align:left;';
+
+const textoPlano = (html: string) => html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
+/**
+ * Pone a un cuerpo de plantilla el aspecto del comunicado —título azul marino, saludo y firma en
+ * dorado, párrafos con aire y enlaces en el verde azulado del PDF— sin cambiarle una palabra.
+ *
+ * Los textos de las plantillas viven en la base y el comité los reescribe desde el panel, así que
+ * el estilo no puede depender de que el texto lo traiga ya puesto: se aplica al componer el
+ * correo. Sólo toca lo que no trae estilo propio —un `<p>` o un `<a>` sin atributos—, de modo que
+ * el comunicado, que ya viene vestido, y los bloques que arma el sistema (sala de Zoom, constancia,
+ * agenda) pasan intactos, y aplicarlo dos veces no cambia nada.
+ *
+ * El título sólo se añade si el cuerpo no trae el suyo (`<h1`). El saludo es el primer párrafo si
+ * acaba en «:» o «,» y es corto; la firma, el último que empieza por «Comité…». Si el comité
+ * reescribe el texto y ya no cumple, simplemente queda como un párrafo más: nada se rompe.
+ */
+export function estilizarCuerpo(html: string, { titulo }: { titulo?: string } = {}): string {
+  let cuerpo = html
+    .replace(/<ul>/g, `<ul style="${ESTILO_P}padding-left:22px;">`)
+    .replace(/<a\s(?![^>]*\bstyle=)/g, `<a style="${ESTILO_ENLACE}" `);
+
+  const parrafos = [...cuerpo.matchAll(/<p>([\s\S]*?)<\/p>/g)];
+  const primero = parrafos[0];
+  const ultimo = parrafos[parrafos.length - 1];
+  const saludo =
+    primero && cuerpo.trimStart().startsWith('<p>') &&
+    textoPlano(primero[1]).length <= 80 && ES_SALUDO.test(textoPlano(primero[1]))
+      ? primero : undefined;
+  const firma = ultimo && ultimo !== saludo && ES_FIRMA.test(textoPlano(ultimo[1])) ? ultimo : undefined;
+
+  let i = 0;
+  cuerpo = cuerpo.replace(/<p>([\s\S]*?)<\/p>/g, (_todo, dentro: string) => {
+    const este = parrafos[i++];
+    if (este === saludo) return `<p style="margin:0 0 18px;font-weight:bold;color:#a08536;">${dentro}</p>`;
+    if (este === firma) {
+      const [linea1, ...resto] = dentro.split(/<br\s*\/?>/i);
+      const abajo = resto.length ? `<br/><span style="color:#a08536;">${resto.join('<br/>')}</span>` : '';
+      return `<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">${linea1}</span>${abajo}</p>`;
+    }
+    // Con un enlace largo dentro, la justificación abre huecos enormes en la línea: a la izquierda.
+    const alinear = /<a[\s>]/i.test(dentro) ? 'text-align:left;' : '';
+    return `<p style="${ESTILO_P}${alinear}">${dentro}</p>`;
+  });
+
+  if (titulo && !/<h1[\s>]/i.test(cuerpo)) cuerpo = `<h1 style="${ESTILO_TITULO}">${titulo}</h1>\n${cuerpo}`;
+  return cuerpo;
 }
 
 /**
@@ -126,15 +149,13 @@ export function envolverSegunClave(
  * tarde o temprano dejarían de coincidir.
  */
 export function componerCorreo(
-  clave: string,
   plantilla: { asunto: string; cuerpo_html: string },
   variables: Record<string, string>,
   { titulo, urlBase, idioma }: { titulo: string; urlBase: string; idioma?: string },
 ): { asunto: string; html: string } {
-  return {
-    asunto: aplicarPlantilla(plantilla.asunto, variables),
-    html: envolverSegunClave(clave, aplicarPlantilla(plantilla.cuerpo_html, variables), { titulo, urlBase, idioma }),
-  };
+  const asunto = aplicarPlantilla(plantilla.asunto, variables);
+  const cuerpo = estilizarCuerpo(aplicarPlantilla(plantilla.cuerpo_html, variables), { titulo: tituloDeAsunto(asunto) });
+  return { asunto, html: envolverCorreo(cuerpo, { titulo, urlBase, idioma }) };
 }
 
 /**
