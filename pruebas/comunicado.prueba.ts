@@ -63,9 +63,8 @@ describe('el texto del comunicado', () => {
 
   it('en español es, palabra por palabra, el del PDF del comité', () => {
     const real = parrafos(sembrada('es').cuerpo_html);
-    // Lo único que no está en el PDF es la línea de contacto del pie, que va aparte.
-    const sinPie = real.filter((p) => !p.startsWith('Para dudas o aclaraciones'));
-    expect(sinPie).toEqual(DEL_PDF);
+    // Sin línea de contacto al pie: se quitó a propósito, no la reincorpores.
+    expect(real).toEqual(DEL_PDF);
   });
 
   it('lleva las mismas frases en negritas que el PDF', () => {
@@ -134,8 +133,40 @@ describe('el texto del comunicado', () => {
       expect(correo.html, idioma).not.toMatch(/\{\{/);
       // `{{url_sitio}}` es la dirección del sitio; el enlace lleva a su agenda.
       expect(correo.html, idioma).toContain(`href="${urlSitio()}/#agenda"`);
-      expect(correo.html, idioma).toContain('congreso@ciess.org');
     }
+  });
+});
+
+describe('cada persona recibe el comunicado en el idioma de su registro', () => {
+  it('el asunto, el cuerpo y el idioma del documento son los de la plantilla de su idioma', async () => {
+    const { armarCorreoConPlantilla } = await import('@/lib/servidor/correo');
+    const salida: Record<string, { asunto: string; html: string }> = {};
+    for (const idioma of IDIOMAS) {
+      salida[idioma] = armarCorreoConPlantilla(
+        {
+          clave: 'comunicado',
+          registro: { id: 'x', token_edicion: 'x', folio: 'REG-1', nombres: 'Ana', apellidos: 'Ruiz', correo: 'a@b.org', idioma, perfil: 'ponente', modalidad: 'presencial' },
+          correoContacto: 'congreso@ciess.org',
+          fechaLimite: '',
+          urlAgenda: 'https://ejemplo.org/agenda',
+          programaPublicado: true,
+        },
+        sembrada(idioma),
+      );
+    }
+    expect(salida.es.html).toContain('<html lang="es">');
+    expect(salida.en.html).toContain('<html lang="en">');
+    expect(salida.pt.html).toContain('<html lang="pt">');
+    expect(salida.es.asunto).toMatch(/^Acceso a las sesiones/);
+    expect(salida.en.asunto).toMatch(/^Access to the sessions/);
+    expect(salida.pt.asunto).toMatch(/^Acesso às sessões/);
+    expect(salida.es.html).toContain('Participación presencial');
+    expect(salida.en.html).toContain('In-person participation');
+    expect(salida.pt.html).toContain('Participação presencial');
+    // Ninguna lleva texto de otro idioma.
+    expect(salida.en.html).not.toContain('Participación');
+    expect(salida.pt.html).not.toContain('Participación');
+    expect(salida.es.html).not.toContain('In-person');
   });
 });
 

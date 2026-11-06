@@ -49,6 +49,7 @@ export async function POST(peticion: NextRequest) {
       lista: typeof cuerpo?.lista === 'string' ? cuerpo.lista : '',
       incluirListaEspera: cuerpo?.incluirListaEspera === true,
       idioma: idiomaDeEnvio(String(cuerpo?.idioma ?? 'es')) as IdiomaEnvio,
+      soloIdioma: ['es', 'en', 'pt'].includes(String(cuerpo?.soloIdioma)) ? (cuerpo?.soloIdioma as IdiomaEnvio) : undefined,
       confirmacion: cuerpo?.confirmacion,
       usuarioId: usuario.id,
     });

@@ -332,6 +332,8 @@ export interface PeticionDeAudiencia {
   incluirListaEspera?: boolean;
   /** El idioma de las direcciones que no son de ningún registro. */
   idioma?: IdiomaEnvio;
+  /** Sólo las personas registradas en este idioma (envío por etapas). Sin él, todas, cada una en el suyo. */
+  soloIdioma?: IdiomaEnvio;
 }
 
 export type ResultadoDeAudiencia =
@@ -370,6 +372,7 @@ export async function calcularAudiencia(p: PeticionDeAudiencia): Promise<Resulta
     lista,
     incluirListaEspera: p.incluirListaEspera,
     idiomaPorOmision: p.idioma ?? 'es',
+    soloIdioma: p.soloIdioma,
   });
   return { ok: true, ...seleccion, total: seleccion.destinatarios.length };
 }

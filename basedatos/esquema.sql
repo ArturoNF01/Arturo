@@ -1103,8 +1103,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 <p style="margin:0 0 16px;">Para conectarse, consulten la <a href="{{url_sitio}}/#agenda" style="color:#467886;text-decoration:underline;">agenda del Congreso</a> y seleccionen el <strong>enlace de la sesión</strong> a la que desean asistir. La plataforma registrará automáticamente su asistencia. Para que podamos identificarla correctamente, les pedimos ingresar con el <strong>nombre completo que utilizaron al inscribirse</strong> y conectarse desde el inicio de cada sesión. El registro de la plataforma se utilizará para verificar el cumplimiento del requisito de asistencia para la constancia.</p>
 <p style="margin:0 0 16px;">Muchas gracias por sumarse a este encuentro que hemos preparado en conjunto desde la RIUSS. Nos alegra compartir estos días de intercambio con quienes nos acompañarán en la sede y con quienes se conectarán desde distintos países.</p>
 <p style="margin:0 0 16px;">Un cordial saludo,</p>
-<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Comité Organizador</span><br/><span style="color:#a08536;">Congreso de la RIUSS | CIESS</span></p>
-<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#5b6b7f;text-align:left;">Para dudas o aclaraciones, escríbanos a {{correo_contacto}}.</p>$html$),
+<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Comité Organizador</span><br/><span style="color:#a08536;">Congreso de la RIUSS | CIESS</span></p>$html$),
 
 ('comunicado', 'en',
  'Access to the sessions, attendance and certificates · 1st Congress of Inter-American Social Security Studies',
@@ -1121,8 +1120,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 <p style="margin:0 0 16px;">To connect, please consult the <a href="{{url_sitio}}/#agenda" style="color:#467886;text-decoration:underline;">Congress agenda</a> and select the <strong>link for the session</strong> you wish to attend. The platform will automatically record your attendance. So that we can identify you correctly, please log in with the <strong>full name you used when registering</strong> and connect from the start of each session. The platform record will be used to verify compliance with the attendance requirement for the certificate.</p>
 <p style="margin:0 0 16px;">Thank you very much for joining this meeting, which we have prepared together from RIUSS. We are glad to share these days of exchange with those who will be with us at the venue and those who will connect from different countries.</p>
 <p style="margin:0 0 16px;">Kind regards,</p>
-<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Organizing Committee</span><br/><span style="color:#a08536;">RIUSS Congress | CIESS</span></p>
-<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#5b6b7f;text-align:left;">For questions or clarifications, write to us at {{correo_contacto}}.</p>$html$),
+<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Organizing Committee</span><br/><span style="color:#a08536;">RIUSS Congress | CIESS</span></p>$html$),
 
 ('comunicado', 'pt',
  'Acesso às sessões, frequência e certificados · 1º Congresso de Estudos Interamericanos de Seguridade Social',
@@ -1139,8 +1137,7 @@ insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
 <p style="margin:0 0 16px;">Para se conectar, consultem a <a href="{{url_sitio}}/#agenda" style="color:#467886;text-decoration:underline;">agenda do Congresso</a> e selecionem o <strong>link da sessão</strong> a que desejam assistir. A plataforma registrará automaticamente a sua presença. Para que possamos identificá-la corretamente, pedimos que entrem com o <strong>nome completo que utilizaram ao se inscrever</strong> e se conectem desde o início de cada sessão. O registro da plataforma será utilizado para verificar o cumprimento do requisito de frequência para o certificado.</p>
 <p style="margin:0 0 16px;">Muito obrigado por participar deste encontro, que preparamos em conjunto a partir da RIUSS. É uma alegria compartilhar estes dias de intercâmbio com quem nos acompanhará na sede e com quem se conectará de diferentes países.</p>
 <p style="margin:0 0 16px;">Um cordial abraço,</p>
-<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Comitê Organizador</span><br/><span style="color:#a08536;">Congresso da RIUSS | CIESS</span></p>
-<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#5b6b7f;text-align:left;">Em caso de dúvida ou esclarecimento, escreva para {{correo_contacto}}.</p>$html$)
+<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Comitê Organizador</span><br/><span style="color:#a08536;">Congresso da RIUSS | CIESS</span></p>$html$)
 on conflict (clave, idioma) do nothing;
 
 -- ---------------------------------------------------------------------

@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/componentes/proveedores';
 import { interpolar } from '@/i18n';
-import { MAXIMO_LISTA, porcentajeAtendido, type Audiencia, type Progreso } from '@/lib/comunicados';
+import { MAXIMO_LISTA, porcentajeAtendido, type Audiencia, type IdiomaEnvio, type Progreso } from '@/lib/comunicados';
 
 interface Calculo {
   total: number;
   porIdioma: { es: number; en: number; pt: number };
-  excluidos: { cancelados: number; listaEspera: number; sinCorreo: number; yaRecibieron: number; noPonentes: number };
+  excluidos: { cancelados: number; listaEspera: number; sinCorreo: number; yaRecibieron: number; noPonentes: number; otroIdioma: number };
   repetidosEnLista: number;
 }
 
@@ -49,6 +49,7 @@ export function EnvioComunicado({
   const [audiencia, setAudiencia] = useState<Audiencia>('todos');
   const [lista, setLista] = useState('');
   const [incluirEspera, setIncluirEspera] = useState(false);
+  const [soloIdioma, setSoloIdioma] = useState<'' | IdiomaEnvio>('');
   const [calculo, setCalculo] = useState<Calculo | null>(null);
   const [calculando, setCalculando] = useState(false);
   const [error, setError] = useState('');
@@ -75,7 +76,7 @@ export function EnvioComunicado({
   }, [cargarCampanas]);
 
   const cuerpoDeLaPeticion = () => ({
-    clave, audiencia, lista, incluirListaEspera: incluirEspera, idioma,
+    clave, audiencia, lista, incluirListaEspera: incluirEspera, idioma, soloIdioma: soloIdioma || undefined,
   });
 
   async function revisar() {
@@ -191,6 +192,7 @@ export function EnvioComunicado({
         calculo.excluidos.yaRecibieron > 0 && interpolar(c.fueraYa, { n: String(calculo.excluidos.yaRecibieron) }),
         calculo.excluidos.noPonentes > 0 && interpolar(c.fueraNoPonentes, { n: String(calculo.excluidos.noPonentes) }),
         calculo.excluidos.sinCorreo > 0 && interpolar(c.fueraSinCorreo, { n: String(calculo.excluidos.sinCorreo) }),
+        calculo.excluidos.otroIdioma > 0 && interpolar(c.fueraOtroIdioma, { n: String(calculo.excluidos.otroIdioma) }),
       ].filter((x): x is string => typeof x === 'string')
     : [];
 
@@ -242,14 +244,31 @@ export function EnvioComunicado({
             <p className="ayuda">{interpolar(c.listaAyuda, { max: String(MAXIMO_LISTA), idioma: idioma.toUpperCase() })}</p>
           </div>
         ) : (
-          <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={incluirEspera}
-              onChange={(e) => { setIncluirEspera(e.target.checked); setCalculo(null); }}
-            />
-            {c.incluirEspera}
-          </label>
+          <>
+            <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={incluirEspera}
+                onChange={(e) => { setIncluirEspera(e.target.checked); setCalculo(null); }}
+              />
+              {c.incluirEspera}
+            </label>
+            <div className="mt-3">
+              <label className="etiqueta" htmlFor="idioma-comunicado">{c.idiomaEtiqueta}</label>
+              <select
+                id="idioma-comunicado"
+                className="campo text-sm sm:max-w-xs"
+                value={soloIdioma}
+                onChange={(e) => { setSoloIdioma(e.target.value as '' | IdiomaEnvio); setCalculo(null); }}
+              >
+                <option value="">{c.idiomaTodos}</option>
+                <option value="es">{c.idiomaEs}</option>
+                <option value="en">{c.idiomaEn}</option>
+                <option value="pt">{c.idiomaPt}</option>
+              </select>
+              <p className="ayuda">{c.idiomaNota}</p>
+            </div>
+          </>
         )}
       </fieldset>
 

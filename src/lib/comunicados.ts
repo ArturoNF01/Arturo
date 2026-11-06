@@ -126,7 +126,7 @@ export interface Destinatario {
 export interface SeleccionDeAudiencia {
   destinatarios: Destinatario[];
   /** Cuántos quedan fuera, y por qué: para que quien envía vea que no se olvidó a nadie sin saberlo. */
-  excluidos: { cancelados: number; listaEspera: number; sinCorreo: number; yaRecibieron: number; noPonentes: number };
+  excluidos: { cancelados: number; listaEspera: number; sinCorreo: number; yaRecibieron: number; noPonentes: number; otroIdioma: number };
   porIdioma: Record<IdiomaEnvio, number>;
   /** Con lista escrita a mano: cuántas de esas direcciones ya habían recibido este comunicado. */
   repetidosEnLista: number;
@@ -151,7 +151,7 @@ export function idiomaDeEnvio(idioma: string | null | undefined, porOmision: Idi
  * Una dirección repetida entre registros cuenta una vez, sin distinguir mayúsculas.
  */
 export function elegirDestinatarios({
-  audiencia, registros, yaRecibieron, lista = [], incluirListaEspera = false, idiomaPorOmision = 'es',
+  audiencia, registros, yaRecibieron, lista = [], incluirListaEspera = false, idiomaPorOmision = 'es', soloIdioma,
 }: {
   audiencia: Audiencia;
   registros: readonly RegistroParaEnvio[];
@@ -159,12 +159,21 @@ export function elegirDestinatarios({
   yaRecibieron: ReadonlySet<string>;
   lista?: readonly string[];
   incluirListaEspera?: boolean;
+  /** El idioma de las direcciones de la lista que no son de ningún registro. */
   idiomaPorOmision?: IdiomaEnvio;
+  /**
+   * Sólo las personas registradas en este idioma: para mandar el comunicado por etapas (por ejemplo
+   * primero en español, mientras el comité revisa la traducción). No aplica a una lista escrita a
+   * mano, que es una orden expresa. Quien se salta aquí no queda marcado como enviado: se alcanza
+   * después, con el idioma que falte, sin repetir a nadie.
+   */
+  soloIdioma?: IdiomaEnvio;
 }): SeleccionDeAudiencia {
-  const excluidos = { cancelados: 0, listaEspera: 0, sinCorreo: 0, yaRecibieron: 0, noPonentes: 0 };
+  const excluidos = { cancelados: 0, listaEspera: 0, sinCorreo: 0, yaRecibieron: 0, noPonentes: 0, otroIdioma: 0 };
   const porIdioma: Record<IdiomaEnvio, number> = { es: 0, en: 0, pt: 0 };
   const destinatarios: Destinatario[] = [];
   const vistos = new Set<string>();
+  const deOtroIdioma = new Set<string>();
   let repetidosEnLista = 0;
 
   const agregar = (d: Destinatario) => {
@@ -187,7 +196,9 @@ export function elegirDestinatarios({
       agregar({
         correo,
         registro_id: registro?.id ?? null,
-        idioma: idiomaDeEnvio(registro?.idioma, idiomaPorOmision),
+        // Quien está registrada recibe el correo en su idioma; el elegido en pantalla sólo vale
+        // para las direcciones que no son de ningún registro.
+        idioma: registro ? idiomaDeEnvio(registro.idioma) : idiomaPorOmision,
       });
     }
     return { destinatarios, excluidos, porIdioma, repetidosEnLista };
@@ -212,13 +223,21 @@ export function elegirDestinatarios({
       excluidos.noPonentes += 1;
       continue;
     }
+    // Quien se registró con un idioma que no tenemos, lo recibe en español.
+    const idioma = idiomaDeEnvio(r.idioma);
     if (vistos.has(correo)) continue;
+    if (soloIdioma && idioma !== soloIdioma) {
+      // Una dirección repetida entre registros se cuenta una sola vez.
+      if (!deOtroIdioma.has(correo)) excluidos.otroIdioma += 1;
+      deOtroIdioma.add(correo);
+      continue;
+    }
     vistos.add(correo);
     if (yaRecibieron.has(correo)) {
       excluidos.yaRecibieron += 1;
       continue;
     }
-    agregar({ correo, registro_id: r.id, idioma: idiomaDeEnvio(r.idioma, idiomaPorOmision) });
+    agregar({ correo, registro_id: r.id, idioma });
   }
   return { destinatarios, excluidos, porIdioma, repetidosEnLista };
 }

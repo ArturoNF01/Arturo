@@ -142,6 +142,47 @@ describe('a quiénes llega un envío', () => {
     expect(s.porIdioma).toEqual({ es: 2, en: 1, pt: 1 });
   });
 
+  it('quien se registró en un idioma que no tenemos lo recibe en español, aunque se esté viendo otra plantilla', () => {
+    // El idioma de la pantalla vale para las direcciones de la lista que no son de nadie; no para quien está registrada.
+    const s = elegirDestinatarios({ audiencia: 'todos', registros, yaRecibieron: ninguno, idiomaPorOmision: 'pt' });
+    expect(s.destinatarios.find((d) => d.correo === 'raro@ejemplo.org')?.idioma).toBe('es');
+    expect(s.destinatarios.find((d) => d.correo === 'ana@ejemplo.org')?.idioma).toBe('es');
+  });
+
+  it('por etapas: sólo quienes se registraron en un idioma, y el resto se cuenta aparte', () => {
+    const solo = (soloIdioma: 'es' | 'en' | 'pt') =>
+      elegirDestinatarios({ audiencia: 'todos', registros, yaRecibieron: ninguno, soloIdioma });
+    expect(solo('en').destinatarios.map((d) => d.correo)).toEqual(['luis@ejemplo.org']);
+    expect(solo('pt').destinatarios.map((d) => d.correo)).toEqual(['maria@ejemplo.org']);
+    // El idioma desconocido cuenta como español.
+    expect(solo('es').destinatarios.map((d) => d.correo)).toEqual(['ana@ejemplo.org', 'raro@ejemplo.org']);
+    expect(solo('en').excluidos.otroIdioma).toBe(3);
+    expect(solo('en').porIdioma).toEqual({ es: 0, en: 1, pt: 0 });
+  });
+
+  it('las etapas se completan sin repetir a nadie: lo ya enviado en una no vuelve en la siguiente', () => {
+    const primera = elegirDestinatarios({ audiencia: 'todos', registros, yaRecibieron: ninguno, soloIdioma: 'es' });
+    const enviados = new Set(primera.destinatarios.map((d) => d.correo));
+    const resto = elegirDestinatarios({ audiencia: 'todos', registros, yaRecibieron: enviados });
+    expect(resto.destinatarios.map((d) => d.correo)).toEqual(['luis@ejemplo.org', 'maria@ejemplo.org']);
+    expect([...enviados].some((c) => resto.destinatarios.some((d) => d.correo === c))).toBe(false);
+  });
+
+  it('el filtro por idioma no aplica a una lista escrita a mano: es una orden expresa', () => {
+    const s = elegirDestinatarios({
+      audiencia: 'lista', registros, yaRecibieron: ninguno, soloIdioma: 'en', lista: ['ana@ejemplo.org', 'luis@ejemplo.org'],
+    });
+    expect(s.destinatarios.map((d) => d.correo)).toEqual(['ana@ejemplo.org', 'luis@ejemplo.org']);
+    expect(s.excluidos.otroIdioma).toBe(0);
+  });
+
+  it('en una lista, quien está registrada recibe su idioma y las demás el de la pantalla', () => {
+    const s = elegirDestinatarios({
+      audiencia: 'lista', registros, yaRecibieron: ninguno, idiomaPorOmision: 'en', lista: ['maria@ejemplo.org', 'nueva@otro.org'],
+    });
+    expect(s.destinatarios.map((d) => d.idioma)).toEqual(['pt', 'en']);
+  });
+
   it('una misma dirección cuenta una vez, sin distinguir mayúsculas', () => {
     const s = elegirDestinatarios({ audiencia: 'todos', registros, yaRecibieron: ninguno });
     expect(s.destinatarios.filter((d) => d.correo === 'ana@ejemplo.org')).toHaveLength(1);

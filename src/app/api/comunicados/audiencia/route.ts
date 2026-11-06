@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
-import { AUDIENCIAS, esPlantillaMasiva, idiomaDeEnvio, type Audiencia } from '@/lib/comunicados';
+import { AUDIENCIAS, esPlantillaMasiva, idiomaDeEnvio, type Audiencia, type IdiomaEnvio } from '@/lib/comunicados';
 import { calcularAudiencia } from '@/lib/servidor/comunicados';
 
 export const dynamic = 'force-dynamic';
@@ -29,6 +29,7 @@ export async function POST(peticion: NextRequest) {
       lista: typeof cuerpo?.lista === 'string' ? cuerpo.lista : '',
       incluirListaEspera: cuerpo?.incluirListaEspera === true,
       idioma: idiomaDeEnvio(String(cuerpo?.idioma ?? 'es')),
+      soloIdioma: ['es', 'en', 'pt'].includes(String(cuerpo?.soloIdioma)) ? (cuerpo?.soloIdioma as IdiomaEnvio) : undefined,
     });
     if (!r.ok) return NextResponse.json({ mensaje: r.mensaje }, { status: 422 });
     // Las direcciones no viajan al navegador: basta con las cifras.
