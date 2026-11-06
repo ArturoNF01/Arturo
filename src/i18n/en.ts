@@ -386,6 +386,11 @@ export const en: Diccionario = {
       cuerpo: 'Message body (HTML)',
       vistaPrevia: 'Preview',
       enviarPrueba: 'Send a test e-mail',
+      pruebaA: 'Send the test to',
+      pruebaAPlaceholder: 'email1@example.org, email2@example.org',
+      pruebaAyuda: 'Comma-separated addresses, up to 10. If left empty, it goes to your own e-mail. It never goes to registered people.',
+      pruebaEnviada: 'Test sent to {n} address(es). Check the inbox and the spam folder.',
+      vistaPreviaAyuda: 'This is how the e-mail will arrive, with sample data. It is built exactly as the real send is.',
     },
     cupos: {
       titulo: 'Seats and settings',

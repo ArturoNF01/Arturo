@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useApp } from '@/componentes/proveedores';
+import { interpolar } from '@/i18n';
 import { IDIOMAS, diccionarios, type Idioma } from '@/i18n';
 
 interface Plantilla {
@@ -16,6 +17,7 @@ const NOMBRES_CLAVE: Record<string, string> = {
   confirmacion_registro: 'Confirmación de registro',
   edicion_registro: 'Registro actualizado',
   lista_espera: 'Lista de espera',
+  comunicado: 'Comunicado: acceso, asistencia y constancias',
 };
 
 export function EditorPlantillas() {
@@ -29,6 +31,10 @@ export function EditorPlantillas() {
   const [edicion, setEdicion] = useState<Record<string, { asunto: string; cuerpo_html: string }>>({});
   const [mensaje, setMensaje] = useState('');
   const [guardando, setGuardando] = useState(false);
+  // A quién va la prueba. Vacío: a quien está en el panel.
+  const [destinatarios, setDestinatarios] = useState('');
+  // El correo ya armado, tal como llegará: lo calcula el servidor con el mismo código del envío.
+  const [armado, setArmado] = useState<{ asunto: string; html: string } | null>(null);
 
   useEffect(() => {
     void fetch('/api/plantillas')
@@ -79,12 +85,35 @@ export function EditorPlantillas() {
     const respuesta = await fetch('/api/plantillas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clave, idioma: idiomaPlantilla, ...borrador }),
+      body: JSON.stringify({ clave, idioma: idiomaPlantilla, ...borrador, destinatarios }),
     });
     const datos = await respuesta.json();
-    setMensaje(respuesta.ok ? t.estados.guardado : datos.mensaje ?? t.estados.error);
+    setMensaje(
+      respuesta.ok
+        ? interpolar(t.panel.plantillas.pruebaEnviada, { n: String(datos.destinatarios ?? 1) })
+        : datos.mensaje ?? t.estados.error,
+    );
     setGuardando(false);
   }
+
+  // La vista previa se pide al servidor y no se arma aquí: así el comité ve el correo
+  // con su envoltura y sus bloques —lo que de verdad llega—, y no sólo el cuerpo suelto.
+  // Se espera un momento tras cada tecla para no pedir uno por letra.
+  const asuntoBorrador = borrador?.asunto;
+  const cuerpoBorrador = borrador?.cuerpo_html;
+  useEffect(() => {
+    if (asuntoBorrador === undefined || cuerpoBorrador === undefined) return;
+    const espera = setTimeout(() => {
+      void fetch('/api/plantillas/vista-previa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clave, idioma: idiomaPlantilla, asunto: asuntoBorrador, cuerpo_html: cuerpoBorrador }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((datos: { asunto: string; html: string } | null) => setArmado(datos));
+    }, 400);
+    return () => clearTimeout(espera);
+  }, [clave, idiomaPlantilla, asuntoBorrador, cuerpoBorrador]);
 
   const claves = [...new Set(plantillas.map((p) => p.clave))];
 
@@ -157,6 +186,17 @@ export function EditorPlantillas() {
               value={borrador.cuerpo_html}
               onChange={(e) => setBorrador({ ...borrador, cuerpo_html: e.target.value })}
             />
+            <label className="etiqueta mt-4" htmlFor="destinatarios-prueba">{t.panel.plantillas.pruebaA}</label>
+            <input
+              id="destinatarios-prueba"
+              className="campo"
+              inputMode="email"
+              autoComplete="off"
+              placeholder={t.panel.plantillas.pruebaAPlaceholder}
+              value={destinatarios}
+              onChange={(e) => setDestinatarios(e.target.value)}
+            />
+            <p className="ayuda">{t.panel.plantillas.pruebaAyuda}</p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <button type="button" className="boton-primario !py-2 !text-sm" onClick={guardar} disabled={guardando}>
                 {t.acciones.guardar}
@@ -170,14 +210,19 @@ export function EditorPlantillas() {
           </div>
 
           <div className="tarjeta p-4">
-            <h2 className="mb-3 text-sm font-semibold">{t.panel.plantillas.vistaPrevia}</h2>
+            <h2 className="mb-1 text-sm font-semibold">{t.panel.plantillas.vistaPrevia}</h2>
+            <p className="ayuda !mt-0 mb-3">{t.panel.plantillas.vistaPreviaAyuda}</p>
             <p className="mb-3 rounded-lg border p-2.5 text-sm font-medium" style={{ borderColor: 'var(--borde)' }}>
-              {borrador.asunto}
+              {armado?.asunto ?? borrador.asunto}
             </p>
-            <div
-              className="desplazable max-h-[36rem] overflow-auto rounded-lg bg-white p-4 text-sm text-[#16283d]"
-              // La vista previa muestra la plantilla tal como llegará al correo.
-              dangerouslySetInnerHTML={{ __html: borrador.cuerpo_html }}
+            {/* Un iframe sin permisos: el HTML del correo no puede ejecutar nada ni tocar el panel,
+                y conserva sus propios estilos sin mezclarse con los del panel. */}
+            <iframe
+              title={t.panel.plantillas.vistaPrevia}
+              sandbox=""
+              srcDoc={armado?.html ?? ''}
+              className="h-[40rem] w-full rounded-lg border bg-white"
+              style={{ borderColor: 'var(--borde)' }}
             />
           </div>
         </div>

@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { conActor, consultar } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { esquemaPlantilla } from '@/lib/esquema';
-import { aplicarPlantilla, envolverHtml } from '@/lib/servidor/correo';
-import { plazosEnPalabras } from '@/lib/fechas';
-import { leerConfiguracion } from '@/lib/servidor/configuracion';
-import { urlSitio } from '@/lib/config';
+import { MAXIMO_DESTINATARIOS_DE_PRUEBA, destinatariosDePrueba } from '@/lib/plantillas';
+import { correoDeMuestra } from '@/lib/servidor/muestra-correo';
 import { Resend } from 'resend';
 
 export const dynamic = 'force-dynamic';
@@ -58,7 +56,14 @@ export async function PUT(peticion: NextRequest) {
   return NextResponse.json({ guardado: true });
 }
 
-/** Envía un correo de prueba con datos ficticios al usuario del panel. */
+/**
+ * Envía un correo de prueba con datos ficticios.
+ *
+ * Por omisión va al propio usuario del panel; con `destinatarios` —direcciones
+ * separadas por coma o espacio— va a quienes tengan que revisarlo, hasta diez: así
+ * el comité puede ver el correo en su bandeja antes de aprobarlo. Sale una copia
+ * por dirección, marcada «[prueba]», y nunca a nadie de la base de registros.
+ */
 export async function POST(peticion: NextRequest) {
   const usuario = await usuarioActual();
   if (!usuario || !permisos(usuario.rol).editarPlantillas) {
@@ -71,39 +76,45 @@ export async function POST(peticion: NextRequest) {
     return NextResponse.json({ mensaje: 'Resend no está configurado.' }, { status: 503 });
   }
 
-  const cuerpo = await peticion.json().catch(() => null);
+  const cuerpo = (await peticion.json().catch(() => null)) as Record<string, unknown> | null;
   const analisis = esquemaPlantilla.safeParse(cuerpo);
   if (!analisis.success) {
     return NextResponse.json({ mensaje: 'Plantilla no válida.' }, { status: 422 });
   }
 
-  const configuracion = await leerConfiguracion();
-  const variables: Record<string, string> = {
-    folio: 'REG-00000000-DEMO',
-    nombre: usuario.nombre ?? usuario.correo,
-    perfil: 'Panelista',
-    modalidad: 'Presencial',
-    correo: usuario.correo,
-    institucion: 'CIESS',
-    rol: 'Ponencia en mesa temática',
-    fecha: new Date().toLocaleDateString('es-MX'),
-    fecha_limite: configuracion.fecha_limite_registro,
-    plazo_edicion: plazosEnPalabras(configuracion.fecha_limite_registro, 'es').edicion,
-    plazo_reenvio: plazosEnPalabras(configuracion.fecha_limite_registro, 'es').reenvio,
-    url_edicion: `${urlSitio()}/confirmacion/demo?token=demo`,
-    url_agenda: configuracion.url_agenda,
-    url_sitio: urlSitio(),
-    correo_contacto: configuracion.correo_contacto,
-  };
+  let destinos = [usuario.correo];
+  const pedidos = typeof cuerpo?.destinatarios === 'string' ? cuerpo.destinatarios.trim() : '';
+  if (pedidos) {
+    const { validos, invalidos, excede } = destinatariosDePrueba(pedidos);
+    if (invalidos.length > 0) {
+      return NextResponse.json({ mensaje: `Dirección no válida: ${invalidos.join(', ')}` }, { status: 422 });
+    }
+    if (excede) {
+      return NextResponse.json(
+        { mensaje: `Como máximo ${MAXIMO_DESTINATARIOS_DE_PRUEBA} direcciones por prueba.` },
+        { status: 422 },
+      );
+    }
+    destinos = validos;
+  }
 
-  const resend = new Resend(clave);
-  const { error } = await resend.emails.send({
-    from: remitente,
-    to: usuario.correo,
-    subject: `[prueba] ${aplicarPlantilla(analisis.data.asunto, variables)}`,
-    html: envolverHtml(aplicarPlantilla(analisis.data.cuerpo_html, variables), 'Prueba de plantilla'),
+  const correo = await correoDeMuestra({
+    clave: analisis.data.clave,
+    idioma: analisis.data.idioma,
+    plantilla: analisis.data,
+    usuario,
   });
 
+  const resend = new Resend(clave);
+  const { error } = await resend.batch.send(
+    destinos.map((para) => ({
+      from: remitente,
+      to: para,
+      subject: `[prueba] ${correo.asunto}`,
+      html: correo.html,
+    })),
+  );
+
   if (error) return NextResponse.json({ mensaje: error.message }, { status: 502 });
-  return NextResponse.json({ enviado: true });
+  return NextResponse.json({ enviado: true, destinatarios: destinos.length });
 }

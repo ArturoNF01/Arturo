@@ -387,6 +387,11 @@ export const pt: Diccionario = {
       cuerpo: 'Corpo da mensagem (HTML)',
       vistaPrevia: 'Pré-visualização',
       enviarPrueba: 'Enviar e-mail de teste',
+      pruebaA: 'Enviar o teste para',
+      pruebaAPlaceholder: 'email1@exemplo.org, email2@exemplo.org',
+      pruebaAyuda: 'Endereços separados por vírgula, até 10. Se ficar vazio, vai para o seu próprio e-mail. Nunca sai para as pessoas inscritas.',
+      pruebaEnviada: 'Teste enviado para {n} endereço(s). Verifique a caixa de entrada e o spam.',
+      vistaPreviaAyuda: 'É assim que o e-mail chegará, com dados de exemplo. É montado exatamente como o envio real.',
     },
     cupos: {
       titulo: 'Vagas e configuração',

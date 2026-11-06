@@ -9,7 +9,7 @@ import { obtenerDiccionario } from '@/i18n';
 import { nombrePerfil, perfilPorClave, registroMinimo, type Modalidad } from '@/lib/perfiles';
 import { leerEjes } from './contenido';
 import { traducir } from '@/lib/contenido';
-import { aplicarPlantilla, envolverHtml } from '@/lib/plantillas';
+import { aplicarPlantilla, componerCorreo, envolverHtml } from '@/lib/plantillas';
 
 export type ClavePlantilla =
   | 'confirmacion_registro'
@@ -20,7 +20,10 @@ export type ClavePlantilla =
   | 'ponencia_aceptada'
   | 'ponencia_aceptada_con_cambios'
   | 'ponencia_rechazada'
-  | 'recordatorio';
+  | 'recordatorio'
+  // El comunicado masivo del comité. Ningún flujo automático lo envía: sale sólo de un envío
+  // que alguien lance a propósito desde el panel.
+  | 'comunicado';
 
 export interface DatosCorreo {
   clave: ClavePlantilla;
@@ -162,14 +165,19 @@ export async function enviarCorreoRegistro(datos: DatosCorreo): Promise<{ enviad
   const variables = variablesDeRegistro(datosConEje);
   const t = obtenerDiccionario(idioma);
 
+  // El mismo armado que usa la vista previa del panel y el correo de prueba.
+  const correo = componerCorreo(datos.clave, plantilla, variables, {
+    titulo: t.congreso.titulo, urlBase: urlSitio(), idioma,
+  });
+
   try {
     const resend = new Resend(clave);
     const { error } = await resend.emails.send({
       from: remitente,
       to: destino,
       replyTo: datos.correoContacto,
-      subject: aplicarPlantilla(plantilla.asunto, variables),
-      html: envolverHtml(aplicarPlantilla(plantilla.cuerpo_html, variables), t.congreso.titulo),
+      subject: correo.asunto,
+      html: correo.html,
     });
     if (error) return { enviado: false, error: error.message };
     return { enviado: true };

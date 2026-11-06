@@ -453,6 +453,11 @@ export const es = {
       cuerpo: 'Cuerpo del mensaje (HTML)',
       vistaPrevia: 'Vista previa',
       enviarPrueba: 'Enviar correo de prueba',
+      pruebaA: 'Enviar la prueba a',
+      pruebaAPlaceholder: 'correo1@ejemplo.org, correo2@ejemplo.org',
+      pruebaAyuda: 'Direcciones separadas por coma, hasta 10. Si lo deja vacío, va a su propio correo. Nunca sale a las personas registradas.',
+      pruebaEnviada: 'Prueba enviada a {n} dirección(es). Revise la bandeja y el correo no deseado.',
+      vistaPreviaAyuda: 'Así llegará el correo, con datos de muestra. Es el mismo armado que el del envío.',
     },
     cupos: {
       titulo: 'Cupos y configuración',
