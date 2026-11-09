@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { estadoDeVentana, sesionPorClave, ventanaDe } from '@/lib/asistencia';
+import { esSesionDePrueba, estadoDeVentana, sesionPorClave, ventanaDe } from '@/lib/asistencia';
 import { resolverCodigo } from '@/lib/servidor/asistencia';
 import { PaginaAsistencia, type DatosDeSesion } from './pagina-asistencia';
 
@@ -34,6 +34,7 @@ export default async function Asistencia({ params }: { params: Promise<{ codigo:
     horario: sesion.horario,
     sala: sesion.sala ?? null,
     estado: estadoDeVentana(sesion),
+    esPrueba: esSesionDePrueba(sesion.clave),
     abre: abre.toISOString(),
     cierra: cierra.toISOString(),
   };

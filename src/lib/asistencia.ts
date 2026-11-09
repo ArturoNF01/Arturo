@@ -155,8 +155,31 @@ function sesionesDeLaAgenda(): SesionDeAsistencia[] {
 
 export const SESIONES_DE_ASISTENCIA: readonly SesionDeAsistencia[] = sesionesDeLaAgenda();
 
+/**
+ * La sesión de prueba: para que el comité vea cómo se captura una asistencia —en el celular, en el panel y en
+ * la hoja— antes del Congreso. No es de la agenda: está siempre abierta, sólo existe mientras alguien del
+ * panel la activa (sus códigos se crean entonces y se borran al borrar la prueba), no cuenta para la
+ * asistencia de nadie (`agruparPorPersona` la deja fuera) y se quita con un clic.
+ */
+export const CLAVE_DE_PRUEBA = 'prueba';
+export const SESION_DE_PRUEBA: SesionDeAsistencia = {
+  clave: CLAVE_DE_PRUEBA,
+  dia: 'prueba',
+  diaTexto: { es: 'Prueba', en: 'Test', pt: 'Teste' },
+  horario: '—',
+  // Un rango tan ancho que la ventana nunca se cierra.
+  inicio: new Date('2000-01-01T00:00:00Z'),
+  fin: new Date('2100-01-01T00:00:00Z'),
+  tipo: 'mesa',
+  corto: { es: 'Sesión de prueba', en: 'Test session', pt: 'Sessão de teste' },
+};
+
+export function esSesionDePrueba(clave: string): boolean {
+  return clave === CLAVE_DE_PRUEBA;
+}
+
 export function sesionPorClave(clave: string): SesionDeAsistencia | undefined {
-  return SESIONES_DE_ASISTENCIA.find((s) => s.clave === clave);
+  return esSesionDePrueba(clave) ? SESION_DE_PRUEBA : SESIONES_DE_ASISTENCIA.find((s) => s.clave === clave);
 }
 
 /** Las sesiones de un día, en orden de horario (las simultáneas, por número de mesa). */
@@ -286,6 +309,16 @@ export type RespuestaDeAsistencia =
   | { ok: false; motivo: 'fuera_de_horario'; estado: 'antes' | 'cerrada'; abre: string; cierra: string }
   | { ok: false; motivo: 'codigo_invalido' | 'datos_invalidos' | 'limite' | 'error'; mensaje?: string };
 
+/**
+ * El resultado de buscar el correo antes de registrar: con él se rellena el nombre completo en la pantalla, para
+ * que quien escanea vea que es su registro. Sólo se contesta con un código vigente y dentro de su horario.
+ */
+export type RespuestaDeBusqueda =
+  | { ok: true; encontrado: true; nombre: string }
+  | { ok: true; encontrado: false }
+  | { ok: false; motivo: 'fuera_de_horario'; estado: 'antes' | 'cerrada'; abre: string; cierra: string }
+  | { ok: false; motivo: 'codigo_invalido' | 'datos_invalidos' | 'limite' | 'error' };
+
 /** Un código nuevo: legible, sin letras que se confunden (0/O, 1/l/I) y sin adivinarse. */
 export const ALFABETO_DE_CODIGOS = 'abcdefghjkmnpqrstuvwxyz23456789';
 export const LARGO_DE_CODIGO = 10;
@@ -334,6 +367,8 @@ export interface PersonaConAsistencia {
 export function agruparPorPersona(filas: readonly FilaDeAsistencia[]): PersonaConAsistencia[] {
   const personas = new Map<string, PersonaConAsistencia>();
   for (const f of filas) {
+    // La sesión de prueba no cuenta para la asistencia de nadie.
+    if (esSesionDePrueba(f.sesion)) continue;
     const clave = f.registro_id ?? `correo:${f.correo.toLowerCase()}`;
     let p = personas.get(clave);
     if (!p) {

@@ -1,10 +1,11 @@
 import 'server-only';
 import { randomInt } from 'node:crypto';
+import QRCode from 'qrcode';
 import { consultar, unaFila } from '@/lib/bd/conexion';
 import {
-  ALFABETO_DE_CODIGOS, LARGO_DE_CODIGO, SESIONES_DE_ASISTENCIA, VIAS,
+  ALFABETO_DE_CODIGOS, CLAVE_DE_PRUEBA, LARGO_DE_CODIGO, SESIONES_DE_ASISTENCIA, VIAS,
   correoValido, decidirIdentidad, esCodigoPosible, estadoDeVentana, nombreDePila, sesionPorClave, ventanaDe,
-  type RespuestaDeAsistencia, type ViaAsistencia,
+  type RespuestaDeAsistencia, type RespuestaDeBusqueda, type SesionDeAsistencia, type ViaAsistencia,
 } from '@/lib/asistencia';
 
 /**
@@ -66,6 +67,8 @@ export async function asegurarCodigos(): Promise<CodigosPorSesion> {
   );
   const salida: CodigosPorSesion = {};
   for (const c of todos) {
+    // Los de la sesión de prueba van aparte (`estadoDePrueba`): no son de la agenda ni se imprimen.
+    if (c.sesion === CLAVE_DE_PRUEBA) continue;
     (salida[c.sesion] ??= {} as Record<ViaAsistencia, string>)[c.via] = c.codigo;
   }
   return salida;
@@ -128,6 +131,48 @@ export interface PeticionDeAsistencia {
   ahora?: Date;
 }
 
+type FalloDeCodigo =
+  | { ok: false; motivo: 'codigo_invalido' }
+  | { ok: false; motivo: 'fuera_de_horario'; estado: 'antes' | 'cerrada'; abre: string; cierra: string };
+
+/** El código, resuelto a su sesión y vía, y comprobado que esté dentro de su horario. */
+async function validarCodigo(
+  codigoCrudo: unknown, ahora: Date,
+): Promise<{ ok: true; sesion: SesionDeAsistencia; via: ViaAsistencia } | FalloDeCodigo> {
+  const codigo = await resolverCodigo(String(codigoCrudo ?? '').trim().toLowerCase());
+  const sesion = codigo ? sesionPorClave(codigo.sesion) : undefined;
+  if (!codigo || !sesion) return { ok: false, motivo: 'codigo_invalido' };
+
+  const estado = estadoDeVentana(sesion, ahora);
+  if (estado !== 'abierta') {
+    const { abre, cierra } = ventanaDe(sesion);
+    return { ok: false, motivo: 'fuera_de_horario', estado, abre: abre.toISOString(), cierra: cierra.toISOString() };
+  }
+  return { ok: true, sesion, via: codigo.via };
+}
+
+/**
+ * Busca el registro de un correo para rellenar el nombre completo en la pantalla, antes de registrar la
+ * asistencia: quien escanea ve que es su registro y toca el botón. No escribe nada.
+ *
+ * Sólo contesta con un código vigente y dentro de su horario —quien no está en la sesión no puede usarla para
+ * averiguar quién está registrado— y devuelve únicamente el nombre, nada más del registro.
+ */
+export async function buscarPersonaPorCorreo(
+  p: { codigo: string; correo: string; ahora?: Date },
+): Promise<RespuestaDeBusqueda> {
+  const valido = await validarCodigo(p.codigo, p.ahora ?? new Date());
+  if (!valido.ok) return valido;
+
+  const correo = String(p.correo ?? '').trim().toLowerCase();
+  if (!correoValido(correo) || correo.length > 200) return { ok: false, motivo: 'datos_invalidos' };
+
+  const registro = await registroVigentePorCorreo(correo);
+  return registro
+    ? { ok: true, encontrado: true, nombre: `${registro.nombres} ${registro.apellidos}`.replace(/\s+/g, ' ').trim() }
+    : { ok: true, encontrado: false };
+}
+
 /**
  * Registra la asistencia de quien escaneó, en dos pasos (ver `decidirIdentidad`).
  *
@@ -135,18 +180,9 @@ export interface PeticionDeAsistencia {
  * línea— sale del código que se usó, no de lo que diga la persona.
  */
 export async function registrarAsistencia(p: PeticionDeAsistencia): Promise<RespuestaDeAsistencia> {
-  const ahora = p.ahora ?? new Date();
-
-  const codigo = await resolverCodigo(String(p.codigo ?? '').trim().toLowerCase());
-  if (!codigo) return { ok: false, motivo: 'codigo_invalido' };
-  const sesion = sesionPorClave(codigo.sesion);
-  if (!sesion) return { ok: false, motivo: 'codigo_invalido' };
-
-  const estado = estadoDeVentana(sesion, ahora);
-  if (estado !== 'abierta') {
-    const { abre, cierra } = ventanaDe(sesion);
-    return { ok: false, motivo: 'fuera_de_horario', estado, abre: abre.toISOString(), cierra: cierra.toISOString() };
-  }
+  const valido = await validarCodigo(p.codigo, p.ahora ?? new Date());
+  if (!valido.ok) return valido;
+  const codigo = { sesion: valido.sesion.clave, via: valido.via };
 
   const correo = String(p.correo ?? '').trim().toLowerCase();
   const nombre = String(p.nombre ?? '').replace(/\s+/g, ' ').trim();
@@ -352,4 +388,61 @@ export async function conciliarAsistencia(asistenciaId: string, registroId: stri
 export async function eliminarAsistencia(id: string): Promise<boolean> {
   const filas = await consultar<{ id: string }>('delete from asistencias where id = $1 returning id', [id]);
   return filas.length > 0;
+}
+
+// ---------------------------------------------------------------------------
+// La sesión de prueba
+// ---------------------------------------------------------------------------
+
+export interface EstadoDePrueba {
+  activa: boolean;
+  /** Los enlaces completos, si está activa. */
+  presencial: string | null;
+  en_linea: string | null;
+  /** El QR del enlace presencial, como SVG, si está activa. */
+  qr: string | null;
+  /** Cuántas asistencias de prueba hay guardadas. */
+  total: number;
+}
+
+/**
+ * Cómo está la sesión de prueba: si tiene códigos, cuáles son y cuántas asistencias de prueba hay.
+ * `base` es la dirección del sitio, para armar los enlaces.
+ */
+export async function estadoDePrueba(base: string): Promise<EstadoDePrueba> {
+  const [codigos, cuenta] = await Promise.all([
+    consultar<{ via: ViaAsistencia; codigo: string }>('select via, codigo from asistencia_codigos where sesion = $1', [CLAVE_DE_PRUEBA]),
+    unaFila<{ total: string }>('select count(*)::text as total from asistencias where sesion = $1', [CLAVE_DE_PRUEBA]),
+  ]);
+  const de = (via: ViaAsistencia) => codigos.find((c) => c.via === via)?.codigo;
+  const presencial = de('presencial');
+  const enLinea = de('en_linea');
+  const enlace = (codigo: string | undefined) => (codigo ? `${base.replace(/\/+$/, '')}/a/${codigo}` : null);
+  const url = enlace(presencial);
+  return {
+    activa: Boolean(presencial && enLinea),
+    presencial: url,
+    en_linea: enlace(enLinea),
+    qr: url ? await QRCode.toString(url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' }) : null,
+    total: Number(cuenta?.total ?? 0),
+  };
+}
+
+/** Crea los códigos de la sesión de prueba (si no existen) y devuelve cómo queda. */
+export async function activarPrueba(base: string): Promise<EstadoDePrueba> {
+  for (const via of VIAS) {
+    const hay = await unaFila('select 1 from asistencia_codigos where sesion = $1 and via = $2', [CLAVE_DE_PRUEBA, via]);
+    if (!hay) await insertarCodigo(CLAVE_DE_PRUEBA, via);
+  }
+  return estadoDePrueba(base);
+}
+
+/**
+ * Quita la prueba: sus asistencias y sus códigos (el QR de prueba deja de funcionar). Sólo toca la sesión de
+ * prueba: ninguna asistencia ni registro del Congreso.
+ */
+export async function borrarPrueba(): Promise<{ asistencias: number; codigos: number }> {
+  const asistencias = await consultar<{ id: string }>('delete from asistencias where sesion = $1 returning id', [CLAVE_DE_PRUEBA]);
+  const codigos = await consultar<{ codigo: string }>('delete from asistencia_codigos where sesion = $1 returning codigo', [CLAVE_DE_PRUEBA]);
+  return { asistencias: asistencias.length, codigos: codigos.length };
 }

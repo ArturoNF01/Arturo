@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ALFABETO_DE_CODIGOS, DIAS_DE_ASISTENCIA, aCsv, agruparPorPersona, type FilaDeAsistencia, LARGO_DE_CODIGO, MINUTOS_ANTES, MINUTOS_DESPUES, SESIONES_DE_ASISTENCIA,
+  ALFABETO_DE_CODIGOS, CLAVE_DE_PRUEBA, DIAS_DE_ASISTENCIA, SESION_DE_PRUEBA, esSesionDePrueba, filasDeAsistencias, aCsv, agruparPorPersona, type FilaDeAsistencia, LARGO_DE_CODIGO, MINUTOS_ANTES, MINUTOS_DESPUES, SESIONES_DE_ASISTENCIA,
   correoValido, decidirIdentidad, diaDeClave, elegirRegistroPorNombre, esCodigoPosible, estadoDeVentana,
   etiquetaDeClave, huellaDeNombre, instanteEnMexico, nombreDePila, normalizarTexto, sesionPorClave, sesionesDelDia,
   ventanaDe,
@@ -234,5 +234,40 @@ describe('el CSV', () => {
 
   it('los números se quedan como números', () => {
     expect(aCsv([[1, 'x']])).toBe('1,x');
+  });
+});
+
+describe('la sesión de prueba', () => {
+  it('no es de la agenda: las 19 sesiones siguen siendo 19', () => {
+    expect(SESIONES_DE_ASISTENCIA).toHaveLength(19);
+    expect(SESIONES_DE_ASISTENCIA.some((x) => x.clave === CLAVE_DE_PRUEBA)).toBe(false);
+    expect(sesionPorClave('prueba')).toBe(SESION_DE_PRUEBA);
+    expect(esSesionDePrueba('prueba')).toBe(true);
+    expect(esSesionDePrueba('mesa-1')).toBe(false);
+  });
+
+  it('está siempre abierta, hoy, durante el Congreso y mucho después', () => {
+    for (const cuando of ['2026-11-09T12:00:00Z', '2026-11-12T22:00:00Z', '2030-01-01T00:00:00Z']) {
+      expect(estadoDeVentana(SESION_DE_PRUEBA, new Date(cuando)), cuando).toBe('abierta');
+    }
+  });
+
+  it('se nombra «Sesión de prueba» y su día es «Prueba», para que en la hoja no se confunda con una mesa', () => {
+    expect(etiquetaDeClave('prueba', 'es')).toBe('Sesión de prueba');
+    expect(etiquetaDeClave('prueba', 'en')).toBe('Test session');
+    expect(diaDeClave('prueba', 'es')).toBe('Prueba');
+    const [fila] = filasDeAsistencias([{ sesion: 'prueba', via: 'presencial', nombre: 'Ana Ruiz', correo: 'ana@x.org' }]);
+    expect(fila.slice(3)).toEqual(['Prueba', 'Sesión de prueba', 'Presencial']);
+  });
+
+  it('no cuenta para la asistencia de nadie: la vista por persona la deja fuera', () => {
+    const f = (id: string, sesion: string): FilaDeAsistencia => ({
+      id, sesion, via: 'presencial', registro_id: 'r1', nombre: 'Ana Ruiz', correo: 'ana@x.org', perfil: null, folio: null, creada_en: '2026-11-12T20:00:00Z',
+    });
+    const personas = agruparPorPersona([f('1', 'prueba'), f('2', 'mesa-1')]);
+    expect(personas).toHaveLength(1);
+    expect(personas[0].total).toBe(1);
+    // Quien sólo hizo la prueba no aparece.
+    expect(agruparPorPersona([f('3', 'prueba')])).toEqual([]);
   });
 });

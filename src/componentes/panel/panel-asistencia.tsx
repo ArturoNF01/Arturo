@@ -3,9 +3,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/componentes/proveedores';
 import { interpolar, type Idioma } from '@/i18n';
-import type { PersonaConAsistencia, ViaAsistencia } from '@/lib/asistencia';
+import { SESION_DE_PRUEBA, type PersonaConAsistencia, type ViaAsistencia } from '@/lib/asistencia';
 import { SALAS, type ClaveSala, type TipoSesion } from '@/lib/programa';
-import type { Asistente, CodigosPorSesion, RegistroCoincidente, ResumenDeSesion } from '@/lib/servidor/asistencia';
+import type { Asistente, CodigosPorSesion, EstadoDePrueba, RegistroCoincidente, ResumenDeSesion } from '@/lib/servidor/asistencia';
 
 type Texto = Record<Idioma, string>;
 
@@ -47,7 +47,7 @@ const post = (cuerpo: Record<string, unknown>) =>
  * ve cómo va entrando la gente.
  */
 export function PanelAsistencia({
-  sesiones, dias, resumenInicial, puedeExportar, puedeGestionar, codigos: codigosIniciales, qrs, urlBase,
+  sesiones, dias, resumenInicial, puedeExportar, puedeGestionar, codigos: codigosIniciales, qrs, urlBase, pruebaInicial,
 }: {
   sesiones: SesionPlana[];
   dias: { iso: string; texto: Texto }[];
@@ -57,6 +57,7 @@ export function PanelAsistencia({
   codigos: CodigosPorSesion | null;
   qrs: Record<string, string>;
   urlBase: string;
+  pruebaInicial: EstadoDePrueba | null;
 }) {
   const { t, idioma } = useApp();
   const a = t.panel.asistencia;
@@ -78,6 +79,8 @@ export function PanelAsistencia({
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const [codigos, setCodigos] = useState(codigosIniciales);
+  const [prueba, setPrueba] = useState(pruebaInicial);
+  const [trabajando, setTrabajando] = useState(false);
   const abiertaRef = useRef(abierta);
   useEffect(() => { abiertaRef.current = abierta; }, [abierta]);
 
@@ -123,16 +126,33 @@ export function PanelAsistencia({
     if (pestana === 'personas' && personas === null) void cargarPersonas();
   }, [pestana, personas, cargarPersonas]);
 
-  const sesionesDelDia = useMemo(() => sesiones.filter((s) => s.dia === dia), [sesiones, dia]);
-  const totalGeneral = useMemo(() => Object.values(resumen).reduce((n, r) => n + r.total, 0), [resumen]);
-  const nombreDia = (iso: string) => dias.find((d) => d.iso === iso)?.texto[idioma] ?? iso;
+  // La prueba aparece como un cuarto «día» mientras esté activa o tenga algo guardado, y no suma al total.
+  const hayPrueba = Boolean(prueba?.activa) || (resumen.prueba?.total ?? 0) > 0;
+  const diasVista = useMemo(
+    () => (hayPrueba ? [...dias, { iso: 'prueba', texto: SESION_DE_PRUEBA.diaTexto }] : dias),
+    [dias, hayPrueba],
+  );
+  const sesionDePrueba: SesionPlana = useMemo(() => ({
+    clave: SESION_DE_PRUEBA.clave, dia: 'prueba', horario: SESION_DE_PRUEBA.horario, tipo: SESION_DE_PRUEBA.tipo, sala: null,
+    corto: SESION_DE_PRUEBA.corto, titulo: null, abre: SESION_DE_PRUEBA.inicio.toISOString(), cierra: SESION_DE_PRUEBA.fin.toISOString(),
+  }), []);
+  const sesionesDelDia = useMemo(
+    () => (dia === 'prueba' ? [sesionDePrueba] : sesiones.filter((s) => s.dia === dia)),
+    [sesiones, dia, sesionDePrueba],
+  );
+  const totalGeneral = useMemo(
+    () => Object.entries(resumen).filter(([clave]) => clave !== 'prueba').reduce((n, [, r]) => n + r.total, 0),
+    [resumen],
+  );
+  const nombreDia = (iso: string) => diasVista.find((d) => d.iso === iso)?.texto[idioma] ?? iso;
   const diaCorto = (iso: string) => nombreDia(iso).split(' ').slice(0, 2).join(' ');
   const abiertaAhora = (s: SesionPlana) => ahora >= Date.parse(s.abre) && ahora <= Date.parse(s.cierra);
 
   async function alternarSesion(clave: string) {
     if (abierta === clave) { setAbierta(null); return; }
     setAbierta(clave);
-    await cargarSesion(clave);
+    // Se cuenta de nuevo al abrir: lo que escaneó la gente desde la última vez ya debe verse en los números.
+    await Promise.all([cargarSesion(clave), cargarResumen()]);
   }
 
   async function refrescarTodo(clave?: string) {
@@ -145,6 +165,42 @@ export function PanelAsistencia({
     if (!window.confirm(a.confirmarQuitar)) return;
     const r = await pedir('/api/asistencia/panel', post({ accion: 'quitar', id }));
     if (r.ok) await refrescarTodo(clave); else setError(r.mensaje ?? a.error);
+  }
+
+  function avisar(mensaje: string) {
+    setAviso(mensaje);
+    setTimeout(() => setAviso(''), 8000);
+  }
+
+  async function activarPrueba() {
+    setTrabajando(true);
+    const r = await pedir<{ prueba: EstadoDePrueba }>('/api/asistencia/panel', post({ accion: 'activar_prueba' }));
+    setTrabajando(false);
+    if (r.ok && r.datos) { setPrueba(r.datos.prueba); avisar(a.pruebaActivada); } else setError(r.mensaje ?? a.error);
+  }
+
+  async function borrarPrueba() {
+    if (!window.confirm(a.confirmarBorrarPrueba)) return;
+    setTrabajando(true);
+    const r = await pedir<{ borradas: { asistencias: number }; prueba: EstadoDePrueba }>('/api/asistencia/panel', post({ accion: 'borrar_prueba' }));
+    setTrabajando(false);
+    if (r.ok && r.datos) {
+      setPrueba(r.datos.prueba);
+      if (dia === 'prueba') setDia(dias[0]?.iso ?? '');
+      avisar(interpolar(a.pruebaBorrada, { n: r.datos.borradas.asistencias }));
+      await refrescarTodo(abierta ?? undefined);
+    } else setError(r.mensaje ?? a.error);
+  }
+
+  async function pasarALaHoja() {
+    setTrabajando(true);
+    const r = await pedir<{ hoja: { nuevas: number; cambiadas: number; quitadas: number; omitido?: string } }>(
+      '/api/asistencia/panel', post({ accion: 'sincronizar_hoja' }),
+    );
+    setTrabajando(false);
+    if (!r.ok || !r.datos) { setError(r.mensaje ?? a.error); return; }
+    const h = r.datos.hoja;
+    avisar(h.omitido ?? interpolar(a.hojaActualizada, { nuevas: h.nuevas, cambiadas: h.cambiadas, quitadas: h.quitadas }));
   }
 
   return (
@@ -172,6 +228,9 @@ export function PanelAsistencia({
           {actualizadoA && <span>{interpolar(a.actualizadoA, { hora: actualizadoA })}</span>}
           <button type="button" className="underline" onClick={() => void refrescarTodo(abierta ?? undefined)}>{a.actualizar}</button>
           {puedeExportar && <a className="underline" href="/api/asistencia/exportar">{a.exportarTodo}</a>}
+          {puedeGestionar && (
+            <button type="button" className="underline" disabled={trabajando} onClick={() => void pasarALaHoja()}>{a.hojaAhora}</button>
+          )}
         </span>
       </div>
 
@@ -181,11 +240,11 @@ export function PanelAsistencia({
       {pestana === 'sesiones' && (
         <section className="tarjeta p-4" aria-label={a.pestanaSesiones}>
           <div className="mb-3 flex flex-wrap gap-2">
-            {dias.map((d) => (
+            {diasVista.map((d) => (
               <button
                 key={d.iso}
                 type="button"
-                onClick={() => setDia(d.iso)}
+                onClick={() => { setDia(d.iso); void cargarResumen(); }}
                 aria-pressed={dia === d.iso}
                 className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${dia === d.iso ? 'bg-ciess-500 text-white' : 'boton-secundario'}`}
               >
@@ -285,6 +344,13 @@ export function PanelAsistencia({
 
       {pestana === 'codigos' && puedeGestionar && codigos && (
         <section className="space-y-4" aria-label={a.pestanaCodigos}>
+          <TarjetaDePrueba
+            prueba={prueba}
+            trabajando={trabajando}
+            alActivar={() => void activarPrueba()}
+            alBorrar={() => void borrarPrueba()}
+            alFallar={(m) => setError(m)}
+          />
           <div className="tarjeta p-4">
             <p className="text-sm">{a.codigosAyuda}</p>
             <div className="mt-3 flex flex-wrap gap-3">
@@ -596,6 +662,71 @@ function FilaDeCodigos({
           <button type="button" className="text-xs underline" onClick={() => void cambiar('en_linea')}>{a.cambiarCodigo} ({a.colEnLinea})</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * La sesión de prueba: para ver cómo se captura una asistencia (en el celular, aquí y en la hoja) antes del
+ * Congreso. Se activa y se borra con un clic, y no cuenta para la asistencia de nadie.
+ */
+function TarjetaDePrueba({
+  prueba, trabajando, alActivar, alBorrar, alFallar,
+}: {
+  prueba: EstadoDePrueba | null;
+  trabajando: boolean;
+  alActivar: () => void;
+  alBorrar: () => void;
+  alFallar: (mensaje: string) => void;
+}) {
+  const { t } = useApp();
+  const a = t.panel.asistencia;
+  const [copiado, setCopiado] = useState(false);
+
+  async function copiar(texto: string) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      alFallar(a.error);
+    }
+  }
+
+  return (
+    <div className="tarjeta border-2 border-dashed p-4" style={{ borderColor: 'var(--dorado)' }}>
+      <h2 className="text-base font-bold">{a.pruebaTitulo}</h2>
+      <p className="ayuda">{a.pruebaAyuda}</p>
+
+      {!prueba?.activa ? (
+        <button type="button" className="boton-primario mt-3 !py-2 !text-sm" disabled={trabajando} onClick={alActivar}>
+          {a.activarPrueba}
+        </button>
+      ) : (
+        <div className="mt-3 grid gap-4 sm:grid-cols-[auto_1fr]">
+          <div
+            className="h-40 w-40 shrink-0 rounded-lg bg-white p-1 [&>svg]:h-full [&>svg]:w-full"
+            // El SVG lo genera el servidor a partir de nuestro propio enlace: no lleva nada que venga de fuera.
+            dangerouslySetInnerHTML={{ __html: prueba.qr ?? '' }}
+            role="img"
+            aria-label={a.pruebaTitulo}
+          />
+          <div className="min-w-0 text-sm">
+            <p className="font-semibold">{interpolar(a.pruebaActiva, { n: prueba.total })}</p>
+            <p className="mt-2 text-xs"><span className="font-semibold">{a.enlacePrueba}:</span> <span className="break-all">{prueba.presencial}</span></p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" className="boton-secundario !px-2.5 !py-1 !text-xs" onClick={() => void copiar(prueba.presencial ?? '')}>
+                {copiado ? a.copiado : a.copiar}
+              </button>
+              <button type="button" className="boton-secundario !px-2.5 !py-1 !text-xs" disabled={trabajando} onClick={alBorrar}>
+                {a.borrarPrueba}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

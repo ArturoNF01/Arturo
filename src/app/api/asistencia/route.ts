@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { huellaDePeticion } from '@/lib/servidor/antiabuso';
-import { registrarAsistencia } from '@/lib/servidor/asistencia';
+import { buscarPersonaPorCorreo, registrarAsistencia } from '@/lib/servidor/asistencia';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +10,8 @@ export const dynamic = 'force-dynamic';
  * Vive en memoria: el sitio corre en un solo proceso, y reiniciarlo sólo lo reinicia a cero.
  */
 const VENTANA_MS = 10 * 60_000;
-const MAXIMO_POR_HUELLA = 600;
+// Cada persona hace una búsqueda del correo y un registro, a veces más: 300 personas a la vez son ~1,000 llamadas.
+const MAXIMO_POR_HUELLA = 3000;
 const intentos = new Map<string, number[]>();
 
 function pasaElLimite(huella: string, ahora: number): boolean {
@@ -46,6 +47,10 @@ export async function POST(peticion: NextRequest) {
   }
 
   try {
+    // Antes de registrar, la pantalla busca el correo para rellenar el nombre completo. No escribe nada.
+    if (cuerpo.accion === 'buscar') {
+      return NextResponse.json(await buscarPersonaPorCorreo({ codigo: cuerpo.codigo, correo: cuerpo.correo }));
+    }
     const respuesta = await registrarAsistencia({
       codigo: cuerpo.codigo,
       correo: cuerpo.correo,

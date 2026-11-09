@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import { urlSitio } from '@/lib/config';
 import { DIAS_DE_ASISTENCIA, SESIONES_DE_ASISTENCIA, ventanaDe } from '@/lib/asistencia';
-import { asegurarCodigos, resumenPorSesion, type CodigosPorSesion } from '@/lib/servidor/asistencia';
+import { asegurarCodigos, estadoDePrueba, resumenPorSesion, type CodigosPorSesion } from '@/lib/servidor/asistencia';
 import { exigirUsuario, permisos } from '@/lib/servidor/sesion';
 import { PanelAsistencia, type SesionPlana } from '@/componentes/panel/panel-asistencia';
 
@@ -36,6 +36,9 @@ export default async function PaginaAsistencia() {
     }
   }
 
+  // La sesión de prueba sólo la maneja quien organiza.
+  const prueba = p.gestionarAsistencia ? await estadoDePrueba(base).catch(() => null) : null;
+
   return (
     <PanelAsistencia
       sesiones={sesiones}
@@ -46,6 +49,7 @@ export default async function PaginaAsistencia() {
       codigos={codigos}
       qrs={qrs}
       urlBase={base}
+      pruebaInicial={prueba}
     />
   );
 }

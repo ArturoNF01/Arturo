@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { agruparPorPersona, esVia, sesionPorClave } from '@/lib/asistencia';
+import { urlSitio } from '@/lib/config';
 import {
-  asistentesDeSesion, buscarRegistros, cambiarCodigo, conciliarAsistencia, eliminarAsistencia,
-  resumenPorSesion, todasLasAsistencias,
+  activarPrueba, asistentesDeSesion, borrarPrueba, buscarRegistros, cambiarCodigo, conciliarAsistencia,
+  eliminarAsistencia, estadoDePrueba, resumenPorSesion, todasLasAsistencias,
 } from '@/lib/servidor/asistencia';
+import { googleConfigurado } from '@/lib/servidor/google';
+import { sincronizarAsistencias } from '@/lib/servidor/sheets-asistencia';
 import { esUuid } from '@/lib/esquema';
 import { permisos, usuarioActual } from '@/lib/servidor/sesion';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 /**
  * Lo que lee el panel de asistencia: el resumen por sesión, quién asistió a una sesión y la vista por
@@ -30,6 +34,8 @@ export async function GET(peticion: NextRequest) {
     }
 
     if (vista === 'personas') return NextResponse.json({ personas: agruparPorPersona(await todasLasAsistencias()) });
+
+    if (vista === 'prueba') return NextResponse.json({ prueba: await estadoDePrueba(urlSitio()) });
   } catch (error) {
     console.error('No se pudo leer la asistencia:', error);
     return NextResponse.json({ mensaje: 'No fue posible leer la asistencia.' }, { status: 500 });
@@ -68,6 +74,21 @@ export async function POST(peticion: NextRequest) {
       return (await eliminarAsistencia(id))
         ? NextResponse.json({ ok: true })
         : NextResponse.json({ mensaje: 'Esa asistencia ya no existe.' }, { status: 404 });
+    }
+
+    // La sesión de prueba: para ver cómo se captura antes del Congreso. No cuenta para nadie y se borra con un clic.
+    if (accion === 'activar_prueba') return NextResponse.json({ prueba: await activarPrueba(urlSitio()) });
+    if (accion === 'borrar_prueba') {
+      const borradas = await borrarPrueba();
+      return NextResponse.json({ borradas, prueba: await estadoDePrueba(urlSitio()) });
+    }
+
+    // Pasar la asistencia a la hoja ahora, sin esperar a la sincronización de cada 10 minutos.
+    if (accion === 'sincronizar_hoja') {
+      if (!googleConfigurado() || !process.env.GOOGLE_SHEETS_ID) {
+        return NextResponse.json({ mensaje: 'Google Sheets no está configurado.' }, { status: 503 });
+      }
+      return NextResponse.json({ hoja: await sincronizarAsistencias() });
     }
 
     if (accion === 'cambiar_codigo') {

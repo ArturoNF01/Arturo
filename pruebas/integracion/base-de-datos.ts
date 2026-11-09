@@ -323,6 +323,50 @@ async function principal() {
     'asistencia: la baja de un registro no borra su asistencia', sobrevive);
   comprobar((await eliminarAsistencia(suelta!.id)) === true && (await eliminarAsistencia(suelta!.id)) === false, 'asistencia: quitar un escaneo que no correspondía');
 
+  // La sesión de prueba y la búsqueda del correo (el nombre que se rellena solo)
+  const { activarPrueba, estadoDePrueba, borrarPrueba, buscarPersonaPorCorreo } = await import('../../src/lib/servidor/asistencia');
+  const BASE = 'https://sitio.example.org';
+  comprobar(!(await estadoDePrueba(BASE)).activa, 'prueba: empieza apagada');
+  const prueba = await activarPrueba(BASE);
+  comprobar(
+    prueba.activa && /^https:\/\/sitio\.example\.org\/a\/[a-z0-9]{10}$/.test(prueba.presencial ?? '') &&
+    /^https:\/\/sitio\.example\.org\/a\/[a-z0-9]{10}$/.test(prueba.en_linea ?? '') && prueba.qr?.startsWith('<svg') === true,
+    'prueba: al activarla hay QR y dos enlaces', prueba);
+  comprobar(JSON.stringify((await activarPrueba(BASE)).presencial) === JSON.stringify(prueba.presencial), 'prueba: activarla otra vez no cambia los códigos');
+  comprobar(!('prueba' in (await asegurarCodigos())), 'prueba: sus códigos no se mezclan con los de la agenda');
+
+  const codigoDePrueba = prueba.presencial!.split('/a/')[1];
+  const DESPUES = new Date('2030-01-01T00:00:00Z'); // una fecha en la que ninguna sesión real está abierta
+  const busca = (correo: string, codigo = codigoDePrueba, ahora: Date = DESPUES) => buscarPersonaPorCorreo({ codigo, correo, ahora });
+
+  const encontrada = await busca(' ASIS.UNO@example.org ');
+  comprobar(encontrada.ok && encontrada.encontrado && encontrada.nombre === 'María Fernanda Robles Iturbide',
+    'búsqueda: el correo de un registro devuelve su nombre completo (sin importar mayúsculas ni espacios)', encontrada);
+  const desconocida = await busca('nadie@example.org');
+  comprobar(desconocida.ok && !desconocida.encontrado, 'búsqueda: un correo desconocido no devuelve nada', desconocida);
+  const canceladaB = await busca('asis.tres@example.org');
+  comprobar(canceladaB.ok && !canceladaB.encontrado, 'búsqueda: un registro cancelado no se reconoce', canceladaB);
+  const malCorreoB = await busca('no-es-un-correo');
+  comprobar(!malCorreoB.ok && malCorreoB.motivo === 'datos_invalidos', 'búsqueda: un correo que no lo es se rechaza', malCorreoB);
+  const malCodigoB = await busca('asis.uno@example.org', 'zzzzzzzzzz');
+  comprobar(!malCodigoB.ok && malCodigoB.motivo === 'codigo_invalido', 'búsqueda: con un código que no existe no contesta nada', malCodigoB);
+  const fueraB = await busca('asis.uno@example.org', codigos['mesa-1'].presencial, DESPUES);
+  comprobar(!fueraB.ok && fueraB.motivo === 'fuera_de_horario', 'búsqueda: fuera del horario de la sesión tampoco contesta (no sirve para averiguar quién está registrado)', fueraB);
+  const antes = (await consultar('select 1 from asistencias')).length;
+  await busca('asis.uno@example.org');
+  comprobar((await consultar('select 1 from asistencias')).length === antes, 'búsqueda: no escribe nada');
+
+  const deLaPrueba = await registrarAsistencia({ codigo: codigoDePrueba, correo: 'asis.uno@example.org', ahora: DESPUES });
+  comprobar(deLaPrueba.ok && deLaPrueba.estado === 'registrada' && deLaPrueba.sesion === 'prueba', 'prueba: se registra a cualquier hora', deLaPrueba);
+  const unaDeLaPrueba = (await resumenPorSesion()).prueba;
+  comprobar(unaDeLaPrueba?.total === 1 && (await estadoDePrueba(BASE)).total === 1, 'prueba: aparece en el resumen y en su contador', unaDeLaPrueba);
+
+  const delCongreso = (await consultar('select 1 from asistencias where sesion <> $1', ['prueba'])).length;
+  const borradas = await borrarPrueba();
+  comprobar(borradas.asistencias === 1 && borradas.codigos === 2, 'prueba: borrarla quita sus asistencias y sus dos códigos', borradas);
+  comprobar((await consultar('select 1 from asistencias where sesion <> $1', ['prueba'])).length === delCongreso, 'prueba: y no toca ninguna asistencia del Congreso');
+  comprobar((await resolverCodigo(codigoDePrueba)) === null && !(await estadoDePrueba(BASE)).activa, 'prueba: su QR deja de funcionar');
+
   await consultar('delete from asistencias');
   await consultar('delete from asistencia_codigos');
   await consultar(`delete from registros where correo like 'asis.%@example.org'`);
