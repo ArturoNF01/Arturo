@@ -7,6 +7,8 @@
  *   npm run sincronizar -- --rehacer  # vacía la hoja y la escribe entera
  *   npm run sincronizar -- --vaciar   # sólo la vacía, sin escribir nada
  *   npm run sincronizar -- --simular  # dice qué quitaría de la hoja, sin tocar nada
+ *
+ * También pone al día la pestaña «Asistencias» (una fila por asistencia registrada con el QR).
  *   npm run sincronizar -- --forzar   # quita de la hoja más de 10 bajas de una vez
  *
  * Hace lo mismo que el botón del panel, pero desde el servidor. Esa es la
@@ -48,6 +50,7 @@ async function principal() {
   const { consultar } = await import('../src/lib/bd/conexion');
   const { alinearHojaConLaBase, cuadrarPestanasEspejo, revisarLibro, sincronizarRegistros, vaciarHojas } =
     await import('../src/lib/servidor/sheets');
+  const { sincronizarAsistencias } = await import('../src/lib/servidor/sheets-asistencia');
   const { googleConfigurado } = await import('../src/lib/servidor/google');
 
   const problema = faltante(googleConfigurado());
@@ -71,6 +74,27 @@ async function principal() {
     const añadidas = await cuadrarPestanasEspejo();
     for (const [hoja, n] of Object.entries(añadidas)) {
       if (n > 0) decir(`${hoja}: se añadieron ${n} filas que faltaban.`);
+    }
+  };
+
+  // La pestaña «Asistencias»: una fila por asistencia registrada con el QR. Se pone al día por lotes aquí y no al
+  // escanear, para que cien escaneos a la vez no pasen la cuota de Google. Si falla no frena lo demás: es una copia
+  // de la base, y la pasada siguiente la alcanza.
+  let asistenciasFallaron = false;
+  const sincronizarLasAsistencias = async () => {
+    try {
+      const r = await sincronizarAsistencias({ forzar: process.argv.includes('--forzar') });
+      if (r.omitido) console.log(`Asistencias: ${r.omitido}`);
+      const partes = [
+        r.nuevas > 0 && `${r.nuevas} nuevas`,
+        r.cambiadas > 0 && `${r.cambiadas} corregidas`,
+        r.quitadas > 0 && `${r.quitadas} quitadas`,
+      ].filter((x): x is string => typeof x === 'string');
+      if (partes.length > 0) console.log(`Asistencias en la hoja: ${partes.join(', ')}.`);
+      else decir('Asistencias: la pestaña está al día.');
+    } catch (fallo) {
+      asistenciasFallaron = true;
+      console.error(`Asistencias: no se pudo poner al día la pestaña: ${fallo instanceof Error ? fallo.message : String(fallo)}`);
     }
   };
 
@@ -112,6 +136,9 @@ async function principal() {
     if (r.enBlanco > 0) console.log(`Filas en blanco que se quitarían: ${r.enBlanco}`);
     if (r.renumeradas > 0) console.log(`N.º que se corregirían: ${r.renumeradas}`);
     for (const hoja of r.reconstruidas) console.log(`${hoja}: se volvería a escribir entera.`);
+    const a = await sincronizarAsistencias({ simular: true, forzar: process.argv.includes('--forzar') });
+    if (a.omitido) console.log(`Asistencias: ${a.omitido}`);
+    else console.log(`Asistencias: se añadirían ${a.nuevas}, se corregirían ${a.cambiadas} y se quitarían ${a.quitadas} filas.`);
     console.log('No se tocó nada. Si la lista es la que espera: npm run sincronizar -- --forzar');
     return;
   }
@@ -147,7 +174,9 @@ async function principal() {
     await revisarLibro();
     await alinearConLaBase();
     await cuadrarEspejos();
+    await sincronizarLasAsistencias();
     decir('No hay nada pendiente, y la hoja tiene las columnas de ahora.');
+    if (asistenciasFallaron) process.exit(1);
     return;
   }
 
@@ -185,6 +214,7 @@ async function principal() {
   if (fallidos.length === 0) {
     await alinearConLaBase();
     await cuadrarEspejos();
+    await sincronizarLasAsistencias();
   }
   if (fallidos.length > 0) {
     const motivos = [...new Set(fallidos.map((f) => f.motivo))];
@@ -196,6 +226,7 @@ async function principal() {
     }
     process.exit(1);
   }
+  if (asistenciasFallaron) process.exit(1);
 }
 
 principal().catch((error) => {

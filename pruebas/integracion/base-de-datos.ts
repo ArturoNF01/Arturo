@@ -205,6 +205,129 @@ async function principal() {
   await consultar(`delete from registros where correo like '%@example.org' and nombres = 'Masivo'`);
   ok('limpieza de los envíos masivos');
 
+  // 12. Asistencia con QR
+  const {
+    asegurarCodigos, cambiarCodigo, resolverCodigo, registrarAsistencia, resumenPorSesion, asistentesDeSesion,
+    conciliarAsistencia, buscarRegistros, todasLasAsistencias, eliminarAsistencia,
+  } = await import('../../src/lib/servidor/asistencia');
+  const { SESIONES_DE_ASISTENCIA } = await import('../../src/lib/asistencia');
+
+  const codigos = await asegurarCodigos();
+  const todosLosCodigos = Object.values(codigos).flatMap((c) => [c.presencial, c.en_linea]);
+  comprobar(
+    Object.keys(codigos).length === SESIONES_DE_ASISTENCIA.length && todosLosCodigos.length === SESIONES_DE_ASISTENCIA.length * 2,
+    'asistencia: hay un código presencial y uno en línea por cada sesión', Object.keys(codigos).length);
+  comprobar(new Set(todosLosCodigos).size === todosLosCodigos.length, 'asistencia: ningún código se repite');
+  comprobar(JSON.stringify(await asegurarCodigos()) === JSON.stringify(codigos), 'asistencia: repetir no cambia los códigos que ya podían estar impresos');
+  const viejo = codigos['mesa-4'].presencial;
+  const nuevoCodigo = await cambiarCodigo('mesa-4', 'presencial');
+  comprobar(
+    nuevoCodigo !== null && nuevoCodigo !== viejo && (await resolverCodigo(viejo)) === null &&
+    (await resolverCodigo(nuevoCodigo))?.sesion === 'mesa-4' && (await resolverCodigo(codigos['mesa-4'].en_linea))?.via === 'en_linea',
+    'asistencia: cambiar un código invalida el anterior y no toca los demás');
+  comprobar((await resolverCodigo('zzzzzzzzzz')) === null && (await resolverCodigo('corto')) === null, 'asistencia: un código que no existe no resuelve nada');
+
+  const altasAsistencia: [string, string, string, string, string][] = [
+    ['asis.uno@example.org', 'María Fernanda', 'Robles Iturbide', 'confirmado', 'es'],
+    ['asis.dos@example.org', 'Luis', 'Pérez Gómez', 'en_proceso', 'en'],
+    ['asis.tres@example.org', 'Ana', 'Cancelada', 'cancelado', 'es'],
+  ];
+  const idsAsis: Record<string, string> = {};
+  for (const [correo, nombres, apellidos, estado, idioma] of altasAsistencia) {
+    const a = armarInsercion({
+      perfil: 'publico_general', grupo: 'externo', modalidad: 'presencial', idioma, nombres, apellidos,
+      correo, institucion: 'CIESS', pais_residencia: 'México', estado, consentimiento_datos: true,
+    });
+    const fila = await unaFila<{ id: string }>(`insert into registros (${a.columnas}) values (${a.marcadores}) returning id`, a.valores);
+    idsAsis[correo] = fila!.id;
+  }
+
+  const EN_SESION = new Date('2026-11-12T22:00:00Z'); // jueves 12, 16:00 en México: mesa 3 y mesa 4 en curso
+  const codigoDe = (sesion: string, via: 'presencial' | 'en_linea') =>
+    via === 'presencial' && sesion === 'mesa-4' ? nuevoCodigo! : codigos[sesion][via];
+
+  const fuera = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'asis.uno@example.org', ahora: new Date('2026-11-12T10:00:00Z') });
+  comprobar(!fuera.ok && fuera.motivo === 'fuera_de_horario' && fuera.estado === 'antes', 'asistencia: fuera de horario no se registra', fuera);
+  comprobar((await consultar('select 1 from asistencias')).length === 0, 'asistencia: y no deja nada guardado');
+
+  const primera = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: ' ASIS.UNO@Example.org ', ahora: EN_SESION });
+  comprobar(primera.ok && primera.estado === 'registrada' && !primera.sinRegistro && primera.nombre === 'María' && primera.via === 'presencial',
+    'asistencia: el correo de un registro (sin importar mayúsculas ni espacios) registra la asistencia presencial', primera);
+  const repetida = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'asis.uno@example.org', ahora: EN_SESION });
+  comprobar(repetida.ok && repetida.estado === 'ya_registrada', 'asistencia: escanear dos veces no duplica', repetida);
+  const porLaOtraVia = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'en_linea'), correo: 'asis.uno@example.org', ahora: EN_SESION });
+  comprobar(porLaOtraVia.ok && porLaOtraVia.estado === 'ya_registrada' && porLaOtraVia.via === 'presencial',
+    'asistencia: la misma persona por la otra vía no cuenta dos veces y se le dice por cuál quedó', porLaOtraVia);
+  const enOtraSesion = await registrarAsistencia({ codigo: codigoDe('mesa-3', 'en_linea'), correo: 'asis.dos@example.org', ahora: EN_SESION });
+  comprobar(enOtraSesion.ok && enOtraSesion.via === 'en_linea', 'asistencia: la vía sale del código, no de lo que diga la persona', enOtraSesion);
+
+  const primerPaso = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'asis.mal.escrito@example.org', ahora: EN_SESION });
+  comprobar(!primerPaso.ok && primerPaso.motivo === 'no_encontrado', 'asistencia: un correo desconocido pide nombre y correo, sin guardar nada todavía', primerPaso);
+  comprobar((await resumenPorSesion())['mesa-4']?.total === 1, 'asistencia: y el primer paso no deja nada guardado');
+
+  const porNombre = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'asis.mal.escrito@example.org', nombre: 'robles iturbide, maria fernanda', ahora: EN_SESION });
+  comprobar(porNombre.ok && porNombre.estado === 'ya_registrada' && !porNombre.sinRegistro,
+    'asistencia: en el segundo paso, un nombre que coincide con un solo registro la identifica (aquí ya tenía su asistencia)', porNombre);
+
+  const sinRegistro = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'quien.sea@example.org', nombre: 'Pedro Ramírez', ahora: EN_SESION });
+  comprobar(sinRegistro.ok && sinRegistro.estado === 'registrada' && sinRegistro.sinRegistro && sinRegistro.nombre === 'Pedro',
+    'asistencia: si ni el correo ni el nombre aparecen, se guarda «sin registro»', sinRegistro);
+  const sinRegistroOtraVez = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'QUIEN.SEA@example.org', nombre: 'Pedro Ramírez', ahora: EN_SESION });
+  comprobar(sinRegistroOtraVez.ok && sinRegistroOtraVez.estado === 'ya_registrada', 'asistencia: la asistencia «sin registro» tampoco se duplica', sinRegistroOtraVez);
+
+  const cancelada = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'asis.tres@example.org', nombre: 'Ana Cancelada', ahora: EN_SESION });
+  comprobar(cancelada.ok && cancelada.sinRegistro, 'asistencia: un registro cancelado no se reconoce: queda «sin registro»', cancelada);
+
+  const malCorreo = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'no-es-un-correo', ahora: EN_SESION });
+  comprobar(!malCorreo.ok && malCorreo.motivo === 'datos_invalidos', 'asistencia: un correo que no lo es se rechaza', malCorreo);
+  const malCodigo = await registrarAsistencia({ codigo: 'zzzzzzzzzz', correo: 'asis.uno@example.org', ahora: EN_SESION });
+  comprobar(!malCodigo.ok && malCodigo.motivo === 'codigo_invalido', 'asistencia: un código que no existe se rechaza', malCodigo);
+
+  const resumen = await resumenPorSesion();
+  comprobar(
+    resumen['mesa-4']?.presencial === 3 && resumen['mesa-4'].sinRegistro === 2 && resumen['mesa-3']?.en_linea === 1,
+    'asistencia: el resumen cuenta por sesión, por vía y «sin registro»', resumen);
+
+  const asistentes = await asistentesDeSesion('mesa-4');
+  comprobar(
+    asistentes[0]?.nombre === 'María Fernanda Robles Iturbide' && asistentes[0].identificado_por === 'correo' && asistentes[0].folio !== null,
+    'asistencia: la lista de una sesión trae el nombre del registro, no lo escrito', asistentes[0]);
+
+  const suelta = asistentes.find((x) => x.registro_id === null && x.correo === 'quien.sea@example.org');
+  const conciliada = await conciliarAsistencia(suelta!.id, idsAsis['asis.dos@example.org']);
+  comprobar(conciliada.ok && conciliada.resultado === 'ligada', 'asistencia: el comité puede ligar una «sin registro» a su registro', conciliada);
+  const despuesDeConciliar = (await asistentesDeSesion('mesa-4')).find((x) => x.id === suelta!.id);
+  comprobar(despuesDeConciliar?.registro_id === idsAsis['asis.dos@example.org'] && despuesDeConciliar.identificado_por === 'conciliada' && despuesDeConciliar.nombre === 'Luis Pérez Gómez',
+    'asistencia: y queda a nombre del registro', despuesDeConciliar);
+
+  // Si esa persona ya tenía asistencia en la misma sesión, la fila suelta sobra: se descarta en vez de contar dos veces.
+  await registrarAsistencia({ codigo: codigoDe('mesa-3', 'en_linea'), correo: 'otro@example.org', nombre: 'Otra Persona', ahora: EN_SESION });
+  const otraSuelta = (await asistentesDeSesion('mesa-3')).find((x) => x.registro_id === null);
+  const duplicada = await conciliarAsistencia(otraSuelta!.id, idsAsis['asis.dos@example.org']);
+  comprobar(duplicada.ok && duplicada.resultado === 'duplicada_descartada', 'asistencia: ligar a quien ya tenía asistencia en la sesión descarta la duplicada', duplicada);
+  comprobar((await asistentesDeSesion('mesa-3')).length === 1, 'asistencia: y no cuenta dos veces');
+  const aCancelado = await conciliarAsistencia(suelta!.id, idsAsis['asis.tres@example.org']);
+  comprobar(!aCancelado.ok, 'asistencia: no se liga a un registro cancelado', aCancelado);
+
+  const encontrados = await buscarRegistros('asis.uno');
+  comprobar(encontrados.length === 1 && encontrados[0].nombre === 'María Fernanda Robles Iturbide', 'asistencia: se busca el registro por correo para conciliar', encontrados);
+  comprobar((await buscarRegistros('robles iturbide')).length === 1 && (await buscarRegistros('a')).length === 0, 'asistencia: o por nombre; con una letra no busca');
+
+  const todas = await todasLasAsistencias();
+  comprobar(todas.length >= 4 && todas.every((x, i) => i === 0 || todas[i - 1].creada_en <= x.creada_en), 'asistencia: todas, en orden de llegada');
+
+  // Dar de baja un registro no borra la asistencia: la fila sigue diciendo quién fue.
+  await consultar('delete from registros where id = $1', [idsAsis['asis.dos@example.org']]);
+  const sobrevive = (await asistentesDeSesion('mesa-4')).find((x) => x.id === suelta!.id);
+  comprobar(sobrevive !== undefined && sobrevive.registro_id === null && sobrevive.nombre === 'Luis Pérez Gómez',
+    'asistencia: la baja de un registro no borra su asistencia', sobrevive);
+  comprobar((await eliminarAsistencia(suelta!.id)) === true && (await eliminarAsistencia(suelta!.id)) === false, 'asistencia: quitar un escaneo que no correspondía');
+
+  await consultar('delete from asistencias');
+  await consultar('delete from asistencia_codigos');
+  await consultar(`delete from registros where correo like 'asis.%@example.org'`);
+  ok('limpieza de la asistencia');
+
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);
   await consultar(`delete from usuarios_panel where correo = 'prueba@ciess.org'`);

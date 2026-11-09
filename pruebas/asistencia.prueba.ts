@@ -1,0 +1,238 @@
+import { describe, expect, it } from 'vitest';
+import {
+  ALFABETO_DE_CODIGOS, DIAS_DE_ASISTENCIA, aCsv, agruparPorPersona, type FilaDeAsistencia, LARGO_DE_CODIGO, MINUTOS_ANTES, MINUTOS_DESPUES, SESIONES_DE_ASISTENCIA,
+  correoValido, decidirIdentidad, diaDeClave, elegirRegistroPorNombre, esCodigoPosible, estadoDeVentana,
+  etiquetaDeClave, huellaDeNombre, instanteEnMexico, nombreDePila, normalizarTexto, sesionPorClave, sesionesDelDia,
+  ventanaDe,
+} from '@/lib/asistencia';
+import { PROGRAMA, MESAS } from '@/lib/programa';
+
+/**
+ * La asistencia con QR: qué sesiones cuentan, cuándo vale cada código y cómo se reconoce a quien
+ * escanea. Lo que toca la base de datos se prueba contra PostgreSQL (`npm run prueba-bd`).
+ */
+
+describe('las sesiones a las que se pasa asistencia', () => {
+  it('son 19: las 5 del miércoles, la apertura, la conferencia, las 11 mesas y la clausura', () => {
+    expect(SESIONES_DE_ASISTENCIA).toHaveLength(19);
+    const claves = SESIONES_DE_ASISTENCIA.map((s) => s.clave);
+    expect(new Set(claves).size).toBe(19);
+    for (let n = 1; n <= 5; n++) expect(claves).toContain(`miercoles-${n}`);
+    for (let n = 1; n <= 11; n++) expect(claves).toContain(`mesa-${n}`);
+    expect(claves).toEqual(expect.arrayContaining(['apertura', 'conferencia', 'clausura']));
+  });
+
+  it('cada mesa de la agenda tiene su sesión, y el registro de participantes y el almuerzo no son sesiones', () => {
+    expect(MESAS.map((m) => `mesa-${m.numero}`).every((c) => sesionPorClave(c))).toBe(true);
+    const sesionesDeLaAgenda = PROGRAMA.flatMap((d) => d.sesiones).filter((s) => s.tipo !== 'registro' && s.tipo !== 'pausa');
+    expect(SESIONES_DE_ASISTENCIA).toHaveLength(sesionesDeLaAgenda.length);
+  });
+
+  it('se reparten en los tres días: miércoles 11, jueves 12 y viernes 13', () => {
+    expect(DIAS_DE_ASISTENCIA.map((d) => d.iso)).toEqual(['2026-11-11', '2026-11-12', '2026-11-13']);
+    expect(sesionesDelDia('2026-11-11')).toHaveLength(5);
+    expect(sesionesDelDia('2026-11-12').map((s) => s.clave)).toEqual([
+      'apertura', 'conferencia', 'mesa-1', 'mesa-2', 'mesa-3', 'mesa-4',
+    ]);
+    expect(sesionesDelDia('2026-11-13').map((s) => s.clave)).toEqual([
+      'mesa-5', 'mesa-6', 'mesa-7', 'mesa-8', 'mesa-9', 'mesa-10', 'mesa-11', 'clausura',
+    ]);
+  });
+
+  it('todas tienen horario legible, termina después de empezar y están dentro del día que les toca', () => {
+    for (const s of SESIONES_DE_ASISTENCIA) {
+      expect(Number.isNaN(s.inicio.getTime()), s.clave).toBe(false);
+      expect(s.fin.getTime(), s.clave).toBeGreaterThan(s.inicio.getTime());
+      expect(s.inicio.toISOString().slice(0, 10), s.clave).toMatch(/^2026-11-1[123]$/);
+    }
+  });
+
+  it('se nombran en los tres idiomas, y las mesas llevan su título', () => {
+    expect(etiquetaDeClave('mesa-4', 'es')).toMatch(/^Mesa 4 · .+/);
+    expect(etiquetaDeClave('mesa-4', 'en')).toMatch(/^Panel 4 · .+/);
+    expect(etiquetaDeClave('apertura', 'es')).toBe('Sesión de apertura');
+    expect(etiquetaDeClave('conferencia', 'es')).toBe('Conferencia magistral');
+    expect(etiquetaDeClave('miercoles-1', 'es')).toMatch(/Salud/);
+    expect(diaDeClave('mesa-9', 'es')).toBe('Viernes 13 de noviembre');
+    // Una clave que ya no está en la agenda se dice tal cual, para no perder la fila.
+    expect(etiquetaDeClave('mesa-99', 'es')).toBe('mesa-99');
+    expect(diaDeClave('mesa-99', 'es')).toBe('');
+  });
+});
+
+describe('la hora de México', () => {
+  it('9:00 en la Ciudad de México es 15:00 UTC en noviembre (sin horario de verano)', () => {
+    expect(instanteEnMexico('2026-11-12', '09:00').toISOString()).toBe('2026-11-12T15:00:00.000Z');
+    expect(instanteEnMexico('2026-11-13', '16:50').toISOString()).toBe('2026-11-13T22:50:00.000Z');
+  });
+
+  it('no depende del huso de quien corre el programa', () => {
+    const antes = process.env.TZ;
+    process.env.TZ = 'Asia/Tokyo';
+    try {
+      expect(instanteEnMexico('2026-11-12', '09:00').toISOString()).toBe('2026-11-12T15:00:00.000Z');
+    } finally {
+      if (antes === undefined) delete process.env.TZ; else process.env.TZ = antes;
+    }
+  });
+});
+
+describe('la ventana de cada código: 20 minutos antes y 30 después', () => {
+  const mesa4 = sesionPorClave('mesa-4')!; // jueves 12, 15:30–17:30
+
+  it('abre 20 minutos antes de empezar y cierra 30 minutos después de terminar', () => {
+    expect(MINUTOS_ANTES).toBe(20);
+    expect(MINUTOS_DESPUES).toBe(30);
+    const { abre, cierra } = ventanaDe(mesa4);
+    expect(abre.toISOString()).toBe('2026-11-12T21:10:00.000Z'); // 15:10 en México
+    expect(cierra.toISOString()).toBe('2026-11-13T00:00:00.000Z'); // 18:00 en México
+  });
+
+  it('antes, abierta y cerrada, con los límites incluidos', () => {
+    const en = (iso: string) => estadoDeVentana(mesa4, new Date(iso));
+    expect(en('2026-11-12T21:09:59Z')).toBe('antes');
+    expect(en('2026-11-12T21:10:00Z')).toBe('abierta');
+    expect(en('2026-11-12T22:30:00Z')).toBe('abierta'); // en plena sesión
+    expect(en('2026-11-13T00:00:00Z')).toBe('abierta');
+    expect(en('2026-11-13T00:00:01Z')).toBe('cerrada');
+  });
+
+  it('una foto del QR de una mesa no sirve el día siguiente ni en otra mesa', () => {
+    const mesa1 = sesionPorClave('mesa-1')!; // jueves 12, 10:30–12:30
+    const alMediodiaDeLaMesa4 = new Date('2026-11-12T22:00:00Z');
+    expect(estadoDeVentana(mesa1, alMediodiaDeLaMesa4)).toBe('cerrada');
+    expect(estadoDeVentana(mesa4, new Date('2026-11-13T15:00:00Z'))).toBe('cerrada');
+  });
+});
+
+describe('reconocer a quien escanea', () => {
+  it('normaliza acentos, mayúsculas, signos y espacios', () => {
+    expect(normalizarTexto('  José  Pérez-Ruiz ')).toBe('jose perez ruiz');
+    expect(normalizarTexto('MARÍA DEL CARMEN')).toBe('maria del carmen');
+  });
+
+  it('el nombre es una bolsa de palabras: el orden en que lo teclea no importa', () => {
+    expect(huellaDeNombre('Ruiz Pérez, José')).toBe(huellaDeNombre('jose perez ruiz'));
+    expect(huellaDeNombre('Ana')).not.toBe(huellaDeNombre('Ana Ruiz'));
+  });
+
+  const candidatos = [
+    { id: 'a', nombres: 'María Fernanda', apellidos: 'Robles Iturbide' },
+    { id: 'b', nombres: 'Luis', apellidos: 'Pérez Gómez' },
+    { id: 'c', nombres: 'Luis', apellidos: 'Pérez Gómez' }, // un homónimo exacto
+    { id: 'd', nombres: 'Ana', apellidos: 'Ruiz' },
+  ];
+
+  it('por nombre sólo si coincide con un único registro', () => {
+    expect(elegirRegistroPorNombre('maria fernanda robles iturbide', candidatos)).toBe('a');
+    expect(elegirRegistroPorNombre('Robles Iturbide, María Fernanda', candidatos)).toBe('a');
+    expect(elegirRegistroPorNombre('Luis Pérez Gómez', candidatos)).toBeNull(); // dos personas: no se adivina
+    expect(elegirRegistroPorNombre('Pedro Ramírez', candidatos)).toBeNull();
+  });
+
+  it('un nombre suelto no identifica a nadie', () => {
+    expect(elegirRegistroPorNombre('Ana', candidatos)).toBeNull();
+    expect(elegirRegistroPorNombre('', candidatos)).toBeNull();
+  });
+
+  it('valida las direcciones de correo', () => {
+    expect(correoValido('a@b.org')).toBe(true);
+    expect(correoValido(' ana@universidad.edu.mx ')).toBe(true);
+    for (const malo of ['', 'ana', 'ana@', '@b.org', 'a b@c.org', 'a@b']) expect(correoValido(malo), malo).toBe(false);
+  });
+
+  it('saluda con el nombre de pila, no con el nombre completo', () => {
+    expect(nombreDePila('María Fernanda')).toBe('María');
+    expect(nombreDePila('  Luis ')).toBe('Luis');
+    expect(nombreDePila('')).toBe('');
+  });
+});
+
+describe('qué se hace con quien escanea, en dos pasos', () => {
+  const candidatos = [{ id: 'a', nombres: 'María', apellidos: 'Robles' }];
+
+  it('con un correo que es de un registro: se le registra, sin pedir nada más', () => {
+    expect(decidirIdentidad({ registroPorCorreo: 'a', nombre: '', candidatosPorNombre: [] }))
+      .toEqual({ accion: 'registrar', registroId: 'a', por: 'correo' });
+  });
+
+  it('con un correo que no aparece y sin nombre: se le pide su nombre y su correo, y no se guarda nada', () => {
+    expect(decidirIdentidad({ registroPorCorreo: null, nombre: '', candidatosPorNombre: candidatos }))
+      .toEqual({ accion: 'pedir_datos' });
+    expect(decidirIdentidad({ registroPorCorreo: null, nombre: '   ', candidatosPorNombre: candidatos }))
+      .toEqual({ accion: 'pedir_datos' });
+  });
+
+  it('en el segundo paso, si el correo corregido aparece, se le registra por el correo', () => {
+    expect(decidirIdentidad({ registroPorCorreo: 'a', nombre: 'María Robles', candidatosPorNombre: candidatos }))
+      .toEqual({ accion: 'registrar', registroId: 'a', por: 'correo' });
+  });
+
+  it('en el segundo paso, si el correo sigue sin aparecer pero el nombre es único, se le registra por el nombre', () => {
+    expect(decidirIdentidad({ registroPorCorreo: null, nombre: 'María Robles', candidatosPorNombre: candidatos }))
+      .toEqual({ accion: 'registrar', registroId: 'a', por: 'nombre' });
+  });
+
+  it('si ni el correo ni el nombre aparecen, queda «sin registro» para que el comité la concilie', () => {
+    expect(decidirIdentidad({ registroPorCorreo: null, nombre: 'Pedro Ramírez', candidatosPorNombre: candidatos }))
+      .toEqual({ accion: 'sin_registro' });
+  });
+});
+
+describe('los códigos', () => {
+  it('son de 10 caracteres de un alfabeto sin letras que se confunden', () => {
+    expect(LARGO_DE_CODIGO).toBe(10);
+    expect(ALFABETO_DE_CODIGOS).not.toMatch(/[0o1li]/);
+    expect(esCodigoPosible('k3x9m2p7qa')).toBe(true);
+    for (const malo of ['', 'corto', 'K3X9M2P7QA', 'k3x9m2p7q1', 'k3x9m2p7qaa', 'k3x9m2p7q ']) {
+      expect(esCodigoPosible(malo), malo).toBe(false);
+    }
+  });
+});
+
+describe('la vista por persona', () => {
+  const f = (id: string, sesion: string, nombre: string, registro: string | null, via: 'presencial' | 'en_linea' = 'presencial'): FilaDeAsistencia => ({
+    id, sesion, via, registro_id: registro, nombre, correo: `${nombre.toLowerCase().replace(/\s/g, '.')}@x.org`, perfil: null, folio: null, creada_en: '2026-11-12T20:00:00Z',
+  });
+
+  it('una fila por persona, con cuántas sesiones por día y cuáles; primero quien más suma', () => {
+    const personas = agruparPorPersona([
+      f('1', 'miercoles-1', 'Ana Ruiz', 'r1'), f('2', 'mesa-1', 'Ana Ruiz', 'r1'), f('3', 'mesa-5', 'Ana Ruiz', 'r1', 'en_linea'),
+      f('4', 'mesa-1', 'Luis Pérez', 'r2'),
+    ]);
+    expect(personas.map((p) => [p.nombre, p.total])).toEqual([['Ana Ruiz', 3], ['Luis Pérez', 1]]);
+    expect(personas[0].porDia).toEqual({ '2026-11-11': 1, '2026-11-12': 1, '2026-11-13': 1 });
+    expect(personas[0].sesiones.map((s) => s.via)).toEqual(['presencial', 'presencial', 'en_linea']);
+  });
+
+  it('quien está «sin registro» se agrupa por su correo: dos escaneos suyos son una persona', () => {
+    const personas = agruparPorPersona([f('1', 'mesa-1', 'Pedro Soto', null), f('2', 'mesa-2', 'Pedro Soto', null)]);
+    expect(personas).toHaveLength(1);
+    expect(personas[0]).toMatchObject({ total: 2, sinRegistro: true });
+  });
+
+  it('una sesión que ya no está en la agenda cuenta en el total pero no en ningún día', () => {
+    const [p] = agruparPorPersona([f('1', 'mesa-99', 'Ana Ruiz', 'r1')]);
+    expect(p.total).toBe(1);
+    expect(p.porDia).toEqual({});
+  });
+});
+
+describe('el CSV', () => {
+  it('escapa comas, comillas y saltos de línea', () => {
+    expect(aCsv([['a', 'b,c', 'd"e', 'f\ng']])).toBe('a,"b,c","d""e","f\ng"');
+  });
+
+  it('un nombre que empiece como fórmula no se ejecuta al abrirlo en Excel', () => {
+    // Los nombres los escribe cualquiera desde el formulario público.
+    const csv = aCsv([['=HYPERLINK("http://malo")', '+52 55', '-1', '@suma']]);
+    expect(csv.startsWith("\"'=HYPERLINK")).toBe(true);
+    expect(csv).toContain("'+52 55");
+    expect(csv).toContain("'-1");
+    expect(csv).toContain("'@suma");
+  });
+
+  it('los números se quedan como números', () => {
+    expect(aCsv([[1, 'x']])).toBe('1,x');
+  });
+});

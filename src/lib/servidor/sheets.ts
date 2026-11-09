@@ -76,7 +76,7 @@ export function esCupoAgotado(fallo: unknown): boolean {
 }
 
 /** Repite la llamada mientras Google diga que vamos demasiado rápido. */
-async function conEspera<T>(operacion: () => Promise<T>): Promise<T> {
+export async function conEspera<T>(operacion: () => Promise<T>): Promise<T> {
   for (let intento = 0; ; intento += 1) {
     try {
       return await operacion();
@@ -131,7 +131,7 @@ async function escribirEncabezados(idLibro: string, nombres: string[]): Promise<
  * dónde acaban los títulos y dónde empiezan los datos. Una fila añadida ya
  * no depende de que adivine la forma de la tabla.
  */
-function peticionesDeTitulos(sheetId: number | null | undefined) {
+export function peticionesDeTitulos(sheetId: number | null | undefined) {
   return [
     {
       updateSheetProperties: {

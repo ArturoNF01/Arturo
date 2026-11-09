@@ -32,6 +32,7 @@ export function MarcoPanel({
     { href: '/panel', texto: t.panel.secciones.dashboard, visible: true, icono: 'grafica' },
     { href: '/panel/registros', texto: t.panel.secciones.registros, visible: permisos.verRegistros, icono: 'lista' },
     { href: '/panel/analitica', texto: t.panel.secciones.analitica, visible: permisos.verRegistros, icono: 'analitica' },
+    { href: '/panel/asistencia', texto: t.panel.secciones.asistencia, visible: permisos.verAsistencia, icono: 'asistencia' },
     { href: '/panel/dictamen', texto: t.panel.secciones.dictamen, visible: permisos.editarRegistros, icono: 'dictamen' },
     { href: '/panel/sql', texto: t.panel.secciones.sql, visible: permisos.consultarSql, icono: 'sql' },
     { href: '/panel/plantillas', texto: t.panel.secciones.plantillas, visible: permisos.editarPlantillas, icono: 'correo' },
@@ -145,6 +146,7 @@ function Icono({ nombre }: { nombre: string }) {
     escudo: 'M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6l8-3z',
     texto: 'M4 7V5h16v2M9 20h6M12 5v15',
     pulso: 'M3 12h4l3 8 4-16 3 8h4',
+    asistencia: 'M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
     personas: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8',
   };
   return (

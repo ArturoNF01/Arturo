@@ -1184,6 +1184,52 @@ create index if not exists envios_campana_estado_idx on envios_campana (campana_
 create index if not exists envios_campana_correo_idx on envios_campana (correo) where estado = 'enviado';
 
 -- ---------------------------------------------------------------------
+-- Asistencia a las sesiones
+-- ---------------------------------------------------------------------
+-- La persona escanea un QR impreso (presencial) o abre el enlace que se pega en el chat de Zoom o
+-- Meet (en línea) y su asistencia queda aquí: una fila por persona y sesión.
+--
+-- Las sesiones viven en el código (src/lib/programa.ts) y aquí sólo se guarda su clave estable
+-- ('mesa-4', 'apertura', 'miercoles-2'…), de modo que mover un horario en la agenda no deja huérfana
+-- ninguna asistencia. Nunca se borra ni se toca `registros`.
+
+-- Un código secreto por sesión y por vía. Lo que va impreso en el QR (o en el chat) es el código, no
+-- la clave de la sesión: así el QR presencial y el enlace del chat son distintos y la vía —presencial o
+-- en línea— la define el código que se usó, no lo que la persona diga. Se generan desde el panel
+-- (`asegurarCodigos`), y si uno se filtra se cambia sin tocar los demás.
+create table if not exists asistencia_codigos (
+  sesion     text not null,
+  via        text not null check (via in ('presencial', 'en_linea')),
+  codigo     text not null unique,
+  creado_en  timestamptz not null default now(),
+  primary key (sesion, via)
+);
+
+create table if not exists asistencias (
+  id                uuid primary key default gen_random_uuid(),
+  sesion            text not null,
+  via               text not null check (via in ('presencial', 'en_linea')),
+  /** De quién es: nula si no se encontró su registro («sin registro») o si el registro se dio de baja. */
+  registro_id       uuid references registros(id) on delete set null,
+  /** Cómo se la identificó: por su correo, por su nombre (único), a mano desde el panel, o no se pudo. */
+  identificado_por  text not null check (identificado_por in ('correo', 'nombre', 'conciliada', 'ninguno')),
+  /** Copia del nombre y del correo (en minúsculas), para que la fila siga diciendo quién es aunque el registro se dé de baja. */
+  nombre            text not null,
+  correo            text not null,
+  /** Lo que la persona escribió en el formulario, por si el comité tiene que conciliarla. */
+  capturado_nombre  text,
+  capturado_correo  text,
+  creada_en         timestamptz not null default now()
+);
+-- Una persona, una asistencia por sesión: escanear dos veces no duplica.
+create unique index if not exists asistencias_registro_sesion_idx
+  on asistencias (sesion, registro_id) where registro_id is not null;
+create unique index if not exists asistencias_sin_registro_idx
+  on asistencias (sesion, correo) where registro_id is null;
+create index if not exists asistencias_sesion_idx on asistencias (sesion);
+create index if not exists asistencias_registro_idx on asistencias (registro_id) where registro_id is not null;
+
+-- ---------------------------------------------------------------------
 -- Avance de los envíos, para el panel
 -- ---------------------------------------------------------------------
 drop view if exists v_recordatorios_enviados;

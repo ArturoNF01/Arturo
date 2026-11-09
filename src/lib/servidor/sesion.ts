@@ -42,6 +42,10 @@ export function alMenos(rol: RolPanel | undefined, minimo: RolPanel): boolean {
 export function permisos(rol: RolPanel | undefined) {
   return {
     verRegistros: alMenos(rol, 'lector'),
+    // La asistencia lleva nombre y correo de quien escaneó, como los registros: la ve quien ve registros.
+    // Ligar una asistencia «sin registro», quitar un escaneo o cambiar un código lo hace quien organiza.
+    verAsistencia: alMenos(rol, 'lector'),
+    gestionarAsistencia: alMenos(rol, 'organizador'),
     exportar: alMenos(rol, 'cientifico_datos'),
     consultarSql: alMenos(rol, 'cientifico_datos'),
     editarRegistros: alMenos(rol, 'organizador'),
