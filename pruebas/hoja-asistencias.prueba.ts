@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ENCABEZADOS_ASISTENCIAS, HOJA_ASISTENCIAS, filasDeAsistencias, planDeHoja,
   type FilaDeAsistencia, type FilaDeHoja,
@@ -87,7 +87,17 @@ const hoja: {
   escrituras: { range: string; valueInputOption: string; filas: Celda[][] }[];
   limpiezas: string[];
   creadaEn: number | undefined;
-} = { existe: false, encabezados: [], filas: [], indice: undefined, escrituras: [], limpiezas: [], creadaEn: undefined };
+  /** Cuántas filas tiene la cuadrícula de la pestaña, títulos incluidos (una pestaña nueva de Google trae 1,000). */
+  cuadricula: number;
+  ampliaciones: number[];
+  configurado: boolean;
+  /** Si es verdadero, Google rechaza las escrituras (un permiso quitado, la hoja borrada…). */
+  falla: string | null;
+  llamadasAGet: number;
+} = {
+  existe: false, encabezados: [], filas: [], indice: undefined, escrituras: [], limpiezas: [], creadaEn: undefined,
+  cuadricula: 1000, ampliaciones: [], configurado: true, falla: null, llamadasAGet: 0,
+};
 
 let asistencias: ReturnType<typeof una>[] = [];
 function una(sesion: string, via: 'presencial' | 'en_linea', nombre: string, correo: string) {
@@ -100,7 +110,7 @@ function una(sesion: string, via: 'presencial' | 'en_linea', nombre: string, cor
 const filaInicial = (rango: string) => Number(/!A(\d+)/.exec(rango)?.[1]);
 
 vi.mock('@/lib/servidor/google', () => ({
-  googleConfigurado: () => true,
+  googleConfigurado: () => hoja.configurado,
   clienteSheets: () => ({
     spreadsheets: {
       get: async () => ({
@@ -108,30 +118,48 @@ vi.mock('@/lib/servidor/google', () => ({
           sheets: [
             { properties: { title: 'REG_Respuestas', sheetId: 1, index: 0 } },
             { properties: { title: 'Resumen Registro', sheetId: 2, index: 1 } },
-            ...(hoja.existe ? [{ properties: { title: 'Asistencias', sheetId: 7, index: hoja.indice ?? 2 } }] : []),
+            ...(hoja.existe
+              ? [{ properties: { title: 'Asistencias', sheetId: 7, index: hoja.indice ?? 2, gridProperties: { rowCount: hoja.cuadricula } } }]
+              : []),
           ],
         },
       }),
       batchUpdate: async (p: { requestBody: { requests: Record<string, unknown>[] } }) => {
         const replies = p.requestBody.requests.map((r) => {
+          if (hoja.falla) throw new Error(hoja.falla);
           const agregar = r.addSheet as { properties: { index?: number } } | undefined;
           if (agregar) {
             hoja.existe = true;
             hoja.creadaEn = agregar.properties.index;
-            return { addSheet: { properties: { sheetId: 7 } } };
+            return { addSheet: { properties: { sheetId: 7, gridProperties: { rowCount: hoja.cuadricula } } } };
+          }
+          const ampliar = r.appendDimension as { dimension: string; length: number } | undefined;
+          if (ampliar) {
+            hoja.cuadricula += ampliar.length;
+            hoja.ampliaciones.push(ampliar.length);
           }
           return {};
         });
         return { data: { replies } };
       },
       values: {
-        get: async () => ({ data: { values: hoja.filas.map((f) => [...f]) } }),
+        get: async (p: { range: string }) => {
+          if (hoja.falla) throw new Error(hoja.falla);
+          hoja.llamadasAGet += 1;
+          // Los títulos (fila 1) y los datos (desde la 2) son lecturas distintas.
+          if (/A1:F1$/.test(p.range)) return { data: { values: hoja.encabezados.length > 0 ? [hoja.encabezados] : undefined } };
+          return { data: { values: hoja.filas.map((f) => [...f]) } };
+        },
         update: async (p: { range: string; valueInputOption: string; requestBody: { values: Celda[][] } }) => {
           if (/!A1$/.test(p.range)) {
             hoja.encabezados = p.requestBody.values[0];
             return { data: {} };
           }
+          if (hoja.falla) throw new Error(hoja.falla);
           const primera = filaInicial(p.range); // fila de Google: la 2 es la primera de datos
+          const ultima = Number(/:[A-Z](\d+)$/.exec(p.range)?.[1]);
+          // Lo que hace Google: no escribe fuera de la cuadrícula.
+          if (ultima > hoja.cuadricula) throw new Error(`Range (${p.range}) exceeds grid limits. Max rows: ${hoja.cuadricula}`);
           p.requestBody.values.forEach((valores, i) => { hoja.filas[primera - 2 + i] = valores; });
           hoja.escrituras.push({ range: p.range, valueInputOption: p.valueInputOption, filas: p.requestBody.values });
           return { data: {} };
@@ -152,12 +180,15 @@ vi.mock('@/lib/servidor/sheets', () => ({
 }));
 vi.mock('@/lib/servidor/asistencia', () => ({ todasLasAsistencias: async () => asistencias }));
 
-const { sincronizarAsistencias } = await import('@/lib/servidor/sheets-asistencia');
+const {
+  ESPERA_AUTOMATICA_MS, estadoDeLaHoja, pedirSincronizacionDeAsistencias, sincronizarAsistencias, sincronizarYAnotar,
+} = await import('@/lib/servidor/sheets-asistencia');
 
 beforeEach(() => {
   process.env.GOOGLE_SHEETS_ID = 'libro-de-prueba';
   hoja.existe = false; hoja.encabezados = []; hoja.filas = []; hoja.indice = undefined;
   hoja.escrituras = []; hoja.limpiezas = []; hoja.creadaEn = undefined;
+  hoja.cuadricula = 1000; hoja.ampliaciones = []; hoja.configurado = true; hoja.falla = null; hoja.llamadasAGet = 0;
   asistencias = [];
 });
 
@@ -264,5 +295,105 @@ describe('sincronizar la pestaña con la base', () => {
     expect(r).toMatchObject({ nuevas: 1, simulado: true });
     expect(hoja.existe).toBe(false);
     expect(hoja.escrituras).toEqual([]);
+  });
+});
+
+describe('cuando son muchas asistencias', () => {
+  it('amplía la pestaña antes de escribir: una pestaña nueva trae 1,000 filas y el Congreso pasa de ahí', async () => {
+    asistencias = Array.from({ length: 1500 }, (_, i) => una('mesa-4', 'presencial', `Persona ${i}`, `p${i}@x.org`));
+    await sincronizarAsistencias();
+    expect(hoja.filas).toHaveLength(1500);
+    expect(hoja.ampliaciones).toHaveLength(1);
+    expect(hoja.cuadricula).toBeGreaterThanOrEqual(1501);
+    expect(hoja.filas[1499][0]).toBe(1500);
+  });
+
+  it('sin ampliar la cuadrícula Google rechazaría la escritura (lo que hace el simulacro)', async () => {
+    // La prueba de que el simulacro vigila el límite: si no se ampliara, esto fallaría.
+    hoja.existe = true;
+    hoja.cuadricula = 10;
+    asistencias = Array.from({ length: 30 }, (_, i) => una('mesa-4', 'presencial', `P${i}`, `p${i}@x.org`));
+    await sincronizarAsistencias();
+    expect(hoja.filas).toHaveLength(30);
+    expect(hoja.ampliaciones.length).toBe(1);
+  });
+
+  it('una pasada siguiente no vuelve a ampliar si ya cabe', async () => {
+    asistencias = Array.from({ length: 1500 }, (_, i) => una('mesa-4', 'presencial', `P${i}`, `p${i}@x.org`));
+    await sincronizarAsistencias();
+    asistencias.push(una('mesa-1', 'presencial', 'Otra', 'otra@x.org'));
+    await sincronizarAsistencias();
+    expect(hoja.ampliaciones).toHaveLength(1);
+    expect(hoja.filas).toHaveLength(1501);
+  });
+});
+
+describe('los títulos de la pestaña', () => {
+  it('si alguien creó la pestaña a mano, o cambió los títulos, se dejan los de siempre', async () => {
+    hoja.existe = true;
+    hoja.encabezados = ['Nombre', 'Correo'];
+    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    await sincronizarAsistencias();
+    expect(hoja.encabezados).toEqual(['N.º', 'Nombre', 'Correo', 'Día', 'Mesa', 'Modalidad']);
+  });
+});
+
+describe('pasar a la hoja sin esperar al cron', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('unos segundos después del escaneo la asistencia está en la hoja, y una ráfaga hace una sola pasada', async () => {
+    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    pedirSincronizacionDeAsistencias();
+    asistencias.push(una('mesa-4', 'presencial', 'Dos', 'dos@x.org'));
+    pedirSincronizacionDeAsistencias();
+    asistencias.push(una('mesa-4', 'en_linea', 'Tres', 'tres@x.org'));
+    pedirSincronizacionDeAsistencias();
+    expect(hoja.filas).toHaveLength(0); // todavía no: se espera para juntar la ráfaga
+    await vi.advanceTimersByTimeAsync(ESPERA_AUTOMATICA_MS + 100);
+    expect(hoja.filas.map((f) => f[1])).toEqual(['Uno', 'Dos', 'Tres']);
+    expect(hoja.escrituras).toHaveLength(1);
+  });
+
+  it('anota cuándo se hizo, y si falla lo anota y no revienta a nadie: el cron lo alcanza después', async () => {
+    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    hoja.falla = 'The caller does not have permission';
+    const consola = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    pedirSincronizacionDeAsistencias();
+    await vi.advanceTimersByTimeAsync(ESPERA_AUTOMATICA_MS + 100);
+    expect(estadoDeLaHoja().error).toMatch(/permission/);
+    expect(consola).toHaveBeenCalled();
+    consola.mockRestore();
+
+    hoja.falla = null;
+    pedirSincronizacionDeAsistencias();
+    await vi.advanceTimersByTimeAsync(ESPERA_AUTOMATICA_MS + 100);
+    expect(estadoDeLaHoja().error).toBeNull();
+    expect(estadoDeLaHoja().ultimaVez).not.toBeNull();
+    expect(hoja.filas).toHaveLength(1);
+  });
+
+  it('el botón del panel dice la causa real cuando falla', async () => {
+    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    hoja.falla = 'Requested entity was not found.';
+    await expect(sincronizarYAnotar()).rejects.toThrow(/not found/);
+    expect(estadoDeLaHoja().error).toMatch(/not found/);
+  });
+
+  it('sin Google conectado (una instalación local) no hace nada ni deja nada pendiente', async () => {
+    hoja.configurado = false;
+    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    pedirSincronizacionDeAsistencias();
+    await vi.advanceTimersByTimeAsync(ESPERA_AUTOMATICA_MS * 2);
+    expect(hoja.existe).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('dos pasadas a la vez no se pisan: van una tras otra', async () => {
+    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    const [a, b] = await Promise.all([sincronizarYAnotar(), sincronizarYAnotar()]);
+    expect(a.nuevas).toBe(1);
+    expect(b.nuevas).toBe(0); // la segunda ya encontró la fila escrita por la primera
+    expect(hoja.filas).toHaveLength(1);
   });
 });

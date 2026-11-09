@@ -493,6 +493,8 @@ export const pt: Diccionario = {
       pruebaBorrada: 'Teste apagado: {n} presença(s) de teste removidas.',
       hojaAhora: 'Enviar para a planilha agora',
       hojaActualizada: 'Planilha do Google em dia: {nuevas} novas, {cambiadas} corrigidas, {quitadas} removidas.',
+      hojaError: 'Não foi possível atualizar a planilha do Google: {mensaje}. Ela tenta de novo sozinha a cada 10 minutos; também é possível tocar em «Enviar para a planilha agora».',
+      hojaAlDia: 'Planilha do Google atualizada às {hora}.',
       imprimir: 'Imprimir',
       volverAlPanel: 'Voltar ao painel',
       formatoHojas: 'Uma folha por sessão',

@@ -492,6 +492,8 @@ export const en: Diccionario = {
       pruebaBorrada: 'Test deleted: {n} test attendance(s) removed.',
       hojaAhora: 'Send to the sheet now',
       hojaActualizada: 'Google sheet up to date: {nuevas} new, {cambiadas} corrected, {quitadas} removed.',
+      hojaError: 'The Google sheet could not be updated: {mensaje}. It retries on its own every 10 minutes; you can also press “Send to the sheet now”.',
+      hojaAlDia: 'Google sheet updated at {hora}.',
       imprimir: 'Print',
       volverAlPanel: 'Back to the panel',
       formatoHojas: 'One sheet per session',

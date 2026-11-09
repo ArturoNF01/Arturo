@@ -172,9 +172,11 @@ async function principal() {
     // por bueno: la hoja se quedaba con las de antes y nadie se enteraba
     // hasta que alguien se registraba y su alta fallaba.
     await revisarLibro();
+    // Las asistencias primero y aparte: no dependen de los registros, y que algo falle al alinear éstos no debe
+    // dejarlas sin pasar.
+    await sincronizarLasAsistencias();
     await alinearConLaBase();
     await cuadrarEspejos();
-    await sincronizarLasAsistencias();
     decir('No hay nada pendiente, y la hoja tiene las columnas de ahora.');
     if (asistenciasFallaron) process.exit(1);
     return;
@@ -211,10 +213,11 @@ async function principal() {
   }
 
   decir(`Copiados ${copiados} registros a la hoja.`);
+  // Las asistencias no dependen de los registros: se pasan aunque alguno de éstos haya fallado.
+  await sincronizarLasAsistencias();
   if (fallidos.length === 0) {
     await alinearConLaBase();
     await cuadrarEspejos();
-    await sincronizarLasAsistencias();
   }
   if (fallidos.length > 0) {
     const motivos = [...new Set(fallidos.map((f) => f.motivo))];

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { huellaDePeticion } from '@/lib/servidor/antiabuso';
 import { buscarPersonaPorCorreo, registrarAsistencia } from '@/lib/servidor/asistencia';
+import { pedirSincronizacionDeAsistencias } from '@/lib/servidor/sheets-asistencia';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,8 @@ export async function POST(peticion: NextRequest) {
       correo: cuerpo.correo,
       nombre: typeof cuerpo.nombre === 'string' ? cuerpo.nombre : undefined,
     });
+    // La asistencia ya está en la base. A la hoja pasa unos segundos después, junto con las demás de esa ráfaga.
+    if (respuesta.ok && respuesta.estado === 'registrada') pedirSincronizacionDeAsistencias();
     return NextResponse.json(respuesta);
   } catch (error) {
     console.error('No se pudo registrar la asistencia:', error);

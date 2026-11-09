@@ -6,7 +6,7 @@ import {
   eliminarAsistencia, estadoDePrueba, resumenPorSesion, todasLasAsistencias,
 } from '@/lib/servidor/asistencia';
 import { googleConfigurado } from '@/lib/servidor/google';
-import { sincronizarAsistencias } from '@/lib/servidor/sheets-asistencia';
+import { estadoDeLaHoja, pedirSincronizacionDeAsistencias, sincronizarYAnotar } from '@/lib/servidor/sheets-asistencia';
 import { esUuid } from '@/lib/esquema';
 import { permisos, usuarioActual } from '@/lib/servidor/sesion';
 
@@ -25,7 +25,7 @@ export async function GET(peticion: NextRequest) {
 
   const vista = peticion.nextUrl.searchParams.get('vista') ?? 'resumen';
   try {
-    if (vista === 'resumen') return NextResponse.json({ resumen: await resumenPorSesion() });
+    if (vista === 'resumen') return NextResponse.json({ resumen: await resumenPorSesion(), hoja: estadoDeLaHoja() });
 
     if (vista === 'sesion') {
       const sesion = peticion.nextUrl.searchParams.get('sesion') ?? '';
@@ -65,21 +65,30 @@ export async function POST(peticion: NextRequest) {
         return NextResponse.json({ mensaje: 'Petición no válida.' }, { status: 422 });
       }
       const r = await conciliarAsistencia(asistenciaId, registroId);
+      if (r.ok) pedirSincronizacionDeAsistencias(); // la hoja lleva el nombre conciliado
       return r.ok ? NextResponse.json(r) : NextResponse.json({ mensaje: r.mensaje }, { status: 409 });
     }
 
     if (accion === 'quitar') {
       const id = String(cuerpo?.id ?? '');
       if (!esUuid(id)) return NextResponse.json({ mensaje: 'Petición no válida.' }, { status: 422 });
-      return (await eliminarAsistencia(id))
-        ? NextResponse.json({ ok: true })
-        : NextResponse.json({ mensaje: 'Esa asistencia ya no existe.' }, { status: 404 });
+      if (!(await eliminarAsistencia(id))) return NextResponse.json({ mensaje: 'Esa asistencia ya no existe.' }, { status: 404 });
+      pedirSincronizacionDeAsistencias();
+      return NextResponse.json({ ok: true });
     }
 
     // La sesión de prueba: para ver cómo se captura antes del Congreso. No cuenta para nadie y se borra con un clic.
     if (accion === 'activar_prueba') return NextResponse.json({ prueba: await activarPrueba(urlSitio()) });
     if (accion === 'borrar_prueba') {
       const borradas = await borrarPrueba();
+      // Se quitan de la hoja las filas de prueba ahora mismo, y con `forzar`: la base acaba de cambiar a propósito
+      // —si la prueba era lo único que había, la hoja se queda vacía—, y las guardas de la sincronización (que
+      // existen por si alguien restaura un respaldo viejo) se saltarían por tratarse de una base «vacía».
+      if (googleConfigurado() && process.env.GOOGLE_SHEETS_ID) {
+        await sincronizarYAnotar({ forzar: true }).catch((error) => {
+          console.error('No se pudieron quitar de la hoja las filas de prueba:', error);
+        });
+      }
       return NextResponse.json({ borradas, prueba: await estadoDePrueba(urlSitio()) });
     }
 
@@ -88,7 +97,14 @@ export async function POST(peticion: NextRequest) {
       if (!googleConfigurado() || !process.env.GOOGLE_SHEETS_ID) {
         return NextResponse.json({ mensaje: 'Google Sheets no está configurado.' }, { status: 503 });
       }
-      return NextResponse.json({ hoja: await sincronizarAsistencias() });
+      try {
+        return NextResponse.json({ hoja: await sincronizarYAnotar() });
+      } catch (error) {
+        // Aquí sí se dice la causa de verdad —permiso, cuota, hoja borrada—: quien pulsa el botón es quien puede arreglarla.
+        console.error('No se pudo pasar la asistencia a la hoja:', error);
+        const motivo = error instanceof Error ? error.message : String(error);
+        return NextResponse.json({ mensaje: `No se pudo escribir en la hoja de Google: ${motivo}` }, { status: 502 });
+      }
     }
 
     if (accion === 'cambiar_codigo') {

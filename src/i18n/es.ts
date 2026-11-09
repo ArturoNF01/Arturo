@@ -560,6 +560,8 @@ export const es = {
       pruebaBorrada: 'Prueba borrada: {n} asistencia(s) de prueba quitadas.',
       hojaAhora: 'Pasar a la hoja ahora',
       hojaActualizada: 'Hoja de Google al día: {nuevas} nuevas, {cambiadas} corregidas, {quitadas} quitadas.',
+      hojaError: 'La hoja de Google no se pudo actualizar: {mensaje}. Se reintenta sola cada 10 minutos; también puede pulsar «Pasar a la hoja ahora».',
+      hojaAlDia: 'Hoja de Google actualizada a las {hora}.',
       imprimir: 'Imprimir',
       volverAlPanel: 'Volver al panel',
       formatoHojas: 'Una hoja por sesión',

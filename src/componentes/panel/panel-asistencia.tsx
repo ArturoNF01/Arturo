@@ -81,6 +81,8 @@ export function PanelAsistencia({
   const [codigos, setCodigos] = useState(codigosIniciales);
   const [prueba, setPrueba] = useState(pruebaInicial);
   const [trabajando, setTrabajando] = useState(false);
+  /** Cómo le fue a la última pasada a la hoja de Google desde el servidor del sitio. */
+  const [hoja, setHoja] = useState<{ ultimaVez: string | null; error: string | null } | null>(null);
   const abiertaRef = useRef(abierta);
   useEffect(() => { abiertaRef.current = abierta; }, [abierta]);
 
@@ -94,8 +96,8 @@ export function PanelAsistencia({
   );
 
   const cargarResumen = useCallback(async () => {
-    const r = await pedir<{ resumen: Record<string, ResumenDeSesion> }>('/api/asistencia/panel?vista=resumen');
-    if (r.ok && r.datos) { setResumen(r.datos.resumen); marcarActualizado(); setError(''); } else setError(a.error);
+    const r = await pedir<{ resumen: Record<string, ResumenDeSesion>; hoja: { ultimaVez: string | null; error: string | null } }>('/api/asistencia/panel?vista=resumen');
+    if (r.ok && r.datos) { setResumen(r.datos.resumen); setHoja(r.datos.hoja); marcarActualizado(); setError(''); } else setError(a.error);
   }, [a.error, marcarActualizado]);
 
   const cargarSesion = useCallback(async (clave: string) => {
@@ -119,6 +121,13 @@ export function PanelAsistencia({
     }, REFRESCO_MS);
     return () => clearInterval(id);
   }, [cargarResumen, cargarSesion]);
+
+  // Al abrir la pantalla también se pregunta cómo va la hoja de Google, no sólo cuando pasan los 30 segundos.
+  useEffect(() => {
+    // La respuesta llega después de pintar: no se actualiza nada de forma síncrona.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void cargarResumen();
+  }, [cargarResumen]);
 
   useEffect(() => {
     // Carga perezosa: la vista por persona pesa más y sólo se pide al abrirla.
@@ -235,6 +244,12 @@ export function PanelAsistencia({
       </div>
 
       {error && <p className="text-sm text-red-500" role="alert">{error}</p>}
+      {puedeGestionar && hoja?.error && (
+        <p className="rounded-lg bg-amber-500/10 p-3 text-sm" role="status">{interpolar(a.hojaError, { mensaje: hoja.error })}</p>
+      )}
+      {puedeGestionar && !hoja?.error && hoja?.ultimaVez && (
+        <p className="text-xs tenue">{interpolar(a.hojaAlDia, { hora: hora(hoja.ultimaVez) })}</p>
+      )}
       {aviso && <p className="rounded-lg bg-green-500/10 p-3 text-sm" role="status">{aviso}</p>}
 
       {pestana === 'sesiones' && (
