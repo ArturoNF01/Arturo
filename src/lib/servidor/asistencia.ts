@@ -74,6 +74,20 @@ export async function asegurarCodigos(): Promise<CodigosPorSesion> {
   return salida;
 }
 
+/**
+ * Los códigos que ya existen, sin crear ninguno: lo que ve quien sólo puede mirar. Si nadie que organice ha
+ * abierto todavía la pantalla, no hay códigos y se devuelve vacío (crearlos es de `asegurarCodigos`).
+ */
+export async function leerCodigos(): Promise<CodigosPorSesion> {
+  const todos = await consultar<{ sesion: string; via: ViaAsistencia; codigo: string }>(
+    'select sesion, via, codigo from asistencia_codigos where sesion <> $1',
+    [CLAVE_DE_PRUEBA],
+  );
+  const salida: CodigosPorSesion = {};
+  for (const c of todos) (salida[c.sesion] ??= {} as Record<ViaAsistencia, string>)[c.via] = c.codigo;
+  return salida;
+}
+
 /** Cambia el código de una sesión y vía —por si se filtró—. El anterior deja de funcionar al instante. */
 export async function cambiarCodigo(sesion: string, via: ViaAsistencia): Promise<string | null> {
   if (!sesionPorClave(sesion)) return null;

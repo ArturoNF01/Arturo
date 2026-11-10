@@ -10,12 +10,12 @@ const HORA = new Intl.DateTimeFormat('es-MX', {
 });
 
 /**
- * La asistencia en CSV, de toda una jornada completa o de una sesión (`?sesion=mesa-4`). Se exporta con el
- * mismo permiso que los registros: lleva nombre y correo.
+ * La asistencia en CSV, completa o de una sesión (`?sesion=mesa-4`). Lleva nombre y correo, y la descarga quien
+ * la ve en el panel (desde el rol de lector). La exportación de los registros es otra, con su propio permiso.
  */
 export async function GET(peticion: NextRequest) {
   const usuario = await usuarioActual();
-  if (!usuario || !permisos(usuario.rol).exportar) {
+  if (!usuario || !permisos(usuario.rol).exportarAsistencia) {
     return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
   }
 

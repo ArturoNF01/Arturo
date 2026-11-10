@@ -208,11 +208,15 @@ async function principal() {
   // 12. Asistencia con QR
   const {
     asegurarCodigos, cambiarCodigo, resolverCodigo, registrarAsistencia, resumenPorSesion, asistentesDeSesion,
-    conciliarAsistencia, buscarRegistros, todasLasAsistencias, eliminarAsistencia,
+    conciliarAsistencia, buscarRegistros, todasLasAsistencias, eliminarAsistencia, leerCodigos,
   } = await import('../../src/lib/servidor/asistencia');
   const { SESIONES_DE_ASISTENCIA } = await import('../../src/lib/asistencia');
 
+  // Quien sólo puede mirar (el lector) lee los códigos que hay y no crea ninguno.
+  comprobar(Object.keys(await leerCodigos()).length === 0 && (await consultar('select 1 from asistencia_codigos')).length === 0,
+    'códigos: leerlos sin que existan no crea nada');
   const codigos = await asegurarCodigos();
+  comprobar(JSON.stringify(await leerCodigos()) === JSON.stringify(codigos), 'códigos: leerlos devuelve los mismos que creó quien organiza');
   const todosLosCodigos = Object.values(codigos).flatMap((c) => [c.presencial, c.en_linea]);
   comprobar(
     Object.keys(codigos).length === SESIONES_DE_ASISTENCIA.length && todosLosCodigos.length === SESIONES_DE_ASISTENCIA.length * 2,
@@ -334,6 +338,7 @@ async function principal() {
     'prueba: al activarla hay QR y dos enlaces', prueba);
   comprobar(JSON.stringify((await activarPrueba(BASE)).presencial) === JSON.stringify(prueba.presencial), 'prueba: activarla otra vez no cambia los códigos');
   comprobar(!('prueba' in (await asegurarCodigos())), 'prueba: sus códigos no se mezclan con los de la agenda');
+  comprobar(!('prueba' in (await leerCodigos())), 'códigos: quien sólo mira tampoco ve los de la prueba');
 
   const codigoDePrueba = prueba.presencial!.split('/a/')[1];
   const DESPUES = new Date('2030-01-01T00:00:00Z'); // una fecha en la que ninguna sesión real está abierta

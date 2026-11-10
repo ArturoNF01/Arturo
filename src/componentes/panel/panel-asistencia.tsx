@@ -220,7 +220,7 @@ export function PanelAsistencia({
       </div>
 
       <div className="flex flex-wrap items-center gap-2" role="tablist">
-        {([['sesiones', a.pestanaSesiones], ['personas', a.pestanaPersonas], ...(puedeGestionar ? [['codigos', a.pestanaCodigos]] : [])] as [Pestana, string][]).map(([clave, texto]) => (
+        {([['sesiones', a.pestanaSesiones], ['personas', a.pestanaPersonas], ...(codigos !== null ? [['codigos', a.pestanaCodigos]] : [])] as [Pestana, string][]).map(([clave, texto]) => (
           <button
             key={clave}
             type="button"
@@ -357,21 +357,26 @@ export function PanelAsistencia({
         </section>
       )}
 
-      {pestana === 'codigos' && puedeGestionar && codigos && (
+      {pestana === 'codigos' && codigos && (
         <section className="space-y-4" aria-label={a.pestanaCodigos}>
-          <TarjetaDePrueba
-            prueba={prueba}
-            trabajando={trabajando}
-            alActivar={() => void activarPrueba()}
-            alBorrar={() => void borrarPrueba()}
-            alFallar={(m) => setError(m)}
-          />
+          {/* La prueba, imprimir y cambiar códigos son de quien organiza: quien sólo lee ve los códigos y los copia. */}
+          {puedeGestionar && (
+            <TarjetaDePrueba
+              prueba={prueba}
+              trabajando={trabajando}
+              alActivar={() => void activarPrueba()}
+              alBorrar={() => void borrarPrueba()}
+              alFallar={(m) => setError(m)}
+            />
+          )}
           <div className="tarjeta p-4">
             <p className="text-sm">{a.codigosAyuda}</p>
-            <div className="mt-3 flex flex-wrap gap-3">
-              <a className="boton-primario !py-2 !text-sm" href="/asistencia-qr?formato=hojas" target="_blank" rel="noreferrer">{a.imprimirHojas}</a>
-              <a className="boton-secundario !py-2 !text-sm" href="/asistencia-qr?formato=tira" target="_blank" rel="noreferrer">{a.imprimirTira}</a>
-            </div>
+            {puedeGestionar && (
+              <div className="mt-3 flex flex-wrap gap-3">
+                <a className="boton-primario !py-2 !text-sm" href="/asistencia-qr?formato=hojas" target="_blank" rel="noreferrer">{a.imprimirHojas}</a>
+                <a className="boton-secundario !py-2 !text-sm" href="/asistencia-qr?formato=tira" target="_blank" rel="noreferrer">{a.imprimirTira}</a>
+              </div>
+            )}
           </div>
 
           {dias.map((d) => (
@@ -388,6 +393,7 @@ export function PanelAsistencia({
                       codigos={c}
                       qr={qrs[s.clave]}
                       urlBase={urlBase}
+                      puedeCambiar={puedeGestionar}
                       vale={interpolar(a.vale, { abre: hora(s.abre), cierra: hora(s.cierra) })}
                       alCambiar={(via, codigo) => {
                         setCodigos((previos) => previos && ({ ...previos, [s.clave]: { ...previos[s.clave], [via]: codigo } }));
@@ -609,13 +615,14 @@ function TablaDePersonas({
 // ---------------------------------------------------------------------------
 
 function FilaDeCodigos({
-  sesion, codigos, qr, urlBase, vale, alCambiar, alFallar,
+  sesion, codigos, qr, urlBase, vale, puedeCambiar, alCambiar, alFallar,
 }: {
   sesion: SesionPlana;
   codigos: Record<ViaAsistencia, string>;
   qr: string | undefined;
   urlBase: string;
   vale: string;
+  puedeCambiar: boolean;
   alCambiar: (via: ViaAsistencia, codigo: string) => void;
   alFallar: (mensaje: string) => void;
 }) {
@@ -673,8 +680,12 @@ function FilaDeCodigos({
           <button type="button" className="boton-secundario !px-2.5 !py-1 !text-xs" onClick={() => void copiar(mensaje, 'mensaje')}>
             {copiado === 'mensaje' ? a.copiado : a.copiarMensaje}
           </button>
-          <button type="button" className="text-xs underline" onClick={() => void cambiar('presencial')}>{a.cambiarCodigo} ({a.qrPresencial})</button>
-          <button type="button" className="text-xs underline" onClick={() => void cambiar('en_linea')}>{a.cambiarCodigo} ({a.colEnLinea})</button>
+          {puedeCambiar && (
+            <>
+              <button type="button" className="text-xs underline" onClick={() => void cambiar('presencial')}>{a.cambiarCodigo} ({a.qrPresencial})</button>
+              <button type="button" className="text-xs underline" onClick={() => void cambiar('en_linea')}>{a.cambiarCodigo} ({a.colEnLinea})</button>
+            </>
+          )}
         </div>
       </div>
     </div>

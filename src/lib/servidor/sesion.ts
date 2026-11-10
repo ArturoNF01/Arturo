@@ -45,6 +45,11 @@ export function permisos(rol: RolPanel | undefined) {
     // La asistencia lleva nombre y correo de quien escaneó, como los registros: la ve quien ve registros.
     // Ligar una asistencia «sin registro», quitar un escaneo o cambiar un código lo hace quien organiza.
     verAsistencia: alMenos(rol, 'lector'),
+    // También el lector ve los códigos (los QR y los enlaces del chat) y descarga la lista de asistencia en CSV:
+    // lo pidió el comité para que quien da seguimiento pueda pasar los enlaces a los moderadores y llevarse la lista.
+    // Cambiar un código, imprimir, activar la prueba o tocar una asistencia sigue siendo de quien organiza.
+    verCodigosAsistencia: alMenos(rol, 'lector'),
+    exportarAsistencia: alMenos(rol, 'lector'),
     gestionarAsistencia: alMenos(rol, 'organizador'),
     exportar: alMenos(rol, 'cientifico_datos'),
     consultarSql: alMenos(rol, 'cientifico_datos'),

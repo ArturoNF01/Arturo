@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import { urlSitio } from '@/lib/config';
 import { DIAS_DE_ASISTENCIA, SESIONES_DE_ASISTENCIA, ventanaDe } from '@/lib/asistencia';
-import { asegurarCodigos, estadoDePrueba, resumenPorSesion, type CodigosPorSesion } from '@/lib/servidor/asistencia';
+import { asegurarCodigos, estadoDePrueba, leerCodigos, resumenPorSesion, type CodigosPorSesion } from '@/lib/servidor/asistencia';
 import { exigirUsuario, permisos } from '@/lib/servidor/sesion';
 import { PanelAsistencia, type SesionPlana } from '@/componentes/panel/panel-asistencia';
 
@@ -22,11 +22,12 @@ export default async function PaginaAsistencia() {
 
   const resumen = await resumenPorSesion().catch(() => ({}));
 
-  // Los códigos sólo los ve —y los genera— quien organiza: con ellos se registra asistencia.
+  // Los códigos los genera quien organiza; el lector sólo ve los que ya existen. Con ellos se registra asistencia,
+  // así que sólo los ve quien tiene permiso (el rol de lector en adelante, no la gente que entra al sitio).
   let codigos: CodigosPorSesion | null = null;
   const qrs: Record<string, string> = {};
-  if (p.gestionarAsistencia) {
-    codigos = await asegurarCodigos().catch(() => null);
+  if (p.verCodigosAsistencia) {
+    codigos = await (p.gestionarAsistencia ? asegurarCodigos() : leerCodigos()).catch(() => null);
     if (codigos) {
       for (const [sesion, c] of Object.entries(codigos)) {
         qrs[sesion] = await QRCode.toString(`${base}/a/${c.presencial}`, {
@@ -44,7 +45,7 @@ export default async function PaginaAsistencia() {
       sesiones={sesiones}
       dias={DIAS_DE_ASISTENCIA.map((d) => ({ iso: d.iso, texto: d.texto }))}
       resumenInicial={resumen}
-      puedeExportar={p.exportar}
+      puedeExportar={p.exportarAsistencia}
       puedeGestionar={p.gestionarAsistencia}
       codigos={codigos}
       qrs={qrs}
