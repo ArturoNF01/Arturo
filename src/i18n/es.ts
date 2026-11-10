@@ -545,6 +545,7 @@ export const es = {
       vale: 'Vale de {abre} a {cierra} (hora de la Ciudad de México)',
       imprimirHojas: 'Imprimir hojas de QR (una por día)',
       imprimirTira: 'Imprimir tira de QR para el programa',
+      pantallaRecepcion: 'Abrir la pantalla de recepción (/qr)',
       cambiarCodigo: 'Cambiar código',
       confirmarCambio: 'El código actual dejará de funcionar y el QR que ya esté impreso quedará inservible. ¿Continuar?',
       codigoCambiado: 'Código cambiado. Imprima de nuevo el QR de esta sesión.',

@@ -477,6 +477,7 @@ export const en: Diccionario = {
       vale: 'Valid from {abre} to {cierra} (Mexico City time)',
       imprimirHojas: 'Print QR sheets (one per day)',
       imprimirTira: 'Print QR strip for the programme',
+      pantallaRecepcion: 'Open the reception screen (/qr)',
       cambiarCodigo: 'Change code',
       confirmarCambio: 'The current code will stop working and any QR already printed will be useless. Continue?',
       codigoCambiado: 'Code changed. Print this session’s QR again.',

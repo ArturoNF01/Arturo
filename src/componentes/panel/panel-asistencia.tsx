@@ -349,6 +349,7 @@ export function PanelAsistencia({
               <div className="mt-3 flex flex-wrap gap-3">
                 <a className="boton-primario !py-2 !text-sm" href="/asistencia-qr?formato=hojas" target="_blank" rel="noreferrer">{a.imprimirHojas}</a>
                 <a className="boton-secundario !py-2 !text-sm" href="/asistencia-qr?formato=tira" target="_blank" rel="noreferrer">{a.imprimirTira}</a>
+                <a className="boton-secundario !py-2 !text-sm" href="/qr" target="_blank" rel="noreferrer">{a.pantallaRecepcion}</a>
               </div>
             )}
           </div>

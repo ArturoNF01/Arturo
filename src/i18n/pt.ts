@@ -478,6 +478,7 @@ export const pt: Diccionario = {
       vale: 'Vale de {abre} a {cierra} (horário da Cidade do México)',
       imprimirHojas: 'Imprimir folhas de QR (uma por dia)',
       imprimirTira: 'Imprimir tira de QR para o programa',
+      pantallaRecepcion: 'Abrir a tela da recepção (/qr)',
       cambiarCodigo: 'Trocar código',
       confirmarCambio: 'O código atual deixará de funcionar e o QR já impresso ficará inútil. Continuar?',
       codigoCambiado: 'Código trocado. Imprima novamente o QR desta sessão.',

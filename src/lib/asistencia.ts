@@ -13,7 +13,7 @@
  * la agenda no deja huérfana ninguna asistencia ya registrada.
  */
 import type { Idioma } from '@/i18n';
-import { HUSO_CONGRESO } from '@/lib/fechas';
+import { HUSO_CONGRESO, diaEnMexico } from '@/lib/fechas';
 import { PROGRAMA, SALAS, type ClaveSala, type TipoSesion } from '@/lib/programa';
 
 type Texto = Record<Idioma, string>;
@@ -172,6 +172,31 @@ export function esSesionDePrueba(clave: string): boolean {
 
 export function sesionPorClave(clave: string): SesionDeAsistencia | undefined {
   return esSesionDePrueba(clave) ? SESION_DE_PRUEBA : SESIONES_DE_ASISTENCIA.find((s) => s.clave === clave);
+}
+
+/**
+ * La jornada que toca mostrar en la pantalla de recepción (`/qr`): la de hoy, contado el día en hora de México. Es el
+ * día entero, no la ventana del código: el QR de un día se queda en pantalla hasta que cambia la fecha, y lo que cambia
+ * con la hora es el aviso de si ya abrió o ya cerró (`estadoDeVentana`).
+ *
+ * Fuera de los días del Congreso la pantalla no se queda vacía: antes del primero enseña el primero («próximo») y
+ * después del último enseña el último («terminó»). En ambos casos el código está fuera de ventana, así que escanearlo
+ * sólo dice que no está abierto.
+ */
+export type RelacionConHoy = 'hoy' | 'proximo' | 'termino';
+
+export function jornadaDeHoy(
+  ahora: Date = new Date(),
+  sesiones: readonly SesionDeAsistencia[] = SESIONES_DE_ASISTENCIA,
+): { sesion: SesionDeAsistencia; relacion: RelacionConHoy } | null {
+  if (sesiones.length === 0) return null;
+  const orden = [...sesiones].sort((a, b) => a.dia.localeCompare(b.dia));
+  const hoy = diaEnMexico(ahora);
+  const deHoy = orden.find((s) => s.dia === hoy);
+  if (deHoy) return { sesion: deHoy, relacion: 'hoy' };
+  const siguiente = orden.find((s) => s.dia > hoy);
+  if (siguiente) return { sesion: siguiente, relacion: 'proximo' };
+  return { sesion: orden[orden.length - 1], relacion: 'termino' };
 }
 
 /** Las sesiones de un día, en orden de horario (las simultáneas, por número de mesa). */

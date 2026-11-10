@@ -3,7 +3,7 @@ import {
   ALFABETO_DE_CODIGOS, CLAVE_DE_PRUEBA, DIAS_DE_ASISTENCIA, SESION_DE_PRUEBA, esSesionDePrueba, filasDeAsistencias, aCsv, agruparPorPersona, type FilaDeAsistencia, LARGO_DE_CODIGO, MINUTOS_ANTES, MINUTOS_DESPUES, SESIONES_DE_ASISTENCIA,
   correoValido, decidirIdentidad, diaDeClave, elegirRegistroPorNombre, esCodigoPosible, estadoDeVentana,
   etiquetaDeClave, huellaDeNombre, instanteEnMexico, nombreDePila, normalizarTexto, sesionPorClave, sesionesDelDia,
-  ventanaDe,
+  jornadaDeHoy, ventanaDe,
 } from '@/lib/asistencia';
 import { PROGRAMA } from '@/lib/programa';
 
@@ -267,5 +267,31 @@ describe('la sesión de prueba', () => {
     expect(personas[0].total).toBe(1);
     // Quien sólo hizo la prueba no aparece.
     expect(agruparPorPersona([f('3', 'prueba')])).toEqual([]);
+  });
+});
+
+describe('la jornada que enseña la pantalla de recepción', () => {
+  const a = (iso: string) => jornadaDeHoy(new Date(iso));
+
+  it('cada día del Congreso enseña el suyo, a cualquier hora de México', () => {
+    // 12:00 UTC del 12 es 06:00 en México; 05:59 UTC del 13 sigue siendo el 12 (23:59 en México).
+    expect(a('2026-11-11T14:00:00Z')).toMatchObject({ relacion: 'hoy', sesion: { clave: 'miercoles' } });
+    expect(a('2026-11-12T12:00:00Z')).toMatchObject({ relacion: 'hoy', sesion: { clave: 'jueves' } });
+    expect(a('2026-11-13T05:59:00Z')).toMatchObject({ relacion: 'hoy', sesion: { clave: 'jueves' } });
+    expect(a('2026-11-13T06:01:00Z')).toMatchObject({ relacion: 'hoy', sesion: { clave: 'viernes' } });
+  });
+
+  it('el día cambia con la fecha de México, no con la de Greenwich', () => {
+    // 03:00 UTC del 12 son las 21:00 del 11 en México: todavía es miércoles.
+    expect(a('2026-11-12T03:00:00Z')?.sesion.clave).toBe('miercoles');
+  });
+
+  it('antes del Congreso enseña el primer día, y después, el último', () => {
+    expect(a('2026-11-10T18:00:00Z')).toMatchObject({ relacion: 'proximo', sesion: { clave: 'miercoles' } });
+    expect(a('2026-11-14T18:00:00Z')).toMatchObject({ relacion: 'termino', sesion: { clave: 'viernes' } });
+  });
+
+  it('sin jornadas no hay nada que enseñar', () => {
+    expect(jornadaDeHoy(new Date(), [])).toBeNull();
   });
 });
