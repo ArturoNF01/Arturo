@@ -10,6 +10,7 @@
  * Escribe y borra en la base contra la que apunte DATABASE_URL: no usar con
  * la base de producción.
  */
+import { readFileSync } from 'node:fs';
 import { consultar, conActor, unaFila, enSoloLectura, armarInsercion } from '../../src/lib/bd/conexion';
 import { cifrarClave, claveCoincide } from '../../src/lib/bd/claves';
 
@@ -494,6 +495,21 @@ async function principal() {
   await consultar(`delete from campanas_correo where clave = 'comunicado' and (audiencia = 'automatico' or creada_por = $1)`, [usuario!.id]);
   await consultar(`delete from registros where correo like 'auto.%@example.org'`);
   ok('limpieza del comunicado automático');
+
+  // 14. Aforo presencial: la migración lo pone en 100 una vez y después manda el panel
+  const migracionSql = readFileSync('basedatos/actualizar-convocatoria.sql', 'utf8');
+  const cupo = async () => Number((await unaFila<{ valor: number }>(
+    `select valor from configuracion where clave = 'cupos_presenciales'`))!.valor);
+  await consultar(`delete from configuracion where clave = 'migracion_cupo_presencial_100'`);
+  await consultar(`update configuracion set valor = '120'::jsonb where clave = 'cupos_presenciales'`);
+  await consultar(migracionSql);
+  comprobar((await cupo()) === 100, 'aforo: la migración lo deja en 100', await cupo());
+  comprobar(
+    Boolean(await unaFila(`select 1 from configuracion where clave = 'migracion_cupo_presencial_100'`)),
+    'aforo: deja su marca de migración aplicada');
+  await consultar(`update configuracion set valor = '130'::jsonb where clave = 'cupos_presenciales'`);
+  await consultar(migracionSql);
+  comprobar((await cupo()) === 130, 'aforo: un segundo despliegue no pisa lo que el panel cambió', await cupo());
 
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);

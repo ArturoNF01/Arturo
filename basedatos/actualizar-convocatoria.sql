@@ -246,19 +246,26 @@ update aviso_privacidad
 -- como un borrador. La casilla sigue en el panel para cuando haga falta.
 update faqs set provisional = false where provisional;
 
--- El aforo presencial sube de 60 a 100, y de ahí a 120.
+-- El aforo presencial queda en 100 personas.
 --
--- Con condición, y no como estaba. Esto corre en cada despliegue, y mientras
--- fue una orden sin condición el número del panel era decorativo: el comité lo
--- cambiaba, el despliegue siguiente lo devolvía a 60 y nadie ataba una cosa
--- con la otra. Así se aplica una sola vez —desde el valor que había— y a
--- partir de ahí manda el panel, que es donde se decide un aforo.
-update configuracion set valor = '100'::jsonb
- where clave = 'cupos_presenciales' and valor = '60'::jsonb;
+-- Se aplica UNA sola vez, y por eso lleva una marca: esto corre en cada despliegue, y mientras
+-- fueron órdenes con condición sobre el valor anterior (60 → 100 → 120) un 100 puesto aquí se
+-- habría devuelto a 120 en el siguiente. Con la marca, el comité pidió 100 y se escribe 100 una
+-- vez; si luego lo cambia desde Cupos y configuración, manda el panel y nada lo vuelve a tocar.
+-- Quien ya esté inscrito por encima de 100 no se mueve: sólo las altas nuevas van a la lista de
+-- espera. La marca es una fila más de `configuracion` que ninguna pantalla enseña; no hay que
+-- borrarla.
+do $cupo$
+begin
+  if not exists (select 1 from configuracion where clave = 'migracion_cupo_presencial_100') then
+    update configuracion set valor = '100'::jsonb where clave = 'cupos_presenciales';
 
--- Y de 100 a 120, con la misma condición: sólo si sigue en 100.
-update configuracion set valor = '120'::jsonb
- where clave = 'cupos_presenciales' and valor = '100'::jsonb;
+    insert into configuracion (clave, valor, descripcion)
+    values ('migracion_cupo_presencial_100', 'true'::jsonb,
+            'Marca interna de una migración ya aplicada: el aforo presencial quedó en 100. No borrar.');
+  end if;
+end
+$cupo$;
 
 -- Las preguntas frecuentes que hablaban de la agenda como algo por publicar.
 --

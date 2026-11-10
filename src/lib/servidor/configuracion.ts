@@ -27,7 +27,7 @@ const RESPALDO: ConfiguracionPublica = {
   // El aforo de la sede. Este respaldo sólo se usa si la base no responde:
   // conviene que sea el de verdad y no uno generoso, porque de lo contrario
   // una caída de la base abre lugares que no existen.
-  cupos_presenciales: 120,
+  cupos_presenciales: 100,
   cupos_en_linea: null,
   registro_abierto: true,
   // El programa se enseña sólo cuando el comité dice que está listo: el
