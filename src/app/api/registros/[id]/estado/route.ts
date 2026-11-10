@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { z } from 'zod';
 import { conActor, consultar, unaFila } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { esUuid } from '@/lib/esquema';
 import { leerConfiguracion, lugaresPresencialesRestantes } from '@/lib/servidor/configuracion';
 import { enviarCorreoRegistro, type ClavePlantilla } from '@/lib/servidor/correo';
+import { enviarComunicadoTrasConfirmacion } from '@/lib/servidor/comunicado-automatico';
 import { ESTADOS, evaluarCambio, plantillaDeEstado, type EstadoRegistro } from '@/lib/estados';
 
 export const dynamic = 'force-dynamic';
@@ -79,6 +80,15 @@ export async function PATCH(peticion: NextRequest, contexto: { params: Promise<{
     });
     if (correo.enviado) {
       await consultar('update registros set correo_enviado_en = now() where id = $1', [id]);
+      // Quien se confirma desde el panel (por ejemplo, al salir de la lista de espera) recibe tras su correo de
+      // confirmación el comunicado, si no lo había recibido ya.
+      if (plantilla === 'registro_confirmado') {
+        after(() =>
+          enviarComunicadoTrasConfirmacion(registro, configuracion).catch((error) => {
+            console.error('El comunicado automático falló:', error);
+          }),
+        );
+      }
     }
   }
 

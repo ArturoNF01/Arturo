@@ -377,6 +377,116 @@ async function principal() {
   await consultar(`delete from registros where correo like 'asis.%@example.org'`);
   ok('limpieza de la asistencia');
 
+  // 13. Comunicado automático tras el correo de confirmación
+  const {
+    comunicadoAutomaticoActivo, enviarComunicadoTrasConfirmacion, estadoDelComunicadoAutomatico, fijarComunicadoAutomatico,
+  } = await import('../../src/lib/servidor/comunicado-automatico');
+
+  const configuracionDePrueba = {
+    correo_contacto: 'congreso@ciess.org', fecha_limite_registro: '', url_agenda: 'https://ejemplo.org/agenda',
+    url_agenda_pt: '', url_agenda_en: '', programa_publicado: true, url_sesion_zoom: '',
+  } as never;
+  const mandadosAuto: { correo: string; clave: string; idioma: string }[] = [];
+  let respuestaDelEnvio: { enviado: boolean; error?: string } | 'revienta' = { enviado: true };
+  const enviarDePrueba = (async (datos: { clave: string; registro: Record<string, unknown> }) => {
+    await new Promise((seguir) => setTimeout(seguir, 20)); // lo que tarda Resend: deja que se crucen dos llamadas a la vez
+    if (respuestaDelEnvio === 'revienta') throw new Error('Se cayó la conexión');
+    if (respuestaDelEnvio.enviado) mandadosAuto.push({ correo: String(datos.registro.correo), clave: datos.clave, idioma: String(datos.registro.idioma) });
+    return respuestaDelEnvio;
+  }) as never;
+
+  const altasAuto: [string, string, string][] = [
+    ['auto.uno@example.org', 'confirmado', 'es'],
+    ['auto.dos@example.org', 'en_proceso', 'en'],
+    ['auto.espera@example.org', 'lista_espera', 'es'],
+    ['auto.cancelado@example.org', 'cancelado', 'es'],
+    ['auto.ya@example.org', 'confirmado', 'pt'],
+    ['auto.falla@example.org', 'confirmado', 'es'],
+    ['auto.carrera@example.org', 'confirmado', 'es'],
+  ];
+  for (const [correo, estado, idioma] of altasAuto) {
+    const a = armarInsercion({
+      perfil: 'publico_general', grupo: 'externo', modalidad: 'presencial', idioma, nombres: 'Auto', apellidos: correo.split('@')[0],
+      correo, institucion: 'CIESS', pais_residencia: 'México', estado, consentimiento_datos: true,
+    });
+    await consultar(`insert into registros (${a.columnas}) values (${a.marcadores})`, a.valores);
+  }
+  const registroDe = async (correo: string) => (await unaFila<Record<string, unknown>>('select * from registros where correo = $1', [correo]))!;
+  const enviarAuto = async (correo: string) => enviarComunicadoTrasConfirmacion(await registroDe(correo), configuracionDePrueba, { enviar: enviarDePrueba });
+
+  comprobar(await comunicadoAutomaticoActivo(), 'automático: viene encendido (así se pidió)');
+
+  comprobar((await enviarAuto('auto.uno@example.org')) === 'enviado' && mandadosAuto.length === 1 && mandadosAuto[0].clave === 'comunicado',
+    'automático: a un registro nuevo se le manda el comunicado', mandadosAuto);
+  const cuenta = await unaFila<{ estado: string; audiencia: string; total: number }>(
+    `select e.estado, c.audiencia, c.total from envios_campana e join campanas_correo c on c.id = e.campana_id where e.correo = 'auto.uno@example.org'`);
+  comprobar(cuenta?.estado === 'enviado' && cuenta.audiencia === 'automatico' && Number(cuenta.total) === 1,
+    'automático: queda asentado en la campaña automática', cuenta);
+  comprobar((await enviarAuto('auto.uno@example.org')) === 'omitido' && mandadosAuto.length === 1,
+    'automático: a la misma persona no se lo manda dos veces (un reintento de acuses, un doble envío)');
+
+  comprobar((await enviarAuto('auto.dos@example.org')) === 'enviado' && mandadosAuto[1].idioma === 'en',
+    'automático: sale en el idioma del registro');
+  comprobar((await enviarAuto('auto.espera@example.org')) === 'omitido' && (await enviarAuto('auto.cancelado@example.org')) === 'omitido' && mandadosAuto.length === 2,
+    'automático: no a quien está en lista de espera ni a quien canceló');
+
+  // Quien ya lo recibió por un envío masivo no lo recibe otra vez.
+  const [previa] = await consultar<{ id: string }>(
+    `insert into campanas_correo (clave, audiencia, plantilla, creada_por, total) values ('comunicado', 'lista', '{}'::jsonb, $1, 1) returning id`, [usuario!.id]);
+  await consultar(
+    `insert into envios_campana (campana_id, correo, registro_id, idioma, estado, enviado_en) values ($1, 'auto.ya@example.org', null, 'pt', 'enviado', now())`, [previa.id]);
+  comprobar((await enviarAuto('auto.ya@example.org')) === 'omitido' && mandadosAuto.length === 2,
+    'automático: no a quien ya lo recibió por un envío masivo');
+
+  // Interruptor
+  await fijarComunicadoAutomatico(false, usuario!.id);
+  comprobar(!(await comunicadoAutomaticoActivo()) && (await enviarAuto('auto.carrera@example.org')) === 'omitido' && mandadosAuto.length === 2,
+    'automático: apagado, no manda nada');
+  await fijarComunicadoAutomatico(true, usuario!.id);
+  comprobar(await comunicadoAutomaticoActivo(), 'automático: se vuelve a encender');
+
+  // Dos peticiones a la vez para la misma persona: sale una sola vez.
+  const carrera = await Promise.all([enviarAuto('auto.carrera@example.org'), enviarAuto('auto.carrera@example.org')]);
+  comprobar(carrera.filter((r) => r === 'enviado').length === 1 && mandadosAuto.filter((m) => m.correo === 'auto.carrera@example.org').length === 1,
+    'automático: dos peticiones a la vez no lo mandan dos veces', carrera);
+
+  // Un fallo no se pierde: queda como error, y se puede reintentar.
+  respuestaDelEnvio = { enviado: false, error: 'rate limit' };
+  comprobar((await enviarAuto('auto.falla@example.org')) === 'error', 'automático: si Resend lo rechaza, se dice que falló');
+  const errorAsentado = await unaFila<{ estado: string; error: string }>(`select estado, error from envios_campana where correo = 'auto.falla@example.org'`);
+  comprobar(errorAsentado?.estado === 'error' && errorAsentado.error === 'rate limit', 'automático: y queda asentado con su causa', errorAsentado);
+  respuestaDelEnvio = 'revienta';
+  comprobar((await enviarAuto('auto.falla@example.org')) === 'error', 'automático: si la conexión se cae, tampoco revienta el alta');
+  const aQuienFalta = await calcularAudiencia({ clave: 'comunicado', audiencia: 'todos' });
+  comprobar(aQuienFalta.ok && correosDe(aQuienFalta).includes('auto.falla@example.org'),
+    'automático: quien no lo recibió por un error entra en «los que aún no lo han recibido» del envío masivo');
+  respuestaDelEnvio = { enviado: true };
+  comprobar((await enviarAuto('auto.falla@example.org')) === 'enviado', 'automático: reintentado, sale');
+
+  // Y el envío masivo ya no repite a quien lo recibió solo.
+  const despuesAuto = await calcularAudiencia({ clave: 'comunicado', audiencia: 'todos' });
+  comprobar(
+    despuesAuto.ok && !correosDe(despuesAuto).some((c) => c.startsWith('auto.')) &&
+    despuesAuto.excluidos.yaRecibieron >= 5,
+    'automático: el envío masivo «a quienes aún no lo han recibido» no repite a quien lo recibió solo', despuesAuto.ok && despuesAuto.excluidos);
+
+  const estadoAuto = await estadoDelComunicadoAutomatico();
+  comprobar(estadoAuto.activo && estadoAuto.enviados === 4 && estadoAuto.errores === 0, 'automático: el panel cuenta lo enviado', estadoAuto);
+  const historialAuto = (await listarCampanas('comunicado')).find((h) => h.audiencia === 'automatico');
+  comprobar(historialAuto?.progreso.enviados === 4 && !historialAuto.faltaPorEnviar, 'automático: aparece en el historial, sin nada pendiente', historialAuto);
+
+  // La campaña automática no estorba a un envío masivo.
+  const nuevaMasiva = await crearCampana({ clave: 'comunicado', audiencia: 'lista', lista: 'alguien.mas@example.org', confirmacion: '1', usuarioId: usuario!.id });
+  comprobar(nuevaMasiva.ok, 'automático: no impide crear un envío masivo', nuevaMasiva);
+  // Y el esquema aguanta repetirse: la campaña automática sigue siendo una sola.
+  comprobar(
+    Number((await unaFila<{ n: string }>(`select count(*)::text as n from campanas_correo where clave = 'comunicado' and audiencia = 'automatico'`))!.n) === 1,
+    'automático: sólo hay una campaña automática');
+
+  await consultar(`delete from campanas_correo where clave = 'comunicado' and (audiencia = 'automatico' or creada_por = $1)`, [usuario!.id]);
+  await consultar(`delete from registros where correo like 'auto.%@example.org'`);
+  ok('limpieza del comunicado automático');
+
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);
   await consultar(`delete from usuarios_panel where correo = 'prueba@ciess.org'`);

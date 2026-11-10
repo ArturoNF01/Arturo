@@ -1157,7 +1157,7 @@ create table if not exists campanas_correo (
   id          uuid primary key default gen_random_uuid(),
   /** La plantilla que se envió: 'comunicado'. */
   clave       text not null,
-  audiencia   text not null check (audiencia in ('todos', 'ponentes', 'lista')),
+  audiencia   text not null check (audiencia in ('todos', 'ponentes', 'lista', 'automatico')),
   /** {"es": {"asunto": …, "cuerpo_html": …}, "en": …, "pt": …} tal como se mandó. */
   plantilla   jsonb not null,
   creada_por  uuid references usuarios_panel(id) on delete set null,
@@ -1182,6 +1182,33 @@ create table if not exists envios_campana (
 );
 create index if not exists envios_campana_estado_idx on envios_campana (campana_id, estado);
 create index if not exists envios_campana_correo_idx on envios_campana (correo) where estado = 'enviado';
+
+-- El comunicado también sale solo, enseguida después del correo de confirmación de cada registro nuevo
+-- (src/lib/servidor/comunicado-automatico.ts). Esos envíos viven en una única campaña «automática» por
+-- plantilla, donde cada fila es una persona: así cuentan como «ya lo recibió» para los envíos masivos y el
+-- historial del panel los muestra. La tabla se creó antes con tres audiencias; se amplía sin tocar lo que hay.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'campanas_correo'::regclass and conname = 'campanas_correo_audiencia_check'
+       and pg_get_constraintdef(oid) like '%automatico%'
+  ) then
+    alter table campanas_correo drop constraint if exists campanas_correo_audiencia_check;
+    alter table campanas_correo add constraint campanas_correo_audiencia_check
+      check (audiencia in ('todos', 'ponentes', 'lista', 'automatico'));
+  end if;
+end $$;
+-- Una sola campaña automática por plantilla, aunque dos registros lleguen a la vez.
+create unique index if not exists campanas_correo_automatica_idx
+  on campanas_correo (clave) where audiencia = 'automatico';
+
+-- El interruptor del envío automático. Se enciende por omisión (así se pidió) y se apaga desde el panel; una
+-- instalación que ya tenga la fila no se toca.
+insert into configuracion (clave, valor, descripcion) values
+  ('comunicado_automatico', 'true'::jsonb,
+   'Enviar el comunicado «Acceso a las sesiones, asistencia y constancias» a cada registro nuevo, enseguida después de su correo de confirmación')
+on conflict (clave) do nothing;
 
 -- ---------------------------------------------------------------------
 -- Asistencia a las sesiones

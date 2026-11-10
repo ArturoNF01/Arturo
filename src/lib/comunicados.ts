@@ -16,6 +16,21 @@ export function esPlantillaMasiva(clave: string): clave is PlantillaMasiva {
 export const AUDIENCIAS = ['todos', 'ponentes', 'lista'] as const;
 export type Audiencia = (typeof AUDIENCIAS)[number];
 
+/**
+ * La audiencia de los envíos que salen solos, tras el correo de confirmación de cada registro. No se elige
+ * en el panel (por eso no está en `AUDIENCIAS`): es la campaña donde quedan asentados.
+ */
+export const AUDIENCIA_AUTOMATICA = 'automatico';
+export type AudienciaGuardada = Audiencia | typeof AUDIENCIA_AUTOMATICA;
+
+/**
+ * ¿A este registro le toca el comunicado automático? A quien está vigente y tiene correo: no a quien canceló ni a
+ * quien está en lista de espera —igual que en el envío masivo, que a la lista de espera sólo llega si se pide—.
+ */
+export function correspondeComunicadoAutomatico(estado: string | null | undefined, correo: string | null | undefined): boolean {
+  return Boolean(String(correo ?? '').trim()) && estadosDeLaAudiencia(false).includes(String(estado));
+}
+
 /** Cuántos correos salen en cada llamada a Resend (admite 100; 50 deja holgura y respuestas cortas). */
 export const TAMANO_TANDA = 50;
 

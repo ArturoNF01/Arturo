@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/componentes/proveedores';
 import { interpolar } from '@/i18n';
-import { MAXIMO_LISTA, porcentajeAtendido, type Audiencia, type IdiomaEnvio, type Progreso } from '@/lib/comunicados';
+import { MAXIMO_LISTA, porcentajeAtendido, type Audiencia, type AudienciaGuardada, type IdiomaEnvio, type Progreso } from '@/lib/comunicados';
 
 interface Calculo {
   total: number;
@@ -12,9 +12,16 @@ interface Calculo {
   repetidosEnLista: number;
 }
 
+/** El envío automático tras el correo de confirmación: si está encendido y cuántos han salido. */
+interface Automatico {
+  activo: boolean;
+  enviados: number;
+  errores: number;
+}
+
 interface Campana {
   id: string;
-  audiencia: Audiencia;
+  audiencia: AudienciaGuardada;
   creada_en: string;
   creada_por: string | null;
   estado: 'en_curso' | 'terminada';
@@ -51,6 +58,8 @@ export function EnvioComunicado({
   const [incluirEspera, setIncluirEspera] = useState(false);
   const [soloIdioma, setSoloIdioma] = useState<'' | IdiomaEnvio>('');
   const [calculo, setCalculo] = useState<Calculo | null>(null);
+  const [estado, setEstado] = useState<{ faltan: number; ya: number } | null>(null);
+  const [automatico, setAutomatico] = useState<Automatico | null>(null);
   const [calculando, setCalculando] = useState(false);
   const [error, setError] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
@@ -67,13 +76,51 @@ export function EnvioComunicado({
     if (r.ok) setCampanas(((await r.json()) as { campanas: Campana[] }).campanas);
   }, [clave]);
 
+  /** Cuántos registros vigentes ya recibieron el comunicado y cuántos no: lo primero que hay que saber antes de enviar. */
+  const cargarEstado = useCallback(async () => {
+    const r = await fetch('/api/comunicados/audiencia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clave, audiencia: 'todos', lista: '', incluirListaEspera: false, idioma }),
+    });
+    if (r.ok) {
+      const d = (await r.json()) as Calculo;
+      setEstado({ faltan: d.total, ya: d.excluidos.yaRecibieron });
+    }
+  }, [clave, idioma]);
+
+  const cargarAutomatico = useCallback(async () => {
+    const r = await fetch('/api/comunicados/automatico');
+    if (r.ok) setAutomatico((await r.json()) as Automatico);
+  }, []);
+
+  async function cambiarAutomatico(activo: boolean) {
+    // La casilla cambia al tocarla; si el servidor no lo guarda, vuelve a como estaba y se dice por qué.
+    const antes = automatico;
+    setAutomatico((previo) => previo && { ...previo, activo });
+    setError('');
+    const r = await fetch('/api/comunicados/automatico', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activo }),
+    }).catch(() => null);
+    if (r?.ok) {
+      setAutomatico((await r.json()) as Automatico);
+      return;
+    }
+    setAutomatico(antes);
+    setError(((await r?.json().catch(() => null)) as { mensaje?: string } | null)?.mensaje ?? t.estados.error);
+  }
+
   useEffect(() => {
     cortar.current = false;
     // Carga inicial del historial: es lo que dice si hay un envío sin terminar.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void cargarCampanas();
+    void cargarEstado();
+    void cargarAutomatico();
     return () => { cortar.current = true; };
-  }, [cargarCampanas]);
+  }, [cargarCampanas, cargarEstado, cargarAutomatico]);
 
   const cuerpoDeLaPeticion = () => ({
     clave, audiencia, lista, incluirListaEspera: incluirEspera, idioma, soloIdioma: soloIdioma || undefined,
@@ -145,6 +192,7 @@ export function EnvioComunicado({
     } finally {
       setEnviando(false);
       await cargarCampanas();
+      await cargarEstado();
     }
   }
 
@@ -179,8 +227,8 @@ export function EnvioComunicado({
   const total = calculo?.total ?? 0;
   const puedeConfirmar = calculo !== null && total > 0 && confirmacion.trim() === String(total) && !sinGuardar && !enviando;
 
-  const nombreAudiencia: Record<Audiencia, string> = {
-    todos: c.todos, ponentes: c.ponentes, lista: c.lista,
+  const nombreAudiencia: Record<AudienciaGuardada, string> = {
+    todos: c.todos, ponentes: c.ponentes, lista: c.lista, automatico: c.automatico,
   };
   const fecha = (iso: string) =>
     new Date(iso).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Mexico_City' });
@@ -200,6 +248,33 @@ export function EnvioComunicado({
     <section className="tarjeta mt-4 p-4" aria-labelledby="envio-titulo">
       <h2 id="envio-titulo" className="text-base font-bold">{c.titulo}</h2>
       <p className="ayuda !mt-1">{c.ayuda}</p>
+
+      {estado && (
+        <p className="mt-3 rounded-lg bg-black/5 p-3 text-sm dark:bg-white/5" role="status">
+          {interpolar(c.estadoNuevos, { total: estado.faltan + estado.ya, ya: estado.ya, faltan: estado.faltan })}
+        </p>
+      )}
+
+      {automatico && (
+        <div className="mt-3 rounded-lg border p-3" style={{ borderColor: 'var(--borde)' }}>
+          <label className="flex cursor-pointer items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={automatico.activo}
+              onChange={(e) => void cambiarAutomatico(e.target.checked)}
+            />
+            <span>
+              <span className="font-semibold">{c.automaticoTitulo}</span>
+              <span className="block ayuda !mt-0.5">{c.automaticoAyuda}</span>
+            </span>
+          </label>
+          <p className="ayuda">
+            {interpolar(c.automaticoCuenta, { enviados: automatico.enviados, errores: automatico.errores })}
+            {automatico.errores > 0 && ` ${c.automaticoErrores}`}
+          </p>
+        </div>
+      )}
       {sinGuardar && (
         <p className="mt-3 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-600" role="status">{c.sinGuardar}</p>
       )}

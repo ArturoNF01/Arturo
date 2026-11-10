@@ -273,19 +273,35 @@ describe('nada lo envía por su cuenta', () => {
   }
   const menciona = (ruta: string) => /['"`]comunicado['"`]|comunicados/.test(readFileSync(ruta, 'utf8'));
 
-  it('ningún flujo automático lo toca: ni el alta, ni los recordatorios, ni el cron, ni la hoja', () => {
-    // El comunicado sale sólo de un envío que alguien confirma en el panel. Estos son los caminos que
-    // corren solos o por otra razón; si alguno lo mencionara, habría un envío sin que nadie lo pida.
-    const automaticos = [
-      ...archivos('src/app/api/registros'),
+  it('los caminos que corren solos o por otra razón no lo tocan: ni los recordatorios, ni el cron, ni la hoja', () => {
+    // El comunicado sale de un envío que alguien confirma en el panel y de un único camino automático (el que
+    // sigue al correo de confirmación, más abajo). Si alguno de estos lo mencionara, habría un envío sin que
+    // nadie lo pida.
+    const ajenos = [
       ...archivos('src/app/api/recordatorios'),
       ...archivos('src/app/api/sincronizar'),
-      ...archivos('src/app/api/acuses'),
       ...archivos('guiones'),
       'src/lib/recordatorios.ts',
     ];
-    const infractores = automaticos.filter(menciona).map((r) => r.replaceAll('\\', '/'));
-    expect(infractores).toEqual([]);
+    expect(ajenos.filter(menciona).map((r) => r.replaceAll('\\', '/'))).toEqual([]);
+  });
+
+  it('el único envío automático es el que sigue al correo de confirmación, y pasa siempre por la misma función', () => {
+    const enganches = ['src/app/api/registros', 'src/app/api/acuses']
+      .flatMap(archivos)
+      .filter((ruta) => /enviarComunicadoTrasConfirmacion/.test(readFileSync(ruta, 'utf8')))
+      .map((r) => r.replaceAll('\\', '/'))
+      .sort();
+    expect(enganches).toEqual([
+      'src/app/api/acuses/route.ts', // el reenvío de un acuse que no había salido
+      'src/app/api/registros/[id]/estado/route.ts', // la confirmación desde el panel
+      'src/app/api/registros/route.ts', // el alta
+    ]);
+    // Y ninguno nombra la plantilla ni manda el correo por su cuenta: lo hace la función, que respeta el interruptor.
+    for (const ruta of enganches) {
+      const fuente = readFileSync(ruta, 'utf8');
+      expect(fuente, ruta).not.toMatch(/['"`]comunicado['"`]/);
+    }
   });
 
   it("sólo el código de envíos y la plantilla nombran 'comunicado' como clave", () => {
@@ -297,6 +313,7 @@ describe('nada lo envía por su cuenta', () => {
       'src/app/api/comunicados/audiencia/route.ts', // la clave por omisión del envío
       'src/app/api/comunicados/route.ts',
       'src/lib/comunicados.ts', // la lista de plantillas que se pueden mandar en masa
+      'src/lib/servidor/comunicado-automatico.ts', // el envío que sigue al correo de confirmación
       'src/lib/servidor/correo.ts', // el tipo de plantilla
     ]);
   });

@@ -5,7 +5,7 @@ import { consultar, enTransaccion } from '@/lib/bd/conexion';
 import {
   MAXIMO_LISTA, TAMANO_TANDA, clasificarErrorDeEnvio, confirmacionValida, elegirDestinatarios,
   esPlantillaMasiva, faltaPorEnviar,
-  type Audiencia, type CausaDeError, type Destinatario, type IdiomaEnvio, type Progreso,
+  type Audiencia, type AudienciaGuardada, type CausaDeError, type Destinatario, type IdiomaEnvio, type Progreso,
   type RegistroParaEnvio,
 } from '@/lib/comunicados';
 import { destinatariosDePrueba } from '@/lib/plantillas';
@@ -450,7 +450,7 @@ export async function crearCampana(
 export interface ResumenDeCampana {
   id: string;
   clave: string;
-  audiencia: Audiencia;
+  audiencia: AudienciaGuardada;
   creada_en: string;
   creada_por: string | null;
   estado: 'en_curso' | 'terminada';
@@ -460,7 +460,7 @@ export interface ResumenDeCampana {
 
 export async function listarCampanas(clave: string, limite = 10): Promise<ResumenDeCampana[]> {
   const filas = await consultar<{
-    id: string; clave: string; audiencia: Audiencia; creada_en: string; estado: 'en_curso' | 'terminada';
+    id: string; clave: string; audiencia: AudienciaGuardada; creada_en: string; estado: 'en_curso' | 'terminada';
     nombre: string | null; total: number; enviados: string; errores: string; pendientes: string; enviando: string;
   }>(
     `select c.id, c.clave, c.audiencia, c.creada_en, c.estado, c.total,

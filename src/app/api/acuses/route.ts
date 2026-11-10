@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { consultar } from '@/lib/bd/conexion';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { enviarCorreoRegistro } from '@/lib/servidor/correo';
+import { enviarComunicadoTrasConfirmacion } from '@/lib/servidor/comunicado-automatico';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
 
 export const dynamic = 'force-dynamic';
@@ -79,6 +80,12 @@ export async function POST(peticion: NextRequest) {
         [registro.id],
       );
       enviados += 1;
+      // El acuse que no había salido sale ahora, y con él el comunicado que lo sigue (si no lo había recibido ya).
+      if (registro.estado !== 'lista_espera') {
+        await enviarComunicadoTrasConfirmacion(registro, configuracion).catch((error) => {
+          console.error('El comunicado automático falló:', error);
+        });
+      }
     } else {
       const motivo = resultado.error ?? 'Error de envío.';
       await consultar('update registros set correo_error = $2 where id = $1', [

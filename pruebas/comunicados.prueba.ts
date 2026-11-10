@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   AUDIENCIAS, PLANTILLAS_MASIVAS, TAMANO_TANDA, clasificarErrorDeEnvio, confirmacionValida,
-  elegirDestinatarios, esPlantillaMasiva, faltaPorEnviar, porcentajeAtendido, tandasDe,
+  correspondeComunicadoAutomatico, elegirDestinatarios, esPlantillaMasiva, faltaPorEnviar, porcentajeAtendido, tandasDe,
   type Progreso, type RegistroParaEnvio,
 } from '@/lib/comunicados';
 
@@ -107,6 +107,25 @@ describe('el avance y la confirmación', () => {
     expect(tandas.map((t) => t.length)).toEqual([50, 50, 20]);
     expect(tandas.flat()).toEqual(lista);
     expect(tandasDe([], 50)).toEqual([]);
+  });
+});
+
+describe('a quién le toca el comunicado automático', () => {
+  it('a quien está vigente y tiene correo', () => {
+    expect(correspondeComunicadoAutomatico('confirmado', 'ana@ejemplo.org')).toBe(true);
+    expect(correspondeComunicadoAutomatico('en_proceso', 'ana@ejemplo.org')).toBe(true);
+  });
+
+  it('no a quien está en lista de espera ni a quien canceló, igual que en el envío masivo', () => {
+    expect(correspondeComunicadoAutomatico('lista_espera', 'ana@ejemplo.org')).toBe(false);
+    expect(correspondeComunicadoAutomatico('cancelado', 'ana@ejemplo.org')).toBe(false);
+    expect(correspondeComunicadoAutomatico(undefined, 'ana@ejemplo.org')).toBe(false);
+  });
+
+  it('ni a quien no tiene correo', () => {
+    expect(correspondeComunicadoAutomatico('confirmado', '')).toBe(false);
+    expect(correspondeComunicadoAutomatico('confirmado', '   ')).toBe(false);
+    expect(correspondeComunicadoAutomatico('confirmado', null)).toBe(false);
   });
 });
 

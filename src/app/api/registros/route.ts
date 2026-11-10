@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { armarActualizacion, armarInsercion, consultar, unaFila } from '@/lib/bd/conexion';
 import { permisos, usuarioActual } from '@/lib/servidor/sesion';
 import { crearEsquemaRegistro } from '@/lib/esquema';
@@ -6,6 +6,7 @@ import { perfilPorClave } from '@/lib/perfiles';
 import { leerConfiguracion } from '@/lib/servidor/configuracion';
 import { sincronizarRegistro } from '@/lib/servidor/sheets';
 import { enviarCorreoRegistro } from '@/lib/servidor/correo';
+import { enviarComunicadoTrasConfirmacion } from '@/lib/servidor/comunicado-automatico';
 import { CONFIG } from '@/lib/config';
 import { leerDatosCongreso } from '@/lib/servidor/contenido';
 import { dentroDelLimite, normalizarCorreo, revisarEnvio } from '@/lib/antiabuso';
@@ -215,6 +216,17 @@ export async function POST(peticion: NextRequest) {
     await consultar(
       `update registros set ${asignaciones} where id = $${valoresParcheo.length + 1}`,
       [...valoresParcheo, registro.id],
+    );
+  }
+
+  // Enseguida después del correo de confirmación sale el comunicado «Acceso a las sesiones, asistencia y
+  // constancias». Va después de responder, para que quien se registra no espere dos correos; y sólo si el acuse
+  // salió (si no, lo manda el reenvío de acuses cuando éste logre salir) y no a quien quedó en lista de espera.
+  if (estado !== 'lista_espera' && correo.status === 'fulfilled' && correo.value.enviado) {
+    after(() =>
+      enviarComunicadoTrasConfirmacion(registro, configuracion).catch((error) => {
+        console.error('El comunicado automático falló:', error);
+      }),
     );
   }
 
