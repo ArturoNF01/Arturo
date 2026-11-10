@@ -35,6 +35,7 @@ export default async function Asistencia({ params }: { params: Promise<{ codigo:
     sala: sesion.sala ?? null,
     estado: estadoDeVentana(sesion),
     esPrueba: esSesionDePrueba(sesion.clave),
+    esDia: sesion.tipo === 'dia',
     abre: abre.toISOString(),
     cierra: cierra.toISOString(),
   };

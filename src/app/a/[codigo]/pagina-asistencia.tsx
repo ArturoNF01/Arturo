@@ -23,6 +23,8 @@ export interface DatosDeSesion {
   cierra: string;
   /** La sesión de prueba del panel: se avisa que no cuenta. */
   esPrueba: boolean;
+  /** Una jornada completa (un QR por día): el título ya es el día, y no se repite como «Día». */
+  esDia: boolean;
 }
 
 type Listo = Extract<RespuestaDeAsistencia, { ok: true }>;
@@ -214,8 +216,12 @@ export function PaginaAsistencia({ codigo, sesion }: { codigo: string; sesion: D
               {sesion.titulo && <p className="mt-1 text-base leading-snug">{sesion.titulo[idioma]}</p>}
               {!sesion.esPrueba && (
                 <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                  <dt className="tenue">{a.dia}</dt>
-                  <dd>{sesion.dia[idioma]}</dd>
+                  {!sesion.esDia && (
+                    <>
+                      <dt className="tenue">{a.dia}</dt>
+                      <dd>{sesion.dia[idioma]}</dd>
+                    </>
+                  )}
                   <dt className="tenue">{a.horario}</dt>
                   <dd>{sesion.horario}</dd>
                   {sesion.sala && (

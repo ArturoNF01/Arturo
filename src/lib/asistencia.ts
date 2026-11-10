@@ -1,6 +1,11 @@
 /**
- * La asistencia a las sesiones del Congreso: qué sesiones cuentan, cuándo vale cada código y cómo se
- * reconoce a quien escanea.
+ * La asistencia al Congreso: qué cuenta como una asistencia, cuándo vale cada código y cómo se reconoce a
+ * quien escanea.
+ *
+ * **Una asistencia por día.** El comité pidió que el registro no fuera tan riguroso: hay un QR por día
+ * (miércoles, jueves y viernes) y una persona registra su asistencia una vez al día, no una vez por mesa. Por
+ * eso lo que aquí se llama «sesión» es una jornada: tres en total. (El nombre se conserva —las tablas, los
+ * códigos y las pantallas ya hablan de «sesión»—, pero cada una es un día completo.)
  *
  * Es lógica pura, sin dependencias del servidor, para poder probarla. Las sesiones no se guardan
  * en la base: salen de la agenda (`programa.ts`), que es donde el comité las cambia. Lo único que
@@ -9,10 +14,7 @@
  */
 import type { Idioma } from '@/i18n';
 import { HUSO_CONGRESO } from '@/lib/fechas';
-import {
-  MESA_POR_NUMERO, PROGRAMA, SALAS, TEXTOS_PROGRAMA,
-  type ClaveSala, type TipoSesion,
-} from '@/lib/programa';
+import { PROGRAMA, SALAS, type ClaveSala, type TipoSesion } from '@/lib/programa';
 
 type Texto = Record<Idioma, string>;
 
@@ -25,21 +27,21 @@ export function esVia(valor: unknown): valor is ViaAsistencia {
 }
 
 export interface SesionDeAsistencia {
-  /** Estable aunque cambie el horario: 'mesa-4', 'apertura', 'conferencia', 'clausura', 'miercoles-2'. */
+  /** Estable aunque cambie el horario: 'miercoles', 'jueves', 'viernes'. */
   clave: string;
   /** El día, 'AAAA-MM-DD'. */
   dia: string;
   diaTexto: Texto;
-  /** '09:00–10:30', tal como viene en la agenda. */
+  /** De cuándo a cuándo es la jornada, por la agenda: '08:30–17:00'. */
   horario: string;
   inicio: Date;
   fin: Date;
-  tipo: TipoSesion;
+  tipo: TipoSesion | 'dia';
   sala?: ClaveSala;
   mesa?: number;
-  /** «Mesa 4», «Sesión de apertura»…: lo que se dice de un vistazo. */
+  /** Lo que se dice de un vistazo: «Jueves 12 de noviembre». */
   corto: Texto;
-  /** El título completo, cuando hay uno distinto del corto (el de la mesa, el de la conferencia). */
+  /** De qué trata la jornada: «Inauguración y mesas temáticas 1 a 4». */
   titulo?: Texto;
 }
 
@@ -48,9 +50,9 @@ export interface SesionDeAsistencia {
 // ---------------------------------------------------------------------------
 
 /**
- * El código de una sesión abre 20 minutos antes de que empiece y cierra 30 minutos después de que
- * termine. Es lo que hace inútil una foto del QR: pasado ese margen, el código ya no registra nada.
- * Quien llega tarde sigue contando, y quien escanea al salir también.
+ * El código de un día abre 20 minutos antes de que empiece la primera actividad del día y cierra 30 minutos
+ * después de que termine la última. Dentro de ese margen se puede escanear a cualquier hora —quien llega
+ * tarde o escanea al salir cuenta—; fuera de él una foto del QR ya no sirve.
  */
 export const MINUTOS_ANTES = 20;
 export const MINUTOS_DESPUES = 30;
@@ -107,48 +109,38 @@ export function estadoDeVentana(
 // ---------------------------------------------------------------------------
 
 /**
- * Todas las sesiones a las que se pasa asistencia: las mesas de trabajo del miércoles, la apertura, la
- * conferencia magistral, las once mesas temáticas y la clausura. El registro de participantes y el
- * almuerzo no son sesiones.
+ * Las claves de los días. Van fijas —no salen del texto de la agenda— para que una corrección al programa no
+ * deje huérfana ninguna asistencia ya registrada. Un día que se añadiera a la agenda tomaría `dia-AAAA-MM-DD`.
+ */
+const CLAVES_DE_DIA: Record<string, string> = {
+  '2026-11-11': 'miercoles',
+  '2026-11-12': 'jueves',
+  '2026-11-13': 'viernes',
+};
+
+/**
+ * Las jornadas a las que se pasa asistencia: una por día de la agenda, con el horario que va de la primera
+ * actividad (el registro de participantes, si lo hay) al final de la última. Sólo se descarta el almuerzo,
+ * que no abre ni cierra el día.
  */
 function sesionesDeLaAgenda(): SesionDeAsistencia[] {
   const salida: SesionDeAsistencia[] = [];
   for (const dia of PROGRAMA) {
-    let trabajo = 0;
-    for (const s of dia.sesiones) {
-      if (s.tipo === 'registro' || s.tipo === 'pausa') continue;
-      const horas = horasDelHorario(s.horario);
-      if (!horas) continue;
+    const horas = dia.sesiones
+      .filter((s) => s.tipo !== 'pausa')
+      .map((s) => horasDelHorario(s.horario))
+      .filter((h): h is { desde: string; hasta: string } => h !== null);
+    if (horas.length === 0) continue;
+    // «HH:MM» ordena bien como texto.
+    const desde = horas.map((h) => h.desde).sort()[0];
+    const hasta = horas.map((h) => h.hasta).sort().at(-1)!;
 
-      let clave: string;
-      let corto: Texto;
-      let titulo: Texto | undefined;
-      if (s.tipo === 'mesa' && s.mesa !== undefined) {
-        const mesa = MESA_POR_NUMERO.get(s.mesa);
-        clave = `mesa-${s.mesa}`;
-        corto = { es: `Mesa ${s.mesa}`, en: `Panel ${s.mesa}`, pt: `Mesa ${s.mesa}` };
-        titulo = mesa?.titulo;
-      } else if (s.tipo === 'trabajo') {
-        trabajo += 1;
-        clave = `miercoles-${trabajo}`;
-        corto = s.actividad ?? { es: `Sesión ${trabajo}`, en: `Session ${trabajo}`, pt: `Sessão ${trabajo}` };
-      } else if (s.tipo === 'conferencia') {
-        clave = 'conferencia';
-        corto = {
-          es: TEXTOS_PROGRAMA.es.conferencia, en: TEXTOS_PROGRAMA.en.conferencia, pt: TEXTOS_PROGRAMA.pt.conferencia,
-        };
-        titulo = s.actividad;
-      } else {
-        clave = s.tipo; // 'apertura' | 'clausura'
-        corto = s.actividad ?? { es: s.tipo, en: s.tipo, pt: s.tipo };
-      }
-
-      salida.push({
-        clave, dia: dia.iso, diaTexto: dia.fecha, horario: s.horario,
-        inicio: instanteEnMexico(dia.iso, horas.desde), fin: instanteEnMexico(dia.iso, horas.hasta),
-        tipo: s.tipo, sala: s.sala, mesa: s.mesa, corto, titulo,
-      });
-    }
+    salida.push({
+      clave: CLAVES_DE_DIA[dia.iso] ?? `dia-${dia.iso}`,
+      dia: dia.iso, diaTexto: dia.fecha, horario: `${desde}–${hasta}`,
+      inicio: instanteEnMexico(dia.iso, desde), fin: instanteEnMexico(dia.iso, hasta),
+      tipo: 'dia', corto: dia.fecha, titulo: dia.titulo,
+    });
   }
   return salida;
 }
@@ -170,7 +162,7 @@ export const SESION_DE_PRUEBA: SesionDeAsistencia = {
   // Un rango tan ancho que la ventana nunca se cierra.
   inicio: new Date('2000-01-01T00:00:00Z'),
   fin: new Date('2100-01-01T00:00:00Z'),
-  tipo: 'mesa',
+  tipo: 'dia',
   corto: { es: 'Sesión de prueba', en: 'Test session', pt: 'Sessão de teste' },
 };
 
@@ -191,13 +183,13 @@ export const DIAS_DE_ASISTENCIA: readonly { iso: string; texto: Texto }[] = PROG
   iso: d.iso, texto: d.fecha,
 }));
 
-/** Cómo se nombra una sesión en una lista o en la hoja: «Mesa 4 · Envejecimiento, dependencia y cuidados…». */
+/** Cómo se nombra una jornada en una lista: «Jueves 12 de noviembre · Inauguración y mesas temáticas 1 a 4». */
 export function etiquetaDeSesion(sesion: SesionDeAsistencia, idioma: Idioma = 'es'): string {
   const corto = sesion.corto[idioma];
-  return sesion.tipo === 'mesa' && sesion.titulo ? `${corto} · ${sesion.titulo[idioma]}` : corto;
+  return sesion.tipo === 'dia' && sesion.titulo && sesion.clave !== CLAVE_DE_PRUEBA ? `${corto} · ${sesion.titulo[idioma]}` : corto;
 }
 
-/** Lo mismo, desde la clave guardada; si la sesión ya no existe en la agenda, la clave tal cual. */
+/** Lo mismo, desde la clave guardada; si ya no existe en la agenda, la clave tal cual. */
 export function etiquetaDeClave(clave: string, idioma: Idioma = 'es'): string {
   const sesion = sesionPorClave(clave);
   return sesion ? etiquetaDeSesion(sesion, idioma) : clave;
@@ -406,10 +398,16 @@ export function aCsv(filas: readonly (readonly (string | number)[])[]): string {
 export const HOJA_ASISTENCIAS = 'Asistencias';
 
 /**
- * Lo que se pidió —nombre, correo, día y mesa— más el número de orden, como las demás pestañas, y la
- * modalidad (presencial o en línea), que es lo que distingue una asistencia de otra en la misma mesa.
+ * Lo que se pidió —nombre, correo y día—, más el número de orden, como las demás pestañas, y la modalidad
+ * (presencial o en línea). La columna «Mesa» se quitó: con un QR por día ya no se sabe a qué mesa fue cada quien.
  */
-export const ENCABEZADOS_ASISTENCIAS = ['N.º', 'Nombre', 'Correo', 'Día', 'Mesa', 'Modalidad'] as const;
+export const ENCABEZADOS_ASISTENCIAS = ['N.º', 'Nombre', 'Correo', 'Día', 'Modalidad'] as const;
+
+/**
+ * Los títulos que tuvo la pestaña cuando la asistencia era por mesa (con una columna «Mesa»). Sirven para
+ * reconocerla y rehacerla con el diseño de ahora: una asistencia por día ya no tiene mesa.
+ */
+export const ENCABEZADOS_ANTERIORES = ['N.º', 'Nombre', 'Correo', 'Día', 'Mesa', 'Modalidad'] as const;
 
 export type FilaDeHoja = (string | number)[];
 
@@ -425,7 +423,6 @@ export function filasDeAsistencias(
     a.nombre,
     a.correo,
     diaDeClave(a.sesion, 'es'),
-    etiquetaDeClave(a.sesion, 'es'),
     a.via === 'presencial' ? 'Presencial' : 'En línea',
   ]);
 }

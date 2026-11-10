@@ -5,38 +5,30 @@ import {
   etiquetaDeClave, huellaDeNombre, instanteEnMexico, nombreDePila, normalizarTexto, sesionPorClave, sesionesDelDia,
   ventanaDe,
 } from '@/lib/asistencia';
-import { PROGRAMA, MESAS } from '@/lib/programa';
+import { PROGRAMA } from '@/lib/programa';
 
 /**
  * La asistencia con QR: qué sesiones cuentan, cuándo vale cada código y cómo se reconoce a quien
  * escanea. Lo que toca la base de datos se prueba contra PostgreSQL (`npm run prueba-bd`).
  */
 
-describe('las sesiones a las que se pasa asistencia', () => {
-  it('son 19: las 5 del miércoles, la apertura, la conferencia, las 11 mesas y la clausura', () => {
-    expect(SESIONES_DE_ASISTENCIA).toHaveLength(19);
-    const claves = SESIONES_DE_ASISTENCIA.map((s) => s.clave);
-    expect(new Set(claves).size).toBe(19);
-    for (let n = 1; n <= 5; n++) expect(claves).toContain(`miercoles-${n}`);
-    for (let n = 1; n <= 11; n++) expect(claves).toContain(`mesa-${n}`);
-    expect(claves).toEqual(expect.arrayContaining(['apertura', 'conferencia', 'clausura']));
-  });
-
-  it('cada mesa de la agenda tiene su sesión, y el registro de participantes y el almuerzo no son sesiones', () => {
-    expect(MESAS.map((m) => `mesa-${m.numero}`).every((c) => sesionPorClave(c))).toBe(true);
-    const sesionesDeLaAgenda = PROGRAMA.flatMap((d) => d.sesiones).filter((s) => s.tipo !== 'registro' && s.tipo !== 'pausa');
-    expect(SESIONES_DE_ASISTENCIA).toHaveLength(sesionesDeLaAgenda.length);
-  });
-
-  it('se reparten en los tres días: miércoles 11, jueves 12 y viernes 13', () => {
+describe('las jornadas a las que se pasa asistencia: una por día', () => {
+  it('son tres: miércoles, jueves y viernes', () => {
+    expect(SESIONES_DE_ASISTENCIA.map((x) => x.clave)).toEqual(['miercoles', 'jueves', 'viernes']);
+    expect(SESIONES_DE_ASISTENCIA.every((x) => x.tipo === 'dia')).toBe(true);
     expect(DIAS_DE_ASISTENCIA.map((d) => d.iso)).toEqual(['2026-11-11', '2026-11-12', '2026-11-13']);
-    expect(sesionesDelDia('2026-11-11')).toHaveLength(5);
-    expect(sesionesDelDia('2026-11-12').map((s) => s.clave)).toEqual([
-      'apertura', 'conferencia', 'mesa-1', 'mesa-2', 'mesa-3', 'mesa-4',
-    ]);
-    expect(sesionesDelDia('2026-11-13').map((s) => s.clave)).toEqual([
-      'mesa-5', 'mesa-6', 'mesa-7', 'mesa-8', 'mesa-9', 'mesa-10', 'mesa-11', 'clausura',
-    ]);
+  });
+
+  it('cada día de la agenda tiene su jornada, con el horario de su primera actividad a la última', () => {
+    expect(SESIONES_DE_ASISTENCIA).toHaveLength(PROGRAMA.length);
+    const horario = (clave: string) => sesionPorClave(clave)?.horario;
+    expect(horario('miercoles')).toBe('08:30–17:00');
+    expect(horario('jueves')).toBe('08:30–17:30');
+    expect(horario('viernes')).toBe('09:00–17:30'); // el viernes no hay registro: empieza con la mesa 5
+  });
+
+  it('cada día tiene una sola jornada', () => {
+    for (const dia of DIAS_DE_ASISTENCIA) expect(sesionesDelDia(dia.iso)).toHaveLength(1);
   });
 
   it('todas tienen horario legible, termina después de empezar y están dentro del día que les toca', () => {
@@ -47,16 +39,15 @@ describe('las sesiones a las que se pasa asistencia', () => {
     }
   });
 
-  it('se nombran en los tres idiomas, y las mesas llevan su título', () => {
-    expect(etiquetaDeClave('mesa-4', 'es')).toMatch(/^Mesa 4 · .+/);
-    expect(etiquetaDeClave('mesa-4', 'en')).toMatch(/^Panel 4 · .+/);
-    expect(etiquetaDeClave('apertura', 'es')).toBe('Sesión de apertura');
-    expect(etiquetaDeClave('conferencia', 'es')).toBe('Conferencia magistral');
-    expect(etiquetaDeClave('miercoles-1', 'es')).toMatch(/Salud/);
-    expect(diaDeClave('mesa-9', 'es')).toBe('Viernes 13 de noviembre');
-    // Una clave que ya no está en la agenda se dice tal cual, para no perder la fila.
-    expect(etiquetaDeClave('mesa-99', 'es')).toBe('mesa-99');
-    expect(diaDeClave('mesa-99', 'es')).toBe('');
+  it('se nombran en los tres idiomas, con el título del día', () => {
+    expect(etiquetaDeClave('jueves', 'es')).toBe('Jueves 12 de noviembre · Inauguración y mesas temáticas 1 a 4');
+    expect(etiquetaDeClave('jueves', 'en')).toBe('Thursday 12 November · Opening and thematic panels 1 to 4');
+    expect(etiquetaDeClave('miercoles', 'es')).toMatch(/^Miércoles 11 de noviembre · /);
+    expect(diaDeClave('viernes', 'es')).toBe('Viernes 13 de noviembre');
+    expect(diaDeClave('viernes', 'pt')).toBe('Sexta-feira, 13 de novembro');
+    // Una clave de cuando la asistencia era por mesa ya no está en la agenda: se dice tal cual, para no perder la fila.
+    expect(etiquetaDeClave('mesa-4', 'es')).toBe('mesa-4');
+    expect(diaDeClave('mesa-4', 'es')).toBe('');
   });
 });
 
@@ -77,31 +68,38 @@ describe('la hora de México', () => {
   });
 });
 
-describe('la ventana de cada código: 20 minutos antes y 30 después', () => {
-  const mesa4 = sesionPorClave('mesa-4')!; // jueves 12, 15:30–17:30
+describe('la ventana de cada código: 20 minutos antes del día y 30 después', () => {
+  const jueves = sesionPorClave('jueves')!; // 08:30–17:30
 
-  it('abre 20 minutos antes de empezar y cierra 30 minutos después de terminar', () => {
+  it('abre 20 minutos antes de la primera actividad y cierra 30 minutos después de la última', () => {
     expect(MINUTOS_ANTES).toBe(20);
     expect(MINUTOS_DESPUES).toBe(30);
-    const { abre, cierra } = ventanaDe(mesa4);
-    expect(abre.toISOString()).toBe('2026-11-12T21:10:00.000Z'); // 15:10 en México
+    const { abre, cierra } = ventanaDe(jueves);
+    expect(abre.toISOString()).toBe('2026-11-12T14:10:00.000Z'); // 08:10 en México
     expect(cierra.toISOString()).toBe('2026-11-13T00:00:00.000Z'); // 18:00 en México
   });
 
   it('antes, abierta y cerrada, con los límites incluidos', () => {
-    const en = (iso: string) => estadoDeVentana(mesa4, new Date(iso));
-    expect(en('2026-11-12T21:09:59Z')).toBe('antes');
-    expect(en('2026-11-12T21:10:00Z')).toBe('abierta');
-    expect(en('2026-11-12T22:30:00Z')).toBe('abierta'); // en plena sesión
+    const en = (iso: string) => estadoDeVentana(jueves, new Date(iso));
+    expect(en('2026-11-12T14:09:59Z')).toBe('antes');
+    expect(en('2026-11-12T14:10:00Z')).toBe('abierta');
+    expect(en('2026-11-12T19:00:00Z')).toBe('abierta'); // a mediodía, en plena jornada
     expect(en('2026-11-13T00:00:00Z')).toBe('abierta');
     expect(en('2026-11-13T00:00:01Z')).toBe('cerrada');
   });
 
-  it('una foto del QR de una mesa no sirve el día siguiente ni en otra mesa', () => {
-    const mesa1 = sesionPorClave('mesa-1')!; // jueves 12, 10:30–12:30
-    const alMediodiaDeLaMesa4 = new Date('2026-11-12T22:00:00Z');
-    expect(estadoDeVentana(mesa1, alMediodiaDeLaMesa4)).toBe('cerrada');
-    expect(estadoDeVentana(mesa4, new Date('2026-11-13T15:00:00Z'))).toBe('cerrada');
+  it('el QR de un día no sirve otro día', () => {
+    const miercoles = sesionPorClave('miercoles')!;
+    const unaTardeDelJueves = new Date('2026-11-12T20:00:00Z');
+    expect(estadoDeVentana(miercoles, unaTardeDelJueves)).toBe('cerrada');
+    expect(estadoDeVentana(sesionPorClave('viernes')!, unaTardeDelJueves)).toBe('antes');
+    expect(estadoDeVentana(jueves, new Date('2026-11-13T15:00:00Z'))).toBe('cerrada');
+  });
+
+  it('dentro del día se puede escanear a cualquier hora: llegar tarde o irse temprano no cambia nada', () => {
+    for (const hora of ['14:30', '16:00', '19:30', '22:59']) {
+      expect(estadoDeVentana(jueves, new Date(`2026-11-12T${hora}:00Z`)), hora).toBe('abierta');
+    }
   });
 });
 
@@ -195,10 +193,10 @@ describe('la vista por persona', () => {
     id, sesion, via, registro_id: registro, nombre, correo: `${nombre.toLowerCase().replace(/\s/g, '.')}@x.org`, perfil: null, folio: null, creada_en: '2026-11-12T20:00:00Z',
   });
 
-  it('una fila por persona, con cuántas sesiones por día y cuáles; primero quien más suma', () => {
+  it('una fila por persona, con a cuántos días asistió y a cuáles; primero quien más suma', () => {
     const personas = agruparPorPersona([
-      f('1', 'miercoles-1', 'Ana Ruiz', 'r1'), f('2', 'mesa-1', 'Ana Ruiz', 'r1'), f('3', 'mesa-5', 'Ana Ruiz', 'r1', 'en_linea'),
-      f('4', 'mesa-1', 'Luis Pérez', 'r2'),
+      f('1', 'miercoles', 'Ana Ruiz', 'r1'), f('2', 'jueves', 'Ana Ruiz', 'r1'), f('3', 'viernes', 'Ana Ruiz', 'r1', 'en_linea'),
+      f('4', 'jueves', 'Luis Pérez', 'r2'),
     ]);
     expect(personas.map((p) => [p.nombre, p.total])).toEqual([['Ana Ruiz', 3], ['Luis Pérez', 1]]);
     expect(personas[0].porDia).toEqual({ '2026-11-11': 1, '2026-11-12': 1, '2026-11-13': 1 });
@@ -206,7 +204,7 @@ describe('la vista por persona', () => {
   });
 
   it('quien está «sin registro» se agrupa por su correo: dos escaneos suyos son una persona', () => {
-    const personas = agruparPorPersona([f('1', 'mesa-1', 'Pedro Soto', null), f('2', 'mesa-2', 'Pedro Soto', null)]);
+    const personas = agruparPorPersona([f('1', 'jueves', 'Pedro Soto', null), f('2', 'viernes', 'Pedro Soto', null)]);
     expect(personas).toHaveLength(1);
     expect(personas[0]).toMatchObject({ total: 2, sinRegistro: true });
   });
@@ -238,8 +236,8 @@ describe('el CSV', () => {
 });
 
 describe('la sesión de prueba', () => {
-  it('no es de la agenda: las 19 sesiones siguen siendo 19', () => {
-    expect(SESIONES_DE_ASISTENCIA).toHaveLength(19);
+  it('no es de la agenda: las jornadas siguen siendo tres', () => {
+    expect(SESIONES_DE_ASISTENCIA).toHaveLength(3);
     expect(SESIONES_DE_ASISTENCIA.some((x) => x.clave === CLAVE_DE_PRUEBA)).toBe(false);
     expect(sesionPorClave('prueba')).toBe(SESION_DE_PRUEBA);
     expect(esSesionDePrueba('prueba')).toBe(true);
@@ -252,19 +250,19 @@ describe('la sesión de prueba', () => {
     }
   });
 
-  it('se nombra «Sesión de prueba» y su día es «Prueba», para que en la hoja no se confunda con una mesa', () => {
+  it('se nombra «Sesión de prueba» y su día es «Prueba», para que en la hoja no se confunda con un día del Congreso', () => {
     expect(etiquetaDeClave('prueba', 'es')).toBe('Sesión de prueba');
     expect(etiquetaDeClave('prueba', 'en')).toBe('Test session');
     expect(diaDeClave('prueba', 'es')).toBe('Prueba');
     const [fila] = filasDeAsistencias([{ sesion: 'prueba', via: 'presencial', nombre: 'Ana Ruiz', correo: 'ana@x.org' }]);
-    expect(fila.slice(3)).toEqual(['Prueba', 'Sesión de prueba', 'Presencial']);
+    expect(fila.slice(3)).toEqual(['Prueba', 'Presencial']);
   });
 
   it('no cuenta para la asistencia de nadie: la vista por persona la deja fuera', () => {
     const f = (id: string, sesion: string): FilaDeAsistencia => ({
       id, sesion, via: 'presencial', registro_id: 'r1', nombre: 'Ana Ruiz', correo: 'ana@x.org', perfil: null, folio: null, creada_en: '2026-11-12T20:00:00Z',
     });
-    const personas = agruparPorPersona([f('1', 'prueba'), f('2', 'mesa-1')]);
+    const personas = agruparPorPersona([f('1', 'prueba'), f('2', 'jueves')]);
     expect(personas).toHaveLength(1);
     expect(personas[0].total).toBe(1);
     // Quien sólo hizo la prueba no aparece.

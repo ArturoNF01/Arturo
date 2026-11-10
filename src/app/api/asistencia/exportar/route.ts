@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { aCsv, diaDeClave, etiquetaDeClave, sesionPorClave } from '@/lib/asistencia';
+import { aCsv, diaDeClave, sesionPorClave } from '@/lib/asistencia';
 import { asistentesDeSesion, todasLasAsistencias } from '@/lib/servidor/asistencia';
 import { permisos, usuarioActual } from '@/lib/servidor/sesion';
 
@@ -10,7 +10,7 @@ const HORA = new Intl.DateTimeFormat('es-MX', {
 });
 
 /**
- * La asistencia en CSV, completa o de una sesión (`?sesion=mesa-4`). Lleva nombre y correo, y la descarga quien
+ * La asistencia en CSV, completa o de un día (`?sesion=jueves`). Lleva nombre y correo, y la descarga quien
  * la ve en el panel (desde el rol de lector). La exportación de los registros es otra, con su propio permiso.
  */
 export async function GET(peticion: NextRequest) {
@@ -25,9 +25,9 @@ export async function GET(peticion: NextRequest) {
   try {
     const filas = sesion ? await asistentesDeSesion(sesion) : await todasLasAsistencias();
     const csv = aCsv([
-      ['N.º', 'Nombre', 'Correo', 'Día', 'Mesa', 'Modalidad', 'Hora de registro', 'Folio', 'Identificación'],
+      ['N.º', 'Nombre', 'Correo', 'Día', 'Modalidad', 'Hora de registro', 'Folio', 'Identificación'],
       ...filas.map((f, i) => [
-        i + 1, f.nombre, f.correo, diaDeClave(f.sesion), etiquetaDeClave(f.sesion),
+        i + 1, f.nombre, f.correo, diaDeClave(f.sesion),
         f.via === 'presencial' ? 'Presencial' : 'En línea',
         HORA.format(new Date(f.creada_en)), f.folio ?? '',
         { correo: 'Por correo', nombre: 'Por nombre', conciliada: 'Conciliada', ninguno: 'Sin registro' }[f.identificado_por],

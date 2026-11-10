@@ -52,6 +52,12 @@ async function insertarCodigo(sesion: string, via: ViaAsistencia): Promise<void>
  * estar impresos.
  */
 export async function asegurarCodigos(): Promise<CodigosPorSesion> {
+  // Los códigos de sesiones que ya no existen —cuando la asistencia era por mesa— se quitan: su QR ya no registra
+  // nada (la sesión no está en la agenda) y no tiene caso que sigan en la lista. La sesión de prueba no se toca.
+  await consultar(
+    'delete from asistencia_codigos where sesion <> $1 and sesion <> all($2::text[])',
+    [CLAVE_DE_PRUEBA, SESIONES_DE_ASISTENCIA.map((s) => s.clave)],
+  );
   const existentes = await consultar<{ sesion: string; via: ViaAsistencia; codigo: string }>(
     'select sesion, via, codigo from asistencia_codigos',
   );

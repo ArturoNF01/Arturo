@@ -210,7 +210,6 @@ async function principal() {
     asegurarCodigos, cambiarCodigo, resolverCodigo, registrarAsistencia, resumenPorSesion, asistentesDeSesion,
     conciliarAsistencia, buscarRegistros, todasLasAsistencias, eliminarAsistencia, leerCodigos,
   } = await import('../../src/lib/servidor/asistencia');
-  const { SESIONES_DE_ASISTENCIA } = await import('../../src/lib/asistencia');
 
   // Quien sólo puede mirar (el lector) lee los códigos que hay y no crea ninguno.
   comprobar(Object.keys(await leerCodigos()).length === 0 && (await consultar('select 1 from asistencia_codigos')).length === 0,
@@ -219,15 +218,23 @@ async function principal() {
   comprobar(JSON.stringify(await leerCodigos()) === JSON.stringify(codigos), 'códigos: leerlos devuelve los mismos que creó quien organiza');
   const todosLosCodigos = Object.values(codigos).flatMap((c) => [c.presencial, c.en_linea]);
   comprobar(
-    Object.keys(codigos).length === SESIONES_DE_ASISTENCIA.length && todosLosCodigos.length === SESIONES_DE_ASISTENCIA.length * 2,
-    'asistencia: hay un código presencial y uno en línea por cada sesión', Object.keys(codigos).length);
+    Object.keys(codigos).length === 3 && todosLosCodigos.length === 6,
+    'asistencia: hay un código presencial y uno en línea por cada día (tres días, seis códigos)', Object.keys(codigos).length);
   comprobar(new Set(todosLosCodigos).size === todosLosCodigos.length, 'asistencia: ningún código se repite');
   comprobar(JSON.stringify(await asegurarCodigos()) === JSON.stringify(codigos), 'asistencia: repetir no cambia los códigos que ya podían estar impresos');
-  const viejo = codigos['mesa-4'].presencial;
-  const nuevoCodigo = await cambiarCodigo('mesa-4', 'presencial');
+  // Los códigos de cuando la asistencia era por mesa se quitan: su QR ya no registra nada, y los de ahora no se tocan.
+  await consultar(`insert into asistencia_codigos (sesion, via, codigo) values ('mesa-7', 'presencial', 'codigoviejo'), ('prueba', 'presencial', 'codigoprueba')`);
+  const trasLimpiar = await asegurarCodigos();
+  comprobar(!('mesa-7' in trasLimpiar) && JSON.stringify(trasLimpiar) === JSON.stringify(codigos),
+    'asistencia: los códigos de sesiones que ya no existen se quitan y los de ahora no cambian');
+  comprobar((await consultar(`select 1 from asistencia_codigos where sesion = 'prueba'`)).length === 1 && (await consultar(`select 1 from asistencia_codigos where sesion = 'mesa-7'`)).length === 0,
+    'asistencia: y los de la sesión de prueba se respetan');
+  await consultar(`delete from asistencia_codigos where sesion = 'prueba'`);
+  const viejo = codigos['jueves'].presencial;
+  const nuevoCodigo = await cambiarCodigo('jueves', 'presencial');
   comprobar(
     nuevoCodigo !== null && nuevoCodigo !== viejo && (await resolverCodigo(viejo)) === null &&
-    (await resolverCodigo(nuevoCodigo))?.sesion === 'mesa-4' && (await resolverCodigo(codigos['mesa-4'].en_linea))?.via === 'en_linea',
+    (await resolverCodigo(nuevoCodigo))?.sesion === 'jueves' && (await resolverCodigo(codigos['jueves'].en_linea))?.via === 'en_linea',
     'asistencia: cambiar un código invalida el anterior y no toca los demás');
   comprobar((await resolverCodigo('zzzzzzzzzz')) === null && (await resolverCodigo('corto')) === null, 'asistencia: un código que no existe no resuelve nada');
 
@@ -246,53 +253,54 @@ async function principal() {
     idsAsis[correo] = fila!.id;
   }
 
-  const EN_SESION = new Date('2026-11-12T22:00:00Z'); // jueves 12, 16:00 en México: mesa 3 y mesa 4 en curso
+  const EN_SESION = new Date('2026-11-12T22:00:00Z'); // jueves 12, 16:00 en México: la jornada del jueves está abierta
+  const EN_VIERNES = new Date('2026-11-13T20:00:00Z'); // viernes 13, 14:00 en México
   const codigoDe = (sesion: string, via: 'presencial' | 'en_linea') =>
-    via === 'presencial' && sesion === 'mesa-4' ? nuevoCodigo! : codigos[sesion][via];
+    via === 'presencial' && sesion === 'jueves' ? nuevoCodigo! : codigos[sesion][via];
 
-  const fuera = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'asis.uno@example.org', ahora: new Date('2026-11-12T10:00:00Z') });
+  const fuera = await registrarAsistencia({ codigo: codigoDe('jueves', 'presencial'), correo: 'asis.uno@example.org', ahora: new Date('2026-11-12T10:00:00Z') });
   comprobar(!fuera.ok && fuera.motivo === 'fuera_de_horario' && fuera.estado === 'antes', 'asistencia: fuera de horario no se registra', fuera);
   comprobar((await consultar('select 1 from asistencias')).length === 0, 'asistencia: y no deja nada guardado');
 
-  const primera = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: ' ASIS.UNO@Example.org ', ahora: EN_SESION });
+  const primera = await registrarAsistencia({ codigo: codigoDe('jueves', 'presencial'), correo: ' ASIS.UNO@Example.org ', ahora: EN_SESION });
   comprobar(primera.ok && primera.estado === 'registrada' && !primera.sinRegistro && primera.nombre === 'María' && primera.via === 'presencial',
-    'asistencia: el correo de un registro (sin importar mayúsculas ni espacios) registra la asistencia presencial', primera);
-  const repetida = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'asis.uno@example.org', ahora: EN_SESION });
+    'asistencia: el correo de un registro (sin importar mayúsculas ni espacios) registra la asistencia presencial del día', primera);
+  const repetida = await registrarAsistencia({ codigo: codigoDe('jueves', 'presencial'), correo: 'asis.uno@example.org', ahora: EN_SESION });
   comprobar(repetida.ok && repetida.estado === 'ya_registrada', 'asistencia: escanear dos veces no duplica', repetida);
-  const porLaOtraVia = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'en_linea'), correo: 'asis.uno@example.org', ahora: EN_SESION });
+  const porLaOtraVia = await registrarAsistencia({ codigo: codigoDe('jueves', 'en_linea'), correo: 'asis.uno@example.org', ahora: EN_SESION });
   comprobar(porLaOtraVia.ok && porLaOtraVia.estado === 'ya_registrada' && porLaOtraVia.via === 'presencial',
     'asistencia: la misma persona por la otra vía no cuenta dos veces y se le dice por cuál quedó', porLaOtraVia);
-  const enOtraSesion = await registrarAsistencia({ codigo: codigoDe('mesa-3', 'en_linea'), correo: 'asis.dos@example.org', ahora: EN_SESION });
+  const enOtraSesion = await registrarAsistencia({ codigo: codigoDe('viernes', 'en_linea'), correo: 'asis.dos@example.org', ahora: EN_VIERNES });
   comprobar(enOtraSesion.ok && enOtraSesion.via === 'en_linea', 'asistencia: la vía sale del código, no de lo que diga la persona', enOtraSesion);
 
-  const primerPaso = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'asis.mal.escrito@example.org', ahora: EN_SESION });
+  const primerPaso = await registrarAsistencia({ codigo: codigoDe('jueves', 'presencial'), correo: 'asis.mal.escrito@example.org', ahora: EN_SESION });
   comprobar(!primerPaso.ok && primerPaso.motivo === 'no_encontrado', 'asistencia: un correo desconocido pide nombre y correo, sin guardar nada todavía', primerPaso);
-  comprobar((await resumenPorSesion())['mesa-4']?.total === 1, 'asistencia: y el primer paso no deja nada guardado');
+  comprobar((await resumenPorSesion())['jueves']?.total === 1, 'asistencia: y el primer paso no deja nada guardado');
 
-  const porNombre = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'asis.mal.escrito@example.org', nombre: 'robles iturbide, maria fernanda', ahora: EN_SESION });
+  const porNombre = await registrarAsistencia({ codigo: codigoDe('jueves', 'presencial'), correo: 'asis.mal.escrito@example.org', nombre: 'robles iturbide, maria fernanda', ahora: EN_SESION });
   comprobar(porNombre.ok && porNombre.estado === 'ya_registrada' && !porNombre.sinRegistro,
     'asistencia: en el segundo paso, un nombre que coincide con un solo registro la identifica (aquí ya tenía su asistencia)', porNombre);
 
-  const sinRegistro = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'quien.sea@example.org', nombre: 'Pedro Ramírez', ahora: EN_SESION });
+  const sinRegistro = await registrarAsistencia({ codigo: codigoDe('jueves', 'presencial'), correo: 'quien.sea@example.org', nombre: 'Pedro Ramírez', ahora: EN_SESION });
   comprobar(sinRegistro.ok && sinRegistro.estado === 'registrada' && sinRegistro.sinRegistro && sinRegistro.nombre === 'Pedro',
     'asistencia: si ni el correo ni el nombre aparecen, se guarda «sin registro»', sinRegistro);
-  const sinRegistroOtraVez = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'QUIEN.SEA@example.org', nombre: 'Pedro Ramírez', ahora: EN_SESION });
+  const sinRegistroOtraVez = await registrarAsistencia({ codigo: codigoDe('jueves', 'presencial'), correo: 'QUIEN.SEA@example.org', nombre: 'Pedro Ramírez', ahora: EN_SESION });
   comprobar(sinRegistroOtraVez.ok && sinRegistroOtraVez.estado === 'ya_registrada', 'asistencia: la asistencia «sin registro» tampoco se duplica', sinRegistroOtraVez);
 
-  const cancelada = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'asis.tres@example.org', nombre: 'Ana Cancelada', ahora: EN_SESION });
+  const cancelada = await registrarAsistencia({ codigo: codigoDe('jueves', 'presencial'), correo: 'asis.tres@example.org', nombre: 'Ana Cancelada', ahora: EN_SESION });
   comprobar(cancelada.ok && cancelada.sinRegistro, 'asistencia: un registro cancelado no se reconoce: queda «sin registro»', cancelada);
 
-  const malCorreo = await registrarAsistencia({ codigo: codigoDe('mesa-4', 'presencial'), correo: 'no-es-un-correo', ahora: EN_SESION });
+  const malCorreo = await registrarAsistencia({ codigo: codigoDe('jueves', 'presencial'), correo: 'no-es-un-correo', ahora: EN_SESION });
   comprobar(!malCorreo.ok && malCorreo.motivo === 'datos_invalidos', 'asistencia: un correo que no lo es se rechaza', malCorreo);
   const malCodigo = await registrarAsistencia({ codigo: 'zzzzzzzzzz', correo: 'asis.uno@example.org', ahora: EN_SESION });
   comprobar(!malCodigo.ok && malCodigo.motivo === 'codigo_invalido', 'asistencia: un código que no existe se rechaza', malCodigo);
 
   const resumen = await resumenPorSesion();
   comprobar(
-    resumen['mesa-4']?.presencial === 3 && resumen['mesa-4'].sinRegistro === 2 && resumen['mesa-3']?.en_linea === 1,
+    resumen['jueves']?.presencial === 3 && resumen['jueves'].sinRegistro === 2 && resumen['viernes']?.en_linea === 1,
     'asistencia: el resumen cuenta por sesión, por vía y «sin registro»', resumen);
 
-  const asistentes = await asistentesDeSesion('mesa-4');
+  const asistentes = await asistentesDeSesion('jueves');
   comprobar(
     asistentes[0]?.nombre === 'María Fernanda Robles Iturbide' && asistentes[0].identificado_por === 'correo' && asistentes[0].folio !== null,
     'asistencia: la lista de una sesión trae el nombre del registro, no lo escrito', asistentes[0]);
@@ -300,16 +308,16 @@ async function principal() {
   const suelta = asistentes.find((x) => x.registro_id === null && x.correo === 'quien.sea@example.org');
   const conciliada = await conciliarAsistencia(suelta!.id, idsAsis['asis.dos@example.org']);
   comprobar(conciliada.ok && conciliada.resultado === 'ligada', 'asistencia: el comité puede ligar una «sin registro» a su registro', conciliada);
-  const despuesDeConciliar = (await asistentesDeSesion('mesa-4')).find((x) => x.id === suelta!.id);
+  const despuesDeConciliar = (await asistentesDeSesion('jueves')).find((x) => x.id === suelta!.id);
   comprobar(despuesDeConciliar?.registro_id === idsAsis['asis.dos@example.org'] && despuesDeConciliar.identificado_por === 'conciliada' && despuesDeConciliar.nombre === 'Luis Pérez Gómez',
     'asistencia: y queda a nombre del registro', despuesDeConciliar);
 
   // Si esa persona ya tenía asistencia en la misma sesión, la fila suelta sobra: se descarta en vez de contar dos veces.
-  await registrarAsistencia({ codigo: codigoDe('mesa-3', 'en_linea'), correo: 'otro@example.org', nombre: 'Otra Persona', ahora: EN_SESION });
-  const otraSuelta = (await asistentesDeSesion('mesa-3')).find((x) => x.registro_id === null);
+  await registrarAsistencia({ codigo: codigoDe('viernes', 'en_linea'), correo: 'otro@example.org', nombre: 'Otra Persona', ahora: EN_VIERNES });
+  const otraSuelta = (await asistentesDeSesion('viernes')).find((x) => x.registro_id === null);
   const duplicada = await conciliarAsistencia(otraSuelta!.id, idsAsis['asis.dos@example.org']);
   comprobar(duplicada.ok && duplicada.resultado === 'duplicada_descartada', 'asistencia: ligar a quien ya tenía asistencia en la sesión descarta la duplicada', duplicada);
-  comprobar((await asistentesDeSesion('mesa-3')).length === 1, 'asistencia: y no cuenta dos veces');
+  comprobar((await asistentesDeSesion('viernes')).length === 1, 'asistencia: y no cuenta dos veces');
   const aCancelado = await conciliarAsistencia(suelta!.id, idsAsis['asis.tres@example.org']);
   comprobar(!aCancelado.ok, 'asistencia: no se liga a un registro cancelado', aCancelado);
 
@@ -322,7 +330,7 @@ async function principal() {
 
   // Dar de baja un registro no borra la asistencia: la fila sigue diciendo quién fue.
   await consultar('delete from registros where id = $1', [idsAsis['asis.dos@example.org']]);
-  const sobrevive = (await asistentesDeSesion('mesa-4')).find((x) => x.id === suelta!.id);
+  const sobrevive = (await asistentesDeSesion('jueves')).find((x) => x.id === suelta!.id);
   comprobar(sobrevive !== undefined && sobrevive.registro_id === null && sobrevive.nombre === 'Luis Pérez Gómez',
     'asistencia: la baja de un registro no borra su asistencia', sobrevive);
   comprobar((await eliminarAsistencia(suelta!.id)) === true && (await eliminarAsistencia(suelta!.id)) === false, 'asistencia: quitar un escaneo que no correspondía');
@@ -355,7 +363,7 @@ async function principal() {
   comprobar(!malCorreoB.ok && malCorreoB.motivo === 'datos_invalidos', 'búsqueda: un correo que no lo es se rechaza', malCorreoB);
   const malCodigoB = await busca('asis.uno@example.org', 'zzzzzzzzzz');
   comprobar(!malCodigoB.ok && malCodigoB.motivo === 'codigo_invalido', 'búsqueda: con un código que no existe no contesta nada', malCodigoB);
-  const fueraB = await busca('asis.uno@example.org', codigos['mesa-1'].presencial, DESPUES);
+  const fueraB = await busca('asis.uno@example.org', codigos['miercoles'].presencial, DESPUES);
   comprobar(!fueraB.ok && fueraB.motivo === 'fuera_de_horario', 'búsqueda: fuera del horario de la sesión tampoco contesta (no sirve para averiguar quién está registrado)', fueraB);
   const antes = (await consultar('select 1 from asistencias')).length;
   await busca('asis.uno@example.org');

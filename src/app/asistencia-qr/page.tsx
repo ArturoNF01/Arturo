@@ -16,7 +16,7 @@ const hora = (d: Date) =>
   d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
 
 /** Cada hoja dice lo mismo en los tres idiomas: la sala es de todos. */
-const LLAMADA = ['Registra tu asistencia', 'Check in for this session', 'Registre sua presença'] as const;
+const LLAMADA = ['Registra tu asistencia', 'Check in', 'Registre sua presença'] as const;
 
 function Hoja({ sesion, qr, enlace }: { sesion: SesionDeAsistencia; qr: string; enlace: string }) {
   const { abre, cierra } = ventanaDe(sesion);
@@ -41,8 +41,9 @@ function Hoja({ sesion, qr, enlace }: { sesion: SesionDeAsistencia; qr: string; 
         </div>
       )}
       <p className="aqr-datos">
-        {sesion.diaTexto.es} · {sesion.horario}
-        {sesion.sala ? ` · ${nombreDeSala(sesion.sala, 'es')}` : ''}
+        {sesion.tipo === 'dia'
+          ? `Horario del día: ${sesion.horario}`
+          : `${sesion.diaTexto.es} · ${sesion.horario}${sesion.sala ? ` · ${nombreDeSala(sesion.sala, 'es')}` : ''}`}
       </p>
       <p className="aqr-vale">Disponible de {hora(abre)} a {hora(cierra)} (hora de la Ciudad de México)</p>
     </section>
@@ -54,14 +55,14 @@ function Ficha({ sesion, qr }: { sesion: SesionDeAsistencia; qr: string }) {
     <div className="aqr-ficha">
       <div className="aqr-qr" dangerouslySetInnerHTML={{ __html: qr }} />
       <p className="aqr-sesion">{sesion.corto.es}</p>
-      <p className="aqr-datos">{sesion.diaTexto.es.split(' de ')[0]} · {sesion.horario}</p>
+      <p className="aqr-datos">{sesion.tipo === 'dia' ? sesion.horario : `${sesion.diaTexto.es.split(' de ')[0]} · ${sesion.horario}`}</p>
     </div>
   );
 }
 
 /**
- * Los QR de asistencia listos para imprimir: una hoja por sesión (para pegar en la entrada de cada sala)
- * o una tira de tarjetas para recortar y poner en el programa impreso. Sólo los QR presenciales: el
+ * Los QR de asistencia listos para imprimir: una hoja por día (para pegar en la entrada de las salas) o una tira de
+ * tarjetas para recortar y poner en el programa impreso. Son tres: miércoles, jueves y viernes. Sólo los QR presenciales: el
  * enlace en línea se pega en el chat, no se imprime.
  */
 export default async function AsistenciaQr({ searchParams }: { searchParams: Promise<{ formato?: string }> }) {

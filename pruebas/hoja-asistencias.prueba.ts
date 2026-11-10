@@ -5,7 +5,7 @@ import {
 } from '@/lib/asistencia';
 
 /**
- * La pestaña «Asistencias» de la hoja de Google: nombre, correo, día y mesa. Se llena por lotes, no al
+ * La pestaña «Asistencias» de la hoja de Google: nombre, correo, día y modalidad. Se llena por lotes, no al
  * escanear, y es una copia de la base. Aquí se ve con una hoja simulada con memoria lo que de verdad
  * queda en cada fila.
  */
@@ -15,25 +15,24 @@ const fila = (
 ): Pick<FilaDeAsistencia, 'sesion' | 'via' | 'nombre' | 'correo'> => ({ sesion, via, nombre, correo });
 
 describe('las filas de la pestaña', () => {
-  it('llevan N.º, nombre, correo, día, mesa y modalidad, con el N.º seguido', () => {
-    expect([...ENCABEZADOS_ASISTENCIAS]).toEqual(['N.º', 'Nombre', 'Correo', 'Día', 'Mesa', 'Modalidad']);
+  it('llevan N.º, nombre, correo, día y modalidad, con el N.º seguido; ya no hay columna de mesa', () => {
+    expect([...ENCABEZADOS_ASISTENCIAS]).toEqual(['N.º', 'Nombre', 'Correo', 'Día', 'Modalidad']);
     expect(HOJA_ASISTENCIAS).toBe('Asistencias');
     const filas = filasDeAsistencias([
-      fila('mesa-4', 'presencial', 'María Robles', 'maria@ejemplo.org'),
-      fila('miercoles-1', 'en_linea', 'Luis Pérez', 'luis@ejemplo.org'),
+      fila('jueves', 'presencial', 'María Robles', 'maria@ejemplo.org'),
+      fila('miercoles', 'en_linea', 'Luis Pérez', 'luis@ejemplo.org'),
     ]);
-    expect(filas[0].slice(0, 4)).toEqual([1, 'María Robles', 'maria@ejemplo.org', 'Jueves 12 de noviembre']);
-    expect(String(filas[0][4])).toMatch(/^Mesa 4 · /);
-    expect(filas[0][5]).toBe('Presencial');
-    expect(filas[1][0]).toBe(2);
-    expect(filas[1][3]).toBe('Miércoles 11 de noviembre');
-    expect(String(filas[1][4])).toMatch(/Salud/);
-    expect(filas[1][5]).toBe('En línea');
+    expect(filas[0]).toEqual([1, 'María Robles', 'maria@ejemplo.org', 'Jueves 12 de noviembre', 'Presencial']);
+    expect(filas[1]).toEqual([2, 'Luis Pérez', 'luis@ejemplo.org', 'Miércoles 11 de noviembre', 'En línea']);
+  });
+
+  it('la sesión de prueba sale con el día «Prueba»', () => {
+    expect(filasDeAsistencias([fila('prueba', 'presencial', 'Ana', 'ana@x.org')])[0].slice(3)).toEqual(['Prueba', 'Presencial']);
   });
 });
 
 describe('qué hay que escribir en la hoja', () => {
-  const f = (n: number, nombre = `P${n}`): FilaDeHoja => [n, nombre, `p${n}@x.org`, 'Jueves 12 de noviembre', 'Mesa 1', 'Presencial'];
+  const f = (n: number, nombre = `P${n}`): FilaDeHoja => [n, nombre, `p${n}@x.org`, 'Jueves 12 de noviembre', 'Presencial'];
 
   it('una hoja igual a la base no necesita nada', () => {
     const p = planDeHoja([f(1), f(2)], [f(1), f(2)]);
@@ -66,10 +65,10 @@ describe('qué hay que escribir en la hoja', () => {
   });
 
   it('compara como texto: un número que la hoja devuelve como «1» no es un cambio', () => {
-    expect(planDeHoja([f(1)], [['1', 'P1', 'p1@x.org', 'Jueves 12 de noviembre', 'Mesa 1', 'Presencial']]).escribir).toEqual([]);
+    expect(planDeHoja([f(1)], [['1', 'P1', 'p1@x.org', 'Jueves 12 de noviembre', 'Presencial']]).escribir).toEqual([]);
   });
 
-  it('no mira lo que alguien haya anotado a la derecha de las seis columnas', () => {
+  it('no mira lo que alguien haya anotado a la derecha de las cinco columnas', () => {
     expect(planDeHoja([f(1)], [[...f(1), 'nota a mano']]).escribir).toEqual([]);
   });
 });
@@ -166,6 +165,12 @@ vi.mock('@/lib/servidor/google', () => ({
         },
         clear: async (p: { range: string }) => {
           hoja.limpiezas.push(p.range);
+          // Las columnas enteras (títulos incluidos): lo que se hace al rehacer una pestaña del diseño anterior.
+          if (/!A1:[A-Z]$/.test(p.range)) {
+            hoja.encabezados = [];
+            hoja.filas = [];
+            return { data: {} };
+          }
           const [, desde, hasta] = /!A(\d+):[A-Z](\d+)/.exec(p.range)!.map(Number);
           hoja.filas.splice(desde - 2, hasta - desde + 1);
           return { data: {} };
@@ -200,12 +205,12 @@ describe('sincronizar la pestaña con la base', () => {
   });
 
   it('con la primera asistencia crea la pestaña detrás de «Resumen Registro», con sus encabezados, y escribe la fila', async () => {
-    asistencias = [una('mesa-4', 'presencial', 'María Robles', 'maria@ejemplo.org')];
+    asistencias = [una('jueves', 'presencial', 'María Robles', 'maria@ejemplo.org')];
     const r = await sincronizarAsistencias();
     expect(r.nuevas).toBe(1);
     expect(hoja.existe).toBe(true);
     expect(hoja.creadaEn).toBe(2); // justo después de «Resumen Registro», que es la segunda
-    expect(hoja.encabezados).toEqual(['N.º', 'Nombre', 'Correo', 'Día', 'Mesa', 'Modalidad']);
+    expect(hoja.encabezados).toEqual(['N.º', 'Nombre', 'Correo', 'Día', 'Modalidad']);
     expect(hoja.filas).toHaveLength(1);
     expect(hoja.filas[0].slice(0, 3)).toEqual([1, 'María Robles', 'maria@ejemplo.org']);
     // Texto tal cual, sin interpretar: un nombre que empiece por «=» no se vuelve fórmula.
@@ -213,7 +218,7 @@ describe('sincronizar la pestaña con la base', () => {
   });
 
   it('repetir no escribe nada: ya está al día', async () => {
-    asistencias = [una('mesa-4', 'presencial', 'María Robles', 'maria@ejemplo.org')];
+    asistencias = [una('jueves', 'presencial', 'María Robles', 'maria@ejemplo.org')];
     await sincronizarAsistencias();
     hoja.escrituras = [];
     const r = await sincronizarAsistencias();
@@ -222,21 +227,21 @@ describe('sincronizar la pestaña con la base', () => {
   });
 
   it('las asistencias nuevas se añaden al final, empezando por la fila que toca', async () => {
-    asistencias = [una('mesa-4', 'presencial', 'María Robles', 'maria@ejemplo.org')];
+    asistencias = [una('jueves', 'presencial', 'María Robles', 'maria@ejemplo.org')];
     await sincronizarAsistencias();
     hoja.escrituras = [];
-    asistencias.push(una('mesa-4', 'en_linea', 'Luis Pérez', 'luis@ejemplo.org'), una('mesa-3', 'presencial', 'Ana Ruiz', 'ana@ejemplo.org'));
+    asistencias.push(una('jueves', 'en_linea', 'Luis Pérez', 'luis@ejemplo.org'), una('viernes', 'presencial', 'Ana Ruiz', 'ana@ejemplo.org'));
     const r = await sincronizarAsistencias();
     expect(r.nuevas).toBe(2);
     expect(hoja.escrituras).toHaveLength(1);
-    expect(hoja.escrituras[0].range).toMatch(/!A3:F4$/); // la 2 ya estaba ocupada
+    expect(hoja.escrituras[0].range).toMatch(/!A3:E4$/); // la 2 ya estaba ocupada
     expect(hoja.filas.map((f) => f[0])).toEqual([1, 2, 3]);
   });
 
   it('lo que se concilia a mitad de lista se corrige en su fila', async () => {
     asistencias = [
-      una('mesa-4', 'presencial', 'Pedro (sin registro)', 'p@x.org'),
-      una('mesa-4', 'presencial', 'Luis Pérez', 'luis@ejemplo.org'),
+      una('jueves', 'presencial', 'Pedro (sin registro)', 'p@x.org'),
+      una('jueves', 'presencial', 'Luis Pérez', 'luis@ejemplo.org'),
     ];
     await sincronizarAsistencias();
     asistencias[0] = { ...asistencias[0], nombre: 'Pedro Ramírez Soto' };
@@ -248,28 +253,28 @@ describe('sincronizar la pestaña con la base', () => {
 
   it('una asistencia quitada no deja hueco: la numeración sigue seguida y sobra una fila que se vacía', async () => {
     asistencias = [
-      una('mesa-4', 'presencial', 'Uno', 'uno@x.org'),
-      una('mesa-4', 'presencial', 'Dos', 'dos@x.org'),
-      una('mesa-4', 'presencial', 'Tres', 'tres@x.org'),
+      una('jueves', 'presencial', 'Uno', 'uno@x.org'),
+      una('jueves', 'presencial', 'Dos', 'dos@x.org'),
+      una('jueves', 'presencial', 'Tres', 'tres@x.org'),
     ];
     await sincronizarAsistencias();
     asistencias.splice(0, 1);
     const r = await sincronizarAsistencias();
     expect(r.quitadas).toBe(1);
     expect(hoja.filas.map((f) => [f[0], f[1]])).toEqual([[1, 'Dos'], [2, 'Tres']]);
-    expect(hoja.limpiezas[0]).toMatch(/!A4:F4$/);
+    expect(hoja.limpiezas[0]).toMatch(/!A4:E4$/);
   });
 
-  it('no escribe fuera de sus seis columnas: lo que se anote a la derecha no se pisa', async () => {
-    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org'), una('mesa-4', 'presencial', 'Dos', 'dos@x.org')];
+  it('no escribe fuera de sus cinco columnas: lo que se anote a la derecha no se pisa', async () => {
+    asistencias = [una('jueves', 'presencial', 'Uno', 'uno@x.org'), una('jueves', 'presencial', 'Dos', 'dos@x.org')];
     await sincronizarAsistencias();
-    asistencias.push(una('mesa-1', 'presencial', 'Tres', 'tres@x.org'));
+    asistencias.push(una('miercoles', 'presencial', 'Tres', 'tres@x.org'));
     await sincronizarAsistencias();
-    for (const e of hoja.escrituras) expect(e.range).toMatch(/![A]\d+:F\d+$/);
+    for (const e of hoja.escrituras) expect(e.range).toMatch(/![A]\d+:E\d+$/);
   });
 
   it('si la base se vació y la hoja no, no la toca: puede ser un respaldo viejo', async () => {
-    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    asistencias = [una('jueves', 'presencial', 'Uno', 'uno@x.org')];
     await sincronizarAsistencias();
     asistencias = [];
     const r = await sincronizarAsistencias();
@@ -281,7 +286,7 @@ describe('sincronizar la pestaña con la base', () => {
   });
 
   it('si la hoja tiene muchas más filas que la base, se detiene y lo dice', async () => {
-    asistencias = Array.from({ length: 15 }, (_, i) => una('mesa-4', 'presencial', `P${i}`, `p${i}@x.org`));
+    asistencias = Array.from({ length: 15 }, (_, i) => una('jueves', 'presencial', `P${i}`, `p${i}@x.org`));
     await sincronizarAsistencias();
     asistencias = asistencias.slice(0, 3);
     const r = await sincronizarAsistencias();
@@ -290,7 +295,7 @@ describe('sincronizar la pestaña con la base', () => {
   });
 
   it('simular dice lo que haría sin tocar nada', async () => {
-    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    asistencias = [una('jueves', 'presencial', 'Uno', 'uno@x.org')];
     const r = await sincronizarAsistencias({ simular: true });
     expect(r).toMatchObject({ nuevas: 1, simulado: true });
     expect(hoja.existe).toBe(false);
@@ -300,7 +305,7 @@ describe('sincronizar la pestaña con la base', () => {
 
 describe('cuando son muchas asistencias', () => {
   it('amplía la pestaña antes de escribir: una pestaña nueva trae 1,000 filas y el Congreso pasa de ahí', async () => {
-    asistencias = Array.from({ length: 1500 }, (_, i) => una('mesa-4', 'presencial', `Persona ${i}`, `p${i}@x.org`));
+    asistencias = Array.from({ length: 1500 }, (_, i) => una('jueves', 'presencial', `Persona ${i}`, `p${i}@x.org`));
     await sincronizarAsistencias();
     expect(hoja.filas).toHaveLength(1500);
     expect(hoja.ampliaciones).toHaveLength(1);
@@ -312,16 +317,16 @@ describe('cuando son muchas asistencias', () => {
     // La prueba de que el simulacro vigila el límite: si no se ampliara, esto fallaría.
     hoja.existe = true;
     hoja.cuadricula = 10;
-    asistencias = Array.from({ length: 30 }, (_, i) => una('mesa-4', 'presencial', `P${i}`, `p${i}@x.org`));
+    asistencias = Array.from({ length: 30 }, (_, i) => una('jueves', 'presencial', `P${i}`, `p${i}@x.org`));
     await sincronizarAsistencias();
     expect(hoja.filas).toHaveLength(30);
     expect(hoja.ampliaciones.length).toBe(1);
   });
 
   it('una pasada siguiente no vuelve a ampliar si ya cabe', async () => {
-    asistencias = Array.from({ length: 1500 }, (_, i) => una('mesa-4', 'presencial', `P${i}`, `p${i}@x.org`));
+    asistencias = Array.from({ length: 1500 }, (_, i) => una('jueves', 'presencial', `P${i}`, `p${i}@x.org`));
     await sincronizarAsistencias();
-    asistencias.push(una('mesa-1', 'presencial', 'Otra', 'otra@x.org'));
+    asistencias.push(una('miercoles', 'presencial', 'Otra', 'otra@x.org'));
     await sincronizarAsistencias();
     expect(hoja.ampliaciones).toHaveLength(1);
     expect(hoja.filas).toHaveLength(1501);
@@ -332,9 +337,9 @@ describe('los títulos de la pestaña', () => {
   it('si alguien creó la pestaña a mano, o cambió los títulos, se dejan los de siempre', async () => {
     hoja.existe = true;
     hoja.encabezados = ['Nombre', 'Correo'];
-    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    asistencias = [una('jueves', 'presencial', 'Uno', 'uno@x.org')];
     await sincronizarAsistencias();
-    expect(hoja.encabezados).toEqual(['N.º', 'Nombre', 'Correo', 'Día', 'Mesa', 'Modalidad']);
+    expect(hoja.encabezados).toEqual(['N.º', 'Nombre', 'Correo', 'Día', 'Modalidad']);
   });
 });
 
@@ -343,11 +348,11 @@ describe('pasar a la hoja sin esperar al cron', () => {
   afterEach(() => { vi.useRealTimers(); });
 
   it('unos segundos después del escaneo la asistencia está en la hoja, y una ráfaga hace una sola pasada', async () => {
-    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    asistencias = [una('jueves', 'presencial', 'Uno', 'uno@x.org')];
     pedirSincronizacionDeAsistencias();
-    asistencias.push(una('mesa-4', 'presencial', 'Dos', 'dos@x.org'));
+    asistencias.push(una('jueves', 'presencial', 'Dos', 'dos@x.org'));
     pedirSincronizacionDeAsistencias();
-    asistencias.push(una('mesa-4', 'en_linea', 'Tres', 'tres@x.org'));
+    asistencias.push(una('jueves', 'en_linea', 'Tres', 'tres@x.org'));
     pedirSincronizacionDeAsistencias();
     expect(hoja.filas).toHaveLength(0); // todavía no: se espera para juntar la ráfaga
     await vi.advanceTimersByTimeAsync(ESPERA_AUTOMATICA_MS + 100);
@@ -356,7 +361,7 @@ describe('pasar a la hoja sin esperar al cron', () => {
   });
 
   it('anota cuándo se hizo, y si falla lo anota y no revienta a nadie: el cron lo alcanza después', async () => {
-    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    asistencias = [una('jueves', 'presencial', 'Uno', 'uno@x.org')];
     hoja.falla = 'The caller does not have permission';
     const consola = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     pedirSincronizacionDeAsistencias();
@@ -374,7 +379,7 @@ describe('pasar a la hoja sin esperar al cron', () => {
   });
 
   it('el botón del panel dice la causa real cuando falla', async () => {
-    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    asistencias = [una('jueves', 'presencial', 'Uno', 'uno@x.org')];
     hoja.falla = 'Requested entity was not found.';
     await expect(sincronizarYAnotar()).rejects.toThrow(/not found/);
     expect(estadoDeLaHoja().error).toMatch(/not found/);
@@ -382,7 +387,7 @@ describe('pasar a la hoja sin esperar al cron', () => {
 
   it('sin Google conectado (una instalación local) no hace nada ni deja nada pendiente', async () => {
     hoja.configurado = false;
-    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    asistencias = [una('jueves', 'presencial', 'Uno', 'uno@x.org')];
     pedirSincronizacionDeAsistencias();
     await vi.advanceTimersByTimeAsync(ESPERA_AUTOMATICA_MS * 2);
     expect(hoja.existe).toBe(false);
@@ -390,10 +395,57 @@ describe('pasar a la hoja sin esperar al cron', () => {
   });
 
   it('dos pasadas a la vez no se pisan: van una tras otra', async () => {
-    asistencias = [una('mesa-4', 'presencial', 'Uno', 'uno@x.org')];
+    asistencias = [una('jueves', 'presencial', 'Uno', 'uno@x.org')];
     const [a, b] = await Promise.all([sincronizarYAnotar(), sincronizarYAnotar()]);
     expect(a.nuevas).toBe(1);
     expect(b.nuevas).toBe(0); // la segunda ya encontró la fila escrita por la primera
     expect(hoja.filas).toHaveLength(1);
+  });
+});
+
+describe('la pestaña del diseño anterior (una asistencia por mesa, con su columna «Mesa»)', () => {
+  const anteriores = ['N.º', 'Nombre', 'Correo', 'Día', 'Mesa', 'Modalidad'];
+
+  it('se rehace con las columnas de ahora, sin dejar nada de la columna «Mesa»', async () => {
+    hoja.existe = true;
+    hoja.encabezados = [...anteriores];
+    hoja.filas = [
+      [1, 'María Robles', 'maria@ejemplo.org', 'Jueves 12 de noviembre', 'Mesa 4 · Envejecimiento', 'Presencial'],
+      [2, 'Luis Pérez', 'luis@ejemplo.org', 'Jueves 12 de noviembre', 'Mesa 3 · Pensiones', 'En línea'],
+    ];
+    asistencias = [
+      una('jueves', 'presencial', 'María Robles', 'maria@ejemplo.org'),
+      una('jueves', 'en_linea', 'Luis Pérez', 'luis@ejemplo.org'),
+    ];
+    await sincronizarAsistencias();
+    expect(hoja.encabezados).toEqual(['N.º', 'Nombre', 'Correo', 'Día', 'Modalidad']);
+    expect(hoja.filas).toEqual([
+      [1, 'María Robles', 'maria@ejemplo.org', 'Jueves 12 de noviembre', 'Presencial'],
+      [2, 'Luis Pérez', 'luis@ejemplo.org', 'Jueves 12 de noviembre', 'En línea'],
+    ]);
+    expect(hoja.filas.every((f) => f.length === 5)).toBe(true);
+  });
+
+  it('una pasada siguiente ya no la rehace', async () => {
+    hoja.existe = true;
+    hoja.encabezados = [...anteriores];
+    asistencias = [una('jueves', 'presencial', 'Uno', 'uno@x.org')];
+    await sincronizarAsistencias();
+    hoja.limpiezas = [];
+    hoja.escrituras = [];
+    await sincronizarAsistencias();
+    expect(hoja.limpiezas).toEqual([]);
+    expect(hoja.escrituras).toEqual([]);
+  });
+
+  it('si la base no tiene asistencias no la toca: lo que hay en la hoja podría ser lo único que queda', async () => {
+    hoja.existe = true;
+    hoja.encabezados = [...anteriores];
+    hoja.filas = [[1, 'María Robles', 'maria@ejemplo.org', 'Jueves 12 de noviembre', 'Mesa 4', 'Presencial']];
+    asistencias = [];
+    const r = await sincronizarAsistencias();
+    expect(r.omitido).toMatch(/--forzar/);
+    expect(hoja.filas).toHaveLength(1);
+    expect(hoja.encabezados).toEqual(anteriores);
   });
 });

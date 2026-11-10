@@ -1,6 +1,6 @@
 import 'server-only';
 import {
-  ENCABEZADOS_ASISTENCIAS, HOJA_ASISTENCIAS, filasDeAsistencias, planDeHoja,
+  ENCABEZADOS_ANTERIORES, ENCABEZADOS_ASISTENCIAS, HOJA_ASISTENCIAS, filasDeAsistencias, planDeHoja,
 } from '@/lib/asistencia';
 import { HOJA_LISTA, rangoDe } from '@/lib/normalizacion';
 import { todasLasAsistencias } from './asistencia';
@@ -44,8 +44,12 @@ export interface ResultadoDeAsistencias {
   simulado?: boolean;
 }
 
-/** La letra de la última columna propia: F con seis columnas. */
+/** La letra de la última columna propia: E con cinco columnas. */
 const ULTIMA_COLUMNA = String.fromCharCode('A'.charCodeAt(0) + ENCABEZADOS_ASISTENCIAS.length - 1);
+/** Hasta dónde se miran los títulos: las columnas de ahora y las que tuvo el diseño anterior (por mesa). */
+const ULTIMA_COLUMNA_DE_TITULOS = String.fromCharCode(
+  'A'.charCodeAt(0) + Math.max(ENCABEZADOS_ASISTENCIAS.length, ENCABEZADOS_ANTERIORES.length) - 1,
+);
 
 const enBlanco = (fila: readonly unknown[]) => fila.every((c) => String(c ?? '').trim() === '');
 
@@ -107,10 +111,28 @@ export async function sincronizarAsistencias(
   // Sin ellos la primera fila de datos quedaría debajo de nada, y «N.º» no se encontraría.
   if (sheetId !== null && !simular) {
     const titulos = (await conEspera(() =>
-      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: rangoDe(HOJA_ASISTENCIAS, `A1:${ULTIMA_COLUMNA}1`) }),
+      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: rangoDe(HOJA_ASISTENCIAS, `A1:${ULTIMA_COLUMNA_DE_TITULOS}1`) }),
     )).data.values?.[0] ?? [];
-    const iguales = ENCABEZADOS_ASISTENCIAS.every((t, i) => String(titulos[i] ?? '').trim() === t);
-    if (!iguales) {
+    const dicen = (esperados: readonly string[]) =>
+      esperados.length === titulos.filter((t) => String(t ?? '').trim() !== '').length &&
+      esperados.every((t, i) => String(titulos[i] ?? '').trim() === t);
+
+    // La pestaña del diseño anterior (una asistencia por mesa, con su columna «Mesa») se rehace entera: es una copia
+    // de la base, y sus filas ya no encajan en las columnas de ahora. Se vacía y se vuelve a escribir desde la base.
+    //
+    // Con una salvedad: si la base no tiene ninguna asistencia (un respaldo viejo, una tabla vaciada) lo que hay en
+    // la hoja podría ser lo único que queda, y no se toca sin `forzar`.
+    const anterior = dicen(ENCABEZADOS_ANTERIORES);
+    const puedeRehacer = deseadas.length > 0 || forzar;
+    if (anterior && puedeRehacer) {
+      await conEspera(() =>
+        sheets.spreadsheets.values.clear({
+          spreadsheetId: idLibro,
+          range: rangoDe(HOJA_ASISTENCIAS, `A1:${ULTIMA_COLUMNA_DE_TITULOS}`),
+        }),
+      );
+    }
+    if (!dicen(ENCABEZADOS_ASISTENCIAS) && (!anterior || puedeRehacer)) {
       await conEspera(() =>
         sheets.spreadsheets.values.update({
           spreadsheetId: idLibro,

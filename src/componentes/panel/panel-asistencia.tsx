@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useApp } from '@/componentes/proveedores';
 import { interpolar, type Idioma } from '@/i18n';
 import { SESION_DE_PRUEBA, type PersonaConAsistencia, type ViaAsistencia } from '@/lib/asistencia';
-import { SALAS, type ClaveSala, type TipoSesion } from '@/lib/programa';
+import type { ClaveSala, TipoSesion } from '@/lib/programa';
 import type { Asistente, CodigosPorSesion, EstadoDePrueba, RegistroCoincidente, ResumenDeSesion } from '@/lib/servidor/asistencia';
 
 type Texto = Record<Idioma, string>;
@@ -13,7 +13,7 @@ export interface SesionPlana {
   clave: string;
   dia: string;
   horario: string;
-  tipo: TipoSesion;
+  tipo: TipoSesion | 'dia';
   sala: ClaveSala | null;
   corto: Texto;
   titulo: Texto | null;
@@ -64,11 +64,6 @@ export function PanelAsistencia({
 
   const [pestana, setPestana] = useState<Pestana>('sesiones');
   const [ahora, setAhora] = useState(() => Date.now());
-  // El día de hoy si cae en el Congreso; si no, el primero.
-  const [dia, setDia] = useState(() => {
-    const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
-    return dias.find((d) => d.iso === hoy)?.iso ?? dias[0]?.iso ?? '';
-  });
   const [resumen, setResumen] = useState(resumenInicial);
   const [actualizadoA, setActualizadoA] = useState('');
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -135,25 +130,21 @@ export function PanelAsistencia({
     if (pestana === 'personas' && personas === null) void cargarPersonas();
   }, [pestana, personas, cargarPersonas]);
 
-  // La prueba aparece como un cuarto «día» mientras esté activa o tenga algo guardado, y no suma al total.
+  // La prueba aparece como una fila más mientras esté activa o tenga algo guardado, y no suma al total.
   const hayPrueba = Boolean(prueba?.activa) || (resumen.prueba?.total ?? 0) > 0;
-  const diasVista = useMemo(
-    () => (hayPrueba ? [...dias, { iso: 'prueba', texto: SESION_DE_PRUEBA.diaTexto }] : dias),
-    [dias, hayPrueba],
-  );
   const sesionDePrueba: SesionPlana = useMemo(() => ({
     clave: SESION_DE_PRUEBA.clave, dia: 'prueba', horario: SESION_DE_PRUEBA.horario, tipo: SESION_DE_PRUEBA.tipo, sala: null,
     corto: SESION_DE_PRUEBA.corto, titulo: null, abre: SESION_DE_PRUEBA.inicio.toISOString(), cierra: SESION_DE_PRUEBA.fin.toISOString(),
   }), []);
-  const sesionesDelDia = useMemo(
-    () => (dia === 'prueba' ? [sesionDePrueba] : sesiones.filter((s) => s.dia === dia)),
-    [sesiones, dia, sesionDePrueba],
+  const filas = useMemo(
+    () => (hayPrueba ? [...sesiones, sesionDePrueba] : sesiones),
+    [sesiones, hayPrueba, sesionDePrueba],
   );
   const totalGeneral = useMemo(
     () => Object.entries(resumen).filter(([clave]) => clave !== 'prueba').reduce((n, [, r]) => n + r.total, 0),
     [resumen],
   );
-  const nombreDia = (iso: string) => diasVista.find((d) => d.iso === iso)?.texto[idioma] ?? iso;
+  const nombreDia = (iso: string) => dias.find((d) => d.iso === iso)?.texto[idioma] ?? iso;
   const diaCorto = (iso: string) => nombreDia(iso).split(' ').slice(0, 2).join(' ');
   const abiertaAhora = (s: SesionPlana) => ahora >= Date.parse(s.abre) && ahora <= Date.parse(s.cierra);
 
@@ -195,7 +186,6 @@ export function PanelAsistencia({
     setTrabajando(false);
     if (r.ok && r.datos) {
       setPrueba(r.datos.prueba);
-      if (dia === 'prueba') setDia(dias[0]?.iso ?? '');
       avisar(interpolar(a.pruebaBorrada, { n: r.datos.borradas.asistencias }));
       await refrescarTodo(abierta ?? undefined);
     } else setError(r.mensaje ?? a.error);
@@ -254,27 +244,12 @@ export function PanelAsistencia({
 
       {pestana === 'sesiones' && (
         <section className="tarjeta p-4" aria-label={a.pestanaSesiones}>
-          <div className="mb-3 flex flex-wrap gap-2">
-            {diasVista.map((d) => (
-              <button
-                key={d.iso}
-                type="button"
-                onClick={() => { setDia(d.iso); void cargarResumen(); }}
-                aria-pressed={dia === d.iso}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${dia === d.iso ? 'bg-ciess-500 text-white' : 'boton-secundario'}`}
-              >
-                {diaCorto(d.iso)}
-              </button>
-            ))}
-          </div>
-
           <div className="desplazable overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="tenue text-xs">
                   <th className="py-1.5 pr-3 font-medium">{a.colHorario}</th>
                   <th className="py-1.5 pr-3 font-medium">{a.colSesion}</th>
-                  <th className="py-1.5 pr-3 font-medium">{a.colSala}</th>
                   <th className="py-1.5 pr-3 text-right font-medium">{a.colPresencial}</th>
                   <th className="py-1.5 pr-3 text-right font-medium">{a.colEnLinea}</th>
                   <th className="py-1.5 pr-3 text-right font-medium">{a.colSinRegistro}</th>
@@ -283,7 +258,7 @@ export function PanelAsistencia({
                 </tr>
               </thead>
               <tbody>
-                {sesionesDelDia.map((s) => {
+                {filas.map((s) => {
                   const r = resumen[s.clave] ?? { presencial: 0, en_linea: 0, sinRegistro: 0, total: 0 };
                   const lista = asistentes[s.clave];
                   return (
@@ -299,7 +274,6 @@ export function PanelAsistencia({
                             </span>
                           )}
                         </td>
-                        <td className="py-2 pr-3 text-xs">{s.sala ? SALAS[s.sala][idioma] : '—'}</td>
                         <td className="py-2 pr-3 text-right tabular-nums">{r.presencial}</td>
                         <td className="py-2 pr-3 text-right tabular-nums">{r.en_linea}</td>
                         <td className="py-2 pr-3 text-right tabular-nums">{r.sinRegistro > 0 ? <span className="text-amber-600">{r.sinRegistro}</span> : 0}</td>
@@ -312,7 +286,7 @@ export function PanelAsistencia({
                       </tr>
                       {abierta === s.clave && (
                         <tr>
-                          <td colSpan={8} className="pb-3">
+                          <td colSpan={7} className="pb-3">
                             <ListaDeAsistentes
                               asistentes={lista}
                               clave={s.clave}
@@ -379,34 +353,31 @@ export function PanelAsistencia({
             )}
           </div>
 
-          {dias.map((d) => (
-            <div key={d.iso} className="tarjeta p-4">
-              <h2 className="text-base font-bold">{d.texto[idioma]}</h2>
-              <div className="mt-3 divide-y" style={{ borderColor: 'var(--borde)' }}>
-                {sesiones.filter((s) => s.dia === d.iso).map((s) => {
-                  const c = codigos[s.clave];
-                  if (!c) return null;
-                  return (
-                    <FilaDeCodigos
-                      key={s.clave}
-                      sesion={s}
-                      codigos={c}
-                      qr={qrs[s.clave]}
-                      urlBase={urlBase}
-                      puedeCambiar={puedeGestionar}
-                      vale={interpolar(a.vale, { abre: hora(s.abre), cierra: hora(s.cierra) })}
-                      alCambiar={(via, codigo) => {
-                        setCodigos((previos) => previos && ({ ...previos, [s.clave]: { ...previos[s.clave], [via]: codigo } }));
-                        setAviso(a.codigoCambiado);
-                        setTimeout(() => setAviso(''), 6000);
-                      }}
-                      alFallar={(m) => setError(m)}
-                    />
-                  );
-                })}
-              </div>
+          <div className="tarjeta p-4">
+            <div className="divide-y" style={{ borderColor: 'var(--borde)' }}>
+              {sesiones.map((s) => {
+                const c = codigos[s.clave];
+                if (!c) return null;
+                return (
+                  <FilaDeCodigos
+                    key={s.clave}
+                    sesion={s}
+                    codigos={c}
+                    qr={qrs[s.clave]}
+                    urlBase={urlBase}
+                    puedeCambiar={puedeGestionar}
+                    vale={interpolar(a.vale, { abre: hora(s.abre), cierra: hora(s.cierra) })}
+                    alCambiar={(via, codigo) => {
+                      setCodigos((previos) => previos && ({ ...previos, [s.clave]: { ...previos[s.clave], [via]: codigo } }));
+                      setAviso(a.codigoCambiado);
+                      setTimeout(() => setAviso(''), 6000);
+                    }}
+                    alFallar={(m) => setError(m)}
+                  />
+                );
+              })}
             </div>
-          ))}
+          </div>
         </section>
       )}
     </div>
