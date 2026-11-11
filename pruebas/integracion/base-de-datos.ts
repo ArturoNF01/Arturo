@@ -550,6 +550,142 @@ async function principal() {
   await consultar(`delete from asistencia_codigos`);
   ok('limpieza de la pantalla de recepción');
 
+  // 16. Asistencia a mano desde el panel, para quien no tiene teléfono
+  const { registrarAsistenciaManual, ultimasManuales } = await import('../../src/lib/servidor/asistencia');
+  const altasManual: [string, string, string, string][] = [
+    ['manual.uno@example.org', 'Rosario', 'Vega Prieto', 'confirmado'],
+    ['manual.dos@example.org', 'Teodoro', 'Salas Ibarra', 'confirmado'],
+    ['manual.tres@example.org', 'Ximena', 'Lara Duarte', 'en_proceso'],
+    ['manual.homonimo.a@example.org', 'Juan', 'Pérez Soto', 'confirmado'],
+    ['manual.homonimo.b@example.org', 'Juan', 'Pérez Soto', 'confirmado'],
+    ['manual.cancelado@example.org', 'Carla', 'Baja Definitiva', 'cancelado'],
+  ];
+  const idsManual: Record<string, string> = {};
+  for (const [correo, nombres, apellidos, estado] of altasManual) {
+    const a = armarInsercion({
+      perfil: 'publico_general', grupo: 'externo', modalidad: 'presencial', idioma: 'es', nombres, apellidos,
+      correo, institucion: 'CIESS', pais_residencia: 'México', estado, consentimiento_datos: true,
+    });
+    idsManual[correo] = (await unaFila<{ id: string }>(`insert into registros (${a.columnas}) values (${a.marcadores}) returning id`, a.valores))!.id;
+  }
+  const filaDe = (sesion: string, correo: string) => unaFila<{
+    via: string; origen: string; identificado_por: string; registrada_por: string | null; registro_id: string | null;
+    capturado_nombre: string | null; capturado_correo: string | null; nombre: string;
+  }>(`select via, origen, identificado_por, registrada_por, registro_id, capturado_nombre, capturado_correo, nombre
+        from asistencias where sesion = $1 and correo = $2`, [sesion, correo]);
+  const cuantas = async () => Number((await unaFila<{ n: string }>('select count(*)::text as n from asistencias'))!.n);
+
+  const base0 = await cuantas();
+  const m1 = await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: '  MANUAL.UNO@Example.org ', usuarioId: usuario!.id });
+  comprobar(
+    m1.ok && m1.estado === 'registrada' && !m1.sinRegistro && m1.nombre === 'Rosario Vega Prieto' && m1.correo === 'manual.uno@example.org',
+    'manual: el correo de un registro (sin importar mayúsculas ni espacios) anota su asistencia, con su nombre completo', m1);
+  const f1 = await filaDe('jueves', 'manual.uno@example.org');
+  comprobar(
+    f1?.origen === 'manual' && f1.registrada_por === usuario!.id && f1.identificado_por === 'correo' && f1.via === 'presencial' && f1.registro_id === idsManual['manual.uno@example.org'],
+    'manual: queda dicho que fue a mano, quién la anotó y que se la identificó por su correo', f1);
+
+  const m1b = await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'manual.uno@example.org', usuarioId: usuario!.id });
+  comprobar(m1b.ok && m1b.estado === 'ya_registrada' && m1b.id === (m1.ok ? m1.id : null) && (await cuantas()) === base0 + 1,
+    'manual: anotar dos veces a la misma persona el mismo día no duplica', m1b);
+  const m1c = await registrarAsistenciaManual({ sesion: 'jueves', via: 'en_linea', correo: 'manual.uno@example.org', usuarioId: usuario!.id });
+  comprobar(m1c.ok && m1c.estado === 'ya_registrada' && m1c.via === 'presencial', 'manual: por la otra modalidad tampoco cuenta dos veces, y dice por cuál quedó', m1c);
+  const m1d = await registrarAsistenciaManual({ sesion: 'viernes', via: 'presencial', correo: 'manual.uno@example.org', usuarioId: usuario!.id });
+  comprobar(m1d.ok && m1d.estado === 'registrada', 'manual: otro día sí es otra asistencia', m1d);
+
+  // Se anota aunque el horario del código ya haya cerrado: quien la anota tiene a la persona enfrente.
+  const m2 = await registrarAsistenciaManual({ sesion: 'miercoles', via: 'en_linea', correo: 'manual.dos@example.org', usuarioId: usuario!.id });
+  comprobar(m2.ok && m2.estado === 'registrada' && m2.via === 'en_linea', 'manual: no depende del horario del código, y respeta la modalidad pedida', m2);
+
+  // Lo que ya escaneó la persona no se pisa.
+  const { asegurarCodigos: crearCodigos } = await import('../../src/lib/servidor/asistencia');
+  const codigosManual = await crearCodigos();
+  await registrarAsistencia({ codigo: codigosManual['jueves'].en_linea, correo: 'manual.dos@example.org', ahora: EN_SESION });
+  const m2b = await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'manual.dos@example.org', usuarioId: usuario!.id });
+  const f2 = await filaDe('jueves', 'manual.dos@example.org');
+  comprobar(
+    m2b.ok && m2b.estado === 'ya_registrada' && m2b.via === 'en_linea' && f2?.origen === 'qr' && f2.registrada_por === null,
+    'manual: si la persona ya había escaneado ese día, no se duplica ni se cambia cómo quedó', m2b);
+  const f2qr = await filaDe('jueves', 'manual.dos@example.org');
+  comprobar(f2qr?.origen === 'qr', 'manual: y el escaneo normal sigue quedando como «qr», sin quién');
+
+  // Elegido entre los registros que se buscaron
+  const m3 = await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', registroId: idsManual['manual.tres@example.org'], usuarioId: usuario!.id });
+  const f3 = await filaDe('jueves', 'manual.tres@example.org');
+  comprobar(m3.ok && m3.estado === 'registrada' && f3?.identificado_por === 'conciliada' && f3.origen === 'manual',
+    'manual: un registro elegido a mano queda como «conciliada» y «manual»', f3);
+  const m3b = await registrarAsistenciaManual({ sesion: 'viernes', via: 'presencial', registroId: idsManual['manual.tres@example.org'], correo: 'MANUAL.TRES@example.org', usuarioId: usuario!.id });
+  const f3b = await filaDe('viernes', 'manual.tres@example.org');
+  comprobar(m3b.ok && f3b?.identificado_por === 'correo' && f3b.capturado_correo === 'manual.tres@example.org',
+    'manual: si además se tecleó su correo y coincide, se identifica por el correo y se guarda lo tecleado', f3b);
+  const mMalo = await registrarAsistenciaManual({ sesion: 'viernes', via: 'presencial', registroId: idsManual['manual.dos@example.org'], correo: 'esto no es un correo', usuarioId: usuario!.id });
+  const fMalo = await filaDe('viernes', 'manual.dos@example.org');
+  comprobar(mMalo.ok && fMalo?.capturado_correo === null, 'manual: un correo mal escrito junto a un registro elegido se ignora', fMalo);
+
+  // El correo no aparece
+  const antesDeNoEncontrado = await cuantas();
+  const m4 = await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'nadie.asi@example.org', usuarioId: usuario!.id });
+  comprobar(!m4.ok && m4.motivo === 'no_encontrado' && (await cuantas()) === antesDeNoEncontrado,
+    'manual: un correo que no está en los registros pide el nombre y no guarda nada todavía', m4);
+  const m5 = await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'Nadie.Asi@example.org', nombre: '  Pedro   Camacho Rueda ', usuarioId: usuario!.id });
+  const f5 = await filaDe('jueves', 'nadie.asi@example.org');
+  comprobar(
+    m5.ok && m5.estado === 'registrada' && m5.sinRegistro && m5.nombre === 'Pedro Camacho Rueda' &&
+    f5?.registro_id === null && f5.identificado_por === 'ninguno' && f5.origen === 'manual' && f5.capturado_nombre === 'Pedro Camacho Rueda',
+    'manual: con el nombre, queda «sin registro» y lo escrito, para que el comité la concilie', f5);
+  const m5b = await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'nadie.asi@example.org', nombre: 'Pedro Camacho Rueda', usuarioId: usuario!.id });
+  comprobar(m5b.ok && m5b.estado === 'ya_registrada', 'manual: la «sin registro» tampoco se duplica', m5b);
+  const m6 = await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'otro.correo@example.org', nombre: 'Teodoro Salas Ibarra', usuarioId: usuario!.id });
+  comprobar(m6.ok && m6.estado === 'ya_registrada' && !m6.sinRegistro,
+    'manual: si el correo no aparece pero el nombre es de un solo registro, se la identifica por el nombre (aquí ya tenía su asistencia)', m6);
+  const m7 = await registrarAsistenciaManual({ sesion: 'miercoles', via: 'presencial', correo: 'otro.mas@example.org', nombre: 'Ximena Lara Duarte', usuarioId: usuario!.id });
+  const f7 = await filaDe('miercoles', 'manual.tres@example.org');
+  comprobar(m7.ok && m7.estado === 'registrada' && !m7.sinRegistro && f7?.identificado_por === 'nombre', 'manual: un nombre que coincide con un solo registro la identifica', m7);
+  const m8 = await registrarAsistenciaManual({ sesion: 'miercoles', via: 'presencial', correo: 'homonimo@example.org', nombre: 'Juan Pérez Soto', usuarioId: usuario!.id });
+  comprobar(m8.ok && m8.sinRegistro, 'manual: dos registros con el mismo nombre no se pueden distinguir: queda «sin registro», no se le atribuye a uno al azar', m8);
+
+  // Lo que se rechaza
+  const baseRechazos = await cuantas();
+  const rechazos = await Promise.all([
+    registrarAsistenciaManual({ sesion: 'prueba', via: 'presencial', correo: 'manual.uno@example.org', usuarioId: usuario!.id }),
+    registrarAsistenciaManual({ sesion: 'mesa-4', via: 'presencial', correo: 'manual.uno@example.org', usuarioId: usuario!.id }),
+    registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'no-es-un-correo', usuarioId: usuario!.id }),
+    registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: '', usuarioId: usuario!.id }),
+    registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', registroId: '00000000-0000-4000-8000-000000000000', usuarioId: usuario!.id }),
+    registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', registroId: idsManual['manual.cancelado@example.org'], usuarioId: usuario!.id }),
+    registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'manual.cancelado@example.org', usuarioId: usuario!.id }),
+  ]);
+  comprobar(
+    rechazos.map((r) => (r.ok ? 'ok' : r.motivo)).join(',') === 'sesion_invalida,sesion_invalida,datos_invalidos,datos_invalidos,registro_invalido,registro_invalido,no_encontrado' &&
+    (await cuantas()) === baseRechazos,
+    'manual: no se anota en la sesión de prueba ni en una que no existe, ni con un correo inválido o un registro inexistente o cancelado', rechazos);
+
+  // Lo que ve el panel
+  const ultimas = await ultimasManuales();
+  comprobar(
+    ultimas.length >= 8 && ultimas.every((x) => x.registrada_por === 'Prueba') &&
+    ultimas.every((x, i) => i === 0 || ultimas[i - 1].creada_en >= x.creada_en) &&
+    !ultimas.some((x) => x.correo === 'manual.dos@example.org' && x.sesion === 'jueves'),
+    'manual: la lista de las últimas anotadas a mano trae quién las anotó, las más recientes primero, y no mezcla los escaneos', ultimas.length);
+  comprobar((await ultimasManuales(3)).length === 3, 'manual: la lista se puede acotar');
+  const delJueves = await asistentesDeSesion('jueves');
+  comprobar(
+    delJueves.find((x) => x.correo === 'manual.uno@example.org')?.origen === 'manual' && delJueves.find((x) => x.correo === 'manual.dos@example.org')?.origen === 'qr',
+    'manual: la lista de asistentes de un día dice de cuáles es a mano');
+  const resumenManual = await resumenPorSesion();
+  comprobar((resumenManual['miercoles']?.en_linea ?? 0) >= 1 && (resumenManual['jueves']?.presencial ?? 0) >= 3,
+    'manual: cuentan igual que un escaneo en el resumen de cada día', resumenManual);
+
+  // Deshacer una equivocación
+  const idUltima = ultimas[0].id;
+  comprobar((await eliminarAsistencia(idUltima)) === true && !(await ultimasManuales(50)).some((x) => x.id === idUltima),
+    'manual: una anotada por equivocación se quita');
+
+  await consultar(`delete from asistencias where origen = 'manual' or correo like 'manual.%'`);
+  await consultar(`delete from registros where correo like 'manual.%@example.org'`);
+  await consultar(`delete from asistencia_codigos`);
+  ok('limpieza de la asistencia a mano');
+
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);
   await consultar(`delete from usuarios_panel where correo = 'prueba@ciess.org'`);

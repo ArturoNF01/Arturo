@@ -25,12 +25,14 @@ export async function GET(peticion: NextRequest) {
   try {
     const filas = sesion ? await asistentesDeSesion(sesion) : await todasLasAsistencias();
     const csv = aCsv([
-      ['N.º', 'Nombre', 'Correo', 'Día', 'Modalidad', 'Hora de registro', 'Folio', 'Identificación'],
+      ['N.º', 'Nombre', 'Correo', 'Día', 'Modalidad', 'Hora de registro', 'Folio', 'Identificación', 'Origen'],
       ...filas.map((f, i) => [
         i + 1, f.nombre, f.correo, diaDeClave(f.sesion),
         f.via === 'presencial' ? 'Presencial' : 'En línea',
         HORA.format(new Date(f.creada_en)), f.folio ?? '',
         { correo: 'Por correo', nombre: 'Por nombre', conciliada: 'Conciliada', ninguno: 'Sin registro' }[f.identificado_por],
+        // De dónde viene: la persona escaneó, o la anotó alguien del comité desde el panel (para quien no tiene teléfono).
+        f.origen === 'manual' ? 'A mano' : 'Escaneo',
       ]),
     ]);
     // El BOM hace que Excel abra el CSV con los acentos bien.

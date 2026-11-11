@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 import { urlSitio } from '@/lib/config';
-import { DIAS_DE_ASISTENCIA, SESIONES_DE_ASISTENCIA, ventanaDe } from '@/lib/asistencia';
+import { DIAS_DE_ASISTENCIA, SESIONES_DE_ASISTENCIA, jornadaDeHoy, ventanaDe } from '@/lib/asistencia';
 import { asegurarCodigos, estadoDePrueba, leerCodigos, resumenPorSesion, type CodigosPorSesion } from '@/lib/servidor/asistencia';
 import { leerAvisoGuardado } from '@/lib/servidor/recepcion';
 import { exigirUsuario, permisos } from '@/lib/servidor/sesion';
@@ -8,10 +8,12 @@ import { PanelAsistencia, type SesionPlana } from '@/componentes/panel/panel-asi
 
 export const dynamic = 'force-dynamic';
 
-export default async function PaginaAsistencia() {
+export default async function PaginaAsistencia({ searchParams }: { searchParams: Promise<{ pestana?: string }> }) {
   const usuario = await exigirUsuario('lector');
+  const { pestana } = await searchParams;
   const p = permisos(usuario.rol);
   const base = urlSitio().replace(/\/+$/, '');
+  const hoy = jornadaDeHoy();
 
   const sesiones: SesionPlana[] = SESIONES_DE_ASISTENCIA.map((s) => {
     const { abre, cierra } = ventanaDe(s);
@@ -55,6 +57,9 @@ export default async function PaginaAsistencia() {
       urlBase={base}
       pruebaInicial={prueba}
       avisoInicial={aviso}
+      diaDeHoy={{ clave: hoy?.sesion.clave ?? sesiones[0].clave, esHoy: hoy?.relacion === 'hoy' }}
+      // `?pestana=manual` abre directo el registro a mano: un acceso para la computadora de la mesa de recepción.
+      pestanaInicial={pestana === 'manual' && p.gestionarAsistencia ? 'manual' : 'sesiones'}
     />
   );
 }

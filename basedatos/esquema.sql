@@ -1249,6 +1249,11 @@ create table if not exists asistencias (
   capturado_correo  text,
   creada_en         timestamptz not null default now()
 );
+-- De dónde viene cada asistencia: 'qr' (la persona escaneó el QR o abrió el enlace del chat) o 'manual' (la anotó alguien del
+-- comité desde el panel, para quien no tiene teléfono o no pudo escanear) y, en ese caso, quién. Las anteriores son 'qr'.
+alter table asistencias add column if not exists origen text not null default 'qr' check (origen in ('qr', 'manual'));
+alter table asistencias add column if not exists registrada_por uuid references usuarios_panel(id) on delete set null;
+
 -- Una persona, una asistencia por sesión: escanear dos veces no duplica.
 create unique index if not exists asistencias_registro_sesion_idx
   on asistencias (sesion, registro_id) where registro_id is not null;

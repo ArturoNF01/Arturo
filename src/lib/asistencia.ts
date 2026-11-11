@@ -327,6 +327,25 @@ export type RespuestaDeAsistencia =
   | { ok: false; motivo: 'fuera_de_horario'; estado: 'antes' | 'cerrada'; abre: string; cierra: string }
   | { ok: false; motivo: 'codigo_invalido' | 'datos_invalidos' | 'limite' | 'error'; mensaje?: string };
 
+/** De dónde viene una asistencia: la persona escaneó (`qr`) o la anotó alguien del comité desde el panel (`manual`). */
+export type OrigenDeAsistencia = 'qr' | 'manual';
+
+/**
+ * Lo que contesta el registro a mano, en el panel. A diferencia de lo que ve quien escanea, aquí sí va el nombre completo
+ * —quien lo anota es del comité y tiene que ver a quién anotó— y el id de la asistencia, para poder deshacerla.
+ */
+export type RespuestaManual =
+  /** Quedó registrada (o ya lo estaba). `sinRegistro`: no se halló su registro y queda para que el comité la concilie. */
+  | { ok: true; estado: 'registrada' | 'ya_registrada'; id: string | null; nombre: string; correo: string; sinRegistro: boolean; via: ViaAsistencia; sesion: string }
+  /** El correo no apareció y no se escribió el nombre: hay que pedirlo. */
+  | { ok: false; motivo: 'no_encontrado' }
+  | { ok: false; motivo: 'datos_invalidos' | 'sesion_invalida' | 'registro_invalido' | 'error'; mensaje?: string };
+
+/** ¿Es un día de la agenda? La sesión de prueba no: sólo los días del Congreso se anotan a mano. */
+export function esSesionDeLaAgenda(clave: string): boolean {
+  return SESIONES_DE_ASISTENCIA.some((s) => s.clave === clave);
+}
+
 /**
  * El resultado de buscar el correo antes de registrar: con él se rellena el nombre completo en la pantalla, para
  * que quien escanea vea que es su registro. Sólo se contesta con un código vigente y dentro de su horario.

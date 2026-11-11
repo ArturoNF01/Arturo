@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { agruparPorPersona, esVia, sesionPorClave } from '@/lib/asistencia';
+import { agruparPorPersona, esSesionDeLaAgenda, esVia, sesionPorClave } from '@/lib/asistencia';
 import { urlSitio } from '@/lib/config';
 import {
   activarPrueba, asistentesDeSesion, borrarPrueba, buscarRegistros, cambiarCodigo, conciliarAsistencia,
-  eliminarAsistencia, estadoDePrueba, resumenPorSesion, todasLasAsistencias,
+  eliminarAsistencia, estadoDePrueba, registrarAsistenciaManual, resumenPorSesion, todasLasAsistencias, ultimasManuales,
 } from '@/lib/servidor/asistencia';
 import { googleConfigurado } from '@/lib/servidor/google';
 import { estadoDeLaHoja, pedirSincronizacionDeAsistencias, sincronizarYAnotar } from '@/lib/servidor/sheets-asistencia';
@@ -36,6 +36,12 @@ export async function GET(peticion: NextRequest) {
     if (vista === 'personas') return NextResponse.json({ personas: agruparPorPersona(await todasLasAsistencias()) });
 
     if (vista === 'prueba') return NextResponse.json({ prueba: await estadoDePrueba(urlSitio()) });
+
+    // Las últimas anotadas a mano, para revisarlas y deshacer una equivocación: es de quien las anota.
+    if (vista === 'manuales') {
+      if (!permisos(usuario.rol).gestionarAsistencia) return NextResponse.json({ mensaje: 'No autorizado.' }, { status: 403 });
+      return NextResponse.json({ manuales: await ultimasManuales() });
+    }
   } catch (error) {
     console.error('No se pudo leer la asistencia:', error);
     return NextResponse.json({ mensaje: 'No fue posible leer la asistencia.' }, { status: 500 });
@@ -43,7 +49,10 @@ export async function GET(peticion: NextRequest) {
   return NextResponse.json({ mensaje: 'Vista no válida.' }, { status: 422 });
 }
 
-/** Lo que cambia la asistencia a mano: ligar una «sin registro», quitar un escaneo, cambiar un código. */
+/**
+ * Lo que cambia la asistencia a mano: anotar la de quien no tiene teléfono, ligar una «sin registro», quitar un escaneo,
+ * cambiar un código.
+ */
 export async function POST(peticion: NextRequest) {
   const usuario = await usuarioActual();
   if (!usuario || !permisos(usuario.rol).gestionarAsistencia) {
@@ -56,6 +65,26 @@ export async function POST(peticion: NextRequest) {
   try {
     if (accion === 'buscar') {
       return NextResponse.json({ registros: await buscarRegistros(String(cuerpo?.texto ?? '')) });
+    }
+
+    // Anotar la asistencia de quien no puede escanear: se escribe su correo (o se elige entre los registros que se buscaron).
+    if (accion === 'registrar_manual') {
+      const sesion = String(cuerpo?.sesion ?? '');
+      const via = cuerpo?.via;
+      const registroId = typeof cuerpo?.registroId === 'string' && cuerpo.registroId !== '' ? cuerpo.registroId : undefined;
+      if (!esSesionDeLaAgenda(sesion) || !esVia(via) || (registroId !== undefined && !esUuid(registroId))) {
+        return NextResponse.json({ mensaje: 'Petición no válida.' }, { status: 422 });
+      }
+      const respuesta = await registrarAsistenciaManual({
+        sesion, via, registroId, usuarioId: usuario.id,
+        correo: typeof cuerpo?.correo === 'string' ? cuerpo.correo : undefined,
+        nombre: typeof cuerpo?.nombre === 'string' ? cuerpo.nombre : undefined,
+      });
+      // La asistencia ya está en la base. A la hoja pasa unos segundos después, como las demás.
+      if (respuesta.ok && respuesta.estado === 'registrada') pedirSincronizacionDeAsistencias();
+      // Que falte el nombre no es un fallo: la pantalla lo pide. Lo demás sí lo es.
+      if (!respuesta.ok && respuesta.motivo !== 'no_encontrado') return NextResponse.json(respuesta, { status: 422 });
+      return NextResponse.json(respuesta);
     }
 
     if (accion === 'conciliar') {

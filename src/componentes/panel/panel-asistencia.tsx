@@ -7,6 +7,8 @@ import { SESION_DE_PRUEBA, type PersonaConAsistencia, type ViaAsistencia } from 
 import type { ClaveSala, TipoSesion } from '@/lib/programa';
 import type { Asistente, CodigosPorSesion, EstadoDePrueba, RegistroCoincidente, ResumenDeSesion } from '@/lib/servidor/asistencia';
 import { AvisoRecepcion } from './aviso-recepcion';
+import { pedir, post } from './pedir';
+import { RegistroManual } from './registro-manual';
 
 type Texto = Record<Idioma, string>;
 
@@ -22,33 +24,21 @@ export interface SesionPlana {
   cierra: string;
 }
 
-type Pestana = 'sesiones' | 'personas' | 'codigos';
+export type Pestana = 'sesiones' | 'personas' | 'manual' | 'codigos';
 
 const LENGUA = { es: 'es-MX', en: 'en-US', pt: 'pt-BR' } as const;
 const REFRESCO_MS = 30_000;
 
-async function pedir<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; datos: T | null; mensaje?: string }> {
-  try {
-    const r = await fetch(url, init);
-    const datos = (await r.json().catch(() => null)) as (T & { mensaje?: string }) | null;
-    return { ok: r.ok, datos, mensaje: datos?.mensaje };
-  } catch {
-    return { ok: false, datos: null };
-  }
-}
-
-const post = (cuerpo: Record<string, unknown>) =>
-  ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) }) satisfies RequestInit;
-
 /**
- * La asistencia a las sesiones, en tres vistas: por sesión (cuántas personas y quiénes), por persona
- * (a qué fue cada quien en los tres días) y los códigos para imprimir los QR y pegar los enlaces en el chat.
+ * La asistencia a las sesiones, en cuatro vistas: por día (cuántas personas y quiénes), por persona (a qué fue cada
+ * quien en los tres días), el registro a mano de quien no puede escanear el QR y los códigos para imprimir los QR y pegar
+ * los enlaces en el chat.
  *
  * El resumen se refresca solo cada 30 segundos mientras la pestaña está a la vista: durante una mesa se
  * ve cómo va entrando la gente.
  */
 export function PanelAsistencia({
-  sesiones, dias, resumenInicial, puedeExportar, puedeGestionar, codigos: codigosIniciales, qrs, urlBase, pruebaInicial, avisoInicial,
+  sesiones, dias, resumenInicial, puedeExportar, puedeGestionar, codigos: codigosIniciales, qrs, urlBase, pruebaInicial, avisoInicial, diaDeHoy, pestanaInicial = 'sesiones',
 }: {
   sesiones: SesionPlana[];
   dias: { iso: string; texto: Texto }[];
@@ -61,11 +51,15 @@ export function PanelAsistencia({
   pruebaInicial: EstadoDePrueba | null;
   /** El aviso de la pantalla de recepción, para quien puede editarlo; nulo para quien sólo lee. */
   avisoInicial: Record<Idioma, string> | null;
+  /** El día que propone el registro a mano —el de hoy, o el más cercano— y si de verdad es hoy. */
+  diaDeHoy: { clave: string; esHoy: boolean };
+  /** La pestaña con que se abre: `?pestana=manual` deja un acceso directo para la mesa de recepción. */
+  pestanaInicial?: Pestana;
 }) {
   const { t, idioma } = useApp();
   const a = t.panel.asistencia;
 
-  const [pestana, setPestana] = useState<Pestana>('sesiones');
+  const [pestana, setPestana] = useState<Pestana>(pestanaInicial);
   const [ahora, setAhora] = useState(() => Date.now());
   const [resumen, setResumen] = useState(resumenInicial);
   const [actualizadoA, setActualizadoA] = useState('');
@@ -213,7 +207,11 @@ export function PanelAsistencia({
       </div>
 
       <div className="flex flex-wrap items-center gap-2" role="tablist">
-        {([['sesiones', a.pestanaSesiones], ['personas', a.pestanaPersonas], ...(codigos !== null ? [['codigos', a.pestanaCodigos]] : [])] as [Pestana, string][]).map(([clave, texto]) => (
+        {([
+          ['sesiones', a.pestanaSesiones], ['personas', a.pestanaPersonas],
+          ...(puedeGestionar ? [['manual', a.pestanaManual]] : []),
+          ...(codigos !== null ? [['codigos', a.pestanaCodigos]] : []),
+        ] as [Pestana, string][]).map(([clave, texto]) => (
           <button
             key={clave}
             type="button"
@@ -332,6 +330,14 @@ export function PanelAsistencia({
             />
           )}
         </section>
+      )}
+
+      {pestana === 'manual' && puedeGestionar && (
+        <RegistroManual
+          dias={sesiones.map((s) => ({ clave: s.clave, corto: s.corto }))}
+          diaDeHoy={diaDeHoy}
+          alCambiar={() => refrescarTodo(abierta ?? undefined)}
+        />
       )}
 
       {pestana === 'codigos' && codigos && (
@@ -465,6 +471,7 @@ function ListaDeAsistentes({
                   <td className="py-1.5 pr-3 whitespace-nowrap">{hora(x.creada_en)}</td>
                   <td className="py-1.5 pr-3 whitespace-nowrap">
                     {x.registro_id === null ? <span className="text-amber-600">{a.sinRegistro}</span> : identificacion[x.identificado_por]}
+                    {x.origen === 'manual' && <span className="ml-1.5 rounded-full bg-black/5 px-1.5 py-0.5 dark:bg-white/10">{a.manualEtiqueta}</span>}
                   </td>
                   <td className="py-1.5 text-right whitespace-nowrap">
                     {puedeGestionar && x.registro_id === null && (

@@ -4,8 +4,9 @@ import QRCode from 'qrcode';
 import { consultar, unaFila } from '@/lib/bd/conexion';
 import {
   ALFABETO_DE_CODIGOS, CLAVE_DE_PRUEBA, LARGO_DE_CODIGO, SESIONES_DE_ASISTENCIA, VIAS,
-  correoValido, decidirIdentidad, esCodigoPosible, estadoDeVentana, nombreDePila, sesionPorClave, ventanaDe,
-  type RespuestaDeAsistencia, type RespuestaDeBusqueda, type SesionDeAsistencia, type ViaAsistencia,
+  correoValido, decidirIdentidad, esCodigoPosible, esSesionDeLaAgenda, estadoDeVentana, nombreDePila, sesionPorClave, ventanaDe,
+  type OrigenDeAsistencia, type RespuestaDeAsistencia, type RespuestaDeBusqueda, type RespuestaManual, type SesionDeAsistencia,
+  type ViaAsistencia,
 } from '@/lib/asistencia';
 
 /**
@@ -193,6 +194,96 @@ export async function buscarPersonaPorCorreo(
     : { ok: true, encontrado: false };
 }
 
+/** Lo que hace falta para anotar una asistencia, venga de un escaneo o de una captura a mano. */
+interface Captura {
+  sesion: string;
+  via: ViaAsistencia;
+  /** En minúsculas y ya comprobado; vacío si se eligió el registro a mano. */
+  correo: string;
+  nombre: string;
+  /** Un registro elegido a mano en el panel, en lugar de buscarlo por el correo. */
+  registroId?: string;
+  origen: OrigenDeAsistencia;
+  /** Quién del comité la anotó, si es a mano. */
+  registradaPor?: string;
+}
+
+type Capturada =
+  | {
+      ok: true; estado: 'registrada' | 'ya_registrada'; id: string | null; registro: RegistroVigente | null;
+      /** Lo que se tecleó como nombre. */
+      nombreEscrito: string; nombreGuardado: string; correoGuardado: string; via: ViaAsistencia;
+    }
+  | { ok: false; motivo: 'no_encontrado' | 'registro_invalido' };
+
+/**
+ * La parte que comparten el QR y el registro a mano: identificar a la persona (ver `decidirIdentidad`) y anotar su
+ * asistencia. Una sola, para que las dos puertas apliquen las mismas reglas: una asistencia por persona y por día, sin
+ * importar la vía ni por dónde llegó, y a quien no se halla se le guarda «sin registro» para que el comité lo concilie.
+ */
+async function capturarAsistencia(c: Captura): Promise<Capturada> {
+  let registro: RegistroVigente | null = null;
+  let identificadoPor: 'correo' | 'nombre' | 'conciliada' | 'ninguno' = 'ninguno';
+
+  if (c.registroId) {
+    // Elegido a mano entre los registros: no hay nada que adivinar.
+    registro = await unaFila<RegistroVigente>(
+      `select id, nombres, apellidos, correo from registros where id = $1 and estado <> 'cancelado'`,
+      [c.registroId],
+    );
+    if (!registro) return { ok: false, motivo: 'registro_invalido' };
+    // Si además se escribió su correo y es el mismo, se lo identificó por el correo; si no, fue a mano entre los registros.
+    identificadoPor = c.correo && c.correo === registro.correo.toLowerCase() ? 'correo' : 'conciliada';
+  } else {
+    const porCorreo = await registroVigentePorCorreo(c.correo);
+    // Sólo hace falta mirar por nombre cuando el correo no apareció y ya se pidió el nombre.
+    const candidatos = !porCorreo && c.nombre
+      ? await consultar<{ id: string; nombres: string; apellidos: string }>(
+          `select id, nombres, apellidos from registros where estado <> 'cancelado'`,
+        )
+      : [];
+
+    const decision = decidirIdentidad({
+      registroPorCorreo: porCorreo?.id ?? null,
+      nombre: c.nombre,
+      candidatosPorNombre: candidatos,
+    });
+    if (decision.accion === 'pedir_datos') return { ok: false, motivo: 'no_encontrado' };
+
+    if (decision.accion === 'registrar') {
+      registro = porCorreo?.id === decision.registroId
+        ? porCorreo
+        : await unaFila<RegistroVigente>('select id, nombres, apellidos, correo from registros where id = $1', [decision.registroId]);
+      if (registro) identificadoPor = decision.por;
+    }
+  }
+
+  const nombreGuardado = registro ? `${registro.nombres} ${registro.apellidos}`.trim() : c.nombre;
+  const correoGuardado = registro ? registro.correo.toLowerCase() : c.correo;
+
+  const insertada = await consultar<{ id: string }>(
+    `insert into asistencias (sesion, via, registro_id, identificado_por, nombre, correo, capturado_nombre, capturado_correo, origen, registrada_por)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     on conflict do nothing
+     returning id`,
+    [
+      c.sesion, c.via, registro?.id ?? null, identificadoPor,
+      nombreGuardado, correoGuardado, c.nombre || null, c.correo || null, c.origen, c.registradaPor ?? null,
+    ],
+  );
+  const base = { ok: true as const, registro, nombreEscrito: c.nombre, nombreGuardado, correoGuardado };
+  if (insertada.length > 0) return { ...base, estado: 'registrada', id: insertada[0].id, via: c.via };
+
+  // Ya estaba: se dice por qué vía quedó, que puede no ser la que se pidió ahora.
+  const previa = await unaFila<{ id: string; via: ViaAsistencia }>(
+    registro
+      ? 'select id, via from asistencias where sesion = $1 and registro_id = $2'
+      : 'select id, via from asistencias where sesion = $1 and correo = $2 and registro_id is null',
+    [c.sesion, registro ? registro.id : correoGuardado],
+  );
+  return { ...base, estado: 'ya_registrada', id: previa?.id ?? null, via: previa?.via ?? c.via };
+}
+
 /**
  * Registra la asistencia de quien escaneó, en dos pasos (ver `decidirIdentidad`).
  *
@@ -202,7 +293,6 @@ export async function buscarPersonaPorCorreo(
 export async function registrarAsistencia(p: PeticionDeAsistencia): Promise<RespuestaDeAsistencia> {
   const valido = await validarCodigo(p.codigo, p.ahora ?? new Date());
   if (!valido.ok) return valido;
-  const codigo = { sesion: valido.sesion.clave, via: valido.via };
 
   const correo = String(p.correo ?? '').trim().toLowerCase();
   const nombre = String(p.nombre ?? '').replace(/\s+/g, ' ').trim();
@@ -210,58 +300,53 @@ export async function registrarAsistencia(p: PeticionDeAsistencia): Promise<Resp
     return { ok: false, motivo: 'datos_invalidos' };
   }
 
-  const porCorreo = await registroVigentePorCorreo(correo);
-  // Sólo hace falta mirar por nombre cuando el correo no apareció y ya se le pidió el nombre.
-  const candidatos = !porCorreo && nombre
-    ? await consultar<{ id: string; nombres: string; apellidos: string }>(
-        `select id, nombres, apellidos from registros where estado <> 'cancelado'`,
-      )
-    : [];
+  const r = await capturarAsistencia({ sesion: valido.sesion.clave, via: valido.via, correo, nombre, origen: 'qr' });
+  if (!r.ok) return { ok: false, motivo: r.motivo === 'no_encontrado' ? 'no_encontrado' : 'error' };
 
-  const decision = decidirIdentidad({
-    registroPorCorreo: porCorreo?.id ?? null,
-    nombre,
-    candidatosPorNombre: candidatos,
+  const saludo = nombreDePila(r.registro ? r.registro.nombres : r.nombreEscrito);
+  return { ok: true, estado: r.estado, sinRegistro: !r.registro, nombre: saludo, via: r.via, sesion: valido.sesion.clave };
+}
+
+export interface PeticionManual {
+  /** Un día de la agenda ('miercoles', 'jueves', 'viernes'). */
+  sesion: string;
+  via: ViaAsistencia;
+  /** El correo con el que se registró la persona. */
+  correo?: string;
+  /** Sólo si el correo no apareció: lo que dice la persona que es su nombre. */
+  nombre?: string;
+  /** Un registro elegido a mano entre los que se buscaron, en lugar del correo. */
+  registroId?: string;
+  /** Quien del comité la anota. */
+  usuarioId: string;
+}
+
+/**
+ * Anota a mano la asistencia de quien no tiene teléfono —o no pudo escanear—, desde el panel. Es lo mismo que un escaneo,
+ * con las mismas reglas (`capturarAsistencia`), salvo dos cosas:
+ *
+ *  - No depende del horario del código. Quien la anota es del comité y tiene a la persona enfrente; un horario que cerró hace
+ *    diez minutos no debe dejar a nadie sin su asistencia. (Sí tiene que ser uno de los días de la agenda.)
+ *  - Queda dicho que fue a mano y quién la anotó, para que se pueda revisar y deshacer.
+ */
+export async function registrarAsistenciaManual(p: PeticionManual): Promise<RespuestaManual> {
+  if (!esSesionDeLaAgenda(p.sesion)) return { ok: false, motivo: 'sesion_invalida' };
+
+  const correo = String(p.correo ?? '').trim().toLowerCase();
+  const nombre = String(p.nombre ?? '').replace(/\s+/g, ' ').trim();
+  if (nombre.length > 200 || correo.length > 200 || (!p.registroId && !correoValido(correo))) {
+    return { ok: false, motivo: 'datos_invalidos' };
+  }
+
+  const r = await capturarAsistencia({
+    sesion: p.sesion, via: p.via, nombre, registroId: p.registroId, origen: 'manual', registradaPor: p.usuarioId,
+    // Con un registro elegido, el correo sólo cuenta si está bien escrito: es lo que se guarda como «lo que se tecleó».
+    correo: p.registroId && !correoValido(correo) ? '' : correo,
   });
-  if (decision.accion === 'pedir_datos') return { ok: false, motivo: 'no_encontrado' };
-
-  let registro: RegistroVigente | null = null;
-  if (decision.accion === 'registrar') {
-    registro = porCorreo?.id === decision.registroId
-      ? porCorreo
-      : await unaFila<RegistroVigente>('select id, nombres, apellidos, correo from registros where id = $1', [decision.registroId]);
-  }
-
-  const nombreGuardado = registro ? `${registro.nombres} ${registro.apellidos}`.trim() : nombre;
-  const correoGuardado = registro ? registro.correo.toLowerCase() : correo;
-
-  const identificadoPor = registro && decision.accion === 'registrar' ? decision.por : 'ninguno';
-  const insertada = await consultar<{ id: string }>(
-    `insert into asistencias (sesion, via, registro_id, identificado_por, nombre, correo, capturado_nombre, capturado_correo)
-     values ($1, $2, $3, $4, $5, $6, $7, $8)
-     on conflict do nothing
-     returning id`,
-    [
-      codigo.sesion, codigo.via, registro?.id ?? null, identificadoPor,
-      nombreGuardado, correoGuardado, nombre || null, correo,
-    ],
-  );
-
-  const saludo = nombreDePila(registro ? registro.nombres : nombre);
-  if (insertada.length > 0) {
-    return { ok: true, estado: 'registrada', sinRegistro: !registro, nombre: saludo, via: codigo.via, sesion: codigo.sesion };
-  }
-
-  // Ya estaba: se dice por qué vía quedó, que puede no ser la de este código.
-  const previa = await unaFila<{ via: ViaAsistencia }>(
-    registro
-      ? 'select via from asistencias where sesion = $1 and registro_id = $2'
-      : 'select via from asistencias where sesion = $1 and correo = $2 and registro_id is null',
-    [codigo.sesion, registro ? registro.id : correoGuardado],
-  );
+  if (!r.ok) return { ok: false, motivo: r.motivo };
   return {
-    ok: true, estado: 'ya_registrada', sinRegistro: !registro, nombre: saludo,
-    via: previa?.via ?? codigo.via, sesion: codigo.sesion,
+    ok: true, estado: r.estado, id: r.id, nombre: r.nombreGuardado, correo: r.correoGuardado,
+    sinRegistro: !r.registro, via: r.via, sesion: p.sesion,
   };
 }
 
@@ -309,13 +394,15 @@ export interface Asistente {
   folio: string | null;
   registro_id: string | null;
   identificado_por: 'correo' | 'nombre' | 'conciliada' | 'ninguno';
+  /** Escaneó la persona (`qr`) o la anotó alguien del comité desde el panel (`manual`). */
+  origen: OrigenDeAsistencia;
   capturado_nombre: string | null;
   capturado_correo: string | null;
   creada_en: string;
 }
 
 const COLUMNAS_DE_ASISTENTE = `
-  a.id, a.sesion, a.via, a.registro_id, a.identificado_por, a.capturado_nombre, a.capturado_correo,
+  a.id, a.sesion, a.via, a.registro_id, a.identificado_por, a.origen, a.capturado_nombre, a.capturado_correo,
   a.creada_en::text as creada_en,
   coalesce(nullif(btrim(r.nombres || ' ' || r.apellidos), ''), a.nombre) as nombre,
   coalesce(r.correo, a.correo) as correo,
@@ -329,6 +416,37 @@ export async function asistentesDeSesion(sesion: string): Promise<Asistente[]> {
       where a.sesion = $1
       order by a.creada_en, a.id`,
     [sesion],
+  );
+}
+
+export interface AsistenciaManual {
+  id: string;
+  sesion: string;
+  via: ViaAsistencia;
+  nombre: string;
+  correo: string;
+  /** No se halló su registro: quedó «sin registro», por conciliar. */
+  sin_registro: boolean;
+  creada_en: string;
+  /** Quién del comité la anotó (su nombre, o su correo si no tiene nombre). */
+  registrada_por: string | null;
+}
+
+/** Las últimas asistencias anotadas a mano, las más recientes primero: lo que se revisa —y se deshace— tras anotar. */
+export async function ultimasManuales(limite = 15): Promise<AsistenciaManual[]> {
+  return consultar<AsistenciaManual>(
+    `select a.id, a.sesion, a.via, a.creada_en::text as creada_en,
+            coalesce(nullif(btrim(r.nombres || ' ' || r.apellidos), ''), a.nombre) as nombre,
+            coalesce(r.correo, a.correo) as correo,
+            (a.registro_id is null) as sin_registro,
+            coalesce(nullif(btrim(u.nombre), ''), u.correo) as registrada_por
+       from asistencias a
+       left join registros r on r.id = a.registro_id
+       left join usuarios_panel u on u.id = a.registrada_por
+      where a.origen = 'manual'
+      order by a.creada_en desc, a.id
+      limit $1`,
+    [Math.max(1, Math.min(50, Math.trunc(limite)))],
   );
 }
 
