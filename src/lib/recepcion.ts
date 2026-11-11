@@ -195,6 +195,8 @@ export interface DatosDePantalla {
   version: string;
   /** `?ligero=1`: sin video, sin desenfoque y sin luces, para un equipo que no puede con tanto efecto. */
   ligero: boolean;
+  /** `?segundos=12`: cuánto se queda cada idioma, fijo. Nulo, lo calcula la pantalla según lo que haya que leer. */
+  segundos: number | null;
   urlVideo: string;
   nombre: Partial<Texto>;
   /** Fechas y sede ya no se enseñan en la pantalla; se siguen mandando para no romper una pantalla abierta con la versión anterior. */
@@ -215,6 +217,46 @@ export interface DatosDePantalla {
   programa: ProgramaDePantalla | null;
   /** El aviso del comité, ya con los tres idiomas; nulo si no hay. */
   aviso: Texto | null;
+}
+
+// ---------------------------------------------------------------------------
+// Cuánto se queda cada idioma
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo menos y lo más que se queda cada idioma en pantalla, en segundos. Más corto no da tiempo de leer un título de tres
+ * renglones —con cuatro segundos no se alcanzaba—; más largo, quien espera su idioma se cansa de esperar (con tres idiomas,
+ * esperarlo son dos turnos).
+ */
+export const SEGUNDOS_MINIMOS_POR_IDIOMA = 9;
+export const SEGUNDOS_MAXIMOS_POR_IDIOMA = 16;
+/** Lo que se acepta fijar a mano con `?segundos=`. */
+const LIMITE_FIJO = { minimo: 5, maximo: 30 } as const;
+
+const palabrasDe = (texto: string) => texto.split(/\s+/).filter(Boolean).length;
+
+/**
+ * Cuánto se queda cada idioma: el tiempo de leer lo más largo que haya en pantalla —un título de sesión, un aviso—, que
+ * es lo que no se alcanza a leer si el idioma cambia demasiado pronto. Unos 4 segundos para ubicarse y un tercio de
+ * segundo por palabra (unas 180 palabras por minuto, que es leer de pie, de lejos y en un idioma que quizá no es el propio),
+ * entre 9 y 16 segundos: un título normal de mesa queda en 9 y un aviso largo, en 11.
+ *
+ * Con `fijo` (lo que se pidió con `?segundos=`) manda lo pedido, entre 5 y 30.
+ */
+export function segundosPorIdioma(textos: readonly Texto[], fijo?: number | null): number {
+  if (typeof fijo === 'number' && Number.isFinite(fijo)) {
+    return Math.min(LIMITE_FIJO.maximo, Math.max(LIMITE_FIJO.minimo, Math.round(fijo)));
+  }
+  const palabras = Math.max(0, ...textos.flatMap((texto) => IDIOMAS.map((idioma) => palabrasDe(texto[idioma]))));
+  const calculado = Math.round(4 + palabras / 3);
+  return Math.min(SEGUNDOS_MAXIMOS_POR_IDIOMA, Math.max(SEGUNDOS_MINIMOS_POR_IDIOMA, calculado));
+}
+
+/** El `?segundos=` de la dirección: un entero entre 5 y 30, o nada (y entonces se calcula). */
+export function leerSegundos(valor: string | null | undefined): number | undefined {
+  if (!valor || !/^\d{1,2}$/.test(valor)) return undefined;
+  const numero = Number(valor);
+  return numero >= LIMITE_FIJO.minimo && numero <= LIMITE_FIJO.maximo ? numero : undefined;
 }
 
 // ---------------------------------------------------------------------------

@@ -56,6 +56,8 @@ export interface OpcionesDePantalla {
   /** 'HH:MM': a esa hora, con `dia`. */
   hora?: string;
   ligero?: boolean;
+  /** Cuánto se queda cada idioma, fijo (5 a 30); sin esto, la pantalla lo calcula según lo que haya que leer. */
+  segundos?: number;
   /**
    * Quien pide tiene sesión en el panel y puede ver otro día u otra hora. Lo decide quien llama (`armarParaPeticion`) y
    * no esta función, que no sabe de sesiones: así se puede probar contra la base sin montar una petición.
@@ -75,7 +77,7 @@ export interface OpcionesDePantalla {
  *
  * Si algo falla (la base, sobre todo) devuelve nulo en lugar de lanzar: la pantalla se queda con lo último que enseñó.
  */
-export async function armarDatosDePantalla({ dia, hora, ligero = false, vistaPrevia = false }: OpcionesDePantalla = {}): Promise<DatosDePantalla | null> {
+export async function armarDatosDePantalla({ dia, hora, ligero = false, segundos, vistaPrevia = false }: OpcionesDePantalla = {}): Promise<DatosDePantalla | null> {
   let ahora = new Date();
   try {
     const [configuracion, congreso, guardado] = await Promise.all([leerConfiguracion(), leerDatosCongreso(), leerAvisoGuardado()]);
@@ -107,6 +109,7 @@ export async function armarDatosDePantalla({ dia, hora, ligero = false, vistaPre
       ahora: ahora.toISOString(),
       version: versionDeLaCompilacion(),
       ligero,
+      segundos: segundos ?? null,
       urlVideo: ligero ? '' : configuracion.url_video_login,
       nombre: congreso.nombre,
       fechas: congreso.fechas,

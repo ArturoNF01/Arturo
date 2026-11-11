@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { LogoCiess } from '@/componentes/logo';
 import { VideoFondo } from '@/componentes/video-fondo';
 import {
-  TEXTOS_RECEPCION as TEXTOS, horaDeMexico, momentoDelDia,
+  TEXTOS_RECEPCION as TEXTOS, horaDeMexico, momentoDelDia, segundosPorIdioma,
   type DatosDePantalla, type Texto,
 } from '@/lib/recepcion';
 import { EnVivo } from './en-vivo';
 import { ESTILOS } from './estilos';
-import { SEGUNDOS_POR_IDIOMA, Triple, useAhora } from './triple';
+import { ProveedorDeIdioma, Triple, useAhora } from './triple';
 
 type Asistencia = NonNullable<DatosDePantalla['asistencia']>;
 
@@ -124,6 +124,11 @@ function Contenido({ datos }: { datos: DatosDePantalla }) {
   // el recordatorio de la constancia, y con aviso y dos salas, también «a continuación». Sin aviso y con una sola sala,
   // no se quita nada.
   const dosSalas = (momento?.actuales.length ?? 0) > 1;
+  // Cada idioma se queda lo que lleva leer lo más largo que hay en pantalla: el aviso y el título de lo que está en vivo.
+  const segundos = segundosPorIdioma(
+    [...(aviso ? [aviso] : []), ...(momento?.actuales.map((b) => b.titulo) ?? [])],
+    datos.segundos,
+  );
   const clases = [
     'rq-escena',
     dosSalas || aviso ? 'rq-compacta' : '',
@@ -132,65 +137,67 @@ function Contenido({ datos }: { datos: DatosDePantalla }) {
   ].filter(Boolean).join(' ');
 
   return (
-    <div className={clases}>
-      <header className="rq-entrada" style={{ ['--retraso' as string]: '0s' }}>
-        <div className="rq-fila">
-          <LogoCiess forzar="oscuro" className="rq-logo" />
-          <Reloj servidor={datos.ahora} />
-        </div>
-        <h1 className="rq-nombre"><Triple textos={completo(datos.nombre)} lineas={2} /></h1>
-      </header>
-
-      {aviso && (
-        <aside className="rq-aviso rq-entrada" style={{ ['--retraso' as string]: '0.1s' }} role="status">
-          <span className="rq-aviso-icono"><IconoAviso /></span>
-          <div>
-            <p className="rq-aviso-etq"><Triple textos={TEXTOS.aviso} /></p>
-            <p className="rq-aviso-texto"><Triple textos={aviso} lineas={3} /></p>
+    <ProveedorDeIdioma segundos={segundos}>
+      <div className={clases}>
+        <header className="rq-entrada" style={{ ['--retraso' as string]: '0s' }}>
+          <div className="rq-fila">
+            <LogoCiess forzar="oscuro" className="rq-logo" />
+            <Reloj servidor={datos.ahora} />
           </div>
-        </aside>
-      )}
+          <h1 className="rq-nombre"><Triple textos={completo(datos.nombre)} lineas={2} /></h1>
+        </header>
 
-      {programa && momento && <EnVivo programa={programa} momento={momento} ahora={ahora} />}
+        {aviso && (
+          <aside className="rq-aviso rq-entrada" style={{ ['--retraso' as string]: '0.1s' }} role="status">
+            <span className="rq-aviso-icono"><IconoAviso /></span>
+            <div>
+              <p className="rq-aviso-etq"><Triple textos={TEXTOS.aviso} /></p>
+              <p className="rq-aviso-texto"><Triple textos={aviso} lineas={3} /></p>
+            </div>
+          </aside>
+        )}
 
-      {datos.qrAgenda && (
-        <section className="rq-tarjeta rq-tarjeta-agenda rq-entrada" style={{ ['--retraso' as string]: '0.3s' }}>
-          <div className="rq-agenda-texto">
-            <span className="rq-icono"><IconoAgenda /></span>
-            <h2 className="rq-titulo rq-titulo-agenda"><Triple textos={TEXTOS.agendaTitulo} /></h2>
-            <p className="rq-sub"><Triple textos={TEXTOS.agendaAyuda} /></p>
-            <p className="rq-nota"><Triple textos={TEXTOS.agendaIdioma} /></p>
-          </div>
-          <CajaQr svg={datos.qrAgenda} tamano="agenda" />
-        </section>
-      )}
+        {programa && momento && <EnVivo programa={programa} momento={momento} ahora={ahora} />}
 
-      {a && (
-        <section className="rq-tarjeta rq-tarjeta-asistencia rq-entrada" style={{ ['--retraso' as string]: '0.45s' }}>
-          <div className="rq-encabezado">
-            <p className="rq-dia">
-              <Triple
-                textos={{
-                  es: `${a.relacion === 'hoy' ? 'Hoy · ' : a.relacion === 'proximo' ? 'Próximo día · ' : ''}${a.dia.es}`,
-                  en: `${a.relacion === 'hoy' ? 'Today · ' : a.relacion === 'proximo' ? 'Next day · ' : ''}${a.dia.en}`,
-                  pt: `${a.relacion === 'hoy' ? 'Hoje · ' : a.relacion === 'proximo' ? 'Próximo dia · ' : ''}${a.dia.pt}`,
-                }}
-              />
-            </p>
-            <h2 className="rq-titulo rq-titulo-fila">
-              <span className="rq-icono"><IconoAsistencia /></span>
-              <Triple textos={TEXTOS.asistenciaTitulo} />
-            </h2>
-            <p className="rq-sub"><Triple textos={TEXTOS.asistenciaAyuda} /></p>
-          </div>
-          <div className="rq-zona-qr">
-            <CajaQr svg={a.qr} tamano="asistencia" escaneo pulso vacio={TEXTOS.sinCodigo} />
-          </div>
-          <Estado ahora={ahora} asistencia={a} />
-          <p className="rq-constancia"><Triple textos={TEXTOS.constancia} /></p>
-        </section>
-      )}
-    </div>
+        {datos.qrAgenda && (
+          <section className="rq-tarjeta rq-tarjeta-agenda rq-entrada" style={{ ['--retraso' as string]: '0.3s' }}>
+            <div className="rq-agenda-texto">
+              <span className="rq-icono"><IconoAgenda /></span>
+              <h2 className="rq-titulo rq-titulo-agenda"><Triple textos={TEXTOS.agendaTitulo} /></h2>
+              <p className="rq-sub"><Triple textos={TEXTOS.agendaAyuda} /></p>
+              <p className="rq-nota"><Triple textos={TEXTOS.agendaIdioma} /></p>
+            </div>
+            <CajaQr svg={datos.qrAgenda} tamano="agenda" />
+          </section>
+        )}
+
+        {a && (
+          <section className="rq-tarjeta rq-tarjeta-asistencia rq-entrada" style={{ ['--retraso' as string]: '0.45s' }}>
+            <div className="rq-encabezado">
+              <p className="rq-dia">
+                <Triple
+                  textos={{
+                    es: `${a.relacion === 'hoy' ? 'Hoy · ' : a.relacion === 'proximo' ? 'Próximo día · ' : ''}${a.dia.es}`,
+                    en: `${a.relacion === 'hoy' ? 'Today · ' : a.relacion === 'proximo' ? 'Next day · ' : ''}${a.dia.en}`,
+                    pt: `${a.relacion === 'hoy' ? 'Hoje · ' : a.relacion === 'proximo' ? 'Próximo dia · ' : ''}${a.dia.pt}`,
+                  }}
+                />
+              </p>
+              <h2 className="rq-titulo rq-titulo-fila">
+                <span className="rq-icono"><IconoAsistencia /></span>
+                <Triple textos={TEXTOS.asistenciaTitulo} />
+              </h2>
+              <p className="rq-sub"><Triple textos={TEXTOS.asistenciaAyuda} /></p>
+            </div>
+            <div className="rq-zona-qr">
+              <CajaQr svg={a.qr} tamano="asistencia" escaneo pulso vacio={TEXTOS.sinCodigo} />
+            </div>
+            <Estado ahora={ahora} asistencia={a} />
+            <p className="rq-constancia"><Triple textos={TEXTOS.constancia} /></p>
+          </section>
+        )}
+      </div>
+    </ProveedorDeIdioma>
   );
 }
 
@@ -296,7 +303,6 @@ export function PantallaRecepcion({ datos, consulta }: { datos: DatosDePantalla 
   return (
     <main
       className={`rq ${mostrado?.ligero ? 'rq-ligero' : ''}`}
-      style={{ ['--ciclo' as string]: `${SEGUNDOS_POR_IDIOMA * 3}s` }}
       onDoubleClick={pantallaCompleta}
     >
       <style>{ESTILOS}</style>
@@ -311,12 +317,14 @@ export function PantallaRecepcion({ datos, consulta }: { datos: DatosDePantalla 
       {mostrado ? (
         <Contenido datos={mostrado} />
       ) : (
-        <div className="rq-escena">
-          <div className="rq-espera">
-            <LogoCiess forzar="oscuro" className="rq-logo" />
-            <p><Triple textos={TEXTOS.reconectando} /></p>
+        <ProveedorDeIdioma segundos={segundosPorIdioma([])}>
+          <div className="rq-escena">
+            <div className="rq-espera">
+              <LogoCiess forzar="oscuro" className="rq-logo" />
+              <p><Triple textos={TEXTOS.reconectando} /></p>
+            </div>
           </div>
-        </div>
+        </ProveedorDeIdioma>
       )}
 
       {mostrado?.asistencia?.previa && <p className="rq-previa">Vista previa · no es la fecha ni la hora de hoy</p>}

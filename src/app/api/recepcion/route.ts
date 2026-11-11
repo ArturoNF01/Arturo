@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { leerSegundos } from '@/lib/recepcion';
 import { armarParaPeticion } from '@/lib/servidor/recepcion-peticion';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,7 @@ export async function GET(peticion: NextRequest) {
     dia: consulta.get('dia') ?? undefined,
     hora: consulta.get('hora') ?? undefined,
     ligero: consulta.get('ligero') === '1',
+    segundos: leerSegundos(consulta.get('segundos')),
   });
   if (!datos) return NextResponse.json({ mensaje: 'No disponible por ahora.' }, { status: 503, headers: SIN_CACHE });
   return NextResponse.json(datos, { headers: SIN_CACHE });

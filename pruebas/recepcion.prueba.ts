@@ -4,8 +4,9 @@ import { instanteEnMexico } from '@/lib/asistencia';
 import { esquemaConfiguracion } from '@/lib/esquema';
 import { PROGRAMA } from '@/lib/programa';
 import {
-  LARGO_MAXIMO_DE_AVISO, TEXTOS_RECEPCION, avance, avisoDeRecepcion, avisoGuardado, bloquesDelDia, duracion,
-  enlacesDeRecepcion, horaDeMexico, minutosPara, momentoDelDia, programaDeLaPantalla, unir,
+  LARGO_MAXIMO_DE_AVISO, SEGUNDOS_MAXIMOS_POR_IDIOMA, SEGUNDOS_MINIMOS_POR_IDIOMA, TEXTOS_RECEPCION, avance,
+  avisoDeRecepcion, avisoGuardado, bloquesDelDia, duracion, enlacesDeRecepcion, horaDeMexico, leerSegundos, minutosPara,
+  momentoDelDia, programaDeLaPantalla, segundosPorIdioma, unir,
 } from '@/lib/recepcion';
 
 /**
@@ -288,5 +289,60 @@ describe('el aviso se guarda desde el panel', () => {
 
   it('la base siembra la fila del aviso (la ruta del panel sólo actualiza filas que existen)', () => {
     expect(readFileSync('basedatos/esquema.sql', 'utf8')).toMatch(/\('aviso_recepcion', '\{"es": "", "en": "", "pt": ""\}'::jsonb/);
+  });
+});
+
+describe('cuánto se queda cada idioma', () => {
+  const texto = (palabras: number) => {
+    const t = Array.from({ length: palabras }, () => 'palabra').join(' ');
+    return { es: t, en: t, pt: t };
+  };
+
+  it('nunca menos de 9 segundos, aunque no haya nada que leer: con 4 no se alcanzaba', () => {
+    expect(segundosPorIdioma([])).toBe(SEGUNDOS_MINIMOS_POR_IDIOMA);
+    expect(segundosPorIdioma([texto(2)])).toBe(9);
+    expect(SEGUNDOS_MINIMOS_POR_IDIOMA).toBeGreaterThanOrEqual(9);
+  });
+
+  it('crece con lo más largo que haya en pantalla, de a un tercio de segundo por palabra', () => {
+    expect(segundosPorIdioma([texto(15)])).toBe(9);
+    expect(segundosPorIdioma([texto(21)])).toBe(11);
+    expect(segundosPorIdioma([texto(30)])).toBe(14);
+    expect(segundosPorIdioma([texto(10), texto(24)])).toBe(12);
+  });
+
+  it('manda el idioma más largo: el portugués suele llevar más palabras', () => {
+    expect(segundosPorIdioma([{ es: 'a b c', en: 'a b c', pt: Array.from({ length: 27 }, () => 'p').join(' ') }])).toBe(13);
+  });
+
+  it('no pasa de 16 segundos, por largo que sea el texto', () => {
+    expect(segundosPorIdioma([texto(200)])).toBe(SEGUNDOS_MAXIMOS_POR_IDIOMA);
+  });
+
+  it('un título normal de mesa y un aviso del largo máximo caben en el tiempo calculado', () => {
+    const mesa = bloquesDelDia(dia('2026-11-12')).find((b) => b.clave === 'mesa-1')!;
+    const conferencia = bloquesDelDia(dia('2026-11-12')).find((b) => b.clave === 'conferencia')!;
+    expect(segundosPorIdioma([mesa.titulo])).toBeGreaterThanOrEqual(9);
+    // La conferencia es el título más largo del programa: se lee en 10 segundos o más.
+    expect(segundosPorIdioma([conferencia.titulo])).toBeGreaterThanOrEqual(10);
+    const aviso = 'palabra '.repeat(Math.floor(LARGO_MAXIMO_DE_AVISO / 8)).trim();
+    expect(segundosPorIdioma([{ es: aviso, en: aviso, pt: aviso }])).toBeLessThanOrEqual(SEGUNDOS_MAXIMOS_POR_IDIOMA);
+  });
+
+  it('lo que se pide con ?segundos= manda, entre 5 y 30', () => {
+    expect(segundosPorIdioma([texto(40)], 12)).toBe(12);
+    expect(segundosPorIdioma([], 2)).toBe(5);
+    expect(segundosPorIdioma([], 99)).toBe(30);
+    expect(segundosPorIdioma([texto(40)], null)).toBe(16);
+    expect(segundosPorIdioma([], Number.NaN)).toBe(9);
+  });
+
+  it('la dirección sólo acepta un entero entre 5 y 30', () => {
+    expect(leerSegundos('12')).toBe(12);
+    expect(leerSegundos('5')).toBe(5);
+    expect(leerSegundos('30')).toBe(30);
+    for (const malo of [undefined, null, '', '4', '31', '99', '1.5', '-8', 'doce', '12s', '012x']) {
+      expect(leerSegundos(malo), String(malo)).toBeUndefined();
+    }
   });
 });

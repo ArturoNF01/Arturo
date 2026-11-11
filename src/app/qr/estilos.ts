@@ -198,16 +198,16 @@ const HOJA = `
 /* Reconectando */
 .rq-espera { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4u; height: 100%; font-size: 4u; font-weight: 600; }
 
-/* Los tres idiomas, uno sobre otro: cada uno se enciende un tercio del ciclo. */
+/* Los tres idiomas, uno sobre otro, de los que se ve uno a la vez: el que toca marca el reloj de idioma (triple.tsx).
+   rq-i-0 es el que está a la vista, rq-i-1 el que sigue (espera abajo) y rq-i-2 el que acaba de salir (arriba).
+   El que sale se va primero (0.35 s) y el que entra espera a que se haya ido (otros 0.35 s) y aparece en medio segundo:
+   así nunca se ven dos idiomas encimados, que es lo que más estorba al leer. La transición se toma del estado al que
+   se llega, por eso el retraso va en el que entra (rq-i-0). */
 .rq-triple { display: inline-grid; }
-.rq-triple > span { grid-area: 1 / 1; opacity: 0; animation: rq-idioma var(--ciclo, 13.5s) ease-in-out infinite; }
-@keyframes rq-idioma {
-  0% { opacity: 0; transform: translateY(35%); }
-  4% { opacity: 1; transform: none; }
-  30% { opacity: 1; transform: none; }
-  34% { opacity: 0; transform: translateY(-35%); }
-  100% { opacity: 0; transform: translateY(-35%); }
-}
+.rq-triple > span { grid-area: 1 / 1; }
+.rq-triple > .rq-i-0 { opacity: 1; transform: none; transition: opacity .5s ease .35s, transform .5s ease .35s; }
+.rq-triple > .rq-i-1 { opacity: 0; transform: translateY(35%); transition: opacity .35s ease, transform .35s ease; }
+.rq-triple > .rq-i-2 { opacity: 0; transform: translateY(-35%); transition: opacity .35s ease, transform .35s ease; }
 /* Con \`lineas\`, cada idioma se corta en ese número de renglones: la altura máxima de un título es conocida. */
 .rq-fijo.rq-corta, .rq-triple.rq-corta > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lineas); overflow: hidden; }
 
@@ -219,7 +219,7 @@ const HOJA = `
 /* Quien pidió menos movimiento: sin animaciones, y en un solo idioma. */
 @media (prefers-reduced-motion: reduce) {
   .rq *, .rq *::before, .rq *::after { animation: none !important; transition: none !important; }
-  .rq-triple > span:first-child { opacity: 1; }
+  .rq-triple > span:first-child { opacity: 1 !important; transform: none !important; }
   .rq-triple > span:not(:first-child) { display: none; }
   .rq-escaneo { display: none; }
 }
