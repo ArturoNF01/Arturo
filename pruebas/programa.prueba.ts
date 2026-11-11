@@ -187,7 +187,7 @@ describe('el programa publicado', () => {
 
 describe('por dónde se entra a cada sesión', () => {
   it('el Auditorio va por Zoom y las salas de la planta baja por Meet', () => {
-    expect(PLATAFORMA_POR_SALA).toEqual({ lobby: null, auditorio: 'zoom', comisiones: 'meet', sesiones: 'meet' });
+    expect(PLATAFORMA_POR_SALA).toEqual({ lobby: null, auditorio: 'zoom', comisiones: 'meet' });
   });
 
   it('cada mesa lleva la plataforma de su sala, salvo la 4: Zoom las 1, 2, 3, 4, 5, 7, 9 y 11; Meet las 6, 8 y 10', () => {
@@ -196,14 +196,23 @@ describe('por dónde se entra a cada sesión', () => {
     for (const n of [6, 8, 10]) expect(plataforma(n), `mesa ${n}`).toBe('meet');
   });
 
-  it('la mesa 4 se hace en la sala de sesiones pero se transmite por su propia sala de Zoom', () => {
+  it('la mesa 4 se hace en la sala de comisiones (planta baja) pero se transmite por su propia sala de Zoom', () => {
     const mesa4 = todas.find(({ s }) => s.mesa === 4)!.s;
-    expect(mesa4.sala, 'la sala no cambia').toBe('sesiones');
+    expect(mesa4.sala, 'la sala no cambia').toBe('comisiones');
     expect(mesa4.horario).toBe('15:30–17:30');
     const generales = { zoom: 'https://zoom.example/general', meet: 'https://meet.example/general' };
     expect(enlaceDe(mesa4, generales)).toBe('https://us02web.zoom.us/j/82897635427');
     // Ni la sala general de Zoom ni la de Meet se la pisan, vacías o no.
     expect(enlaceDe(mesa4, { zoom: '', meet: '' })).toBe('https://us02web.zoom.us/j/82897635427');
+  });
+
+  it('el jueves por la tarde las dos salas son el Auditorio y la sala de comisiones, y no existe una «sala de sesiones»', () => {
+    // El comité lo corrigió: la mesa 4 es en la sala de comisiones, planta baja. Una sala con ese otro nombre no existe.
+    const jueves = PROGRAMA.find((d) => d.iso === '2026-11-12')!;
+    const tarde = jueves.sesiones.filter((x) => x.horario === '15:30–17:30');
+    expect(tarde.map((x) => [x.mesa, x.sala])).toEqual([[3, 'auditorio'], [4, 'comisiones']]);
+    expect(SALAS.comisiones.es).toBe('Sala de comisiones, planta baja');
+    for (const sala of Object.values(SALAS)) for (const texto of Object.values(sala)) expect(texto).not.toMatch(/sesion|sessi|session room/i);
   });
 
   it('las demás sesiones siguen entrando por el enlace general de su plataforma', () => {

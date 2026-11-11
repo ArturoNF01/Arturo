@@ -6,6 +6,7 @@ import { interpolar, type Idioma } from '@/i18n';
 import { SESION_DE_PRUEBA, type PersonaConAsistencia, type ViaAsistencia } from '@/lib/asistencia';
 import type { ClaveSala, TipoSesion } from '@/lib/programa';
 import type { Asistente, CodigosPorSesion, EstadoDePrueba, RegistroCoincidente, ResumenDeSesion } from '@/lib/servidor/asistencia';
+import { AvisoRecepcion } from './aviso-recepcion';
 
 type Texto = Record<Idioma, string>;
 
@@ -47,7 +48,7 @@ const post = (cuerpo: Record<string, unknown>) =>
  * ve cómo va entrando la gente.
  */
 export function PanelAsistencia({
-  sesiones, dias, resumenInicial, puedeExportar, puedeGestionar, codigos: codigosIniciales, qrs, urlBase, pruebaInicial,
+  sesiones, dias, resumenInicial, puedeExportar, puedeGestionar, codigos: codigosIniciales, qrs, urlBase, pruebaInicial, avisoInicial,
 }: {
   sesiones: SesionPlana[];
   dias: { iso: string; texto: Texto }[];
@@ -58,6 +59,8 @@ export function PanelAsistencia({
   qrs: Record<string, string>;
   urlBase: string;
   pruebaInicial: EstadoDePrueba | null;
+  /** El aviso de la pantalla de recepción, para quien puede editarlo; nulo para quien sólo lee. */
+  avisoInicial: Record<Idioma, string> | null;
 }) {
   const { t, idioma } = useApp();
   const a = t.panel.asistencia;
@@ -353,6 +356,8 @@ export function PanelAsistencia({
               </div>
             )}
           </div>
+
+          {puedeGestionar && avisoInicial && <AvisoRecepcion inicial={avisoInicial} />}
 
           <div className="tarjeta p-4">
             <div className="divide-y" style={{ borderColor: 'var(--borde)' }}>

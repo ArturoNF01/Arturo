@@ -25,7 +25,7 @@ type Texto = Record<Idioma, string>;
 // Salas
 // ---------------------------------------------------------------------------
 
-export type ClaveSala = 'lobby' | 'auditorio' | 'comisiones' | 'sesiones';
+export type ClaveSala = 'lobby' | 'auditorio' | 'comisiones';
 
 export const SALAS: Record<ClaveSala, Texto> = {
   lobby: { es: 'Lobby del Auditorio', en: 'Auditorium lobby', pt: 'Lobby do Auditório' },
@@ -34,11 +34,6 @@ export const SALAS: Record<ClaveSala, Texto> = {
     es: 'Sala de comisiones, planta baja',
     en: 'Committee room, ground floor',
     pt: 'Sala de comissões, térreo',
-  },
-  sesiones: {
-    es: 'Sala de sesiones, planta baja',
-    en: 'Session room, ground floor',
-    pt: 'Sala de sessões, térreo',
   },
 };
 
@@ -442,7 +437,6 @@ export const PLATAFORMA_POR_SALA: Record<ClaveSala, PlataformaEnLinea | null> = 
   lobby: null,
   auditorio: 'zoom',
   comisiones: 'meet',
-  sesiones: 'meet',
 };
 
 /** Sesiones a las que se entra en línea: no el registro ni el almuerzo. */
@@ -624,9 +618,9 @@ export const PROGRAMA: DiaPrograma[] = [
       { horario: '14:30–15:30', tipo: 'pausa', actividad: ALMUERZO },
       { horario: '15:30–17:30', tipo: 'mesa', mesa: 3, sala: 'auditorio' },
       // La mesa 4 se transmite por una sala de Zoom propia, aunque se haga en
-      // la sala de sesiones, que por sí sola iría por Meet.
+      // la sala de comisiones (planta baja), que por sí sola iría por Meet.
       {
-        horario: '15:30–17:30', tipo: 'mesa', mesa: 4, sala: 'sesiones',
+        horario: '15:30–17:30', tipo: 'mesa', mesa: 4, sala: 'comisiones',
         plataforma: 'zoom', enlace: 'https://us02web.zoom.us/j/82897635427',
       },
     ],

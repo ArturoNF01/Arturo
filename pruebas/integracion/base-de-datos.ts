@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { consultar, conActor, unaFila, enSoloLectura, armarInsercion } from '../../src/lib/bd/conexion';
 import { cifrarClave, claveCoincide } from '../../src/lib/bd/claves';
+import { armarDatosDePantalla, leerAvisoGuardado } from '../../src/lib/servidor/recepcion';
 
 function comprobar(condicion: boolean, texto: string, detalle?: unknown) {
   if (condicion) {
@@ -510,6 +511,44 @@ async function principal() {
   await consultar(`update configuracion set valor = '130'::jsonb where clave = 'cupos_presenciales'`);
   await consultar(migracionSql);
   comprobar((await cupo()) === 130, 'aforo: un segundo despliegue no pisa lo que el panel cambió', await cupo());
+
+  // 15. La pantalla de recepción (/qr): lo que se arma, el aviso del comité y la sala del jueves
+  const publicadoAntes = (await unaFila<{ valor: boolean }>(`select valor from configuracion where clave = 'programa_publicado'`))!.valor;
+  comprobar(
+    Boolean(await unaFila(`select 1 from configuracion where clave = 'aviso_recepcion'`)),
+    'recepción: el aviso tiene su fila sembrada en la configuración');
+  await consultar(`update configuracion set valor = '{"es":"","en":"","pt":""}'::jsonb where clave = 'aviso_recepcion'`);
+  await consultar(`update configuracion set valor = 'true'::jsonb where clave = 'programa_publicado'`);
+
+  const publicada = await armarDatosDePantalla();
+  comprobar(publicada !== null, 'recepción: se arma la pantalla', publicada);
+  comprobar(Boolean(publicada?.qrAgenda?.startsWith('<svg')), 'recepción: con el programa publicado hay QR de la agenda');
+  comprobar(Boolean(publicada?.asistencia?.qr?.startsWith('<svg')), 'recepción: hay QR de asistencia del día (crea los códigos si faltan)');
+  comprobar((publicada?.programa?.bloques.length ?? 0) > 5, 'recepción: con el programa publicado lleva la agenda del día');
+  comprobar(publicada?.aviso === null, 'recepción: sin aviso guardado no hay aviso en la pantalla', publicada?.aviso);
+  comprobar(
+    publicada !== null && Date.parse(publicada.ahora) > Date.now() - 60_000 && publicada.urlVideo !== '',
+    'recepción: trae la hora del servidor y el video');
+  comprobar((await armarDatosDePantalla({ ligero: true }))?.urlVideo === '', 'recepción: en modo ligero no lleva video');
+
+  await consultar(`update configuracion set valor = '{"es":"La mesa 4 inicia tarde.","en":"","pt":""}'::jsonb where clave = 'aviso_recepcion'`);
+  const conAviso = await armarDatosDePantalla();
+  comprobar(
+    conAviso?.aviso?.es === 'La mesa 4 inicia tarde.' && conAviso.aviso.en === conAviso.aviso.es && conAviso.aviso.pt === conAviso.aviso.es,
+    'recepción: un aviso sólo en español se enseña en los tres idiomas', conAviso?.aviso);
+  comprobar((await leerAvisoGuardado()).en === '', 'recepción: lo guardado conserva los idiomas vacíos, que es lo que edita el panel');
+
+  await consultar(`update configuracion set valor = 'false'::jsonb where clave = 'programa_publicado'`);
+  const sinPublicar = await armarDatosDePantalla();
+  comprobar(
+    sinPublicar?.qrAgenda === null && sinPublicar.programa === null && sinPublicar.asistencia !== null,
+    'recepción: sin programa publicado no hay QR de la agenda ni «en vivo», pero el QR de asistencia sigue', sinPublicar);
+
+  // Se deja todo como estaba.
+  await consultar(`update configuracion set valor = '${JSON.stringify(publicadoAntes)}'::jsonb where clave = 'programa_publicado'`);
+  await consultar(`update configuracion set valor = '{"es":"","en":"","pt":""}'::jsonb where clave = 'aviso_recepcion'`);
+  await consultar(`delete from asistencia_codigos`);
+  ok('limpieza de la pantalla de recepción');
 
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);

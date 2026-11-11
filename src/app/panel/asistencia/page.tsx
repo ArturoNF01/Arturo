@@ -2,6 +2,7 @@ import QRCode from 'qrcode';
 import { urlSitio } from '@/lib/config';
 import { DIAS_DE_ASISTENCIA, SESIONES_DE_ASISTENCIA, ventanaDe } from '@/lib/asistencia';
 import { asegurarCodigos, estadoDePrueba, leerCodigos, resumenPorSesion, type CodigosPorSesion } from '@/lib/servidor/asistencia';
+import { leerAvisoGuardado } from '@/lib/servidor/recepcion';
 import { exigirUsuario, permisos } from '@/lib/servidor/sesion';
 import { PanelAsistencia, type SesionPlana } from '@/componentes/panel/panel-asistencia';
 
@@ -39,6 +40,8 @@ export default async function PaginaAsistencia() {
 
   // La sesión de prueba sólo la maneja quien organiza.
   const prueba = p.gestionarAsistencia ? await estadoDePrueba(base).catch(() => null) : null;
+  // El aviso de la pantalla de recepción, igual: lo escribe quien organiza.
+  const aviso = p.gestionarAsistencia ? await leerAvisoGuardado() : null;
 
   return (
     <PanelAsistencia
@@ -51,6 +54,7 @@ export default async function PaginaAsistencia() {
       qrs={qrs}
       urlBase={base}
       pruebaInicial={prueba}
+      avisoInicial={aviso}
     />
   );
 }

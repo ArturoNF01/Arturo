@@ -1,12 +1,6 @@
 import type { Metadata } from 'next';
-import QRCode from 'qrcode';
-import { urlSitio } from '@/lib/config';
-import { SESIONES_DE_ASISTENCIA, jornadaDeHoy, ventanaDe } from '@/lib/asistencia';
-import { asegurarCodigos, leerCodigos } from '@/lib/servidor/asistencia';
-import { leerConfiguracion } from '@/lib/servidor/configuracion';
-import { leerDatosCongreso } from '@/lib/servidor/contenido';
-import { usuarioActual } from '@/lib/servidor/sesion';
-import { PantallaRecepcion, type DatosDePantalla } from './pantalla-recepcion';
+import { armarParaPeticion } from '@/lib/servidor/recepcion-peticion';
+import { PantallaRecepcion } from './pantalla-recepcion';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,69 +10,32 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const qrSvg = (enlace: string) =>
-  QRCode.toString(enlace, { type: 'svg', margin: 2, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } });
-
 /**
- * La pantalla vertical de la mesa de recepción: arriba el QR para descargar la agenda y abajo el de la asistencia
- * del día, que cambia solo —miércoles, jueves o viernes— según la fecha de México.
+ * La pantalla vertical (9:16) de la mesa de recepción: el QR de la agenda del sitio, el QR de la asistencia del día —que
+ * cambia solo, miércoles, jueves o viernes, según la fecha de México—, qué sesión está en vivo ahora y qué sigue, y el
+ * aviso que el comité deje en el panel.
  *
- * No pide sesión: es una pantalla que se deja abierta en un monitor sin nadie que la maneje. Lo que enseña es lo
- * mismo que está impreso en la sede (el QR presencial), no datos de nadie. La pantalla se vuelve a pedir sola cada
- * minuto (ver `PantallaRecepcion`), y por eso aquí un fallo de la base no tira la página: devuelve `datos: null` y
- * la pantalla se queda con lo último que enseñó.
+ * Aquí sólo se arma la primera imagen (para que no salga en blanco); después la pantalla se actualiza sola pidiendo
+ * `/api/recepcion` cada minuto. Ahí está la explicación de qué se arma y de por qué así (`armarDatosDePantalla`).
  *
- * `?dia=miercoles|jueves|viernes` enseña ese día en lugar del de hoy, para revisar el diseño antes del Congreso;
- * sólo lo atiende a quien tiene sesión en el panel.
+ * Parámetros:
+ *  - `?ligero=1`: sin video, sin desenfoque y sin luces, para un equipo que no pueda con tanto efecto.
+ *  - `?dia=miercoles|jueves|viernes` (y, opcional, `&hora=10:45`): enseña ese día —y a esa hora— en lugar de la fecha
+ *    de hoy, para revisar el diseño antes del Congreso. Sólo lo atiende a quien tiene sesión en el panel.
  */
-export default async function Recepcion({ searchParams }: { searchParams: Promise<{ dia?: string }> }) {
-  const { dia } = await searchParams;
-  const ahora = new Date();
+export default async function Recepcion({
+  searchParams,
+}: {
+  searchParams: Promise<{ dia?: string; hora?: string; ligero?: string }>;
+}) {
+  const { dia, hora, ligero } = await searchParams;
+  const datos = await armarParaPeticion({ dia, hora, ligero: ligero === '1' });
 
-  let datos: DatosDePantalla | null = null;
-  try {
-    const [configuracion, congreso] = await Promise.all([leerConfiguracion(), leerDatosCongreso()]);
-    const base = urlSitio().replace(/\/+$/, '');
+  // Los mismos parámetros viajan a cada actualización, para que una vista previa siga siendo la misma.
+  const consulta = new URLSearchParams();
+  if (dia) consulta.set('dia', dia);
+  if (hora) consulta.set('hora', hora);
+  if (ligero === '1') consulta.set('ligero', '1');
 
-    let jornada = jornadaDeHoy(ahora);
-    let previa = false;
-    if (dia) {
-      const pedida = SESIONES_DE_ASISTENCIA.find((s) => s.clave === dia);
-      if (pedida && (await usuarioActual())) {
-        jornada = { sesion: pedida, relacion: 'hoy' };
-        previa = true;
-      }
-    }
-
-    let qrAsistencia: string | null = null;
-    if (jornada) {
-      let codigos = await leerCodigos();
-      // Si nadie ha abierto todavía el panel de asistencia, los códigos no existen: se crean, sin tocar los que ya
-      // hay (pueden estar impresos).
-      if (!codigos[jornada.sesion.clave]?.presencial) codigos = await asegurarCodigos();
-      const codigo = codigos[jornada.sesion.clave]?.presencial;
-      if (codigo) qrAsistencia = await qrSvg(`${base}/a/${codigo}`);
-    }
-
-    datos = {
-      ahora: ahora.toISOString(),
-      urlVideo: configuracion.url_video_login,
-      nombre: congreso.nombre,
-      fechas: congreso.fechas,
-      sede: congreso.sede,
-      qrAgenda: await qrSvg(`${base}/api/agenda`),
-      asistencia: jornada && {
-        qr: qrAsistencia,
-        dia: jornada.sesion.diaTexto,
-        relacion: jornada.relacion,
-        abre: ventanaDe(jornada.sesion).abre.toISOString(),
-        cierra: ventanaDe(jornada.sesion).cierra.toISOString(),
-        previa,
-      },
-    };
-  } catch (error) {
-    console.error('No se pudo armar la pantalla de recepción:', error);
-  }
-
-  return <PantallaRecepcion datos={datos} />;
+  return <PantallaRecepcion datos={datos} consulta={consulta.toString()} />;
 }

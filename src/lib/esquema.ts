@@ -288,6 +288,9 @@ export const esquemaConfiguracion = z.object({
   url_sesion_meet: z.string().url().optional().or(z.literal('')),
   programa_publicado: z.boolean().optional(),
   correo_contacto: z.string().email().optional(),
+  // El aviso de la pantalla de recepción: tres textos cortos (cabe en tres renglones de la pantalla; ver
+  // `LARGO_MAXIMO_DE_AVISO`); todos vacíos = sin aviso.
+  aviso_recepcion: z.record(z.enum(['es', 'en', 'pt']), z.string().max(140)).optional(),
 
   // Datos del congreso
   congreso_nombre: multilingueTexto.optional(),

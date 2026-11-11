@@ -267,6 +267,13 @@ begin
 end
 $cupo$;
 
+-- La sala de «sesiones» no existe: la mesa 4 es en la sala de comisiones (planta baja).
+-- Sólo cambia la descripción del enlace de Meet, y sólo si conserva el texto de siempre.
+update configuracion
+   set descripcion = 'Sala de Google Meet de la sala de comisiones (planta baja)'
+ where clave = 'url_sesion_meet'
+   and descripcion = 'Sala de Google Meet de las salas de la planta baja (comisiones y sesiones)';
+
 -- Las preguntas frecuentes que hablaban de la agenda como algo por publicar.
 --
 -- Las filas de la base no se tocan al desplegar —se insertan sólo si faltan—, y

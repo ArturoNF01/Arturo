@@ -74,7 +74,8 @@ export function instanteEnMexico(dia: string, hora: string): Date {
   return new Date(supuesto - (enMexico - supuesto));
 }
 
-function horasDelHorario(horario: string): { desde: string; hasta: string } | null {
+/** «09:00–10:30» → { desde: '09:00', hasta: '10:30' }; null si el texto no trae dos horas. */
+export function horasDelHorario(horario: string): { desde: string; hasta: string } | null {
   const m = /(\d{1,2}):(\d{2})\s*\D+\s*(\d{1,2}):(\d{2})/.exec(horario);
   if (!m) return null;
   return { desde: `${m[1].padStart(2, '0')}:${m[2]}`, hasta: `${m[3].padStart(2, '0')}:${m[4]}` };
