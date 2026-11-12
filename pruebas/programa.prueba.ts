@@ -199,7 +199,7 @@ describe('por dónde se entra a cada sesión', () => {
   it('la mesa 4 se hace en la sala de comisiones (planta baja) pero se transmite por su propia sala de Zoom', () => {
     const mesa4 = todas.find(({ s }) => s.mesa === 4)!.s;
     expect(mesa4.sala, 'la sala no cambia').toBe('comisiones');
-    expect(mesa4.horario).toBe('15:30–17:30');
+    expect(mesa4.horario).toBe('15:45–17:45'); // el jueves se recorrió 15 minutos desde la mesa 2
     const generales = { zoom: 'https://zoom.example/general', meet: 'https://meet.example/general' };
     expect(enlaceDe(mesa4, generales)).toBe('https://us02web.zoom.us/j/82897635427');
     // Ni la sala general de Zoom ni la de Meet se la pisan, vacías o no.
@@ -209,7 +209,7 @@ describe('por dónde se entra a cada sesión', () => {
   it('el jueves por la tarde las dos salas son el Auditorio y la sala de comisiones, y no existe una «sala de sesiones»', () => {
     // El comité lo corrigió: la mesa 4 es en la sala de comisiones, planta baja. Una sala con ese otro nombre no existe.
     const jueves = PROGRAMA.find((d) => d.iso === '2026-11-12')!;
-    const tarde = jueves.sesiones.filter((x) => x.horario === '15:30–17:30');
+    const tarde = jueves.sesiones.filter((x) => x.horario === '15:45–17:45');
     expect(tarde.map((x) => [x.mesa, x.sala])).toEqual([[3, 'auditorio'], [4, 'comisiones']]);
     expect(SALAS.comisiones.es).toBe('Sala de comisiones, planta baja');
     for (const sala of Object.values(SALAS)) for (const texto of Object.values(sala)) expect(texto).not.toMatch(/sesion|sessi|session room/i);
@@ -283,7 +283,7 @@ describe('las sesiones paralelas', () => {
       agruparPorHorario(PROGRAMA.find((d) => d.iso === iso)!.sesiones).filter((b) => b.sesiones.length > 1);
 
     const jueves = parejas('2026-11-12');
-    expect(jueves.map((b) => b.horario)).toEqual(['15:30–17:30']);
+    expect(jueves.map((b) => b.horario)).toEqual(['15:45–17:45']);
     expect(jueves[0].sesiones.map((s) => s.mesa)).toEqual([3, 4]);
 
     const viernes = parejas('2026-11-13');
