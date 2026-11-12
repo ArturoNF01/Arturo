@@ -32,7 +32,7 @@ describe('la agenda de cada día, lista para la pantalla', () => {
   });
 
   it('las dos salas a la vez del jueves por la tarde: la mesa 3 en el Auditorio y la 4 en la sala de comisiones', () => {
-    const tarde = jueves.filter((b) => b.horario === '15:45–17:45');
+    const tarde = jueves.filter((b) => b.horario === '16:00–18:00');
     expect(claves(tarde)).toEqual(['mesa-3', 'mesa-4']);
     expect(tarde.map((b) => b.sala?.es)).toEqual(['Auditorio', 'Sala de comisiones, planta baja']);
     for (const b of jueves) expect(b.sala?.es ?? '', b.clave).not.toMatch(/sesiones/i);
@@ -95,7 +95,7 @@ describe('qué pasa ahora y qué sigue', () => {
   });
 
   it('con dos salas a la vez están las dos en marcha, y lo que sigue es lo siguiente a esa hora', () => {
-    const m = momentoDelDia(jueves, a('2026-11-12', '16:00'));
+    const m = momentoDelDia(jueves, a('2026-11-12', '16:30'));
     expect(m.fase).toBe('en_curso');
     expect(claves(m.actuales)).toEqual(['mesa-3', 'mesa-4']);
     expect(m.siguientes).toEqual([]);
@@ -106,7 +106,7 @@ describe('qué pasa ahora y qué sigue', () => {
   });
 
   it('en el almuerzo es receso, y lo que sigue es lo de después', () => {
-    const m = momentoDelDia(jueves, a('2026-11-12', '15:00'));
+    const m = momentoDelDia(jueves, a('2026-11-12', '15:30'));
     expect(m.fase).toBe('receso');
     expect(claves(m.actuales)).toEqual(['pausa']);
     expect(claves(m.siguientes)).toEqual(['mesa-3', 'mesa-4']);
@@ -120,24 +120,24 @@ describe('qué pasa ahora y qué sigue', () => {
     expect(m.siguientes[0].titulo.es).toBe('Mesa de Trabajo RIUSS – Pensiones');
   });
 
-  it('el jueves 12 se recorrió 15 minutos desde la mesa 2: mesa 2 a las 12:45, almuerzo a las 14:45 y mesas 3 y 4 a las 15:45', () => {
+  it('el jueves 12 se recorrió 30 minutos desde la mesa 2: mesa 2 a las 13:00, almuerzo a las 15:00 y mesas 3 y 4 a las 16:00', () => {
     const hora = (clave: string) => jueves.find((b) => b.clave === clave)!.horario;
     expect([hora('mesa-1'), hora('mesa-2'), hora('pausa'), hora('mesa-3'), hora('mesa-4')]).toEqual([
-      '10:30–12:30', '12:45–14:45', '14:45–15:45', '15:45–17:45', '15:45–17:45',
+      '10:30–12:30', '13:00–15:00', '15:00–16:00', '16:00–18:00', '16:00–18:00',
     ]);
     // Lo anterior no se mueve: ya ocurrió.
     expect([hora('registro'), hora('apertura'), hora('conferencia')]).toEqual(['08:30–09:00', '09:00–09:30', '09:30–10:30']);
-    // A las 12:40 no hay nada en marcha y lo que sigue es la mesa 2; a las 12:45 ya empezó.
-    const entre = momentoDelDia(jueves, a('2026-11-12', '12:40'));
+    // A las 12:45 no hay nada en marcha y lo que sigue es la mesa 2; a las 13:00 ya empezó.
+    const entre = momentoDelDia(jueves, a('2026-11-12', '12:45'));
     expect([entre.fase, claves(entre.actuales), claves(entre.siguientes)]).toEqual(['receso', [], ['mesa-2']]);
-    expect(claves(momentoDelDia(jueves, a('2026-11-12', '12:45')).actuales)).toEqual(['mesa-2']);
-    // El día termina a las 17:45: la jornada de asistencia, y con ella el cierre del QR, se recorren igual.
-    expect(Date.parse(jueves.at(-1)!.fin)).toBe(a('2026-11-12', '17:45'));
+    expect(claves(momentoDelDia(jueves, a('2026-11-12', '13:00')).actuales)).toEqual(['mesa-2']);
+    // El día termina a las 18:00: la jornada de asistencia, y con ella el cierre del QR, se recorren igual.
+    expect(Date.parse(jueves.at(-1)!.fin)).toBe(a('2026-11-12', '18:00'));
   });
 
   it('al terminar el día no queda nada en marcha ni por venir', () => {
-    expect(momentoDelDia(jueves, a('2026-11-12', '17:44')).fase).toBe('en_curso');
-    expect(momentoDelDia(jueves, a('2026-11-12', '17:45'))).toEqual({ fase: 'despues', actuales: [], siguientes: [] });
+    expect(momentoDelDia(jueves, a('2026-11-12', '17:59')).fase).toBe('en_curso');
+    expect(momentoDelDia(jueves, a('2026-11-12', '18:00'))).toEqual({ fase: 'despues', actuales: [], siguientes: [] });
     expect(momentoDelDia(viernes, a('2026-11-13', '20:00')).fase).toBe('despues');
   });
 
@@ -154,8 +154,8 @@ describe('qué pasa ahora y qué sigue', () => {
   });
 
   it('la hora que se le da es la que manda: el mismo instante da lo mismo en cualquier huso', () => {
-    // 22:00 UTC del 12 son las 16:00 en México.
-    expect(claves(momentoDelDia(jueves, Date.parse('2026-11-12T22:00:00Z')).actuales)).toEqual(['mesa-3', 'mesa-4']);
+    // 22:30 UTC del 12 son las 16:30 en México.
+    expect(claves(momentoDelDia(jueves, Date.parse('2026-11-12T22:30:00Z')).actuales)).toEqual(['mesa-3', 'mesa-4']);
   });
 });
 

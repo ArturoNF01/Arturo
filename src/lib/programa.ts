@@ -614,16 +614,16 @@ export const PROGRAMA: DiaPrograma[] = [
         },
       },
       { horario: '10:30–12:30', tipo: 'mesa', mesa: 1, sala: 'auditorio' },
-      // El jueves 12 se corrió tarde: a partir de la mesa 2 todo se recorrió 15 minutos (el programa impreso dice 12:30 la
-      // mesa 2, 14:30 el almuerzo y 15:30 las mesas 3 y 4). La jornada de asistencia sale de aquí, así que su horario y el
-      // cierre del QR del jueves también se recorrieron.
-      { horario: '12:45–14:45', tipo: 'mesa', mesa: 2, sala: 'auditorio' },
-      { horario: '14:45–15:45', tipo: 'pausa', actividad: ALMUERZO },
-      { horario: '15:45–17:45', tipo: 'mesa', mesa: 3, sala: 'auditorio' },
+      // El jueves 12 se corrió tarde: la mesa 2 empezó a las 13:00 (el programa impreso dice 12:30) y todo lo que sigue se
+      // recorrió igual —30 minutos—: almuerzo a las 15:00 (14:30 en el impreso) y mesas 3 y 4 a las 16:00 (15:30). La jornada
+      // de asistencia sale de aquí, así que su horario y el cierre del QR del jueves también se recorrieron.
+      { horario: '13:00–15:00', tipo: 'mesa', mesa: 2, sala: 'auditorio' },
+      { horario: '15:00–16:00', tipo: 'pausa', actividad: ALMUERZO },
+      { horario: '16:00–18:00', tipo: 'mesa', mesa: 3, sala: 'auditorio' },
       // La mesa 4 se transmite por una sala de Zoom propia, aunque se haga en
       // la sala de comisiones (planta baja), que por sí sola iría por Meet.
       {
-        horario: '15:45–17:45', tipo: 'mesa', mesa: 4, sala: 'comisiones',
+        horario: '16:00–18:00', tipo: 'mesa', mesa: 4, sala: 'comisiones',
         plataforma: 'zoom', enlace: 'https://us02web.zoom.us/j/82897635427',
       },
     ],
