@@ -25,7 +25,7 @@ type Texto = Record<Idioma, string>;
 // Salas
 // ---------------------------------------------------------------------------
 
-export type ClaveSala = 'lobby' | 'auditorio' | 'comisiones';
+export type ClaveSala = 'lobby' | 'auditorio' | 'comisiones' | 'comisionesAlta';
 
 export const SALAS: Record<ClaveSala, Texto> = {
   lobby: { es: 'Lobby del Auditorio', en: 'Auditorium lobby', pt: 'Lobby do Auditório' },
@@ -34,6 +34,12 @@ export const SALAS: Record<ClaveSala, Texto> = {
     es: 'Sala de comisiones, planta baja',
     en: 'Committee room, ground floor',
     pt: 'Sala de comissões, térreo',
+  },
+  // Otra sala, en otro piso: no es la de comisiones de la planta baja. El viernes 13 se usa para las mesas 5, 7 y 9.
+  comisionesAlta: {
+    es: 'Sala de comisiones, planta alta',
+    en: 'Committee room, upper floor',
+    pt: 'Sala de comissões, andar superior',
   },
 };
 
@@ -437,6 +443,7 @@ export const PLATAFORMA_POR_SALA: Record<ClaveSala, PlataformaEnLinea | null> = 
   lobby: null,
   auditorio: 'zoom',
   comisiones: 'meet',
+  comisionesAlta: 'meet',
 };
 
 /** Sesiones a las que se entra en línea: no el registro ni el almuerzo. */
@@ -637,12 +644,18 @@ export const PROGRAMA: DiaPrograma[] = [
       pt: 'Mesas temáticas 5 a 11 e encerramento',
     },
     sesiones: [
-      { horario: '09:00–10:30', tipo: 'mesa', mesa: 5, sala: 'auditorio' },
+      // El viernes 13 también hay registro de participantes, como el miércoles y el jueves (el programa impreso no lo trae).
+      // Con él, el registro de asistencia del viernes abre 20 minutos antes: a las 08:10.
+      { horario: '08:30–09:00', tipo: 'registro', sala: 'lobby', actividad: REGISTRO },
+      // Las mesas 5, 7 y 9 se pasaron de última hora del Auditorio a la sala de comisiones de la planta alta (el programa
+      // impreso las trae en el Auditorio). Se siguen en línea por Zoom, como las demás del Auditorio: cambia el lugar,
+      // no la transmisión.
+      { horario: '09:00–10:30', tipo: 'mesa', mesa: 5, sala: 'comisionesAlta', plataforma: 'zoom' },
       { horario: '09:00–10:30', tipo: 'mesa', mesa: 6, sala: 'comisiones' },
-      { horario: '10:30–12:00', tipo: 'mesa', mesa: 7, sala: 'auditorio' },
+      { horario: '10:30–12:00', tipo: 'mesa', mesa: 7, sala: 'comisionesAlta', plataforma: 'zoom' },
       { horario: '10:30–12:00', tipo: 'mesa', mesa: 8, sala: 'comisiones' },
       { horario: '12:00–13:00', tipo: 'pausa', actividad: ALMUERZO },
-      { horario: '13:00–15:00', tipo: 'mesa', mesa: 9, sala: 'auditorio' },
+      { horario: '13:00–15:00', tipo: 'mesa', mesa: 9, sala: 'comisionesAlta', plataforma: 'zoom' },
       { horario: '13:00–15:00', tipo: 'mesa', mesa: 10, sala: 'comisiones' },
       { horario: '15:00–16:50', tipo: 'mesa', mesa: 11, sala: 'auditorio' },
       {

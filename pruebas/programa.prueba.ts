@@ -187,7 +187,7 @@ describe('el programa publicado', () => {
 
 describe('por dónde se entra a cada sesión', () => {
   it('el Auditorio va por Zoom y las salas de la planta baja por Meet', () => {
-    expect(PLATAFORMA_POR_SALA).toEqual({ lobby: null, auditorio: 'zoom', comisiones: 'meet' });
+    expect(PLATAFORMA_POR_SALA).toEqual({ lobby: null, auditorio: 'zoom', comisiones: 'meet', comisionesAlta: 'meet' });
   });
 
   it('cada mesa lleva la plataforma de su sala, salvo la 4: Zoom las 1, 2, 3, 4, 5, 7, 9 y 11; Meet las 6, 8 y 10', () => {
@@ -213,6 +213,34 @@ describe('por dónde se entra a cada sesión', () => {
     expect(tarde.map((x) => [x.mesa, x.sala])).toEqual([[3, 'auditorio'], [4, 'comisiones']]);
     expect(SALAS.comisiones.es).toBe('Sala de comisiones, planta baja');
     for (const sala of Object.values(SALAS)) for (const texto of Object.values(sala)) expect(texto).not.toMatch(/sesion|sessi|session room/i);
+  });
+
+  it('el viernes: registro de participantes a las 08:30 en el lobby, y las mesas 5, 7 y 9 en la sala de comisiones de la planta alta', () => {
+    const viernes = PROGRAMA.find((d) => d.iso === '2026-11-13')!;
+    const primera = viernes.sesiones[0];
+    expect([primera.tipo, primera.horario, primera.sala]).toEqual(['registro', '08:30–09:00', 'lobby']);
+    expect(primera.actividad?.es).toBe('Registro de participantes');
+    expect(plataformaDe(primera)).toBeNull(); // el registro no se sigue en línea
+
+    const salaDe = (n: number) => viernes.sesiones.find((x) => x.mesa === n)!.sala;
+    for (const n of [5, 7, 9]) expect(salaDe(n), `mesa ${n}`).toBe('comisionesAlta');
+    for (const n of [6, 8, 10]) expect(salaDe(n), `mesa ${n}`).toBe('comisiones');
+    expect(salaDe(11)).toBe('auditorio');
+    // Es otra sala, no la de la planta baja con otro nombre.
+    expect(SALAS.comisionesAlta.es).toBe('Sala de comisiones, planta alta');
+    expect(SALAS.comisionesAlta).not.toEqual(SALAS.comisiones);
+  });
+
+  it('las mesas 5, 7 y 9 cambiaron de lugar pero no de transmisión: siguen por la sala general de Zoom', () => {
+    const generales = { zoom: 'https://zoom.example/general', meet: 'https://meet.example/general' };
+    const viernes = PROGRAMA.find((d) => d.iso === '2026-11-13')!;
+    for (const n of [5, 7, 9]) {
+      const mesa = viernes.sesiones.find((x) => x.mesa === n)!;
+      expect(plataformaDe(mesa), `mesa ${n}`).toBe('zoom');
+      expect(enlaceDe(mesa, generales), `mesa ${n}`).toBe(generales.zoom);
+    }
+    // Las de la sala de comisiones de la planta baja siguen por Meet.
+    for (const n of [6, 8, 10]) expect(plataformaDe(viernes.sesiones.find((x) => x.mesa === n)!), `mesa ${n}`).toBe('meet');
   });
 
   it('las demás sesiones siguen entrando por el enlace general de su plataforma', () => {

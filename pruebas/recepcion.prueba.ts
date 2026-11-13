@@ -38,6 +38,18 @@ describe('la agenda de cada día, lista para la pantalla', () => {
     for (const b of jueves) expect(b.sala?.es ?? '', b.clave).not.toMatch(/sesiones/i);
   });
 
+  it('el viernes empieza con el registro de participantes y las mesas 5, 7 y 9 están en la sala de comisiones de la planta alta', () => {
+    expect([viernes[0].clave, viernes[0].horario, viernes[0].sala?.es]).toEqual(['registro', '08:30–09:00', 'Lobby del Auditorio']);
+    expect(viernes[0].naturaleza).toBe('registro');
+    const sala = (clave: string) => viernes.find((b) => b.clave === clave)!.sala?.es;
+    expect([sala('mesa-5'), sala('mesa-7'), sala('mesa-9')]).toEqual(Array(3).fill('Sala de comisiones, planta alta'));
+    expect([sala('mesa-6'), sala('mesa-8'), sala('mesa-10')]).toEqual(Array(3).fill('Sala de comisiones, planta baja'));
+    expect(sala('mesa-11')).toBe('Auditorio');
+    // A las 08:45 está en marcha el registro, y lo que sigue son las dos mesas de las 09:00.
+    const m = momentoDelDia(viernes, a('2026-11-13', '08:45'));
+    expect([m.fase, claves(m.actuales), claves(m.siguientes)]).toEqual(['en_curso', ['registro'], ['mesa-5', 'mesa-6']]);
+  });
+
   it('cada tipo de sesión sabe cómo se nombra: la mesa por su número, la conferencia con su ponente', () => {
     const mesa1 = jueves.find((b) => b.clave === 'mesa-1')!;
     expect(mesa1.etiqueta?.es).toBe('Mesa temática 1');

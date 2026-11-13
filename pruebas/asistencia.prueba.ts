@@ -24,7 +24,7 @@ describe('las jornadas a las que se pasa asistencia: una por día', () => {
     const horario = (clave: string) => sesionPorClave(clave)?.horario;
     expect(horario('miercoles')).toBe('08:30–17:00');
     expect(horario('jueves')).toBe('08:30–18:00'); // el jueves 12 se recorrió 30 minutos desde la mesa 2
-    expect(horario('viernes')).toBe('09:00–17:30'); // el viernes no hay registro: empieza con la mesa 5
+    expect(horario('viernes')).toBe('08:30–17:30'); // el viernes también hay registro de participantes, antes de la mesa 5
   });
 
   it('cada día tiene una sola jornada', () => {
@@ -86,6 +86,16 @@ describe('la ventana de cada código: 20 minutos antes del día y 30 después', 
     expect(en('2026-11-12T19:00:00Z')).toBe('abierta'); // a mediodía, en plena jornada
     expect(en('2026-11-13T00:30:00Z')).toBe('abierta');
     expect(en('2026-11-13T00:30:01Z')).toBe('cerrada');
+  });
+
+  it('el viernes el registro de asistencia abre a las 08:10, por el registro de participantes de las 08:30', () => {
+    const viernes = sesionPorClave('viernes')!;
+    const { abre, cierra } = ventanaDe(viernes);
+    expect(abre.toISOString()).toBe('2026-11-13T14:10:00.000Z'); // 08:10 en México
+    expect(cierra.toISOString()).toBe('2026-11-14T00:00:00.000Z'); // 18:00 en México
+    // A las 08:20 ya está abierto; con la mesa 5 como primera actividad habría abierto hasta las 08:40.
+    expect(estadoDeVentana(viernes, new Date('2026-11-13T14:20:00Z'))).toBe('abierta');
+    expect(estadoDeVentana(viernes, new Date('2026-11-13T14:09:59Z'))).toBe('antes');
   });
 
   it('el QR de un día no sirve otro día', () => {
