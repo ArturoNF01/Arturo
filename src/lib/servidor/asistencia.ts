@@ -2,6 +2,7 @@ import 'server-only';
 import { randomInt } from 'node:crypto';
 import QRCode from 'qrcode';
 import { consultar, unaFila } from '@/lib/bd/conexion';
+import type { EstadoRegistro } from '@/lib/estados';
 import {
   ALFABETO_DE_CODIGOS, CLAVE_DE_PRUEBA, LARGO_DE_CODIGO, SESIONES_DE_ASISTENCIA, VIAS,
   correoValido, decidirIdentidad, esCodigoPosible, esSesionDeLaAgenda, estadoDeVentana, nombreDePila, sesionPorClave, ventanaDe,
@@ -393,6 +394,8 @@ export interface Asistente {
   perfil: string | null;
   folio: string | null;
   registro_id: string | null;
+  /** El estado de ese registro, si lo hay: uno cancelado después de asistir sigue ligado a la asistencia. */
+  estado_registro: EstadoRegistro | null;
   identificado_por: 'correo' | 'nombre' | 'conciliada' | 'ninguno';
   /** Escaneó la persona (`qr`) o la anotó alguien del comité desde el panel (`manual`). */
   origen: OrigenDeAsistencia;
@@ -406,7 +409,7 @@ const COLUMNAS_DE_ASISTENTE = `
   a.creada_en::text as creada_en,
   coalesce(nullif(btrim(r.nombres || ' ' || r.apellidos), ''), a.nombre) as nombre,
   coalesce(r.correo, a.correo) as correo,
-  r.perfil, r.folio`;
+  r.perfil, r.folio, r.estado::text as estado_registro`;
 
 /** Quién asistió a una sesión, en el orden en que escaneó. */
 export async function asistentesDeSesion(sesion: string): Promise<Asistente[]> {

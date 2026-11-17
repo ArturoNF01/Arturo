@@ -139,7 +139,7 @@ const PERFILES_EN_PROGRAMA = new Set([
 ]);
 
 /** El nombre del perfil en español, para un libro que se lleva en español. */
-function nombreDePerfil(clave: unknown): string {
+export function nombreDePerfil(clave: unknown): string {
   const nombres = es.perfiles as unknown as Record<string, string>;
   const texto = String(clave ?? '');
   return nombres[texto] ?? texto;

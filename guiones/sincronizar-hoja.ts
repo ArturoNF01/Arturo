@@ -8,7 +8,8 @@
  *   npm run sincronizar -- --vaciar   # sólo la vacía, sin escribir nada
  *   npm run sincronizar -- --simular  # dice qué quitaría de la hoja, sin tocar nada
  *
- * También pone al día la pestaña «Asistencias» (una fila por asistencia registrada con el QR).
+ * También pone al día las pestañas de asistencia: «Asistencias» (una fila por asistencia registrada con el QR) y
+ * «Asistencia por persona» (una fila por persona, con un día por columna y si tenía registro, para las constancias).
  *   npm run sincronizar -- --forzar   # quita de la hoja más de 10 bajas de una vez
  *
  * Hace lo mismo que el botón del panel, pero desde el servidor. Esa es la
@@ -50,7 +51,7 @@ async function principal() {
   const { consultar } = await import('../src/lib/bd/conexion');
   const { alinearHojaConLaBase, cuadrarPestanasEspejo, revisarLibro, sincronizarRegistros, vaciarHojas } =
     await import('../src/lib/servidor/sheets');
-  const { sincronizarAsistencias } = await import('../src/lib/servidor/sheets-asistencia');
+  const { PESTANAS_DE_ASISTENCIA } = await import('../src/lib/servidor/sheets-asistencia');
   const { googleConfigurado } = await import('../src/lib/servidor/google');
 
   const problema = faltante(googleConfigurado());
@@ -77,24 +78,27 @@ async function principal() {
     }
   };
 
-  // La pestaña «Asistencias»: una fila por asistencia registrada con el QR. Se pone al día por lotes aquí y no al
-  // escanear, para que cien escaneos a la vez no pasen la cuota de Google. Si falla no frena lo demás: es una copia
-  // de la base, y la pasada siguiente la alcanza.
+  // Las pestañas de asistencia: «Asistencias» (una fila por asistencia registrada con el QR) y «Asistencia por persona»
+  // (una fila por persona). Se ponen al día por lotes aquí y no al escanear, para que cien escaneos a la vez no pasen la
+  // cuota de Google. Si una falla no frena lo demás —ni a la otra pestaña—: es una copia de la base, y la pasada
+  // siguiente la alcanza.
   let asistenciasFallaron = false;
   const sincronizarLasAsistencias = async () => {
-    try {
-      const r = await sincronizarAsistencias({ forzar: process.argv.includes('--forzar') });
-      if (r.omitido) console.log(`Asistencias: ${r.omitido}`);
-      const partes = [
-        r.nuevas > 0 && `${r.nuevas} nuevas`,
-        r.cambiadas > 0 && `${r.cambiadas} corregidas`,
-        r.quitadas > 0 && `${r.quitadas} quitadas`,
-      ].filter((x): x is string => typeof x === 'string');
-      if (partes.length > 0) console.log(`Asistencias en la hoja: ${partes.join(', ')}.`);
-      else decir('Asistencias: la pestaña está al día.');
-    } catch (fallo) {
-      asistenciasFallaron = true;
-      console.error(`Asistencias: no se pudo poner al día la pestaña: ${fallo instanceof Error ? fallo.message : String(fallo)}`);
+    for (const { titulo, sincronizar } of PESTANAS_DE_ASISTENCIA) {
+      try {
+        const r = await sincronizar({ forzar: process.argv.includes('--forzar') });
+        if (r.omitido) console.log(r.omitido);
+        const partes = [
+          r.nuevas > 0 && `${r.nuevas} nuevas`,
+          r.cambiadas > 0 && `${r.cambiadas} corregidas`,
+          r.quitadas > 0 && `${r.quitadas} quitadas`,
+        ].filter((x): x is string => typeof x === 'string');
+        if (partes.length > 0) console.log(`«${titulo}» en la hoja: ${partes.join(', ')}.`);
+        else decir(`«${titulo}»: la pestaña está al día.`);
+      } catch (fallo) {
+        asistenciasFallaron = true;
+        console.error(`«${titulo}»: no se pudo poner al día la pestaña: ${fallo instanceof Error ? fallo.message : String(fallo)}`);
+      }
     }
   };
 
@@ -136,9 +140,11 @@ async function principal() {
     if (r.enBlanco > 0) console.log(`Filas en blanco que se quitarían: ${r.enBlanco}`);
     if (r.renumeradas > 0) console.log(`N.º que se corregirían: ${r.renumeradas}`);
     for (const hoja of r.reconstruidas) console.log(`${hoja}: se volvería a escribir entera.`);
-    const a = await sincronizarAsistencias({ simular: true, forzar: process.argv.includes('--forzar') });
-    if (a.omitido) console.log(`Asistencias: ${a.omitido}`);
-    else console.log(`Asistencias: se añadirían ${a.nuevas}, se corregirían ${a.cambiadas} y se quitarían ${a.quitadas} filas.`);
+    for (const { titulo, sincronizar } of PESTANAS_DE_ASISTENCIA) {
+      const a = await sincronizar({ simular: true, forzar: process.argv.includes('--forzar') });
+      if (a.omitido) console.log(a.omitido);
+      else console.log(`«${titulo}»: se añadirían ${a.nuevas}, se corregirían ${a.cambiadas} y se quitarían ${a.quitadas} filas.`);
+    }
     console.log('No se tocó nada. Si la lista es la que espera: npm run sincronizar -- --forzar');
     return;
   }

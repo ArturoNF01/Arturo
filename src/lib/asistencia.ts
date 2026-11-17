@@ -379,6 +379,8 @@ export interface FilaDeAsistencia {
   perfil: string | null;
   folio: string | null;
   creada_en: string;
+  /** El estado del registro al que está ligada («confirmado», «cancelado»…); nada si no está ligada a ninguno. */
+  estado_registro?: string | null;
 }
 
 export interface PersonaConAsistencia {
@@ -390,6 +392,8 @@ export interface PersonaConAsistencia {
   perfil: string | null;
   folio: string | null;
   sinRegistro: boolean;
+  /** El estado de su registro, si lo tiene: un registro cancelado después de asistir sigue ligado, pero ya no vale. */
+  estadoDelRegistro: string | null;
   /** Cuántas sesiones, en total y por día ('2026-11-12' → 3). */
   total: number;
   porDia: Record<string, number>;
@@ -397,11 +401,11 @@ export interface PersonaConAsistencia {
 }
 
 /**
- * La asistencia vista por persona: una fila por quien asistió a algo, con cuántas sesiones y a
- * cuáles. Quien está «sin registro» se agrupa por su correo, para que dos escaneos suyos sean una
- * sola persona. Primero quien más sesiones suma, y a igualdad, por nombre.
+ * Junta las asistencias por persona, en el orden en que cada una llegó por primera vez (las filas vienen en
+ * orden de llegada). Quien está «sin registro» se agrupa por su correo, para que dos escaneos suyos sean una
+ * sola persona.
  */
-export function agruparPorPersona(filas: readonly FilaDeAsistencia[]): PersonaConAsistencia[] {
+function reunirPorPersona(filas: readonly FilaDeAsistencia[]): PersonaConAsistencia[] {
   const personas = new Map<string, PersonaConAsistencia>();
   for (const f of filas) {
     // La sesión de prueba no cuenta para la asistencia de nadie.
@@ -411,7 +415,8 @@ export function agruparPorPersona(filas: readonly FilaDeAsistencia[]): PersonaCo
     if (!p) {
       p = {
         clave, registroId: f.registro_id, nombre: f.nombre, correo: f.correo, perfil: f.perfil, folio: f.folio,
-        sinRegistro: f.registro_id === null, total: 0, porDia: {}, sesiones: [],
+        sinRegistro: f.registro_id === null, estadoDelRegistro: f.registro_id === null ? null : (f.estado_registro ?? null),
+        total: 0, porDia: {}, sesiones: [],
       };
       personas.set(clave, p);
     }
@@ -420,7 +425,15 @@ export function agruparPorPersona(filas: readonly FilaDeAsistencia[]): PersonaCo
     if (dia) p.porDia[dia] = (p.porDia[dia] ?? 0) + 1;
     p.sesiones.push({ sesion: f.sesion, via: f.via, creada_en: f.creada_en });
   }
-  return [...personas.values()].sort((a, b) => b.total - a.total || a.nombre.localeCompare(b.nombre, 'es'));
+  return [...personas.values()];
+}
+
+/**
+ * La asistencia vista por persona: una fila por quien asistió a algo, con cuántas sesiones y a
+ * cuáles. Primero quien más sesiones suma, y a igualdad, por nombre.
+ */
+export function agruparPorPersona(filas: readonly FilaDeAsistencia[]): PersonaConAsistencia[] {
+  return reunirPorPersona(filas).sort((a, b) => b.total - a.total || a.nombre.localeCompare(b.nombre, 'es'));
 }
 
 /**
@@ -472,6 +485,59 @@ export function filasDeAsistencias(
   ]);
 }
 
+// ---------------------------------------------------------------------------
+// La pestaña «Asistencia por persona»: lo que se ve en la pestaña «Personas» del panel, para hacer las constancias
+// ---------------------------------------------------------------------------
+
+export const HOJA_PERSONAS = 'Asistencia por persona';
+
+/** «Miércoles 11»: el día como lo rotula el panel en su tabla por persona. */
+const diaCortoEnEspanol = (texto: Texto) => texto.es.split(' ').slice(0, 2).join(' ');
+
+/**
+ * Los títulos: los de la tabla por persona del panel —nombre, correo, perfil, un día por columna y el total— y, al final,
+ * «Con registro», que el panel no tiene como columna: quien asistió sin estar registrado no recibe constancia, y en la
+ * hoja, donde se hacen, tiene que verse de un vistazo. Los días salen de la agenda: si ésta cambia, los títulos la siguen.
+ */
+export const ENCABEZADOS_PERSONAS: readonly string[] = [
+  'N.º', 'Nombre', 'Correo', 'Perfil', ...DIAS_DE_ASISTENCIA.map((d) => diaCortoEnEspanol(d.texto)), 'Total', 'Con registro',
+];
+
+/**
+ * Lo que dice «Con registro»: «Sí» si su asistencia está ligada a un registro vigente; «No» si quedó «sin registro»
+ * (el comité aún no la concilió con ninguno). Un registro cancelado después de asistir sigue ligado, pero ya no vale: se
+ * dice «No (cancelado)» para que no se confunda con quien nunca se registró y el comité decida con el dato a la vista.
+ */
+export function textoDeRegistro(p: Pick<PersonaConAsistencia, 'sinRegistro' | 'estadoDelRegistro'>): string {
+  if (p.sinRegistro) return 'No';
+  return p.estadoDelRegistro === 'cancelado' ? 'No (cancelado)' : 'Sí';
+}
+
+/**
+ * Las filas de la pestaña por persona: una por quien asistió a algo, con cuántas sesiones tuvo cada día y en total
+ * (como en el panel: 1 o 0 por día) y si tenía registro.
+ *
+ * **En orden de llegada** (quien escaneó primero, primero), no por nombre ni por total como en el panel: la pestaña es una
+ * copia que se reescribe, y con un orden que se mueve cada vez que alguien suma un día, lo que se anote o genere a la derecha
+ * de una fila (las constancias, un «enviada») quedaría apuntando a otra persona. Así quien llega después se añade al final
+ * y las filas de antes no se mueven. Para verla por nombre, una vista de filtro de Sheets ordena sin mover filas.
+ */
+export function filasDePersonas(
+  asistentes: readonly FilaDeAsistencia[],
+  /** El perfil como se lee en la hoja («Público general»), no como se guarda («publico_general»). */
+  etiquetaDePerfil: (clave: string) => string = (clave) => clave,
+): FilaDeHoja[] {
+  return reunirPorPersona(asistentes).map((p, i) => [
+    i + 1,
+    p.nombre,
+    p.correo,
+    p.perfil ? etiquetaDePerfil(p.perfil) : '',
+    ...DIAS_DE_ASISTENCIA.map((d) => p.porDia[d.iso] ?? 0),
+    p.total,
+    textoDeRegistro(p),
+  ]);
+}
+
 const celdaComoTexto = (valor: unknown) => String(valor ?? '').trim();
 
 export interface PlanDeHoja {
@@ -493,10 +559,14 @@ export interface PlanDeHoja {
  * La pestaña es una copia, así que no hace falta saber qué fila es de qué asistencia: se compara fila
  * por fila, y desde la primera que difiere se reescribe lo demás. Lo normal —llegan asistencias nuevas—
  * es sólo añadir al final; si el comité concilia o quita una a mitad de lista, se corrige desde ahí.
- * Sólo se miran las seis columnas propias: lo que alguien anote a la derecha no se toca.
+ * Sólo se miran las columnas propias de la pestaña (`columnas`: las de «Asistencias» si no se dice otra cosa): lo que
+ * alguien anote a la derecha no se toca.
  */
-export function planDeHoja(deseadas: readonly FilaDeHoja[], enLaHoja: readonly (readonly unknown[])[]): PlanDeHoja {
-  const columnas = ENCABEZADOS_ASISTENCIAS.length;
+export function planDeHoja(
+  deseadas: readonly FilaDeHoja[],
+  enLaHoja: readonly (readonly unknown[])[],
+  columnas: number = ENCABEZADOS_ASISTENCIAS.length,
+): PlanDeHoja {
   const igual = (a: readonly unknown[], b: readonly unknown[]) =>
     Array.from({ length: columnas }).every((_, i) => celdaComoTexto(a[i]) === celdaComoTexto(b[i]));
 

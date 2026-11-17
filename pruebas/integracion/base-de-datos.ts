@@ -686,6 +686,56 @@ async function principal() {
   await consultar(`delete from asistencia_codigos`);
   ok('limpieza de la asistencia a mano');
 
+  // 17. La pestaña «Asistencia por persona» de la hoja: lo que sale de la base, con la columna «Con registro»
+  const { ENCABEZADOS_PERSONAS, filasDePersonas } = await import('../../src/lib/asistencia');
+  const { nombreDePerfil } = await import('../../src/lib/normalizacion');
+  const altasHoja: [string, string, string, string][] = [
+    ['hoja.completa@example.org', 'Silvana', 'Costa Arbulú', 'confirmado'],
+    ['hoja.espera@example.org', 'Teresa', 'Lista Espera', 'lista_espera'],
+    ['hoja.baja@example.org', 'Bernardo', 'Dado De Baja', 'confirmado'],
+  ];
+  for (const [correo, nombres, apellidos, estado] of altasHoja) {
+    const a = armarInsercion({
+      perfil: 'publico_general', grupo: 'externo', modalidad: 'presencial', idioma: 'es', nombres, apellidos,
+      correo, institucion: 'CIESS', pais_residencia: 'México', estado, consentimiento_datos: true,
+    });
+    await consultar(`insert into registros (${a.columnas}) values (${a.marcadores})`, a.valores);
+  }
+  for (const dia of ['miercoles', 'jueves', 'viernes']) {
+    await registrarAsistenciaManual({ sesion: dia, via: 'presencial', correo: 'hoja.completa@example.org', usuarioId: usuario!.id });
+  }
+  await registrarAsistenciaManual({ sesion: 'jueves', via: 'en_linea', correo: 'hoja.espera@example.org', usuarioId: usuario!.id });
+  await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'hoja.baja@example.org', usuarioId: usuario!.id });
+  await registrarAsistenciaManual({ sesion: 'viernes', via: 'presencial', correo: 'hoja.sin@example.org', nombre: 'Pedro Sin Registro', usuarioId: usuario!.id });
+  // Su registro se da de baja después de haber asistido: la asistencia sigue ligada, pero ya no vale.
+  await consultar(`update registros set estado = 'cancelado' where correo = 'hoja.baja@example.org'`);
+
+  const deLaBase = await todasLasAsistencias();
+  comprobar(
+    deLaBase.find((x) => x.correo === 'hoja.completa@example.org')?.estado_registro === 'confirmado' &&
+    deLaBase.find((x) => x.correo === 'hoja.baja@example.org')?.estado_registro === 'cancelado' &&
+    deLaBase.find((x) => x.correo === 'hoja.sin@example.org')?.estado_registro === null,
+    'hoja por persona: cada asistencia trae el estado del registro al que está ligada (nada si está «sin registro»)');
+  const filasHoja = filasDePersonas(deLaBase, nombreDePerfil);
+  const filaHoja = (correo: string) => filasHoja.find((f) => f[2] === correo);
+  comprobar(filasHoja.every((f) => f.length === ENCABEZADOS_PERSONAS.length), 'hoja por persona: cada fila trae una celda por título');
+  comprobar(
+    JSON.stringify(filaHoja('hoja.completa@example.org')?.slice(1)) ===
+      JSON.stringify(['Silvana Costa Arbulú', 'hoja.completa@example.org', 'Público general', 1, 1, 1, 3, 'Sí']),
+    'hoja por persona: quien asistió los tres días sale en una fila, con 1 por día, total 3 y «Sí»', filaHoja('hoja.completa@example.org'));
+  comprobar(filaHoja('hoja.espera@example.org')?.at(-1) === 'Sí' && filaHoja('hoja.espera@example.org')?.[7] === 1,
+    'hoja por persona: un registro en lista de espera cuenta como registro', filaHoja('hoja.espera@example.org'));
+  comprobar(filaHoja('hoja.baja@example.org')?.at(-1) === 'No (cancelado)',
+    'hoja por persona: un registro cancelado después de asistir sale «No (cancelado)»', filaHoja('hoja.baja@example.org'));
+  comprobar(
+    JSON.stringify(filaHoja('hoja.sin@example.org')?.slice(1)) === JSON.stringify(['Pedro Sin Registro', 'hoja.sin@example.org', '', 0, 0, 1, 1, 'No']),
+    'hoja por persona: quien asistió sin registro sale «No» y sin perfil', filaHoja('hoja.sin@example.org'));
+  comprobar(filasHoja.map((f) => f[0]).every((n, i) => n === i + 1), 'hoja por persona: el N.º va seguido');
+
+  await consultar(`delete from asistencias where correo like 'hoja.%'`);
+  await consultar(`delete from registros where correo like 'hoja.%@example.org'`);
+  ok('limpieza de la hoja por persona');
+
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);
   await consultar(`delete from usuarios_panel where correo = 'prueba@ciess.org'`);

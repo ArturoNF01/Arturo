@@ -1,15 +1,19 @@
 import 'server-only';
 import {
-  ENCABEZADOS_ANTERIORES, ENCABEZADOS_ASISTENCIAS, HOJA_ASISTENCIAS, filasDeAsistencias, planDeHoja,
+  ENCABEZADOS_ANTERIORES, ENCABEZADOS_ASISTENCIAS, ENCABEZADOS_PERSONAS, HOJA_ASISTENCIAS, HOJA_PERSONAS,
+  filasDeAsistencias, filasDePersonas, planDeHoja, type FilaDeHoja,
 } from '@/lib/asistencia';
-import { HOJA_LISTA, rangoDe } from '@/lib/normalizacion';
-import { todasLasAsistencias } from './asistencia';
+import { HOJA_LISTA, nombreDePerfil, rangoDe } from '@/lib/normalizacion';
+import { todasLasAsistencias, type Asistente } from './asistencia';
 import { clienteSheets, googleConfigurado } from './google';
 import { conEspera, peticionesDeTitulos } from './sheets';
 
 /**
- * La pestaña «Asistencias» de la hoja de Google: una fila por asistencia, con el nombre, el correo, el día
- * y la mesa (y la modalidad).
+ * Las pestañas de asistencia de la hoja de Google, las dos copias de la base:
+ *
+ *  - «Asistencias»: una fila por asistencia, con el nombre, el correo, el día y la modalidad (el detalle).
+ *  - «Asistencia por persona»: una fila por persona, como la pestaña «Personas» del panel —nombre, correo, perfil, un día por
+ *    columna y el total— más «Con registro». De ahí se hacen las constancias, que sólo reciben quienes estaban registrados.
  *
  * **No se escribe al escanear, sino poco después y por lotes.** Cien personas escaneando a la vez serían cien
  * escrituras a Google, que corta a las sesenta por minuto, y el escaneo no puede depender de que Google
@@ -21,8 +25,8 @@ import { conEspera, peticionesDeTitulos } from './sheets';
  *    falló en el momento, la pasada siguiente lo alcanza;
  *  - a pedido, con el botón del panel.
  *
- * La pestaña es una copia de la base (la base manda): se compara fila por fila y sólo se escribe lo que
- * falta o cambió. Sólo toca sus seis columnas; lo que alguien anote a la derecha no se pisa. Y como una copia
+ * Cada pestaña es una copia de la base (la base manda): se compara fila por fila y sólo se escribe lo que
+ * falta o cambió. Sólo toca sus propias columnas; lo que alguien anote a la derecha no se pisa. Y como una copia
  * que desaparece es peor que una copia que tarda, no quita filas de golpe: si la hoja tuviera muchas más
  * que la base (un respaldo viejo restaurado, una tabla vaciada), se detiene y lo dice.
  */
@@ -44,18 +48,51 @@ export interface ResultadoDeAsistencias {
   simulado?: boolean;
 }
 
-/** La letra de la última columna propia: E con cinco columnas. */
-const ULTIMA_COLUMNA = String.fromCharCode('A'.charCodeAt(0) + ENCABEZADOS_ASISTENCIAS.length - 1);
-/** Hasta dónde se miran los títulos: las columnas de ahora y las que tuvo el diseño anterior (por mesa). */
-const ULTIMA_COLUMNA_DE_TITULOS = String.fromCharCode(
-  'A'.charCodeAt(0) + Math.max(ENCABEZADOS_ASISTENCIAS.length, ENCABEZADOS_ANTERIORES.length) - 1,
-);
+/** Una pestaña de asistencia: cómo se llama, qué columnas lleva y qué filas le tocan según la base. */
+interface Pestana {
+  titulo: string;
+  encabezados: readonly string[];
+  /** Los títulos que tuvo en un diseño anterior, si lo hubo: se reconocen para rehacerla con los de ahora. */
+  anteriores?: readonly string[];
+  filas: (asistencias: Asistente[]) => FilaDeHoja[];
+}
+
+const PESTANA_DE_DETALLE: Pestana = {
+  titulo: HOJA_ASISTENCIAS,
+  encabezados: ENCABEZADOS_ASISTENCIAS,
+  anteriores: ENCABEZADOS_ANTERIORES,
+  filas: filasDeAsistencias,
+};
+
+const PESTANA_POR_PERSONA: Pestana = {
+  titulo: HOJA_PERSONAS,
+  encabezados: ENCABEZADOS_PERSONAS,
+  filas: (asistencias) => filasDePersonas(asistencias, nombreDePerfil),
+};
+
+/** La letra de la columna n: la 5.ª es la E. Las pestañas de asistencia no pasan de 26 columnas. */
+const letraDeColumna = (n: number) => String.fromCharCode('A'.charCodeAt(0) + n - 1);
 
 const enBlanco = (fila: readonly unknown[]) => fila.every((c) => String(c ?? '').trim() === '');
 
-export async function sincronizarAsistencias(
-  { forzar = false, simular = false }: { forzar?: boolean; simular?: boolean } = {},
+export interface OpcionesDeSincronizacion {
+  /** Quitar de la hoja más filas de las que se quitan solas, o vaciarla si la base quedó vacía. */
+  forzar?: boolean;
+  /** Sólo calcular lo que pasaría. */
+  simular?: boolean;
+}
+
+/** Pone al día una pestaña de asistencia: la crea si no existe, pone sus títulos y escribe lo que falta o cambió. */
+async function sincronizarPestana(
+  pestana: Pestana,
+  { forzar = false, simular = false }: OpcionesDeSincronizacion = {},
 ): Promise<ResultadoDeAsistencias> {
+  const { titulo, encabezados, anteriores } = pestana;
+  /** La letra de la última columna propia: E con cinco columnas. */
+  const ultimaColumna = letraDeColumna(encabezados.length);
+  /** Hasta dónde se miran los títulos: las columnas de ahora y las que tuvo un diseño anterior. */
+  const ultimaColumnaDeTitulos = letraDeColumna(Math.max(encabezados.length, anteriores?.length ?? 0));
+
   const idLibro = process.env.GOOGLE_SHEETS_ID;
   if (!googleConfigurado() || !idLibro) throw new Error('Google Sheets no está configurado.');
   const sheets = clienteSheets();
@@ -67,13 +104,12 @@ export async function sincronizarAsistencias(
     }),
   );
   const hojas = libro.data.sheets ?? [];
-  const existente = hojas.find((h) => h.properties?.title === HOJA_ASISTENCIAS)?.properties;
+  const existente = hojas.find((h) => h.properties?.title === titulo)?.properties;
   let sheetId = existente?.sheetId ?? null;
   // Una pestaña nueva de Google trae 1,000 filas.
   let filasDeLaCuadricula = existente?.gridProperties?.rowCount ?? 1000;
 
-  const asistencias = await todasLasAsistencias();
-  const deseadas = filasDeAsistencias(asistencias);
+  const deseadas = pestana.filas(await todasLasAsistencias());
 
   // Sin pestaña y sin asistencias no hay nada que crear: la pestaña nace con la primera asistencia.
   if (sheetId === null && deseadas.length === 0) return { nuevas: 0, cambiadas: 0, quitadas: 0 };
@@ -88,7 +124,7 @@ export async function sincronizarAsistencias(
           requests: [{
             addSheet: {
               properties: {
-                title: HOJA_ASISTENCIAS,
+                title: titulo,
                 ...(typeof ancla === 'number' ? { index: ancla + 1 } : {}),
                 gridProperties: { frozenRowCount: 1 },
               },
@@ -111,7 +147,7 @@ export async function sincronizarAsistencias(
   // Sin ellos la primera fila de datos quedaría debajo de nada, y «N.º» no se encontraría.
   if (sheetId !== null && !simular) {
     const titulos = (await conEspera(() =>
-      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: rangoDe(HOJA_ASISTENCIAS, `A1:${ULTIMA_COLUMNA_DE_TITULOS}1`) }),
+      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: rangoDe(titulo, `A1:${ultimaColumnaDeTitulos}1`) }),
     )).data.values?.[0] ?? [];
     const dicen = (esperados: readonly string[]) =>
       esperados.length === titulos.filter((t) => String(t ?? '').trim() !== '').length &&
@@ -122,23 +158,23 @@ export async function sincronizarAsistencias(
     //
     // Con una salvedad: si la base no tiene ninguna asistencia (un respaldo viejo, una tabla vaciada) lo que hay en
     // la hoja podría ser lo único que queda, y no se toca sin `forzar`.
-    const anterior = dicen(ENCABEZADOS_ANTERIORES);
+    const anterior = anteriores !== undefined && dicen(anteriores);
     const puedeRehacer = deseadas.length > 0 || forzar;
     if (anterior && puedeRehacer) {
       await conEspera(() =>
         sheets.spreadsheets.values.clear({
           spreadsheetId: idLibro,
-          range: rangoDe(HOJA_ASISTENCIAS, `A1:${ULTIMA_COLUMNA_DE_TITULOS}`),
+          range: rangoDe(titulo, `A1:${ultimaColumnaDeTitulos}`),
         }),
       );
     }
-    if (!dicen(ENCABEZADOS_ASISTENCIAS) && (!anterior || puedeRehacer)) {
+    if (!dicen(encabezados) && (!anterior || puedeRehacer)) {
       await conEspera(() =>
         sheets.spreadsheets.values.update({
           spreadsheetId: idLibro,
-          range: rangoDe(HOJA_ASISTENCIAS, 'A1'),
+          range: rangoDe(titulo, 'A1'),
           valueInputOption: 'RAW',
-          requestBody: { values: [[...ENCABEZADOS_ASISTENCIAS]] },
+          requestBody: { values: [[...encabezados]] },
         }),
       );
     }
@@ -149,7 +185,7 @@ export async function sincronizarAsistencias(
     : ((await conEspera(() =>
         sheets.spreadsheets.values.get({
           spreadsheetId: idLibro,
-          range: rangoDe(HOJA_ASISTENCIAS, `A2:${ULTIMA_COLUMNA}`),
+          range: rangoDe(titulo, `A2:${ultimaColumna}`),
         }),
       )).data.values ?? []);
   // Sólo se descartan las filas en blanco del final (restos de un borrado a mano): una en blanco a mitad de
@@ -159,16 +195,16 @@ export async function sincronizarAsistencias(
   const enLaHoja = leida.slice(0, fin);
   const hojaEstaba = enLaHoja.length;
 
-  const plan = planDeHoja(deseadas, enLaHoja);
+  const plan = planDeHoja(deseadas, enLaHoja, encabezados.length);
   const resultado: ResultadoDeAsistencias = {
     nuevas: plan.nuevas, cambiadas: plan.cambian, quitadas: plan.sobran, ...(simular ? { simulado: true } : {}),
   };
 
   if (deseadas.length === 0 && hojaEstaba > 0 && !forzar) {
-    return { ...resultado, nuevas: 0, cambiadas: 0, quitadas: 0, omitido: 'La base no tiene asistencias y la hoja sí: no se toca la hoja. Si es lo que se quiere, npm run sincronizar -- --forzar' };
+    return { ...resultado, nuevas: 0, cambiadas: 0, quitadas: 0, omitido: `La base no tiene asistencias y la pestaña «${titulo}» sí: no se toca. Si es lo que se quiere, npm run sincronizar -- --forzar` };
   }
   if (plan.sobran > MAXIMO_DE_FILAS_QUE_SOBRAN && !forzar) {
-    return { ...resultado, nuevas: 0, cambiadas: 0, quitadas: 0, omitido: `La hoja tiene ${plan.sobran} filas más que la base: no se quitan solas (¿un respaldo viejo?). Si son las que se quitaron a propósito, npm run sincronizar -- --forzar` };
+    return { ...resultado, nuevas: 0, cambiadas: 0, quitadas: 0, omitido: `La pestaña «${titulo}» tiene ${plan.sobran} filas más que la base: no se quitan solas (¿un respaldo viejo?). Si son las que se quitaron a propósito, npm run sincronizar -- --forzar` };
   }
   if (simular || sheetId === null) return resultado;
 
@@ -191,7 +227,7 @@ export async function sincronizarAsistencias(
     await conEspera(() =>
       sheets.spreadsheets.values.update({
         spreadsheetId: idLibro,
-        range: rangoDe(HOJA_ASISTENCIAS, `A${primera}:${ULTIMA_COLUMNA}${primera + lote.length - 1}`),
+        range: rangoDe(titulo, `A${primera}:${ultimaColumna}${primera + lote.length - 1}`),
         // RAW: lo que escribe cualquiera en el formulario público no se interpreta nunca como fórmula.
         valueInputOption: 'RAW',
         requestBody: { values: lote },
@@ -204,7 +240,7 @@ export async function sincronizarAsistencias(
     await conEspera(() =>
       sheets.spreadsheets.values.clear({
         spreadsheetId: idLibro,
-        range: rangoDe(HOJA_ASISTENCIAS, `A${desde}:${ULTIMA_COLUMNA}${desde + plan.sobran - 1}`),
+        range: rangoDe(titulo, `A${desde}:${ultimaColumna}${desde + plan.sobran - 1}`),
       }),
     );
   }
@@ -217,7 +253,7 @@ export async function sincronizarAsistencias(
         requestBody: {
           requests: [{
             autoResizeDimensions: {
-              dimensions: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: ENCABEZADOS_ASISTENCIAS.length },
+              dimensions: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: encabezados.length },
             },
           }],
         },
@@ -226,6 +262,56 @@ export async function sincronizarAsistencias(
   }
 
   return resultado;
+}
+
+/** La pestaña «Asistencias»: una fila por asistencia. */
+export function sincronizarAsistencias(opciones: OpcionesDeSincronizacion = {}): Promise<ResultadoDeAsistencias> {
+  return sincronizarPestana(PESTANA_DE_DETALLE, opciones);
+}
+
+/** La pestaña «Asistencia por persona»: una fila por persona, con un día por columna y si tenía registro. */
+export function sincronizarAsistenciaPorPersona(opciones: OpcionesDeSincronizacion = {}): Promise<ResultadoDeAsistencias> {
+  return sincronizarPestana(PESTANA_POR_PERSONA, opciones);
+}
+
+/** Las pestañas de asistencia, en el orden en que se ponen al día (para el script, que dice cómo le fue a cada una). */
+export const PESTANAS_DE_ASISTENCIA: readonly { titulo: string; sincronizar: (opciones?: OpcionesDeSincronizacion) => Promise<ResultadoDeAsistencias> }[] = [
+  { titulo: HOJA_ASISTENCIAS, sincronizar: sincronizarAsistencias },
+  { titulo: HOJA_PERSONAS, sincronizar: sincronizarAsistenciaPorPersona },
+];
+
+export interface ResultadoDeLaHoja extends ResultadoDeAsistencias {
+  /** Lo de cada pestaña por separado; los totales de arriba son la suma de las dos. */
+  pestanas: { asistencias: ResultadoDeAsistencias; personas: ResultadoDeAsistencias };
+}
+
+/**
+ * Pone al día las dos pestañas. Si una falla no deja a la otra sin pasar: se intentan las dos y, si alguna falló, se
+ * relanza su error (el de la primera, si fallaron ambas).
+ */
+export async function sincronizarLasPestanas(opciones: OpcionesDeSincronizacion = {}): Promise<ResultadoDeLaHoja> {
+  const resultados: ResultadoDeAsistencias[] = [];
+  let fallo: { error: unknown } | null = null;
+  for (const { sincronizar } of PESTANAS_DE_ASISTENCIA) {
+    try {
+      resultados.push(await sincronizar(opciones));
+    } catch (error) {
+      fallo ??= { error };
+      resultados.push({ nuevas: 0, cambiadas: 0, quitadas: 0 });
+    }
+  }
+  if (fallo) throw fallo.error;
+
+  const [asistencias, personas] = resultados;
+  const omitidos = resultados.map((r) => r.omitido).filter((o): o is string => Boolean(o));
+  return {
+    nuevas: asistencias.nuevas + personas.nuevas,
+    cambiadas: asistencias.cambiadas + personas.cambiadas,
+    quitadas: asistencias.quitadas + personas.quitadas,
+    ...(omitidos.length > 0 ? { omitido: omitidos.join(' ') } : {}),
+    ...(opciones.simular ? { simulado: true } : {}),
+    pestanas: { asistencias, personas },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -249,11 +335,11 @@ export const estadoDeLaHoja = (): EstadoDeLaHoja => ({ ...estado });
  */
 let cola: Promise<unknown> = Promise.resolve();
 
-/** Una pasada a la hoja que además anota cómo le fue, para que el panel lo enseñe. Si falla, relanza el error. */
-export function sincronizarYAnotar(opciones?: { forzar?: boolean }): Promise<ResultadoDeAsistencias> {
+/** Una pasada a las dos pestañas que además anota cómo le fue, para que el panel lo enseñe. Si falla, relanza el error. */
+export function sincronizarYAnotar(opciones?: { forzar?: boolean }): Promise<ResultadoDeLaHoja> {
   const pasada = cola.then(async () => {
     try {
-      const r = await sincronizarAsistencias(opciones);
+      const r = await sincronizarLasPestanas(opciones);
       estado.ultimaVez = new Date().toISOString();
       estado.error = r.omitido ?? null;
       return r;
