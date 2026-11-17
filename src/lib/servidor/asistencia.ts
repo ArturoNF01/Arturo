@@ -6,8 +6,8 @@ import type { EstadoRegistro } from '@/lib/estados';
 import {
   ALFABETO_DE_CODIGOS, CLAVE_DE_PRUEBA, LARGO_DE_CODIGO, SESIONES_DE_ASISTENCIA, VIAS,
   correoValido, decidirIdentidad, esCodigoPosible, esSesionDeLaAgenda, estadoDeVentana, nombreDePila, sesionPorClave, ventanaDe,
-  type OrigenDeAsistencia, type RespuestaDeAsistencia, type RespuestaDeBusqueda, type RespuestaManual, type SesionDeAsistencia,
-  type ViaAsistencia,
+  type OrigenDeAsistencia, type RegistroDePonente, type RespuestaDeAsistencia, type RespuestaDeBusqueda, type RespuestaManual,
+  type SesionDeAsistencia, type ViaAsistencia,
 } from '@/lib/asistencia';
 
 /**
@@ -459,6 +459,20 @@ export async function todasLasAsistencias(): Promise<Asistente[]> {
     `select ${COLUMNAS_DE_ASISTENTE}
        from asistencias a left join registros r on r.id = a.registro_id
       order by a.creada_en, a.id`,
+  );
+}
+
+/**
+ * Todos los registros de ponente, en el orden en que se registraron, estén o no cancelados (un cancelado sale con la casilla
+ * de «Con registro» sin marcar): es la misma lista que la pestaña «Resumen Registro» cuenta como ponentes, que no distingue
+ * estados. Los ponentes no tenían que registrar asistencia, pero tienen constancia, y de aquí salen los que no la registraron.
+ */
+export async function ponentesRegistrados(): Promise<RegistroDePonente[]> {
+  return consultar<RegistroDePonente>(
+    `select id, btrim(nombres || ' ' || apellidos) as nombre, correo, perfil, folio, estado::text as estado
+       from registros
+      where perfil = 'ponente'
+      order by creado_en, id`,
   );
 }
 

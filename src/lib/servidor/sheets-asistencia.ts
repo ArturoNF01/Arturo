@@ -1,11 +1,12 @@
 import 'server-only';
 import {
   COLUMNA_CON_REGISTRO, ENCABEZADOS_DE_CONSTANCIAS, ENCABEZADOS_DE_FECHAS, ENCABEZADOS_DE_LA_HOJA_RETIRADA, ENCABEZADOS_PERSONAS,
-  ENCABEZADO_DE_GENERAR, HOJA_PERSONAS, HOJA_RETIRADA, filasDePersonas, planDeHoja,
+  ENCABEZADO_DE_GENERAR, HOJA_PERSONAS, HOJA_RETIRADA, filasDePersonas, planDeHoja, posiblesRepetidos, resumenDePonentes,
+  type PosibleRepetido,
 } from '@/lib/asistencia';
 import { HOJA_LISTA, nombreDePerfil, rangoDe } from '@/lib/normalizacion';
 import { ponenciasParaLaHoja } from '@/lib/ponentes';
-import { todasLasAsistencias } from './asistencia';
+import { ponentesRegistrados, todasLasAsistencias } from './asistencia';
 import { clienteSheets, googleConfigurado } from './google';
 import { conEspera, peticionesDeTitulos } from './sheets';
 
@@ -16,6 +17,10 @@ import { conEspera, peticionesDeTitulos } from './sheets';
  * una. De ahí se hacen las constancias, que sólo reciben quienes estaban registrados. A la derecha de esas diez columnas la
  * pestaña lleva las de las constancias mismas —horas, número, folio, libro, foja, el botón de generar, el archivo…—, que son de
  * quien las hace: el sistema las crea una vez (`ENCABEZADOS_DE_CONSTANCIAS`) y no escribe nunca en ellas.
+ *
+ * Los ponentes tienen constancia aunque no registraron asistencia (no era un requisito para ellos): todos los registros de
+ * ponente salen en la pestaña, una sola vez cada uno —los que asistieron, en su fila de llegada, y los demás al final, con
+ * cero días—, y se cotejan los nombres para avisar de quien salga dos veces con otra identidad.
  *
  * La pestaña «Asistencias» que había antes (una fila por asistencia) se retiró: esta pasada la quita de la hoja, una
  * sola vez y sólo si es la que puso el sistema (`retirarLaPestanaVieja`). El detalle por asistencia sigue en el panel y en
@@ -65,6 +70,10 @@ export interface ResultadoDeAsistencias {
   retirada?: RetiroDeLaPestana;
   /** Cambios en la estructura de la hoja que conviene decir: una columna que se insertó, por ejemplo. */
   avisos?: string[];
+  /** Cuántos ponentes lleva la pestaña (todos sus registros, una vez cada uno) y cuántos de ellos no registraron asistencia. */
+  ponentes?: { total: number; sinAsistencia: number };
+  /** El cotejo: quién sale en más de una fila con el mismo nombre, siendo alguna de un ponente. Sólo se avisa. */
+  repetidos?: string[];
 }
 
 export interface OpcionesDeSincronizacion {
@@ -72,6 +81,13 @@ export interface OpcionesDeSincronizacion {
   forzar?: boolean;
   /** Sólo calcular lo que pasaría. */
   simular?: boolean;
+}
+
+/** «Ana Ruiz»: filas 12 (sin registro, 2 días) y 70 (ponente, sin asistencia): lo que se dice de un nombre que sale más de una vez. */
+function textoDeRepetido({ nombre, filas }: PosibleRepetido): string {
+  const quien = (f: PosibleRepetido['filas'][number]) =>
+    `${f.numero} (${f.perfil === 'ponente' ? 'ponente' : f.sinRegistro ? 'sin registro' : 'con registro'}, ${f.total === 0 ? 'sin asistencia' : `${f.total} ${f.total === 1 ? 'día' : 'días'}`})`;
+  return `«${nombre}»: filas ${filas.map(quien).join(' y ')}`;
 }
 
 /** La letra de la columna n: la 5.ª es la E. La pestaña no pasa de 26 columnas. */
@@ -180,7 +196,10 @@ export async function sincronizarAsistencias(
   let filasDeLaCuadricula = existente?.gridProperties?.rowCount ?? 1000;
   let columnasDeLaCuadricula = existente?.gridProperties?.columnCount ?? 26;
 
-  const deseadas = filasDePersonas(await todasLasAsistencias(), nombreDePerfil, ponenciasParaLaHoja);
+  const asistencias = await todasLasAsistencias();
+  const ponentes = await ponentesRegistrados();
+  const deseadas = filasDePersonas(asistencias, nombreDePerfil, ponenciasParaLaHoja, ponentes);
+  const repetidos = posiblesRepetidos(asistencias, ponentes).map(textoDeRepetido);
 
   // Sin pestaña y sin asistencias no hay nada que crear: la pestaña nace con la primera asistencia.
   if (sheetId === null && deseadas.length === 0) return { nuevas: 0, cambiadas: 0, quitadas: 0 };
@@ -335,6 +354,8 @@ export async function sincronizarAsistencias(
   const plan = planDeHoja(deseadas, enLaHoja, ENCABEZADOS_PERSONAS.length);
   const resultado: ResultadoDeAsistencias = {
     nuevas: plan.nuevas, cambiadas: plan.cambian, quitadas: plan.sobran, ...(simular ? { simulado: true } : {}),
+    ponentes: resumenDePonentes(asistencias, ponentes),
+    ...(repetidos.length > 0 ? { repetidos } : {}),
   };
 
   if (deseadas.length === 0 && hojaEstaba > 0 && !forzar) {

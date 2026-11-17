@@ -507,6 +507,19 @@ export const ENCABEZADOS_DE_LA_HOJA_RETIRADA: readonly (readonly string[])[] = [
 export type FilaDeHoja = (string | number | boolean)[];
 
 /**
+ * Un registro de ponente. Los ponentes no tenían que registrar asistencia, pero tienen constancia: van en la hoja aunque no
+ * hayan escaneado, y de ellos sale el registro (no una asistencia) —su nombre, su correo, su folio y el estado de su registro.
+ */
+export interface RegistroDePonente {
+  id: string;
+  nombre: string;
+  correo: string;
+  perfil: string;
+  folio: string | null;
+  estado: string | null;
+}
+
+/**
  * Lo que dice la casilla «Con registro»: marcada si su asistencia está ligada a un registro que vale; sin marcar si quedó
  * «sin registro» (el comité aún no la concilió con ninguno) o si su registro se canceló después de asistir. En lista de
  * espera o en proceso sí es un registro. Quien se cancela y luego se reactiva en el panel vuelve a quedar marcado.
@@ -516,13 +529,36 @@ export function conRegistro(p: Pick<PersonaConAsistencia, 'sinRegistro' | 'estad
 }
 
 /**
- * Las filas de la pestaña por persona: una por quien asistió a algo, con cuántas sesiones tuvo cada día y en total
- * (como en el panel: 1 o 0 por día), si tenía registro (la casilla) y, si presentó una ponencia, cuál.
+ * Las personas de la pestaña, en el orden de sus filas: primero quienes asistieron, en orden de llegada, y después, en
+ * el orden en que se registraron, los ponentes que no registraron asistencia (con cero días). Cada registro de ponente sale
+ * una sola vez: quien asistió y está ligado a su registro ya tiene su fila arriba, y no se repite abajo.
+ *
+ * Los ponentes sin asistencia van al final, no mezclados, para que las filas de quienes ya estaban no se muevan.
+ */
+function personasDeLaHoja(asistentes: readonly FilaDeAsistencia[], ponentes: readonly RegistroDePonente[]): PersonaConAsistencia[] {
+  const personas = reunirPorPersona(asistentes);
+  const yaEstan = new Set(personas.map((p) => p.registroId).filter((id): id is string => id !== null));
+  for (const r of ponentes) {
+    if (yaEstan.has(r.id)) continue;
+    yaEstan.add(r.id);
+    personas.push({
+      clave: r.id, registroId: r.id, nombre: r.nombre, correo: r.correo, perfil: r.perfil, folio: r.folio,
+      sinRegistro: false, estadoDelRegistro: r.estado, total: 0, porDia: {}, sesiones: [],
+    });
+  }
+  return personas;
+}
+
+/**
+ * Las filas de la pestaña por persona: una por quien asistió a algo y una por cada ponente que no, con cuántas sesiones
+ * tuvo cada día y en total (como en el panel: 1 o 0 por día), si tenía registro (la casilla) y, si presentó una ponencia, cuál.
  *
  * **En orden de llegada** (quien escaneó primero, primero), no por nombre ni por total como en el panel: la pestaña es una
  * copia que se reescribe, y con un orden que se mueve cada vez que alguien suma un día, lo que se anote o genere a la derecha
  * de una fila (las constancias, un «enviada») quedaría apuntando a otra persona. Así quien llega después se añade al final
  * y las filas de antes no se mueven. Para verla por nombre, una vista de filtro de Sheets ordena sin mover filas.
+ *
+ * Los ponentes que no registraron asistencia van detrás de todos los demás (ver `personasDeLaHoja`).
  */
 export function filasDePersonas(
   asistentes: readonly FilaDeAsistencia[],
@@ -530,8 +566,10 @@ export function filasDePersonas(
   etiquetaDePerfil: (clave: string) => string = (clave) => clave,
   /** La ponencia que presentó quien tiene ese nombre, como va en la celda; vacía si no presentó ninguna. */
   ponenciaDe: (nombre: string) => string = () => '',
+  /** Todos los registros de ponente, tengan o no asistencia. */
+  ponentes: readonly RegistroDePonente[] = [],
 ): FilaDeHoja[] {
-  return reunirPorPersona(asistentes).map((p, i) => [
+  return personasDeLaHoja(asistentes, ponentes).map((p, i) => [
     i + 1,
     p.nombre,
     p.correo,
@@ -541,6 +579,41 @@ export function filasDePersonas(
     conRegistro(p),
     ponenciaDe(p.nombre),
   ]);
+}
+
+/** Cuántos ponentes lleva la hoja (todos los registros de ponente, una vez cada uno) y cuántos de ellos no registraron asistencia. */
+export function resumenDePonentes(
+  asistentes: readonly FilaDeAsistencia[],
+  ponentes: readonly RegistroDePonente[],
+): { total: number; sinAsistencia: number } {
+  const conAsistencia = new Set(asistentes.filter((a) => !esSesionDePrueba(a.sesion)).map((a) => a.registro_id));
+  const ids = new Set(ponentes.map((r) => r.id));
+  return { total: ids.size, sinAsistencia: [...ids].filter((id) => !conAsistencia.has(id)).length };
+}
+
+export interface PosibleRepetido {
+  nombre: string;
+  /** Las filas que se llaman igual: su N.º en la hoja y qué son. */
+  filas: { numero: number; perfil: string | null; sinRegistro: boolean; total: number }[];
+}
+
+/**
+ * El cotejo: quiénes salen más de una vez con el mismo nombre en la hoja y alguno de ellos es ponente. Por su registro no
+ * puede haber un ponente repetido (cada registro sale una vez), pero una persona puede estar dos veces con otra identidad:
+ * escaneó con un correo que no era el suyo y quedó «sin registro» aparte de su fila de ponente, o se registró dos veces. Se
+ * reconoce por el nombre (sin acentos, mayúsculas ni orden). Sólo se avisa: juntarlas es decisión del comité, ligando la
+ * asistencia a su registro desde el panel, y la hoja las junta sola cuando eso pasa.
+ */
+export function posiblesRepetidos(asistentes: readonly FilaDeAsistencia[], ponentes: readonly RegistroDePonente[]): PosibleRepetido[] {
+  const grupos = new Map<string, PosibleRepetido>();
+  personasDeLaHoja(asistentes, ponentes).forEach((p, i) => {
+    const huella = huellaDeNombre(p.nombre);
+    if (huella === '') return;
+    const grupo = grupos.get(huella) ?? { nombre: p.nombre, filas: [] };
+    grupo.filas.push({ numero: i + 1, perfil: p.perfil, sinRegistro: p.sinRegistro, total: p.total });
+    grupos.set(huella, grupo);
+  });
+  return [...grupos.values()].filter((g) => g.filas.length > 1 && g.filas.some((f) => f.perfil === 'ponente'));
 }
 
 /**

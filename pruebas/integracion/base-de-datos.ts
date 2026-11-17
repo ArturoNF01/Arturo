@@ -690,6 +690,8 @@ async function principal() {
   const { ENCABEZADOS_PERSONAS, filasDePersonas } = await import('../../src/lib/asistencia');
   const { nombreDePerfil } = await import('../../src/lib/normalizacion');
   const { ponenciasDeLaPersona, ponenciasParaLaHoja } = await import('../../src/lib/ponentes');
+  const { posiblesRepetidos, resumenDePonentes } = await import('../../src/lib/asistencia');
+  const { ponentesRegistrados } = await import('../../src/lib/servidor/asistencia');
   const altasHoja: [string, string, string, string][] = [
     ['hoja.completa@example.org', 'Silvana', 'Costa Arbulú', 'confirmado'],
     ['hoja.espera@example.org', 'Teresa', 'Lista Espera', 'lista_espera'],
@@ -697,6 +699,12 @@ async function principal() {
     // Quien presentó dos ponencias del programa (con los dos apellidos, como los escribe quien se registra).
     ['hoja.ponente@example.org', 'Nuria', 'Ape', 'confirmado'],
     ['hoja.ponente2@example.org', 'Sebastián', 'Grillo Pérez', 'confirmado'],
+    // Ponentes que no registraron asistencia (no era un requisito para ellos), uno de ellos con el registro cancelado.
+    ['hoja.ponente3@example.org', 'Teresa', 'Sin Asistencia', 'confirmado'],
+    ['hoja.ponente4@example.org', 'Carmen', 'Cancelada Ponente', 'cancelado'],
+    // Dos registros con el mismo nombre: quien escanee con ese nombre y otro correo no se puede ligar a ninguno.
+    ['hoja.ponente5@example.org', 'Nombre', 'Repetido Ponente', 'confirmado'],
+    ['hoja.ponente6@example.org', 'Nombre', 'Repetido Ponente', 'confirmado'],
   ];
   for (const [correo, nombres, apellidos, estado] of altasHoja) {
     const a = armarInsercion({
@@ -713,6 +721,7 @@ async function principal() {
   await registrarAsistenciaManual({ sesion: 'viernes', via: 'presencial', correo: 'hoja.sin@example.org', nombre: 'Pedro Sin Registro', usuarioId: usuario!.id });
   await registrarAsistenciaManual({ sesion: 'viernes', via: 'presencial', correo: 'hoja.ponente@example.org', usuarioId: usuario!.id });
   await registrarAsistenciaManual({ sesion: 'jueves', via: 'en_linea', correo: 'hoja.ponente2@example.org', usuarioId: usuario!.id });
+  await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'hoja.typo@example.org', nombre: 'Nombre Repetido Ponente', usuarioId: usuario!.id });
   // Su registro se da de baja después de haber asistido: la asistencia sigue ligada, pero ya no vale.
   await consultar(`update registros set estado = 'cancelado' where correo = 'hoja.baja@example.org'`);
 
@@ -722,7 +731,8 @@ async function principal() {
     deLaBase.find((x) => x.correo === 'hoja.baja@example.org')?.estado_registro === 'cancelado' &&
     deLaBase.find((x) => x.correo === 'hoja.sin@example.org')?.estado_registro === null,
     'hoja por persona: cada asistencia trae el estado del registro al que está ligada (nada si está «sin registro»)');
-  const filasHoja = filasDePersonas(deLaBase, nombreDePerfil, ponenciasParaLaHoja);
+  const ponentesBase = await ponentesRegistrados();
+  const filasHoja = filasDePersonas(deLaBase, nombreDePerfil, ponenciasParaLaHoja, ponentesBase);
   const filaHoja = (correo: string) => filasHoja.find((f) => f[2] === correo);
   comprobar(filasHoja.every((f) => f.length === ENCABEZADOS_PERSONAS.length), 'hoja por persona: cada fila trae una celda por título');
   comprobar(
@@ -747,6 +757,32 @@ async function principal() {
     'hoja por persona: se reconoce al ponente aunque se haya registrado con los dos apellidos y con acento', filaHoja('hoja.ponente2@example.org'));
   comprobar(filasHoja.filter((f) => f[2] !== 'hoja.ponente@example.org' && f[2] !== 'hoja.ponente2@example.org').every((f) => f[9] === ''),
     'hoja por persona: quien no presentó ponencia no lleva nada en esa columna');
+
+  // Los ponentes: todos los registros de ponente, una vez cada uno, tengan o no asistencia
+  comprobar(ponentesBase.length >= 6 && ponentesBase.every((r) => r.perfil === 'ponente'),
+    'ponentes: la consulta trae los registros con perfil de ponente', ponentesBase.length);
+  comprobar(ponentesBase.every((r) => filasHoja.filter((f) => f[2] === r.correo).length === 1),
+    'ponentes: cada registro de ponente sale una sola vez en la hoja, haya asistido o no');
+  comprobar(filasHoja.filter((f) => f[3] === 'Ponente').length === ponentesBase.length,
+    'ponentes: las filas con perfil «Ponente» son tantas como los registros de ponente', filasHoja.filter((f) => f[3] === 'Ponente').length);
+  const filaSin = filaHoja('hoja.ponente3@example.org');
+  comprobar(
+    JSON.stringify(filaSin?.slice(1)) === JSON.stringify(['Teresa Sin Asistencia', 'hoja.ponente3@example.org', 'Ponente', 0, 0, 0, 0, true, '']),
+    'ponentes: quien no registró asistencia sale con cero días y la casilla de registro marcada', filaSin);
+  comprobar(filaHoja('hoja.ponente4@example.org')?.[8] === false,
+    'ponentes: un ponente con el registro cancelado sale, con la casilla sin marcar', filaHoja('hoja.ponente4@example.org'));
+  const ultimoQueAsistio = Math.max(...filasHoja.filter((f) => Number(f[7]) > 0).map((f) => Number(f[0])));
+  comprobar(ponentesBase.filter((r) => !filasHoja.some((f) => f[2] === r.correo && Number(f[7]) > 0))
+    .every((r) => Number(filaHoja(r.correo)![0]) > ultimoQueAsistio),
+    'ponentes: los que no registraron asistencia van detrás de todos los que sí');
+  const resumenPonentes = resumenDePonentes(deLaBase, ponentesBase);
+  comprobar(resumenPonentes.total === ponentesBase.length && resumenPonentes.sinAsistencia === ponentesBase.length - 2,
+    'ponentes: el resumen dice cuántos hay y cuántos no registraron asistencia (aquí sólo dos asistieron)', resumenPonentes);
+  const repetidos = posiblesRepetidos(deLaBase, ponentesBase);
+  comprobar(
+    repetidos.length === 1 && repetidos[0].filas.length === 3 &&
+    repetidos[0].filas.filter((f) => f.perfil === 'ponente').length === 2 && repetidos[0].filas.filter((f) => f.sinRegistro).length === 1,
+    'ponentes: el cotejo avisa de quien escaneó «sin registro» con el nombre de dos ponentes, con las tres filas', repetidos);
 
   await consultar(`delete from asistencias where correo like 'hoja.%'`);
   await consultar(`delete from registros where correo like 'hoja.%@example.org'`);

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   COLUMNA_CON_REGISTRO, ENCABEZADOS_DE_CONSTANCIAS, ENCABEZADOS_DE_LA_HOJA_RETIRADA, ENCABEZADOS_PERSONAS, ENCABEZADO_DE_GENERAR,
-  HOJA_PERSONAS, HOJA_RETIRADA, conRegistro, filasDePersonas, planDeHoja, type FilaDeAsistencia, type FilaDeHoja,
+  HOJA_PERSONAS, HOJA_RETIRADA, conRegistro, filasDePersonas, planDeHoja, posiblesRepetidos, resumenDePonentes, type FilaDeAsistencia,
+  type FilaDeHoja, type RegistroDePonente,
 } from '@/lib/asistencia';
 import { SEPARADOR_DE_PONENCIAS } from '@/lib/ponentes';
 import { MESAS } from '@/lib/programa';
@@ -240,6 +241,8 @@ const fallaDe = (p: PestanaSimulada) => hoja.falla ?? p.fallaPropia;
 const comoLoLeeGoogle = (valor: Celda) => (valor === true ? 'TRUE' : valor === false ? 'FALSE' : String(valor));
 
 let asistencias: ReturnType<typeof una>[] = [];
+/** Los registros de ponente de la base, tengan o no asistencia. */
+let ponentesDeLaBase: RegistroDePonente[] = [];
 function una(sesion: string, via: 'presencial' | 'en_linea', nombre: string, correo: string, extra: Record<string, unknown> = {}) {
   return {
     id: `${sesion}-${correo}`, sesion, via, nombre, correo, perfil: null as string | null, folio: null, registro_id: null as string | null,
@@ -400,7 +403,7 @@ vi.mock('@/lib/servidor/sheets', () => ({
   conEspera: async <T>(op: () => Promise<T>) => op(),
   peticionesDeTitulos: () => [],
 }));
-vi.mock('@/lib/servidor/asistencia', () => ({ todasLasAsistencias: async () => asistencias }));
+vi.mock('@/lib/servidor/asistencia', () => ({ todasLasAsistencias: async () => asistencias, ponentesRegistrados: async () => ponentesDeLaBase }));
 
 const {
   ESPERA_AUTOMATICA_MS, estadoDeLaHoja, pedirSincronizacionDeAsistencias, sincronizarAsistencias, sincronizarYAnotar,
@@ -416,6 +419,7 @@ beforeEach(() => {
   }
   hoja.configurado = true; hoja.falla = null; hoja.fallaAlBorrar = null; hoja.fallaAlValidar = null; hoja.eventos = []; hoja.lecturasDeLaVieja = 0;
   asistencias = [];
+  ponentesDeLaBase = [];
 });
 
 const registrada = (sesion: string, nombre: string, correo: string, extra: Record<string, unknown> = {}) =>
@@ -888,6 +892,190 @@ describe('las columnas de las constancias', () => {
     await sincronizarAsistencias({ simular: true });
     expect(personas.encabezados).toEqual([...managed]);
     expect(hoja.eventos).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Los ponentes que no registraron asistencia
+// ---------------------------------------------------------------------------
+
+describe('los ponentes que no registraron asistencia', () => {
+  const registro = (n: number, nombre = `Ponente Número ${n}`, extra: Partial<RegistroDePonente> = {}): RegistroDePonente => ({
+    id: `rp-${n}`, nombre, correo: `ponente${n}@x.org`, perfil: 'ponente', folio: `F-${String(n).padStart(3, '0')}`, estado: 'confirmado', ...extra,
+  });
+  /** La asistencia de un ponente: ligada a su registro, como queda cuando escaneó con su correo. */
+  const asistio = (sesion: string, n: number, nombre = `Ponente Número ${n}`) =>
+    registrada(sesion, nombre, `ponente${n}@x.org`, { registro_id: `rp-${n}`, perfil: 'ponente' });
+  const perfil = (clave: string) => ({ ponente: 'Ponente', publico_general: 'Público general' })[clave] ?? clave;
+  const filas = (asistentes: ReturnType<typeof una>[], ponentes: RegistroDePonente[]) =>
+    filasDePersonas(asistentes as never, perfil, undefined, ponentes);
+
+  it('van al final, en el orden en que se registraron, con cero días, la casilla marcada y su perfil de ponente', () => {
+    const f = filas([registrada('jueves', 'Ana Ruiz', 'ana@x.org')], [registro(1, 'Luis Pérez'), registro(2, 'Eva Mora')]);
+    expect(f.map((x) => x[1])).toEqual(['Ana Ruiz', 'Luis Pérez', 'Eva Mora']);
+    expect(f[1]).toEqual([2, 'Luis Pérez', 'ponente1@x.org', 'Ponente', 0, 0, 0, 0, true, '']);
+    expect(f.map((x) => x[0])).toEqual([1, 2, 3]);
+  });
+
+  it('quien ya está por su asistencia no se repite abajo: cada registro de ponente sale una sola vez', () => {
+    const f = filas([asistio('jueves', 1, 'Luis Pérez'), asistio('viernes', 1, 'Luis Pérez')], [registro(1, 'Luis Pérez'), registro(2, 'Eva Mora')]);
+    expect(f.map((x) => x[1])).toEqual(['Luis Pérez', 'Eva Mora']);
+    expect(f[0].slice(4)).toEqual([0, 1, 1, 2, true, '']); // su fila de asistencia, con sus dos días
+    expect(f[1].slice(4)).toEqual([0, 0, 0, 0, true, '']); // y la de quien no asistió
+  });
+
+  it('con 64 registros de ponente la hoja lleva 64 filas de ponente, hayan asistido unos u otros, sin repetir a nadie', () => {
+    const ponentes = Array.from({ length: 64 }, (_, i) => registro(i + 1));
+    const asistentes = [
+      ...Array.from({ length: 20 }, (_, i) => registrada('jueves', `Persona Común ${i}`, `comun${i}@x.org`)),
+      // Diez de los ponentes sí escanearon, y uno de ellos dos días.
+      ...Array.from({ length: 10 }, (_, i) => asistio('miercoles', i * 6 + 1)),
+      asistio('viernes', 1),
+    ];
+    const f = filas(asistentes, ponentes);
+    const deponentes = f.filter((x) => x[3] === 'Ponente');
+    expect(deponentes).toHaveLength(64);
+    expect(new Set(deponentes.map((x) => x[2])).size).toBe(64); // ni un correo repetido
+    expect(f).toHaveLength(20 + 64);
+    expect(resumenDePonentes(asistentes as never, ponentes)).toEqual({ total: 64, sinAsistencia: 54 });
+  });
+
+  it('un ponente con el registro cancelado sale igual —cuenta en el total— pero con la casilla sin marcar', () => {
+    const f = filas([], [registro(1), registro(2, 'Ponente Cancelado', { estado: 'cancelado' }), registro(3, 'Ponente En Espera', { estado: 'lista_espera' })]);
+    expect(f.map((x) => x[COLUMNA_CON_REGISTRO])).toEqual([true, false, true]);
+  });
+
+  it('añadirlos no mueve a nadie de los que ya estaban: ni un cambio en las filas de antes', () => {
+    const asistentes = [registrada('jueves', 'Ana Ruiz', 'ana@x.org'), registrada('jueves', 'Luis Pérez', 'luis@x.org')];
+    const antes = filas(asistentes, []);
+    const despues = filas(asistentes, [registro(1), registro(2)]);
+    expect(despues.slice(0, antes.length)).toEqual(antes);
+    expect(despues).toHaveLength(antes.length + 2);
+  });
+
+  it('su ponencia se reconoce igual, hayan asistido o no', () => {
+    const conPonencia = filasDePersonas([] as never, perfil, (nombre) => (nombre === 'Sebastian Grillo' ? titulosDe('Sebastian Grillo')[0] : ''), [registro(1, 'Sebastian Grillo'), registro(2)]);
+    expect(conPonencia[0].at(-1)).toBe(titulosDe('Sebastian Grillo')[0]);
+    expect(conPonencia[1].at(-1)).toBe('');
+  });
+
+  it('la asistencia sólo de la sesión de prueba no cuenta: ese ponente sigue sin asistencia', () => {
+    expect(resumenDePonentes([de('prueba', 'Luis Pérez', 'rp-1', { perfil: 'ponente' })], [registro(1, 'Luis Pérez')])).toEqual({ total: 1, sinAsistencia: 1 });
+  });
+});
+
+describe('el cotejo de repetidos', () => {
+  const registro = (n: number, nombre: string): RegistroDePonente => ({
+    id: `rp-${n}`, nombre, correo: `ponente${n}@x.org`, perfil: 'ponente', folio: null, estado: 'confirmado',
+  });
+
+  it('una asistencia «sin registro» con el nombre de un ponente se avisa, con el N.º de cada fila', () => {
+    const r = posiblesRepetidos([de('jueves', 'Luis Pérez', null, { correo: 'otro@typo.org' })], [registro(1, 'Luis Pérez')]);
+    expect(r).toHaveLength(1);
+    expect(r[0].filas).toEqual([
+      { numero: 1, perfil: null, sinRegistro: true, total: 1 },
+      { numero: 2, perfil: 'ponente', sinRegistro: false, total: 0 },
+    ]);
+  });
+
+  it('no importan los acentos, las mayúsculas ni el orden de las palabras', () => {
+    expect(posiblesRepetidos([de('jueves', 'PEREZ, LUIS', null)], [registro(1, 'Luis Pérez')])).toHaveLength(1);
+  });
+
+  it('también se avisa si el ponente ya está ligado a su asistencia y hay otra aparte con su nombre', () => {
+    const ligado = de('jueves', 'Luis Pérez', 'rp-1', { perfil: 'ponente' });
+    const aparte = de('viernes', 'Luis Pérez', null, { correo: 'otro@typo.org' });
+    expect(posiblesRepetidos([ligado, aparte], [registro(1, 'Luis Pérez')])).toHaveLength(1);
+  });
+
+  it('dos registros de ponente con el mismo nombre se avisan', () => {
+    expect(posiblesRepetidos([], [registro(1, 'Luis Pérez'), registro(2, 'Luis Pérez')])).toHaveLength(1);
+  });
+
+  it('lo que no incluye a un ponente no es asunto de este cotejo', () => {
+    expect(posiblesRepetidos([de('jueves', 'Ana Ruiz', 'r1'), de('viernes', 'Ana Ruiz', null, { correo: 'x@y.org' })], [])).toEqual([]);
+  });
+
+  it('sin repetidos, nada', () => {
+    expect(posiblesRepetidos([de('jueves', 'Ana Ruiz', 'r1')], [registro(1, 'Luis Pérez'), registro(2, 'Eva Mora')])).toEqual([]);
+  });
+});
+
+describe('los ponentes en la hoja', () => {
+  const registro = (n: number, nombre = `Ponente Número ${n}`, extra: Partial<RegistroDePonente> = {}): RegistroDePonente => ({
+    id: `rp-${n}`, nombre, correo: `ponente${n}@x.org`, perfil: 'ponente', folio: `F-${n}`, estado: 'confirmado', ...extra,
+  });
+  const asistio = (sesion: string, n: number) =>
+    registrada(sesion, `Ponente Número ${n}`, `ponente${n}@x.org`, { registro_id: `rp-${n}`, perfil: 'ponente' });
+
+  it('sin asistencias pero con ponentes, la pestaña nace con ellos', async () => {
+    ponentesDeLaBase = [registro(1), registro(2)];
+    const r = await sincronizarAsistencias();
+    expect(r.nuevas).toBe(2);
+    expect(personas.filas.map((f) => f[1])).toEqual(['Ponente Número 1', 'Ponente Número 2']);
+    expect(personas.filas[0].slice(4, 10)).toEqual([0, 0, 0, 0, true, '']);
+  });
+
+  it('en una hoja que ya tenía asistentes se añaden sólo al final: nadie se mueve y no se reescribe nada de antes', async () => {
+    asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org'), registrada('jueves', 'Luis Pérez', 'luis@x.org')];
+    await sincronizarAsistencias();
+    const antes = personas.filas.map((f) => [...f]);
+    personas.escrituras = [];
+    ponentesDeLaBase = [registro(1), registro(2), registro(3)];
+    const r = await sincronizarAsistencias();
+    expect(r).toMatchObject({ nuevas: 3, cambiadas: 0, quitadas: 0 });
+    expect(personas.escrituras).toHaveLength(1);
+    expect(personas.escrituras[0].range).toMatch(/!A4:J6$/); // las filas 2 y 3 ya estaban
+    expect(personas.filas.slice(0, 2)).toEqual(antes);
+  });
+
+  it('repetir no escribe nada', async () => {
+    asistencias = [asistio('jueves', 1)];
+    ponentesDeLaBase = [registro(1), registro(2)];
+    await sincronizarAsistencias();
+    personas.escrituras = []; hoja.eventos = [];
+    const r = await sincronizarAsistencias();
+    expect(r).toMatchObject({ nuevas: 0, cambiadas: 0, quitadas: 0 });
+    expect(personas.escrituras).toEqual([]);
+  });
+
+  it('dice cuántos ponentes lleva y cuántos no registraron asistencia', async () => {
+    asistencias = [asistio('jueves', 1), asistio('viernes', 3), registrada('jueves', 'Ana Ruiz', 'ana@x.org')];
+    ponentesDeLaBase = [registro(1), registro(2), registro(3), registro(4)];
+    const r = await sincronizarAsistencias();
+    expect(r.ponentes).toEqual({ total: 4, sinAsistencia: 2 });
+    expect(personas.filas.filter((f) => f[3] === 'Público general' || f[3] === '')).toHaveLength(1);
+  });
+
+  it('el cotejo sale en el resultado, con el nombre y las filas', async () => {
+    asistencias = [una('jueves', 'presencial', 'Ponente Número 2', 'otro@typo.org')];
+    ponentesDeLaBase = [registro(1), registro(2)];
+    const r = await sincronizarAsistencias();
+    expect(r.repetidos).toEqual(['«Ponente Número 2»: filas 1 (sin registro, 1 día) y 3 (ponente, sin asistencia)']);
+  });
+
+  it('sin repetidos el resultado no trae cotejo', async () => {
+    ponentesDeLaBase = [registro(1), registro(2)];
+    expect((await sincronizarAsistencias()).repetidos).toBeUndefined();
+  });
+
+  it('un ponente que después registra asistencia pasa a su lugar de llegada y no queda repetido ni en la cola', async () => {
+    asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org')];
+    ponentesDeLaBase = [registro(1), registro(2)];
+    await sincronizarAsistencias();
+    expect(personas.filas.map((f) => f[1])).toEqual(['Ana Ruiz', 'Ponente Número 1', 'Ponente Número 2']);
+    asistencias.push(asistio('viernes', 2)); // el 2 asiste: sube a su lugar, detrás de quien ya había llegado
+    const r = await sincronizarAsistencias();
+    expect(personas.filas.map((f) => f[1])).toEqual(['Ana Ruiz', 'Ponente Número 2', 'Ponente Número 1']);
+    expect(personas.filas.filter((f) => f[3] === 'ponente' || String(f[1]).startsWith('Ponente'))).toHaveLength(2);
+    expect(r.ponentes).toEqual({ total: 2, sinAsistencia: 1 });
+  });
+
+  it('las columnas de las constancias de esas filas quedan vacías: el sistema no escribe en ellas', async () => {
+    ponentesDeLaBase = [registro(1), registro(2)];
+    await sincronizarAsistencias();
+    for (const fila of personas.filas) expect(fila.slice(10)).toEqual([]);
+    expect(personas.encabezados.slice(10)).toEqual([...ENCABEZADOS_DE_CONSTANCIAS]);
   });
 });
 

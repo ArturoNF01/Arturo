@@ -97,6 +97,18 @@ async function principal() {
       ].filter((x): x is string => typeof x === 'string');
       if (partes.length > 0) console.log(`Asistencia por persona en la hoja: ${partes.join(', ')}.`);
       else decir('Asistencia por persona: la pestaña está al día.');
+      // Los ponentes tienen constancia aunque no hayan registrado asistencia: todos van en la pestaña, una vez cada uno.
+      if (r.ponentes) {
+        const con = r.ponentes.total - r.ponentes.sinAsistencia;
+        decir(`Ponentes en la hoja: ${r.ponentes.total} (${con} con asistencia y ${r.ponentes.sinAsistencia} sin ella).`);
+      }
+      // El cotejo: un mismo nombre en más de una fila, siendo alguna de un ponente.
+      if (r.repetidos && r.repetidos.length > 0) {
+        decir(`Posibles repetidos (el mismo nombre en más de una fila, y alguna es de un ponente): ${r.repetidos.length}`);
+        for (const repetido of r.repetidos.slice(0, 40)) decir(`  ${repetido}`);
+        if (r.repetidos.length > 40) decir(`  … y ${r.repetidos.length - 40} más.`);
+        decir('  Si es la misma persona: en el panel, Asistencia → Por día → «Ligar» su asistencia a su registro; la hoja las junta sola.');
+      }
       // Que se quitó, o que no se pudo, se dice siempre; que se dejó porque no es la del sistema, sólo si no es cron
       // (se repetiría cada diez minutos).
       if (r.retirada) {
