@@ -516,7 +516,7 @@ export const pt: Diccionario = {
       codigoCambiado: 'Código trocado. Imprima novamente o QR desta sessão.',
       error: 'Não foi possível concluir a operação.',
       pruebaTitulo: 'Sessão de teste',
-      pruebaAyuda: 'Para ver como uma presença é registrada —no celular, neste painel e na planilha do Google— sem esperar pelo Congresso. Escaneie o QR com o celular ou abra o link, digite um e-mail inscrito e o seu nome será preenchido sozinho. O teste não conta para a presença de ninguém e é apagado com um clique. Na planilha aparece com o dia «Teste».',
+      pruebaAyuda: 'Para ver como uma presença é registrada —no celular e neste painel— sem esperar pelo Congresso. Escaneie o QR com o celular ou abra o link, digite um e-mail inscrito e o seu nome será preenchido sozinho. O teste não conta para a presença de ninguém, não vai para a planilha do Google e é apagado com um clique.',
       activarPrueba: 'Ativar a sessão de teste',
       pruebaActivada: 'Sessão de teste ativada.',
       pruebaActiva: 'A sessão de teste está ativa: {n} presença(s) de teste.',

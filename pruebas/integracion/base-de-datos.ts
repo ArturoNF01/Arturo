@@ -721,15 +721,15 @@ async function principal() {
   comprobar(filasHoja.every((f) => f.length === ENCABEZADOS_PERSONAS.length), 'hoja por persona: cada fila trae una celda por título');
   comprobar(
     JSON.stringify(filaHoja('hoja.completa@example.org')?.slice(1)) ===
-      JSON.stringify(['Silvana Costa Arbulú', 'hoja.completa@example.org', 'Público general', 1, 1, 1, 3, 'Sí']),
-    'hoja por persona: quien asistió los tres días sale en una fila, con 1 por día, total 3 y «Sí»', filaHoja('hoja.completa@example.org'));
-  comprobar(filaHoja('hoja.espera@example.org')?.at(-1) === 'Sí' && filaHoja('hoja.espera@example.org')?.[7] === 1,
+      JSON.stringify(['Silvana Costa Arbulú', 'hoja.completa@example.org', 'Público general', 1, 1, 1, 3, true]),
+    'hoja por persona: quien asistió los tres días sale en una fila, con 1 por día, total 3 y la casilla marcada', filaHoja('hoja.completa@example.org'));
+  comprobar(filaHoja('hoja.espera@example.org')?.at(-1) === true && filaHoja('hoja.espera@example.org')?.[7] === 1,
     'hoja por persona: un registro en lista de espera cuenta como registro', filaHoja('hoja.espera@example.org'));
-  comprobar(filaHoja('hoja.baja@example.org')?.at(-1) === 'No (cancelado)',
-    'hoja por persona: un registro cancelado después de asistir sale «No (cancelado)»', filaHoja('hoja.baja@example.org'));
+  comprobar(filaHoja('hoja.baja@example.org')?.at(-1) === false,
+    'hoja por persona: un registro cancelado después de asistir deja la casilla sin marcar', filaHoja('hoja.baja@example.org'));
   comprobar(
-    JSON.stringify(filaHoja('hoja.sin@example.org')?.slice(1)) === JSON.stringify(['Pedro Sin Registro', 'hoja.sin@example.org', '', 0, 0, 1, 1, 'No']),
-    'hoja por persona: quien asistió sin registro sale «No» y sin perfil', filaHoja('hoja.sin@example.org'));
+    JSON.stringify(filaHoja('hoja.sin@example.org')?.slice(1)) === JSON.stringify(['Pedro Sin Registro', 'hoja.sin@example.org', '', 0, 0, 1, 1, false]),
+    'hoja por persona: quien asistió sin registro sale con la casilla sin marcar y sin perfil', filaHoja('hoja.sin@example.org'));
   comprobar(filasHoja.map((f) => f[0]).every((n, i) => n === i + 1), 'hoja por persona: el N.º va seguido');
 
   await consultar(`delete from asistencias where correo like 'hoja.%'`);

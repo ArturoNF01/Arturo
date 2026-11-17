@@ -515,7 +515,7 @@ export const en: Diccionario = {
       codigoCambiado: 'Code changed. Print this session’s QR again.',
       error: 'The operation could not be completed.',
       pruebaTitulo: 'Test session',
-      pruebaAyuda: 'To see how an attendance is captured —on the phone, in this panel and in the Google sheet— without waiting for the Congress. Scan the QR with your phone or open the link, enter a registered e-mail and your name will fill in by itself. The test does not count towards anyone’s attendance and is deleted with one click. In the sheet it appears with the day “Test”.',
+      pruebaAyuda: 'To see how an attendance is captured —on the phone and in this panel— without waiting for the Congress. Scan the QR with your phone or open the link, enter a registered e-mail and your name will fill in by itself. The test does not count towards anyone’s attendance, does not go to the Google sheet and is deleted with one click.',
       activarPrueba: 'Activate the test session',
       pruebaActivada: 'Test session activated.',
       pruebaActiva: 'The test session is active: {n} test attendance(s).',

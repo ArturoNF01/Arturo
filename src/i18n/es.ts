@@ -583,7 +583,7 @@ export const es = {
       codigoCambiado: 'Código cambiado. Imprima de nuevo el QR de esta sesión.',
       error: 'No se pudo completar la operación.',
       pruebaTitulo: 'Sesión de prueba',
-      pruebaAyuda: 'Para ver cómo se captura una asistencia —en el celular, en este panel y en la hoja de Google— sin esperar al Congreso. Escanee el QR con su celular o abra el enlace, escriba un correo registrado y su nombre aparecerá solo. La prueba no cuenta para la asistencia de nadie y se borra con un clic. En la hoja aparece con el día «Prueba».',
+      pruebaAyuda: 'Para ver cómo se captura una asistencia —en el celular y en este panel— sin esperar al Congreso. Escanee el QR con su celular o abra el enlace, escriba un correo registrado y su nombre aparecerá solo. La prueba no cuenta para la asistencia de nadie, no pasa a la hoja de Google y se borra con un clic.',
       activarPrueba: 'Activar la sesión de prueba',
       pruebaActivada: 'Sesión de prueba activada.',
       pruebaActiva: 'La sesión de prueba está activa: {n} asistencia(s) de prueba.',

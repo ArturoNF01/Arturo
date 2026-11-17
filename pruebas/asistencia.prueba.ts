@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ALFABETO_DE_CODIGOS, CLAVE_DE_PRUEBA, DIAS_DE_ASISTENCIA, SESION_DE_PRUEBA, esSesionDePrueba, filasDeAsistencias, aCsv, agruparPorPersona, type FilaDeAsistencia, LARGO_DE_CODIGO, MINUTOS_ANTES, MINUTOS_DESPUES, SESIONES_DE_ASISTENCIA,
+  ALFABETO_DE_CODIGOS, CLAVE_DE_PRUEBA, DIAS_DE_ASISTENCIA, SESION_DE_PRUEBA, esSesionDePrueba, aCsv, agruparPorPersona, type FilaDeAsistencia, LARGO_DE_CODIGO, MINUTOS_ANTES, MINUTOS_DESPUES, SESIONES_DE_ASISTENCIA,
   correoValido, decidirIdentidad, diaDeClave, elegirRegistroPorNombre, esCodigoPosible, estadoDeVentana,
   etiquetaDeClave, huellaDeNombre, instanteEnMexico, nombreDePila, normalizarTexto, sesionPorClave, sesionesDelDia,
   jornadaDeHoy, ventanaDe,
@@ -260,12 +260,10 @@ describe('la sesión de prueba', () => {
     }
   });
 
-  it('se nombra «Sesión de prueba» y su día es «Prueba», para que en la hoja no se confunda con un día del Congreso', () => {
+  it('se nombra «Sesión de prueba» y su día es «Prueba», para que en el CSV no se confunda con un día del Congreso', () => {
     expect(etiquetaDeClave('prueba', 'es')).toBe('Sesión de prueba');
     expect(etiquetaDeClave('prueba', 'en')).toBe('Test session');
     expect(diaDeClave('prueba', 'es')).toBe('Prueba');
-    const [fila] = filasDeAsistencias([{ sesion: 'prueba', via: 'presencial', nombre: 'Ana Ruiz', correo: 'ana@x.org' }]);
-    expect(fila.slice(3)).toEqual(['Prueba', 'Presencial']);
   });
 
   it('no cuenta para la asistencia de nadie: la vista por persona la deja fuera', () => {

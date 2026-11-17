@@ -149,10 +149,10 @@ function sesionesDeLaAgenda(): SesionDeAsistencia[] {
 export const SESIONES_DE_ASISTENCIA: readonly SesionDeAsistencia[] = sesionesDeLaAgenda();
 
 /**
- * La sesión de prueba: para que el comité vea cómo se captura una asistencia —en el celular, en el panel y en
- * la hoja— antes del Congreso. No es de la agenda: está siempre abierta, sólo existe mientras alguien del
- * panel la activa (sus códigos se crean entonces y se borran al borrar la prueba), no cuenta para la
- * asistencia de nadie (`agruparPorPersona` la deja fuera) y se quita con un clic.
+ * La sesión de prueba: para que el comité vea cómo se captura una asistencia —en el celular y en el panel—
+ * antes del Congreso. No es de la agenda: está siempre abierta, sólo existe mientras alguien del panel la
+ * activa (sus códigos se crean entonces y se borran al borrar la prueba), no cuenta para la asistencia de nadie
+ * (ni la vista por persona ni la hoja de Google la llevan) y se quita con un clic.
  */
 export const CLAVE_DE_PRUEBA = 'prueba';
 export const SESION_DE_PRUEBA: SesionDeAsistencia = {
@@ -450,52 +450,16 @@ export function aCsv(filas: readonly (readonly (string | number)[])[]): string {
 }
 
 // ---------------------------------------------------------------------------
-// La pestaña «Asistencias» de la hoja de Google
-// ---------------------------------------------------------------------------
-
-export const HOJA_ASISTENCIAS = 'Asistencias';
-
-/**
- * Lo que se pidió —nombre, correo y día—, más el número de orden, como las demás pestañas, y la modalidad
- * (presencial o en línea). La columna «Mesa» se quitó: con un QR por día ya no se sabe a qué mesa fue cada quien.
- */
-export const ENCABEZADOS_ASISTENCIAS = ['N.º', 'Nombre', 'Correo', 'Día', 'Modalidad'] as const;
-
-/**
- * Los títulos que tuvo la pestaña cuando la asistencia era por mesa (con una columna «Mesa»). Sirven para
- * reconocerla y rehacerla con el diseño de ahora: una asistencia por día ya no tiene mesa.
- */
-export const ENCABEZADOS_ANTERIORES = ['N.º', 'Nombre', 'Correo', 'Día', 'Mesa', 'Modalidad'] as const;
-
-export type FilaDeHoja = (string | number)[];
-
-/**
- * Las filas que debe tener la pestaña, en orden de llegada y con el N.º seguido (1, 2, 3…), igual que
- * las demás: una asistencia quitada no deja un hueco en la numeración.
- */
-export function filasDeAsistencias(
-  asistentes: readonly Pick<FilaDeAsistencia, 'sesion' | 'via' | 'nombre' | 'correo'>[],
-): FilaDeHoja[] {
-  return asistentes.map((a, i) => [
-    i + 1,
-    a.nombre,
-    a.correo,
-    diaDeClave(a.sesion, 'es'),
-    a.via === 'presencial' ? 'Presencial' : 'En línea',
-  ]);
-}
-
-// ---------------------------------------------------------------------------
-// La pestaña «Asistencia por persona»: lo que se ve en la pestaña «Personas» del panel, para hacer las constancias
+// La hoja de Google: la pestaña «Asistencia por persona», de donde se hacen las constancias
 // ---------------------------------------------------------------------------
 
 export const HOJA_PERSONAS = 'Asistencia por persona';
 
-/** «Miércoles 11»: el día como lo rotula el panel en su tabla por persona. */
+/** «Miércoles 11»: el día como lo rotula el panel en su tabla «Por persona». */
 const diaCortoEnEspanol = (texto: Texto) => texto.es.split(' ').slice(0, 2).join(' ');
 
 /**
- * Los títulos: los de la tabla por persona del panel —nombre, correo, perfil, un día por columna y el total— y, al final,
+ * Los títulos: los de la tabla «Por persona» del panel —nombre, correo, perfil, un día por columna y el total— y, al final,
  * «Con registro», que el panel no tiene como columna: quien asistió sin estar registrado no recibe constancia, y en la
  * hoja, donde se hacen, tiene que verse de un vistazo. Los días salen de la agenda: si ésta cambia, los títulos la siguen.
  */
@@ -503,19 +467,36 @@ export const ENCABEZADOS_PERSONAS: readonly string[] = [
   'N.º', 'Nombre', 'Correo', 'Perfil', ...DIAS_DE_ASISTENCIA.map((d) => diaCortoEnEspanol(d.texto)), 'Total', 'Con registro',
 ];
 
+/** Dónde está «Con registro» (la última columna, contando desde 0): la que se muestra con casillas de verificación. */
+export const COLUMNA_CON_REGISTRO = ENCABEZADOS_PERSONAS.length - 1;
+
 /**
- * Lo que dice «Con registro»: «Sí» si su asistencia está ligada a un registro vigente; «No» si quedó «sin registro»
- * (el comité aún no la concilió con ninguno). Un registro cancelado después de asistir sigue ligado, pero ya no vale: se
- * dice «No (cancelado)» para que no se confunda con quien nunca se registró y el comité decida con el dato a la vista.
+ * La pestaña «Asistencias» que tuvo la hoja —una fila por asistencia, con el día y la modalidad— y que se retiró: sólo
+ * quedó «Asistencia por persona». Estos son los títulos con que la ponía el sistema (los de ahora y los del diseño por
+ * mesa, que llevaba una columna «Mesa»). Sirven para reconocerla al quitarla y no borrar una pestaña con ese nombre que
+ * alguien haya hecho a mano, con otros títulos o con columnas de más.
  */
-export function textoDeRegistro(p: Pick<PersonaConAsistencia, 'sinRegistro' | 'estadoDelRegistro'>): string {
-  if (p.sinRegistro) return 'No';
-  return p.estadoDelRegistro === 'cancelado' ? 'No (cancelado)' : 'Sí';
+export const HOJA_RETIRADA = 'Asistencias';
+export const ENCABEZADOS_DE_LA_HOJA_RETIRADA: readonly (readonly string[])[] = [
+  ['N.º', 'Nombre', 'Correo', 'Día', 'Modalidad'],
+  ['N.º', 'Nombre', 'Correo', 'Día', 'Mesa', 'Modalidad'],
+];
+
+/** Una celda de la hoja: texto, número o —en las casillas de verificación— verdadero o falso. */
+export type FilaDeHoja = (string | number | boolean)[];
+
+/**
+ * Lo que dice la casilla «Con registro»: marcada si su asistencia está ligada a un registro que vale; sin marcar si quedó
+ * «sin registro» (el comité aún no la concilió con ninguno) o si su registro se canceló después de asistir. En lista de
+ * espera o en proceso sí es un registro. Quien se cancela y luego se reactiva en el panel vuelve a quedar marcado.
+ */
+export function conRegistro(p: Pick<PersonaConAsistencia, 'sinRegistro' | 'estadoDelRegistro'>): boolean {
+  return !p.sinRegistro && p.estadoDelRegistro !== 'cancelado';
 }
 
 /**
  * Las filas de la pestaña por persona: una por quien asistió a algo, con cuántas sesiones tuvo cada día y en total
- * (como en el panel: 1 o 0 por día) y si tenía registro.
+ * (como en el panel: 1 o 0 por día) y si tenía registro (la casilla).
  *
  * **En orden de llegada** (quien escaneó primero, primero), no por nombre ni por total como en el panel: la pestaña es una
  * copia que se reescribe, y con un orden que se mueve cada vez que alguien suma un día, lo que se anote o genere a la derecha
@@ -534,11 +515,15 @@ export function filasDePersonas(
     p.perfil ? etiquetaDePerfil(p.perfil) : '',
     ...DIAS_DE_ASISTENCIA.map((d) => p.porDia[d.iso] ?? 0),
     p.total,
-    textoDeRegistro(p),
+    conRegistro(p),
   ]);
 }
 
-const celdaComoTexto = (valor: unknown) => String(valor ?? '').trim();
+/**
+ * Una celda como texto, para comparar la que se quiere escribir con la que la hoja devuelve: un número vuelve como «1»
+ * y una casilla como «TRUE» o «FALSE».
+ */
+const celdaComoTexto = (valor: unknown) => (typeof valor === 'boolean' ? (valor ? 'TRUE' : 'FALSE') : String(valor ?? '').trim());
 
 export interface PlanDeHoja {
   /** Desde qué fila (de datos, empezando en 0) hay que escribir. */
@@ -556,16 +541,15 @@ export interface PlanDeHoja {
 /**
  * Qué hay que hacerle a la pestaña para que quede como la base.
  *
- * La pestaña es una copia, así que no hace falta saber qué fila es de qué asistencia: se compara fila
- * por fila, y desde la primera que difiere se reescribe lo demás. Lo normal —llegan asistencias nuevas—
- * es sólo añadir al final; si el comité concilia o quita una a mitad de lista, se corrige desde ahí.
- * Sólo se miran las columnas propias de la pestaña (`columnas`: las de «Asistencias» si no se dice otra cosa): lo que
- * alguien anote a la derecha no se toca.
+ * La pestaña es una copia, así que no hace falta saber qué fila es de qué persona: se compara fila por fila, y desde la
+ * primera que difiere se reescribe lo demás. Lo normal —llegan asistencias nuevas— es sólo añadir al final; si alguien suma
+ * un día, o el comité concilia o quita una asistencia, se corrige desde ahí. Sólo se miran las columnas propias de la
+ * pestaña (`columnas`): lo que alguien anote a la derecha no se toca.
  */
 export function planDeHoja(
   deseadas: readonly FilaDeHoja[],
   enLaHoja: readonly (readonly unknown[])[],
-  columnas: number = ENCABEZADOS_ASISTENCIAS.length,
+  columnas: number = ENCABEZADOS_PERSONAS.length,
 ): PlanDeHoja {
   const igual = (a: readonly unknown[], b: readonly unknown[]) =>
     Array.from({ length: columnas }).every((_, i) => celdaComoTexto(a[i]) === celdaComoTexto(b[i]));

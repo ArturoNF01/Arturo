@@ -110,14 +110,8 @@ export async function POST(peticion: NextRequest) {
     if (accion === 'activar_prueba') return NextResponse.json({ prueba: await activarPrueba(urlSitio()) });
     if (accion === 'borrar_prueba') {
       const borradas = await borrarPrueba();
-      // Se quitan de la hoja las filas de prueba ahora mismo, y con `forzar`: la base acaba de cambiar a propósito
-      // —si la prueba era lo único que había, la hoja se queda vacía—, y las guardas de la sincronización (que
-      // existen por si alguien restaura un respaldo viejo) se saltarían por tratarse de una base «vacía».
-      if (googleConfigurado() && process.env.GOOGLE_SHEETS_ID) {
-        await sincronizarYAnotar({ forzar: true }).catch((error) => {
-          console.error('No se pudieron quitar de la hoja las filas de prueba:', error);
-        });
-      }
+      // La hoja de Google no lleva la sesión de prueba (sólo la gente que asistió a un día del Congreso), así que no hay nada
+      // que quitar de ella.
       return NextResponse.json({ borradas, prueba: await estadoDePrueba(urlSitio()) });
     }
 
