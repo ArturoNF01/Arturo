@@ -41,7 +41,7 @@ function cabeEn(menor: readonly string[], mayor: readonly string[]): boolean {
   return true;
 }
 
-type Calce = 'igual' | 'parcial';
+export type Calce = 'igual' | 'parcial';
 
 /** Cómo se parecen dos nombres: `igual` si son las mismas palabras, `parcial` si uno trae de más o una inicial, nada si no. */
 function calce(autor: readonly string[], persona: readonly string[]): Calce | null {
@@ -52,6 +52,15 @@ function calce(autor: readonly string[], persona: readonly string[]): Calce | nu
   if (mismas) return 'igual';
   if (persona.length < autor.length && persona.filter((p) => p.length > 1).length < 3) return null;
   return 'parcial';
+}
+
+/**
+ * Cómo se parece el nombre de un autor del programa al de quien se registró, con las mismas reglas con que se reconoce a un
+ * ponente en la hoja: `igual` si son las mismas palabras, `parcial` si uno trae de más o una inicial, nada si no se parecen
+ * lo bastante para dar a uno por el otro.
+ */
+export function calzaNombre(autor: string, persona: string): Calce | null {
+  return calce(palabrasDe(autor), palabrasDe(persona));
 }
 
 export interface PonenciaDeUnAutor {

@@ -788,6 +788,78 @@ async function principal() {
   await consultar(`delete from registros where correo like 'hoja.%@example.org'`);
   ok('limpieza de la hoja por persona');
 
+  // 18. El cotejo de los ponentes con la agenda: se leen los registros y se pasa a ponente a quien se registró como público general
+  const { cotejarPonentes } = await import('../../src/lib/cotejo-ponentes');
+  const { aplicarCambiosDePerfil, leerRegistrosParaCotejo } = await import('../../src/lib/servidor/cotejo-ponentes');
+  const { MESAS } = await import('../../src/lib/programa');
+  const altasCotejo: [string, string, string, string, string][] = [
+    ['cot.exacto@example.org', 'Soledad', 'Hormazábal', 'publico_general', 'confirmado'],
+    ['cot.parcial@example.org', 'Sebastián', 'Grillo Pérez', 'publico_general', 'confirmado'], // con un apellido más que la agenda
+    ['cot.ponente@example.org', 'Pedro', 'Pizarro', 'ponente', 'confirmado'],
+    ['cot.moderador@example.org', 'Nuria', 'Ape', 'moderador', 'confirmado'],
+    ['cot.cancelado@example.org', 'Bruno', 'Bagnarelli', 'publico_general', 'cancelado'],
+    ['cot.dup.a@example.org', 'Camila', 'Machado', 'ponente', 'confirmado'],
+    ['cot.dup.b@example.org', 'Camila', 'Machado', 'publico_general', 'confirmado'], // la misma persona, registrada dos veces
+    ['cot.corto@example.org', 'María', 'López', 'publico_general', 'confirmado'], // un nombre corto que cabe en el de una autora
+  ];
+  for (const [correo, nombres, apellidos, perfil, estado] of altasCotejo) {
+    const a = armarInsercion({
+      perfil, grupo: 'externo', modalidad: 'presencial', idioma: 'es', nombres, apellidos, correo,
+      institucion: 'CIESS', pais_residencia: 'México', estado, consentimiento_datos: true,
+    });
+    await consultar(`insert into registros (${a.columnas}) values (${a.marcadores})`, a.valores);
+  }
+  const perfilDe = async (correo: string) => (await unaFila<{ perfil: string }>('select perfil from registros where correo = $1', [correo]))?.perfil;
+  const delRegistro = await leerRegistrosParaCotejo();
+  comprobar(altasCotejo.every(([correo]) => delRegistro.some((r) => r.correo === correo)) && delRegistro.every((r) => r.nombre === r.nombre.trim()),
+    'cotejo: la consulta trae todos los registros, con el nombre completo y el estado');
+  const cotejo = cotejarPonentes(MESAS, delRegistro);
+  const suyos = cotejo.cambios.filter((c) => c.registro.correo.startsWith('cot.'));
+  comprobar(suyos.map((c) => c.registro.correo).sort().join(',') === 'cot.exacto@example.org,cot.parcial@example.org',
+    'cotejo: sólo pasan a ponente quienes se registraron como público general y se reconocen con claridad', suyos.map((c) => c.registro.correo));
+  const filaCot = (autor: string) => cotejo.filas.find((f) => f.autor === autor);
+  comprobar(
+    filaCot('Pedro Pizarro')?.resultado === 'ya_ponente' && filaCot('Nuria Ape')?.resultado === 'otro_perfil' &&
+    filaCot('Bruno Bagnarelli')?.resultado === 'cancelado' && filaCot('Camila Machado')?.resultado === 'ya_ponente' &&
+    Boolean(filaCot('Camila Machado')?.otros.some((o) => o.correo === 'cot.dup.b@example.org')) &&
+    filaCot('María Luisa Mussot López')?.resultado === 'sin_registro',
+    'cotejo: ya ponente, otro perfil, cancelado, duplicado de la misma persona y nombre corto sin confundir');
+
+  const aplicados = await aplicarCambiosDePerfil(suyos);
+  comprobar(aplicados.length === 2 && aplicados.every((a) => !a.omitido),
+    'cotejo: se aplican los dos cambios', aplicados);
+  comprobar(
+    (await perfilDe('cot.exacto@example.org')) === 'ponente' && (await perfilDe('cot.parcial@example.org')) === 'ponente' &&
+    (await perfilDe('cot.moderador@example.org')) === 'moderador' && (await perfilDe('cot.cancelado@example.org')) === 'publico_general' &&
+    (await perfilDe('cot.dup.b@example.org')) === 'publico_general' && (await perfilDe('cot.corto@example.org')) === 'publico_general',
+    'cotejo: sólo cambia el perfil de esos dos; lo dudoso, lo cancelado y lo de otro perfil se queda como estaba');
+  const rastro = await unaFila<{ origen: string; antes: string; despues: string; campos: string[] }>(
+    `select origen, datos_previos->>'perfil' as antes, datos_nuevos->>'perfil' as despues, campos
+       from auditoria
+      where tabla = 'registros' and accion = 'UPDATE'
+        and registro_id = (select id::text from registros where correo = 'cot.exacto@example.org')
+      order by ocurrido_en desc limit 1`);
+  comprobar(rastro?.origen === 'sistema' && rastro.antes === 'publico_general' && rastro.despues === 'ponente' && rastro.campos.includes('perfil'),
+    'cotejo: la auditoría asienta el cambio como del sistema, con el perfil de antes y el de después', rastro);
+
+  const cotejoDespues = cotejarPonentes(MESAS, await leerRegistrosParaCotejo());
+  comprobar(cotejoDespues.cambios.filter((c) => c.registro.correo.startsWith('cot.')).length === 0 &&
+    cotejoDespues.filas.find((f) => f.autor === 'Soledad Hormazábal')?.resultado === 'ya_ponente',
+    'cotejo: repetirlo no cambia nada más: ya son ponentes');
+  comprobar((await aplicarCambiosDePerfil(suyos)).every((a) => Boolean(a.omitido)),
+    'cotejo: un cambio que ya se hizo no se vuelve a aplicar');
+
+  // Un cambio viejo no pisa lo que alguien haya hecho mientras tanto
+  await consultar(`update registros set perfil = 'conferencista' where correo = 'cot.corto@example.org'`);
+  const [obsoleto] = await aplicarCambiosDePerfil([{
+    registro: delRegistro.find((r) => r.correo === 'cot.corto@example.org')!, autor: 'María Luisa Mussot López',
+  }]);
+  comprobar(Boolean(obsoleto.omitido) && (await perfilDe('cot.corto@example.org')) === 'conferencista',
+    'cotejo: si el registro ya no es de público general cuando se aplica, se deja como esté', obsoleto);
+
+  await consultar(`delete from registros where correo like 'cot.%@example.org'`);
+  ok('limpieza del cotejo de ponentes');
+
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);
   await consultar(`delete from usuarios_panel where correo = 'prueba@ciess.org'`);
