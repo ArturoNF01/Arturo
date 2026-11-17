@@ -281,14 +281,16 @@ export async function sincronizarAsistencias(
       );
     }
 
-    // Las columnas de las constancias (de la K en adelante, o detrás de lo que ya haya): se crean una sola vez. Si alguna de
-    // ellas ya está en la hoja se deja todo como está —quien las usa ya las tiene a su gusto, y renombrar o quitar una no debe
-    // hacer que el sistema la vuelva a poner—; si no hay ninguna, se ponen las diez juntas, sin pisar lo que haya a la derecha.
+    // Las columnas de las constancias (de la K en adelante, o detrás de lo que ya haya): cada una tiene que estar en la hoja, porque
+    // quien hace las constancias —o su automatización— las busca por su título. Las que faltan se añaden juntas, al final de lo que
+    // ya haya a la derecha y sin tocarlo; las que ya están, donde estén y como estén, se dejan. (Una de esas columnas con el
+    // nombre de otra de las nuestras, como «Constancia», no debe hacer que no se creen las demás.)
     const resto = titulos.slice(ENCABEZADOS_PERSONAS.length);
-    if (!ENCABEZADOS_DE_CONSTANCIAS.some((t) => resto.includes(t))) {
+    const faltan = ENCABEZADOS_DE_CONSTANCIAS.filter((t) => !resto.includes(t));
+    if (faltan.length > 0) {
       const ultimaOcupada = titulos.reduce((ultima, t, i) => (t !== '' && i > ultima ? i : ultima), ENCABEZADOS_PERSONAS.length - 1);
       const primera = ultimaOcupada + 1;
-      const fin = primera + ENCABEZADOS_DE_CONSTANCIAS.length; // no incluida
+      const fin = primera + faltan.length; // no incluida
       if (fin > columnasDeLaCuadricula) {
         await conEspera(() =>
           sheets.spreadsheets.batchUpdate({
@@ -298,39 +300,40 @@ export async function sincronizarAsistencias(
         );
         columnasDeLaCuadricula = fin;
       }
-      // Primero el formato y después los títulos: si algo falla a medias, la pasada siguiente —que no encuentra títulos— lo repite
-      // todo junto, en vez de quedarse con títulos y sin casillas ni formato de fecha (y sin volver a intentarlo).
+      // Primero el formato y después los títulos: si algo falla a medias, la pasada siguiente —que sigue sin encontrar los títulos—
+      // lo repite todo junto, en vez de quedarse con títulos y sin casillas ni formato de fecha (y sin volver a intentarlo).
       // Su formato: la casilla de generar en las filas que ya hay (las que lleguen después la reciben al escribirse) y el formato de
-      // fecha en sus dos columnas, para toda la columna.
-      const columnaDeGenerar = primera + ENCABEZADOS_DE_CONSTANCIAS.indexOf(ENCABEZADO_DE_GENERAR);
-      await conEspera(() =>
-        sheets.spreadsheets.batchUpdate({
-          spreadsheetId: idLibro,
-          requestBody: {
-            requests: [
-              ...(deseadas.length > 0 ? pedirCasillas(sheetId, [columnaDeGenerar], 1, deseadas.length + 1) : []),
-              ...ENCABEZADOS_DE_FECHAS.map((t) => primera + ENCABEZADOS_DE_CONSTANCIAS.indexOf(t)).map((columna) => ({
-                repeatCell: {
-                  range: { sheetId, startRowIndex: 1, startColumnIndex: columna, endColumnIndex: columna + 1 },
-                  cell: { userEnteredFormat: { numberFormat: { type: 'DATE', pattern: 'dd/mm/yyyy' } } },
-                  fields: 'userEnteredFormat.numberFormat',
-                },
-              })),
-            ],
+      // fecha en las columnas de fechas, para toda la columna.
+      const columnaDe = (titulo: string) => primera + faltan.indexOf(titulo);
+      const formatos = [
+        ...(faltan.includes(ENCABEZADO_DE_GENERAR) && deseadas.length > 0
+          ? pedirCasillas(sheetId, [columnaDe(ENCABEZADO_DE_GENERAR)], 1, deseadas.length + 1)
+          : []),
+        ...ENCABEZADOS_DE_FECHAS.filter((t) => faltan.includes(t)).map((t) => ({
+          repeatCell: {
+            range: { sheetId, startRowIndex: 1, startColumnIndex: columnaDe(t), endColumnIndex: columnaDe(t) + 1 },
+            cell: { userEnteredFormat: { numberFormat: { type: 'DATE', pattern: 'dd/mm/yyyy' } } },
+            fields: 'userEnteredFormat.numberFormat',
           },
-        }),
-      );
+        })),
+      ];
+      if (formatos.length > 0) {
+        await conEspera(() =>
+          sheets.spreadsheets.batchUpdate({ spreadsheetId: idLibro, requestBody: { requests: formatos } }),
+        );
+      }
       await conEspera(() =>
         sheets.spreadsheets.values.update({
           spreadsheetId: idLibro,
           range: rangoDe(HOJA_PERSONAS, `${letraDeColumna(primera + 1)}1`),
           valueInputOption: 'RAW',
-          requestBody: { values: [[...ENCABEZADOS_DE_CONSTANCIAS]] },
+          requestBody: { values: [[...faltan]] },
         }),
       );
       while (titulos.length < primera) titulos.push('');
-      titulos.splice(primera, ENCABEZADOS_DE_CONSTANCIAS.length, ...ENCABEZADOS_DE_CONSTANCIAS);
-      avisos.push(`Se añadieron a «${HOJA_PERSONAS}» las columnas de las constancias (de la ${letraDeColumna(primera + 1)} a la ${letraDeColumna(fin)}): ${ENCABEZADOS_DE_CONSTANCIAS.join(', ')}. El sistema no escribe en ellas.`);
+      titulos.splice(primera, faltan.length, ...faltan);
+      const queFaltaban = faltan.length === ENCABEZADOS_DE_CONSTANCIAS.length ? '' : ' que faltaban';
+      avisos.push(`Se añadieron a «${HOJA_PERSONAS}» las columnas de las constancias${queFaltaban} (de la ${letraDeColumna(primera + 1)} a la ${letraDeColumna(fin)}): ${faltan.join(', ')}. El sistema no escribe en ellas.`);
     }
     const generar = titulos.indexOf(ENCABEZADO_DE_GENERAR, ENCABEZADOS_PERSONAS.length);
     if (generar >= 0) columnasConCasillas = [COLUMNA_CON_REGISTRO, generar];

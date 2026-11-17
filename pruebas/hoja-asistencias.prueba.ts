@@ -825,17 +825,42 @@ describe('las columnas de las constancias', () => {
     for (const e of personas.escrituras) expect(e.range).toMatch(/!A\d+:J\d+$/);
   });
 
-  it('se crean una sola vez: renombrar o quitar una no hace que el sistema la vuelva a poner', async () => {
+  it('si ya están todas no se toca nada: ni títulos ni formato', async () => {
     conLaPestanaHecha();
     await sincronizarAsistencias();
-    hoja.eventos = [];
-    const i = personas.encabezados.indexOf('Libro');
-    personas.encabezados[i] = 'Libro de registro'; // la renombran
-    personas.encabezados[personas.encabezados.indexOf('Foja')] = ''; // quitan otra
+    hoja.eventos = []; personas.formatosDeFecha = []; personas.casillas = [];
+    const antes = [...personas.encabezados];
     const r = await sincronizarAsistencias();
     expect(r.avisos).toBeUndefined();
-    expect(hoja.eventos.some((e) => e.startsWith('títulos'))).toBe(false);
-    expect(personas.encabezados[i]).toBe('Libro de registro');
+    expect(hoja.eventos).toEqual([]);
+    expect(personas.encabezados).toEqual(antes);
+  });
+
+  it('las que falten se añaden al final y lo demás no se toca: una renombrada o quitada se vuelve a poner', async () => {
+    conLaPestanaHecha();
+    await sincronizarAsistencias();
+    const antes = [...personas.encabezados];
+    personas.encabezados[personas.encabezados.indexOf('Libro')] = 'Libro de registro'; // la renombran
+    personas.encabezados[personas.encabezados.indexOf('Foja')] = ''; // quitan otra
+    const r = await sincronizarAsistencias();
+    // Detrás de lo último que hay en la hoja: «Libro» y «Foja», en su orden, sin mover nada.
+    expect(personas.encabezados.slice(0, 20)).toEqual(antes.map((t) => (t === 'Libro' ? 'Libro de registro' : t === 'Foja' ? '' : t)));
+    expect(personas.encabezados.slice(20, 22)).toEqual(['Libro', 'Foja']);
+    expect(r.avisos?.[0]).toMatch(/que faltaban \(de la U a la V\): Libro, Foja/);
+  });
+
+  it('una columna con el nombre de una de las nuestras («Constancia», por ejemplo) no impide que se creen las demás', async () => {
+    conLaPestanaHecha();
+    personas.encabezados = [...managed, 'Constancia'];
+    const r = await sincronizarAsistencias();
+    // «Constancia» sigue en la K, donde la puso quien hace las constancias; las otras nueve, detrás.
+    expect(personas.encabezados.slice(0, 11)).toEqual([...managed, 'Constancia']);
+    expect(personas.encabezados.slice(11)).toEqual(ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== 'Constancia'));
+    expect(r.avisos?.[0]).toMatch(/que faltaban \(de la L a la T\)/);
+    // Y la casilla de generar y los formatos de fecha caen en las columnas nuevas, no en la de «Constancia».
+    const generar = personas.encabezados.indexOf(ENCABEZADO_DE_GENERAR);
+    expect(casillasDe(generar)).toEqual([{ desde: 1, hasta: 3, columna: generar }]);
+    expect(personas.formatosDeFecha.map((f) => personas.encabezados[f.columna])).toEqual(['Fecha de registro', 'Fecha de elaboración']);
   });
 
   it('si no queda ninguna, se vuelven a poner las diez juntas', async () => {
@@ -876,12 +901,15 @@ describe('las columnas de las constancias', () => {
     expect(casillasDe(COLUMNA_DE_GENERAR)).toHaveLength(2); // las dos primeras filas, y la nueva
   });
 
-  it('si la columna de generar ya existe (la puso quien hace las constancias), no se añade nada y sus filas nuevas la reciben', async () => {
+  it('si la columna de generar ya existe (la puso quien hace las constancias) no se le cambia la casilla de lo que ya tiene, y sus filas nuevas la reciben', async () => {
     conLaPestanaHecha();
     personas.encabezados = [...managed, 'Mi columna', ENCABEZADO_DE_GENERAR];
     const r = await sincronizarAsistencias();
-    expect(r.avisos).toBeUndefined();
-    expect(personas.encabezados).toEqual([...managed, 'Mi columna', ENCABEZADO_DE_GENERAR]);
+    // Se añaden las otras nueve, detrás; «✨Generar Constancia» se queda en la L y no se le pide la casilla de las filas de antes.
+    expect(personas.encabezados.slice(0, 12)).toEqual([...managed, 'Mi columna', ENCABEZADO_DE_GENERAR]);
+    expect(personas.encabezados.slice(12)).toEqual(ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== ENCABEZADO_DE_GENERAR));
+    expect(r.avisos?.[0]).toMatch(/que faltaban/);
+    expect(casillasDe(11)).toEqual([]);
     asistencias.push(registrada('viernes', 'Eva Mora', 'eva@x.org'));
     await sincronizarAsistencias();
     expect(casillasDe(11).map((c) => [c.desde, c.hasta])).toEqual([[3, 4]]); // «✨Generar Constancia» está en la L (11)
