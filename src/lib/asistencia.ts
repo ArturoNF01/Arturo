@@ -459,16 +459,20 @@ export const HOJA_PERSONAS = 'Asistencia por persona';
 const diaCortoEnEspanol = (texto: Texto) => texto.es.split(' ').slice(0, 2).join(' ');
 
 /**
- * Los títulos: los de la tabla «Por persona» del panel —nombre, correo, perfil, un día por columna y el total— y, al final,
- * «Con registro», que el panel no tiene como columna: quien asistió sin estar registrado no recibe constancia, y en la
- * hoja, donde se hacen, tiene que verse de un vistazo. Los días salen de la agenda: si ésta cambia, los títulos la siguen.
+ * Los títulos: los de la tabla «Por persona» del panel —nombre, correo, perfil, un día por columna y el total— y dos más que
+ * el panel no tiene, para hacer las constancias desde la hoja:
+ *  - «Con registro»: quien asistió sin estar registrado no recibe constancia, y tiene que verse de un vistazo;
+ *  - «Ponencia»: para los ponentes, la ponencia del programa en la que participaron (el título que lleva su constancia).
+ * Los días salen de la agenda: si ésta cambia, los títulos la siguen.
+ *
+ * Las columnas nuevas se añaden siempre a la derecha, para que las de antes no cambien de letra.
  */
 export const ENCABEZADOS_PERSONAS: readonly string[] = [
-  'N.º', 'Nombre', 'Correo', 'Perfil', ...DIAS_DE_ASISTENCIA.map((d) => diaCortoEnEspanol(d.texto)), 'Total', 'Con registro',
+  'N.º', 'Nombre', 'Correo', 'Perfil', ...DIAS_DE_ASISTENCIA.map((d) => diaCortoEnEspanol(d.texto)), 'Total', 'Con registro', 'Ponencia',
 ];
 
-/** Dónde está «Con registro» (la última columna, contando desde 0): la que se muestra con casillas de verificación. */
-export const COLUMNA_CON_REGISTRO = ENCABEZADOS_PERSONAS.length - 1;
+/** Dónde está «Con registro» (contando desde 0): la columna que se muestra con casillas de verificación. */
+export const COLUMNA_CON_REGISTRO = ENCABEZADOS_PERSONAS.indexOf('Con registro');
 
 /**
  * La pestaña «Asistencias» que tuvo la hoja —una fila por asistencia, con el día y la modalidad— y que se retiró: sólo
@@ -496,7 +500,7 @@ export function conRegistro(p: Pick<PersonaConAsistencia, 'sinRegistro' | 'estad
 
 /**
  * Las filas de la pestaña por persona: una por quien asistió a algo, con cuántas sesiones tuvo cada día y en total
- * (como en el panel: 1 o 0 por día) y si tenía registro (la casilla).
+ * (como en el panel: 1 o 0 por día), si tenía registro (la casilla) y, si presentó una ponencia, cuál.
  *
  * **En orden de llegada** (quien escaneó primero, primero), no por nombre ni por total como en el panel: la pestaña es una
  * copia que se reescribe, y con un orden que se mueve cada vez que alguien suma un día, lo que se anote o genere a la derecha
@@ -507,6 +511,8 @@ export function filasDePersonas(
   asistentes: readonly FilaDeAsistencia[],
   /** El perfil como se lee en la hoja («Público general»), no como se guarda («publico_general»). */
   etiquetaDePerfil: (clave: string) => string = (clave) => clave,
+  /** La ponencia que presentó quien tiene ese nombre, como va en la celda; vacía si no presentó ninguna. */
+  ponenciaDe: (nombre: string) => string = () => '',
 ): FilaDeHoja[] {
   return reunirPorPersona(asistentes).map((p, i) => [
     i + 1,
@@ -516,6 +522,7 @@ export function filasDePersonas(
     ...DIAS_DE_ASISTENCIA.map((d) => p.porDia[d.iso] ?? 0),
     p.total,
     conRegistro(p),
+    ponenciaDe(p.nombre),
   ]);
 }
 

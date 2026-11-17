@@ -3,6 +3,7 @@ import {
   COLUMNA_CON_REGISTRO, ENCABEZADOS_DE_LA_HOJA_RETIRADA, ENCABEZADOS_PERSONAS, HOJA_PERSONAS, HOJA_RETIRADA, filasDePersonas, planDeHoja,
 } from '@/lib/asistencia';
 import { HOJA_LISTA, nombreDePerfil, rangoDe } from '@/lib/normalizacion';
+import { ponenciasParaLaHoja } from '@/lib/ponentes';
 import { todasLasAsistencias } from './asistencia';
 import { clienteSheets, googleConfigurado } from './google';
 import { conEspera, peticionesDeTitulos } from './sheets';
@@ -10,7 +11,8 @@ import { conEspera, peticionesDeTitulos } from './sheets';
 /**
  * La pestaña «Asistencia por persona» de la hoja de Google: una fila por persona, como la tabla «Por persona» del
  * panel —nombre, correo, perfil, un día por columna y el total— más «Con registro», una casilla de verificación que está
- * marcada si la persona tenía registro. De ahí se hacen las constancias, que sólo reciben quienes estaban registrados.
+ * marcada si la persona tenía registro, y «Ponencia», el título de la ponencia del programa en que participó, si presentó
+ * una. De ahí se hacen las constancias, que sólo reciben quienes estaban registrados.
  *
  * La pestaña «Asistencias» que había antes (una fila por asistencia) se retiró: esta pasada la quita de la hoja, una
  * sola vez y sólo si es la que puso el sistema (`retirarLaPestanaVieja`). El detalle por asistencia sigue en el panel y en
@@ -27,7 +29,7 @@ import { conEspera, peticionesDeTitulos } from './sheets';
  *  - a pedido, con el botón del panel.
  *
  * La pestaña es una copia de la base (la base manda): se compara fila por fila y sólo se escribe lo que
- * falta o cambió. Sólo toca sus nueve columnas; lo que alguien anote a la derecha no se pisa. Y como una copia
+ * falta o cambió. Sólo toca sus diez columnas; lo que alguien anote a la derecha no se pisa. Y como una copia
  * que desaparece es peor que una copia que tarda, no quita filas de golpe: si la hoja tuviera muchas más
  * que la base (un respaldo viejo restaurado, una tabla vaciada), se detiene y lo dice.
  */
@@ -58,6 +60,8 @@ export interface ResultadoDeAsistencias {
   simulado?: boolean;
   /** Si la hoja todavía tenía la pestaña «Asistencias» del diseño anterior, qué se hizo con ella. */
   retirada?: RetiroDeLaPestana;
+  /** Cambios en la estructura de la hoja que conviene decir: una columna que se insertó, por ejemplo. */
+  avisos?: string[];
 }
 
 export interface OpcionesDeSincronizacion {
@@ -69,7 +73,7 @@ export interface OpcionesDeSincronizacion {
 
 /** La letra de la columna n: la 5.ª es la E. La pestaña no pasa de 26 columnas. */
 const letraDeColumna = (n: number) => String.fromCharCode('A'.charCodeAt(0) + n - 1);
-/** La letra de la última columna propia: I con nueve columnas. */
+/** La letra de la última columna propia: J con diez columnas. */
 const ULTIMA_COLUMNA = letraDeColumna(ENCABEZADOS_PERSONAS.length);
 
 const enBlanco = (fila: readonly unknown[]) => fila.every((c) => String(c ?? '').trim() === '');
@@ -169,7 +173,7 @@ export async function sincronizarAsistencias(
   // Una pestaña nueva de Google trae 1,000 filas.
   let filasDeLaCuadricula = existente?.gridProperties?.rowCount ?? 1000;
 
-  const deseadas = filasDePersonas(await todasLasAsistencias(), nombreDePerfil);
+  const deseadas = filasDePersonas(await todasLasAsistencias(), nombreDePerfil, ponenciasParaLaHoja);
 
   // Sin pestaña y sin asistencias no hay nada que crear: la pestaña nace con la primera asistencia.
   if (sheetId === null && deseadas.length === 0) return { nuevas: 0, cambiadas: 0, quitadas: 0 };
@@ -205,13 +209,37 @@ export async function sincronizarAsistencias(
 
   // Los títulos: si la pestaña acaba de crearse, o alguien la creó a mano o los cambió, se ponen los de siempre.
   // Sin ellos la primera fila de datos quedaría debajo de nada, y «N.º» no se encontraría.
+  const avisos: string[] = [];
+  const conAvisos = (r: ResultadoDeAsistencias): ResultadoDeAsistencias => (avisos.length > 0 ? { ...r, avisos } : r);
   if (sheetId !== null && !simular) {
-    const titulos = (await conEspera(() =>
+    const titulos = ((await conEspera(() =>
       sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: rangoDe(HOJA_PERSONAS, `A1:${ULTIMA_COLUMNA}1`) }),
-    )).data.values?.[0] ?? [];
+    )).data.values?.[0] ?? []).map((t) => String(t ?? '').trim());
+
+    // La última columna («Ponencia») se añadió después de que la pestaña existiera, y a su derecha pudo haber crecido algo
+    // de quien hace las constancias: las columnas que añaden los complementos de Sheets (el enlace de cada documento, si ya
+    // se mandó…) van justo detrás de la última. Si en el lugar que le toca ya hay una columna que no es nuestra, no se
+    // escribe encima: se inserta una nueva y lo de esa persona se recorre una a la derecha, con sus datos y fórmulas. Una
+    // celda en blanco, o la nuestra, no necesita nada; y una vez puesto el título, no vuelve a hacer falta.
+    const nueva = ENCABEZADOS_PERSONAS.length - 1;
+    if ((titulos[nueva] ?? '') !== '' && titulos[nueva] !== ENCABEZADOS_PERSONAS[nueva]) {
+      await conEspera(() =>
+        sheets.spreadsheets.batchUpdate({
+          spreadsheetId: idLibro,
+          requestBody: {
+            requests: [{
+              insertDimension: { range: { sheetId, dimension: 'COLUMNS', startIndex: nueva, endIndex: nueva + 1 }, inheritFromBefore: false },
+            }],
+          },
+        }),
+      );
+      titulos[nueva] = '';
+      avisos.push(`Se insertó la columna «${ENCABEZADOS_PERSONAS[nueva]}» (${letraDeColumna(nueva + 1)}) de «${HOJA_PERSONAS}»: lo que había a su derecha se recorrió una columna, con sus datos.`);
+    }
+
     const dicenLoEsperado =
-      ENCABEZADOS_PERSONAS.length === titulos.filter((t) => String(t ?? '').trim() !== '').length &&
-      ENCABEZADOS_PERSONAS.every((t, i) => String(titulos[i] ?? '').trim() === t);
+      ENCABEZADOS_PERSONAS.length === titulos.filter((t) => t !== '').length &&
+      ENCABEZADOS_PERSONAS.every((t, i) => titulos[i] === t);
     if (!dicenLoEsperado) {
       await conEspera(() =>
         sheets.spreadsheets.values.update({
@@ -245,10 +273,10 @@ export async function sincronizarAsistencias(
   };
 
   if (deseadas.length === 0 && hojaEstaba > 0 && !forzar) {
-    return { ...resultado, nuevas: 0, cambiadas: 0, quitadas: 0, omitido: `La base no tiene asistencias y la pestaña «${HOJA_PERSONAS}» sí: no se toca. Si es lo que se quiere, npm run sincronizar -- --forzar` };
+    return conAvisos({ ...resultado, nuevas: 0, cambiadas: 0, quitadas: 0, omitido: `La base no tiene asistencias y la pestaña «${HOJA_PERSONAS}» sí: no se toca. Si es lo que se quiere, npm run sincronizar -- --forzar` });
   }
   if (plan.sobran > MAXIMO_DE_FILAS_QUE_SOBRAN && !forzar) {
-    return { ...resultado, nuevas: 0, cambiadas: 0, quitadas: 0, omitido: `La pestaña «${HOJA_PERSONAS}» tiene ${plan.sobran} filas más que la base: no se quitan solas (¿un respaldo viejo?). Si son las que se quitaron a propósito, npm run sincronizar -- --forzar` };
+    return conAvisos({ ...resultado, nuevas: 0, cambiadas: 0, quitadas: 0, omitido: `La pestaña «${HOJA_PERSONAS}» tiene ${plan.sobran} filas más que la base: no se quitan solas (¿un respaldo viejo?). Si son las que se quitaron a propósito, npm run sincronizar -- --forzar` });
   }
   if (simular) {
     const retirada = await retirarLaPestanaVieja(sheets, idLibro, hojas, true);
@@ -326,7 +354,7 @@ export async function sincronizarAsistencias(
 
   // Lo nuevo ya está al día: ahora sí se quita la pestaña vieja, si todavía está.
   const retirada = await retirarLaPestanaVieja(sheets, idLibro, hojas, false);
-  return retirada ? { ...resultado, retirada } : resultado;
+  return conAvisos(retirada ? { ...resultado, retirada } : resultado);
 }
 
 // ---------------------------------------------------------------------------

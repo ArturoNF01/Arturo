@@ -689,14 +689,18 @@ async function principal() {
   // 17. La pestaña «Asistencia por persona» de la hoja: lo que sale de la base, con la columna «Con registro»
   const { ENCABEZADOS_PERSONAS, filasDePersonas } = await import('../../src/lib/asistencia');
   const { nombreDePerfil } = await import('../../src/lib/normalizacion');
+  const { ponenciasDeLaPersona, ponenciasParaLaHoja } = await import('../../src/lib/ponentes');
   const altasHoja: [string, string, string, string][] = [
     ['hoja.completa@example.org', 'Silvana', 'Costa Arbulú', 'confirmado'],
     ['hoja.espera@example.org', 'Teresa', 'Lista Espera', 'lista_espera'],
     ['hoja.baja@example.org', 'Bernardo', 'Dado De Baja', 'confirmado'],
+    // Quien presentó dos ponencias del programa (con los dos apellidos, como los escribe quien se registra).
+    ['hoja.ponente@example.org', 'Nuria', 'Ape', 'confirmado'],
+    ['hoja.ponente2@example.org', 'Sebastián', 'Grillo Pérez', 'confirmado'],
   ];
   for (const [correo, nombres, apellidos, estado] of altasHoja) {
     const a = armarInsercion({
-      perfil: 'publico_general', grupo: 'externo', modalidad: 'presencial', idioma: 'es', nombres, apellidos,
+      perfil: correo.startsWith('hoja.ponente') ? 'ponente' : 'publico_general', grupo: 'externo', modalidad: 'presencial', idioma: 'es', nombres, apellidos,
       correo, institucion: 'CIESS', pais_residencia: 'México', estado, consentimiento_datos: true,
     });
     await consultar(`insert into registros (${a.columnas}) values (${a.marcadores})`, a.valores);
@@ -707,6 +711,8 @@ async function principal() {
   await registrarAsistenciaManual({ sesion: 'jueves', via: 'en_linea', correo: 'hoja.espera@example.org', usuarioId: usuario!.id });
   await registrarAsistenciaManual({ sesion: 'jueves', via: 'presencial', correo: 'hoja.baja@example.org', usuarioId: usuario!.id });
   await registrarAsistenciaManual({ sesion: 'viernes', via: 'presencial', correo: 'hoja.sin@example.org', nombre: 'Pedro Sin Registro', usuarioId: usuario!.id });
+  await registrarAsistenciaManual({ sesion: 'viernes', via: 'presencial', correo: 'hoja.ponente@example.org', usuarioId: usuario!.id });
+  await registrarAsistenciaManual({ sesion: 'jueves', via: 'en_linea', correo: 'hoja.ponente2@example.org', usuarioId: usuario!.id });
   // Su registro se da de baja después de haber asistido: la asistencia sigue ligada, pero ya no vale.
   await consultar(`update registros set estado = 'cancelado' where correo = 'hoja.baja@example.org'`);
 
@@ -716,21 +722,31 @@ async function principal() {
     deLaBase.find((x) => x.correo === 'hoja.baja@example.org')?.estado_registro === 'cancelado' &&
     deLaBase.find((x) => x.correo === 'hoja.sin@example.org')?.estado_registro === null,
     'hoja por persona: cada asistencia trae el estado del registro al que está ligada (nada si está «sin registro»)');
-  const filasHoja = filasDePersonas(deLaBase, nombreDePerfil);
+  const filasHoja = filasDePersonas(deLaBase, nombreDePerfil, ponenciasParaLaHoja);
   const filaHoja = (correo: string) => filasHoja.find((f) => f[2] === correo);
   comprobar(filasHoja.every((f) => f.length === ENCABEZADOS_PERSONAS.length), 'hoja por persona: cada fila trae una celda por título');
   comprobar(
     JSON.stringify(filaHoja('hoja.completa@example.org')?.slice(1)) ===
-      JSON.stringify(['Silvana Costa Arbulú', 'hoja.completa@example.org', 'Público general', 1, 1, 1, 3, true]),
+      JSON.stringify(['Silvana Costa Arbulú', 'hoja.completa@example.org', 'Público general', 1, 1, 1, 3, true, '']),
     'hoja por persona: quien asistió los tres días sale en una fila, con 1 por día, total 3 y la casilla marcada', filaHoja('hoja.completa@example.org'));
-  comprobar(filaHoja('hoja.espera@example.org')?.at(-1) === true && filaHoja('hoja.espera@example.org')?.[7] === 1,
+  comprobar(filaHoja('hoja.espera@example.org')?.[8] === true && filaHoja('hoja.espera@example.org')?.[7] === 1,
     'hoja por persona: un registro en lista de espera cuenta como registro', filaHoja('hoja.espera@example.org'));
-  comprobar(filaHoja('hoja.baja@example.org')?.at(-1) === false,
+  comprobar(filaHoja('hoja.baja@example.org')?.[8] === false,
     'hoja por persona: un registro cancelado después de asistir deja la casilla sin marcar', filaHoja('hoja.baja@example.org'));
   comprobar(
-    JSON.stringify(filaHoja('hoja.sin@example.org')?.slice(1)) === JSON.stringify(['Pedro Sin Registro', 'hoja.sin@example.org', '', 0, 0, 1, 1, false]),
+    JSON.stringify(filaHoja('hoja.sin@example.org')?.slice(1)) === JSON.stringify(['Pedro Sin Registro', 'hoja.sin@example.org', '', 0, 0, 1, 1, false, '']),
     'hoja por persona: quien asistió sin registro sale con la casilla sin marcar y sin perfil', filaHoja('hoja.sin@example.org'));
   comprobar(filasHoja.map((f) => f[0]).every((n, i) => n === i + 1), 'hoja por persona: el N.º va seguido');
+  const filaPonente = filaHoja('hoja.ponente@example.org');
+  comprobar(
+    filaPonente?.[3] === 'Ponente' && ponenciasDeLaPersona('Nuria Ape').length === 2 && filaPonente[9] === ponenciasParaLaHoja('Nuria Ape') &&
+    String(filaPonente[9]).includes(' | '),
+    'hoja por persona: quien presentó dos ponencias del programa las lleva las dos, en una celda', filaPonente?.[9]);
+  comprobar(
+    filaHoja('hoja.ponente2@example.org')?.[9] === 'Modelado markoviano de aportes previsionales con estados enriquecidos.',
+    'hoja por persona: se reconoce al ponente aunque se haya registrado con los dos apellidos y con acento', filaHoja('hoja.ponente2@example.org'));
+  comprobar(filasHoja.filter((f) => f[2] !== 'hoja.ponente@example.org' && f[2] !== 'hoja.ponente2@example.org').every((f) => f[9] === ''),
+    'hoja por persona: quien no presentó ponencia no lleva nada en esa columna');
 
   await consultar(`delete from asistencias where correo like 'hoja.%'`);
   await consultar(`delete from registros where correo like 'hoja.%@example.org'`);
