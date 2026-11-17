@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Constancia · 1er Congreso de Estudios Interamericanos de Seguridad Social</title>
+<link rel="stylesheet" href="fuentes.css">
+<style>
+  /*
+   * La constancia, sobre la plantilla del Congreso (plantilla-congreso.png es la hoja membretada tal cual, a 300 ppp: encabezado
+   * con los logos, marca de agua del continente y la curva azul y dorada de abajo; el original es plantilla-congreso.pdf).
+   * Aquí sólo va lo que se pone encima.
+   *
+   * Los campos van entre dobles llaves y se llaman igual que las columnas de la hoja de Google («Nombre», «Ponencia»,
+   * «Total de horas», «N° de constancia», «Folio», «Libro», «Foja», «Fecha de registro», «Fecha de elaboración»), para que
+   * lo que salga de una fila de la hoja caiga en su lugar. Hay dos variantes: la de asistente y la de ponente.
+   *
+   * Medidas en puntos (carta: 612 × 792). Lo libre de la hoja, para no pisar el membrete: de 96 pt a 700 pt de alto, y la
+   * curva de abajo a la derecha empieza a unos 680 pt.
+   */
+  :root {
+    --azul: #002268;
+    --azul-profundo: #001544;
+    --dorado: #c4b06a;
+    --dorado-oscuro: #9c8742;
+    --texto: #1b2a4a;
+    --tenue: #5b6784;
+    --linea: #d9dde6;
+  }
+  @page { size: 612pt 792pt; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e9ecf2; font-family: 'Montserrat', sans-serif; color: var(--texto); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .hoja {
+    position: relative; width: 612pt; height: 792pt; margin: 0 auto; overflow: hidden;
+    background: #fff url('plantilla-congreso.png') 0 0 / 612pt 792pt no-repeat;
+  }
+  @media print { body { background: none; } .hoja { margin: 0; } }
+
+  .contenido { position: absolute; left: 58pt; right: 58pt; top: 104pt; bottom: 112pt; text-align: center; display: flex; flex-direction: column; }
+  .encabezado { flex: none; }
+  .medio { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding: 24pt 0 10pt; }
+  .pie { flex: none; }
+
+  /* Quién la otorga */
+  .otorgan { margin: 0; font-size: 7.6pt; line-height: 1.55; letter-spacing: .09em; text-transform: uppercase; color: var(--tenue); font-weight: 500; }
+  .otorgan span { display: block; }
+  .otorgan strong { display: block; margin-top: 6pt; font-weight: 700; letter-spacing: .3em; color: var(--dorado-oscuro); font-size: 7.6pt; }
+
+  /* Título */
+  .titulo {
+    margin: 15pt 0 0; font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 47pt; line-height: 1;
+    letter-spacing: .24em; text-indent: .24em; text-transform: uppercase; color: var(--azul);
+  }
+  .adorno { display: flex; align-items: center; justify-content: center; gap: 9pt; margin: 9pt auto 0; width: 230pt; }
+  .adorno i { flex: 1; height: .8pt; background: var(--dorado); }
+  .adorno b { width: 5.5pt; height: 5.5pt; background: var(--dorado); transform: rotate(45deg); }
+
+  /* A quién */
+  .a { margin: 17pt 0 0; font-size: 8pt; letter-spacing: .34em; text-indent: .34em; text-transform: uppercase; color: var(--dorado-oscuro); font-weight: 600; }
+  .nombre {
+    margin: 7pt auto 0; max-width: 470pt; min-height: 34pt; display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 29pt; line-height: 1.08; letter-spacing: .035em;
+    text-transform: uppercase; color: var(--azul-profundo); overflow-wrap: anywhere;
+  }
+  .filete { margin: 8pt auto 0; width: 330pt; height: .8pt; background: linear-gradient(90deg, transparent, var(--dorado) 18%, var(--dorado) 82%, transparent); }
+
+  /* Qué reconoce */
+  .cuerpo { margin: 0 auto; max-width: 458pt; font-size: 11pt; line-height: 1.7; color: var(--texto); font-weight: 400; }
+  .cuerpo p { margin: 0; }
+  .cuerpo strong { font-weight: 600; color: var(--azul); }
+  .ponencia {
+    margin: 10pt auto 9pt !important; padding: 0 8pt; max-width: 440pt;
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 700; font-size: 17pt; line-height: 1.26; color: var(--azul);
+  }
+  .fecha { margin: 0; font-size: 9.6pt; font-weight: 500; color: var(--texto); letter-spacing: .02em; }
+
+  /* Quién firma: los nombres y cargos se ponen cuando se confirmen */
+  .firmas { display: flex; justify-content: center; gap: 54pt; margin-top: 46pt; }
+  .firma { width: 188pt; }
+  .firma .raya { height: 1pt; background: var(--azul); margin-bottom: 6pt; }
+  .firma .quien { font-size: 8.6pt; font-weight: 600; color: var(--azul); line-height: 1.4; }
+  .firma .cargo { font-size: 7.6pt; color: var(--tenue); line-height: 1.45; font-weight: 500; }
+  .firma .quien.pendiente, .firma .cargo.pendiente { color: #8f98b0; font-weight: 500; font-style: italic; }
+
+  /* Datos de registro, abajo a la izquierda (a la derecha empieza la curva del membrete) */
+  .registro { position: absolute; left: 58pt; bottom: 54pt; width: 380pt; }
+  .registro .linea { height: .8pt; background: var(--dorado); margin-bottom: 7pt; width: 380pt; }
+  .registro dl { display: flex; margin: 0; gap: 0; }
+  .registro dl div { flex: 1; padding-right: 8pt; }
+  .registro dl div.ancho { flex: 1.5; }
+  .registro dt { font-size: 5.6pt; letter-spacing: .13em; text-transform: uppercase; color: var(--dorado-oscuro); font-weight: 700; margin: 0 0 2.5pt; white-space: nowrap; }
+  .registro dd { margin: 0; font-size: 8.4pt; font-weight: 600; color: var(--azul-profundo); white-space: nowrap; }
+
+  /* Una sola variante a la vez */
+  .hoja[data-variante="asistente"] .solo-ponente { display: none; }
+  .hoja[data-variante="ponente"] .solo-asistente { display: none; }
+  .vacio { display: none; }
+</style>
+</head>
+<body>
+<div class="hoja" data-variante="asistente">
+  <div class="contenido">
+   <div class="encabezado">
+    <p class="otorgan">
+      <span>El Centro Interamericano de Estudios de Seguridad Social (CIESS)</span>
+      <span>y la Red Interamericana de Universidades para la Seguridad Social (RIUSS)</span>
+      <strong>Otorgan la presente</strong>
+    </p>
+    <h1 class="titulo">Constancia</h1>
+    <div class="adorno"><i></i><b></b><i></i></div>
+
+    <p class="a">a</p>
+    <p class="nombre" data-ajustar="nombre">{{Nombre}}</p>
+    <div class="filete"></div>
+   </div>
+
+   <div class="medio">
+    <div class="cuerpo">
+      <p class="solo-asistente">
+        Por su asistencia al <strong>1er Congreso de Estudios Interamericanos de Seguridad Social</strong>, celebrado los días
+        11, 12 y 13 de noviembre de 2026 en la Ciudad de México<span data-si="Total de horas">, con una duración total de
+        <strong>{{Total de horas}}&nbsp;horas</strong></span>.
+      </p>
+      <p class="solo-ponente">
+        Por su participación como ponente en el <strong>1er Congreso de Estudios Interamericanos de Seguridad Social</strong>,
+        celebrado los días 11, 12 y 13 de noviembre de 2026 en la Ciudad de México, con la ponencia
+      </p>
+      <p class="ponencia solo-ponente" data-ajustar="ponencia">«{{Ponencia}}»</p>
+      <p class="solo-ponente">
+        presentada en las mesas temáticas del Congreso<span data-si="Total de horas">, con una duración total de
+        <strong>{{Total de horas}}&nbsp;horas</strong></span>.
+      </p>
+    </div>
+   </div>
+
+   <div class="pie">
+    <p class="fecha">Ciudad de México, a {{Fecha de elaboración}}</p>
+
+    <div class="firmas">
+      <div class="firma">
+        <div class="raya"></div>
+        <div class="quien pendiente">Nombre de quien firma</div>
+        <div class="cargo pendiente">Cargo</div>
+        <div class="cargo">Centro Interamericano de Estudios de Seguridad Social</div>
+      </div>
+      <div class="firma">
+        <div class="raya"></div>
+        <div class="quien pendiente">Nombre de quien firma</div>
+        <div class="cargo pendiente">Cargo</div>
+        <div class="cargo">Red Interamericana de Universidades para la Seguridad Social</div>
+      </div>
+    </div>
+   </div>
+  </div>
+
+  <div class="registro">
+    <div class="linea"></div>
+    <dl>
+      <div class="ancho"><dt>N° de constancia</dt><dd>{{N° de constancia}}</dd></div>
+      <div><dt>Folio</dt><dd>{{Folio}}</dd></div>
+      <div><dt>Libro</dt><dd>{{Libro}}</dd></div>
+      <div><dt>Foja</dt><dd>{{Foja}}</dd></div>
+      <div class="ancho"><dt>Fecha de registro</dt><dd>{{Fecha de registro}}</dd></div>
+    </dl>
+  </div>
+</div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import 'server-only';
 import {
-  COLUMNA_CON_REGISTRO, ENCABEZADOS_DE_LA_HOJA_RETIRADA, ENCABEZADOS_PERSONAS, HOJA_PERSONAS, HOJA_RETIRADA, filasDePersonas, planDeHoja,
+  COLUMNA_CON_REGISTRO, ENCABEZADOS_DE_CONSTANCIAS, ENCABEZADOS_DE_FECHAS, ENCABEZADOS_DE_LA_HOJA_RETIRADA, ENCABEZADOS_PERSONAS,
+  ENCABEZADO_DE_GENERAR, HOJA_PERSONAS, HOJA_RETIRADA, filasDePersonas, planDeHoja,
 } from '@/lib/asistencia';
 import { HOJA_LISTA, nombreDePerfil, rangoDe } from '@/lib/normalizacion';
 import { ponenciasParaLaHoja } from '@/lib/ponentes';
@@ -12,7 +13,9 @@ import { conEspera, peticionesDeTitulos } from './sheets';
  * La pestaña «Asistencia por persona» de la hoja de Google: una fila por persona, como la tabla «Por persona» del
  * panel —nombre, correo, perfil, un día por columna y el total— más «Con registro», una casilla de verificación que está
  * marcada si la persona tenía registro, y «Ponencia», el título de la ponencia del programa en que participó, si presentó
- * una. De ahí se hacen las constancias, que sólo reciben quienes estaban registrados.
+ * una. De ahí se hacen las constancias, que sólo reciben quienes estaban registrados. A la derecha de esas diez columnas la
+ * pestaña lleva las de las constancias mismas —horas, número, folio, libro, foja, el botón de generar, el archivo…—, que son de
+ * quien las hace: el sistema las crea una vez (`ENCABEZADOS_DE_CONSTANCIAS`) y no escribe nunca en ellas.
  *
  * La pestaña «Asistencias» que había antes (una fila por asistencia) se retiró: esta pasada la quita de la hoja, una
  * sola vez y sólo si es la que puso el sistema (`retirarLaPestanaVieja`). El detalle por asistencia sigue en el panel y en
@@ -75,31 +78,34 @@ export interface OpcionesDeSincronizacion {
 const letraDeColumna = (n: number) => String.fromCharCode('A'.charCodeAt(0) + n - 1);
 /** La letra de la última columna propia: J con diez columnas. */
 const ULTIMA_COLUMNA = letraDeColumna(ENCABEZADOS_PERSONAS.length);
+/** Hasta dónde se leen los títulos: la Z, para ver también lo que haya a la derecha de las columnas propias. */
+const ULTIMA_COLUMNA_DE_TITULOS = 'Z';
 
 const enBlanco = (fila: readonly unknown[]) => fila.every((c) => String(c ?? '').trim() === '');
 
 type Cliente = ReturnType<typeof clienteSheets>;
 interface PestanaDelLibro { properties?: { title?: string | null; sheetId?: number | null } | null }
 
-/** El rango de «Con registro» en esas filas (la primera fila de la hoja es la 0, y `hasta` no entra). */
-const rangoDeCasillas = (sheetId: number, desde: number, hasta: number) => ({
-  sheetId, startRowIndex: desde, endRowIndex: hasta, startColumnIndex: COLUMNA_CON_REGISTRO, endColumnIndex: COLUMNA_CON_REGISTRO + 1,
+/** El rango de una columna en esas filas (la primera fila de la hoja es la 0, y `hasta` no entra). */
+const rangoDeColumna = (sheetId: number, columna: number, desde: number, hasta: number) => ({
+  sheetId, startRowIndex: desde, endRowIndex: hasta, startColumnIndex: columna, endColumnIndex: columna + 1,
 });
 
 /**
- * Pide que esas celdas sean casillas de verificación. Una validación «booleana» estricta es lo que Sheets muestra como
+ * Pide que esas celdas de cada una de esas columnas sean casillas de verificación: «Con registro» y, si ya existe, «✨Generar
+ * Constancia». Una validación «booleana» estricta es lo que Sheets muestra como
  * casilla: el verdadero se ve marcado y el falso, vacío. Sólo se pone en las filas con datos —en una columna entera
  * saldrían casillas vacías hasta el final de la hoja— y se pone antes de escribir los valores, para que, si falla, la pasada
  * siguiente lo repita todo junto en vez de dejar «TRUE» y «FALSE» escritos como texto.
  */
-const pedirCasillas = (sheetId: number, desde: number, hasta: number) => ({
-  setDataValidation: { range: rangoDeCasillas(sheetId, desde, hasta), rule: { condition: { type: 'BOOLEAN' }, strict: true } },
-});
+const pedirCasillas = (sheetId: number, columnas: readonly number[], desde: number, hasta: number) =>
+  columnas.map((columna) => ({
+    setDataValidation: { range: rangoDeColumna(sheetId, columna, desde, hasta), rule: { condition: { type: 'BOOLEAN' }, strict: true } },
+  }));
 
 /** Lo contrario, para las filas que se vacían: sin `rule`, Google quita la validación de ese rango. */
-const quitarCasillas = (sheetId: number, desde: number, hasta: number) => ({
-  setDataValidation: { range: rangoDeCasillas(sheetId, desde, hasta) },
-});
+const quitarCasillas = (sheetId: number, columnas: readonly number[], desde: number, hasta: number) =>
+  columnas.map((columna) => ({ setDataValidation: { range: rangoDeColumna(sheetId, columna, desde, hasta) } }));
 
 /**
  * Quita la pestaña «Asistencias» del diseño anterior (una fila por asistencia): se pidió dejar sólo «Asistencia por
@@ -164,7 +170,7 @@ export async function sincronizarAsistencias(
   const libro = await conEspera(() =>
     sheets.spreadsheets.get({
       spreadsheetId: idLibro,
-      fields: 'sheets(properties(sheetId,title,index,gridProperties(rowCount)))',
+      fields: 'sheets(properties(sheetId,title,index,gridProperties(rowCount,columnCount)))',
     }),
   );
   const hojas = libro.data.sheets ?? [];
@@ -172,6 +178,7 @@ export async function sincronizarAsistencias(
   let sheetId = existente?.sheetId ?? null;
   // Una pestaña nueva de Google trae 1,000 filas.
   let filasDeLaCuadricula = existente?.gridProperties?.rowCount ?? 1000;
+  let columnasDeLaCuadricula = existente?.gridProperties?.columnCount ?? 26;
 
   const deseadas = filasDePersonas(await todasLasAsistencias(), nombreDePerfil, ponenciasParaLaHoja);
 
@@ -200,6 +207,7 @@ export async function sincronizarAsistencias(
     const propiedades = creada.data.replies?.[0]?.addSheet?.properties;
     sheetId = propiedades?.sheetId ?? null;
     filasDeLaCuadricula = propiedades?.gridProperties?.rowCount ?? 1000;
+    columnasDeLaCuadricula = propiedades?.gridProperties?.columnCount ?? 26;
     if (sheetId !== null) {
       await conEspera(() =>
         sheets.spreadsheets.batchUpdate({ spreadsheetId: idLibro, requestBody: { requests: peticionesDeTitulos(sheetId) } }),
@@ -211,9 +219,12 @@ export async function sincronizarAsistencias(
   // Sin ellos la primera fila de datos quedaría debajo de nada, y «N.º» no se encontraría.
   const avisos: string[] = [];
   const conAvisos = (r: ResultadoDeAsistencias): ResultadoDeAsistencias => (avisos.length > 0 ? { ...r, avisos } : r);
+  // Las columnas que llevan casillas de verificación: «Con registro» y, cuando ya existe, «✨Generar Constancia».
+  let columnasConCasillas: number[] = [COLUMNA_CON_REGISTRO];
   if (sheetId !== null && !simular) {
+    // Se leen hasta la Z: las diez primeras son nuestras; las demás, de quien hace las constancias.
     const titulos = ((await conEspera(() =>
-      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: rangoDe(HOJA_PERSONAS, `A1:${ULTIMA_COLUMNA}1`) }),
+      sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: rangoDe(HOJA_PERSONAS, `A1:${ULTIMA_COLUMNA_DE_TITULOS}1`) }),
     )).data.values?.[0] ?? []).map((t) => String(t ?? '').trim());
 
     // La última columna («Ponencia») se añadió después de que la pestaña existiera, y a su derecha pudo haber crecido algo
@@ -233,13 +244,13 @@ export async function sincronizarAsistencias(
           },
         }),
       );
-      titulos[nueva] = '';
+      titulos.splice(nueva, 0, ''); // lo que estaba ahí pasa a la columna de al lado
       avisos.push(`Se insertó la columna «${ENCABEZADOS_PERSONAS[nueva]}» (${letraDeColumna(nueva + 1)}) de «${HOJA_PERSONAS}»: lo que había a su derecha se recorrió una columna, con sus datos.`);
     }
 
+    const propios = titulos.slice(0, ENCABEZADOS_PERSONAS.length);
     const dicenLoEsperado =
-      ENCABEZADOS_PERSONAS.length === titulos.filter((t) => t !== '').length &&
-      ENCABEZADOS_PERSONAS.every((t, i) => titulos[i] === t);
+      ENCABEZADOS_PERSONAS.length === propios.filter((t) => t !== '').length && ENCABEZADOS_PERSONAS.every((t, i) => propios[i] === t);
     if (!dicenLoEsperado) {
       await conEspera(() =>
         sheets.spreadsheets.values.update({
@@ -250,6 +261,60 @@ export async function sincronizarAsistencias(
         }),
       );
     }
+
+    // Las columnas de las constancias (de la K en adelante, o detrás de lo que ya haya): se crean una sola vez. Si alguna de
+    // ellas ya está en la hoja se deja todo como está —quien las usa ya las tiene a su gusto, y renombrar o quitar una no debe
+    // hacer que el sistema la vuelva a poner—; si no hay ninguna, se ponen las diez juntas, sin pisar lo que haya a la derecha.
+    const resto = titulos.slice(ENCABEZADOS_PERSONAS.length);
+    if (!ENCABEZADOS_DE_CONSTANCIAS.some((t) => resto.includes(t))) {
+      const ultimaOcupada = titulos.reduce((ultima, t, i) => (t !== '' && i > ultima ? i : ultima), ENCABEZADOS_PERSONAS.length - 1);
+      const primera = ultimaOcupada + 1;
+      const fin = primera + ENCABEZADOS_DE_CONSTANCIAS.length; // no incluida
+      if (fin > columnasDeLaCuadricula) {
+        await conEspera(() =>
+          sheets.spreadsheets.batchUpdate({
+            spreadsheetId: idLibro,
+            requestBody: { requests: [{ appendDimension: { sheetId, dimension: 'COLUMNS', length: fin - columnasDeLaCuadricula } }] },
+          }),
+        );
+        columnasDeLaCuadricula = fin;
+      }
+      // Primero el formato y después los títulos: si algo falla a medias, la pasada siguiente —que no encuentra títulos— lo repite
+      // todo junto, en vez de quedarse con títulos y sin casillas ni formato de fecha (y sin volver a intentarlo).
+      // Su formato: la casilla de generar en las filas que ya hay (las que lleguen después la reciben al escribirse) y el formato de
+      // fecha en sus dos columnas, para toda la columna.
+      const columnaDeGenerar = primera + ENCABEZADOS_DE_CONSTANCIAS.indexOf(ENCABEZADO_DE_GENERAR);
+      await conEspera(() =>
+        sheets.spreadsheets.batchUpdate({
+          spreadsheetId: idLibro,
+          requestBody: {
+            requests: [
+              ...(deseadas.length > 0 ? pedirCasillas(sheetId, [columnaDeGenerar], 1, deseadas.length + 1) : []),
+              ...ENCABEZADOS_DE_FECHAS.map((t) => primera + ENCABEZADOS_DE_CONSTANCIAS.indexOf(t)).map((columna) => ({
+                repeatCell: {
+                  range: { sheetId, startRowIndex: 1, startColumnIndex: columna, endColumnIndex: columna + 1 },
+                  cell: { userEnteredFormat: { numberFormat: { type: 'DATE', pattern: 'dd/mm/yyyy' } } },
+                  fields: 'userEnteredFormat.numberFormat',
+                },
+              })),
+            ],
+          },
+        }),
+      );
+      await conEspera(() =>
+        sheets.spreadsheets.values.update({
+          spreadsheetId: idLibro,
+          range: rangoDe(HOJA_PERSONAS, `${letraDeColumna(primera + 1)}1`),
+          valueInputOption: 'RAW',
+          requestBody: { values: [[...ENCABEZADOS_DE_CONSTANCIAS]] },
+        }),
+      );
+      while (titulos.length < primera) titulos.push('');
+      titulos.splice(primera, ENCABEZADOS_DE_CONSTANCIAS.length, ...ENCABEZADOS_DE_CONSTANCIAS);
+      avisos.push(`Se añadieron a «${HOJA_PERSONAS}» las columnas de las constancias (de la ${letraDeColumna(primera + 1)} a la ${letraDeColumna(fin)}): ${ENCABEZADOS_DE_CONSTANCIAS.join(', ')}. El sistema no escribe en ellas.`);
+    }
+    const generar = titulos.indexOf(ENCABEZADO_DE_GENERAR, ENCABEZADOS_PERSONAS.length);
+    if (generar >= 0) columnasConCasillas = [COLUMNA_CON_REGISTRO, generar];
   }
 
   const leida = sheetId === null
@@ -304,7 +369,7 @@ export async function sincronizarAsistencias(
     await conEspera(() =>
       sheets.spreadsheets.batchUpdate({
         spreadsheetId: idLibro,
-        requestBody: { requests: [pedirCasillas(sheetId, primera - 1, primera - 1 + lote.length)] },
+        requestBody: { requests: pedirCasillas(sheetId, columnasConCasillas, primera - 1, primera - 1 + lote.length) },
       }),
     );
     await conEspera(() =>
@@ -331,7 +396,7 @@ export async function sincronizarAsistencias(
     await conEspera(() =>
       sheets.spreadsheets.batchUpdate({
         spreadsheetId: idLibro,
-        requestBody: { requests: [quitarCasillas(sheetId, desde - 1, desde - 1 + plan.sobran)] },
+        requestBody: { requests: quitarCasillas(sheetId, columnasConCasillas, desde - 1, desde - 1 + plan.sobran) },
       }),
     );
   }

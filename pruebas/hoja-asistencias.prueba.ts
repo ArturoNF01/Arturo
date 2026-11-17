@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  COLUMNA_CON_REGISTRO, ENCABEZADOS_DE_LA_HOJA_RETIRADA, ENCABEZADOS_PERSONAS, HOJA_PERSONAS, HOJA_RETIRADA,
-  conRegistro, filasDePersonas, planDeHoja, type FilaDeAsistencia, type FilaDeHoja,
+  COLUMNA_CON_REGISTRO, ENCABEZADOS_DE_CONSTANCIAS, ENCABEZADOS_DE_LA_HOJA_RETIRADA, ENCABEZADOS_PERSONAS, ENCABEZADO_DE_GENERAR,
+  HOJA_PERSONAS, HOJA_RETIRADA, conRegistro, filasDePersonas, planDeHoja, type FilaDeAsistencia, type FilaDeHoja,
 } from '@/lib/asistencia';
 import { SEPARADOR_DE_PONENCIAS } from '@/lib/ponentes';
 import { MESAS } from '@/lib/programa';
+
+/** La columna de «✨Generar Constancia» (contando desde 0): la 7.ª de las columnas de las constancias, que empiezan en la K. */
+const COLUMNA_DE_GENERAR = ENCABEZADOS_PERSONAS.length + ENCABEZADOS_DE_CONSTANCIAS.indexOf(ENCABEZADO_DE_GENERAR);
+/** Los títulos de la pestaña tal como quedan en una hoja nueva: los del sistema y, a su derecha, los de las constancias. */
+const TITULOS_DE_UNA_HOJA_NUEVA = [...ENCABEZADOS_PERSONAS, ...ENCABEZADOS_DE_CONSTANCIAS];
 
 /** Los títulos del programa en los que figura un autor, tal como están en el programa. */
 const titulosDe = (autor: string) => MESAS.flatMap((m) => m.ponencias).filter((p) => p.autores.includes(autor)).map((p) => p.titulo);
@@ -188,6 +193,11 @@ interface PestanaSimulada {
   /** Cuántas filas tiene la cuadrícula de la pestaña, títulos incluidos (una pestaña nueva de Google trae 1,000). */
   cuadricula: number;
   ampliaciones: number[];
+  /** Cuántas columnas tiene (una pestaña nueva trae 26) y cuántas se le añadieron. */
+  columnas: number;
+  columnasAnadidas: number[];
+  /** Los formatos de fecha que se pidieron, por columna (desde 0). */
+  formatosDeFecha: { columna: number; patron: string }[];
   /** Las casillas de verificación que se pidieron (filas de la API, desde 0, sin incluir `hasta`) y las que se quitaron. */
   casillas: { desde: number; hasta: number; columna: number }[];
   casillasQuitadas: { desde: number; hasta: number; columna: number }[];
@@ -196,7 +206,8 @@ interface PestanaSimulada {
 }
 const pestanaNueva = (titulo: string, sheetId: number): PestanaSimulada => ({
   titulo, sheetId, existe: false, encabezados: [], filas: [], indice: undefined, escrituras: [], limpiezas: [],
-  creadaEn: undefined, cuadricula: 1000, ampliaciones: [], casillas: [], casillasQuitadas: [], fallaPropia: null,
+  creadaEn: undefined, cuadricula: 1000, ampliaciones: [], columnas: 26, columnasAnadidas: [], formatosDeFecha: [],
+  casillas: [], casillasQuitadas: [], fallaPropia: null,
 });
 
 /** La pestaña «Asistencias» del diseño anterior: la que se retira. */
@@ -204,6 +215,9 @@ const vieja = pestanaNueva('Asistencias', 7);
 /** La pestaña «Asistencia por persona». */
 const personas = pestanaNueva('Asistencia por persona', 8);
 const pestanasSimuladas = [vieja, personas];
+/** Las casillas pedidas o quitadas en una columna de la pestaña de personas. */
+const casillasDe = (columna: number, lista: { desde: number; hasta: number; columna: number }[] = personas.casillas) =>
+  lista.filter((c) => c.columna === columna);
 
 const hoja = {
   configurado: true,
@@ -248,7 +262,7 @@ vi.mock('@/lib/servidor/google', () => ({
             { properties: { title: 'Resumen Registro', sheetId: 2, index: 1 } },
             ...pestanasSimuladas
               .filter((p) => p.existe)
-              .map((p) => ({ properties: { title: p.titulo, sheetId: p.sheetId, index: p.indice ?? 2, gridProperties: { rowCount: p.cuadricula } } })),
+              .map((p) => ({ properties: { title: p.titulo, sheetId: p.sheetId, index: p.indice ?? 2, gridProperties: { rowCount: p.cuadricula, columnCount: p.columnas } } })),
           ],
         },
       }),
@@ -261,7 +275,7 @@ vi.mock('@/lib/servidor/google', () => ({
             nueva.existe = true;
             nueva.creadaEn = agregar.properties.index;
             hoja.eventos.push(`crear ${nueva.titulo}`);
-            return { addSheet: { properties: { sheetId: nueva.sheetId, gridProperties: { rowCount: nueva.cuadricula } } } };
+            return { addSheet: { properties: { sheetId: nueva.sheetId, gridProperties: { rowCount: nueva.cuadricula, columnCount: nueva.columnas } } } };
           }
           const borrar = r.deleteSheet as { sheetId: number } | undefined;
           if (borrar) {
@@ -290,8 +304,23 @@ vi.mock('@/lib/servidor/google', () => ({
           if (ampliar) {
             const destino = pestanasSimuladas.find((x) => x.sheetId === ampliar.sheetId)!;
             if (fallaDe(destino)) throw new Error(fallaDe(destino)!);
+            if (ampliar.dimension === 'COLUMNS') {
+              destino.columnas += ampliar.length;
+              destino.columnasAnadidas.push(ampliar.length);
+              hoja.eventos.push(`columnas +${ampliar.length}`);
+              return {};
+            }
             destino.cuadricula += ampliar.length;
             destino.ampliaciones.push(ampliar.length);
+            return {};
+          }
+          const formato = r.repeatCell as
+            { range: { sheetId: number; startColumnIndex: number }; cell: { userEnteredFormat: { numberFormat: { type: string; pattern: string } } } } | undefined;
+          if (formato) {
+            const destino = pestanasSimuladas.find((x) => x.sheetId === formato.range.sheetId)!;
+            expect(formato.cell.userEnteredFormat.numberFormat.type).toBe('DATE');
+            destino.formatosDeFecha.push({ columna: formato.range.startColumnIndex, patron: formato.cell.userEnteredFormat.numberFormat.pattern });
+            hoja.eventos.push(`fecha ${formato.range.startColumnIndex}`);
             return {};
           }
           const validar = r.setDataValidation as {
@@ -326,7 +355,9 @@ vi.mock('@/lib/servidor/google', () => ({
           if (destino === vieja) hoja.lecturasDeLaVieja += 1;
           // Los títulos (fila 1) y los datos (desde la 2) son lecturas distintas.
           if (/A1:[A-Z]1$/.test(p.range)) {
-            return { data: { values: destino.encabezados.length > 0 ? [destino.encabezados.map(comoLoLeeGoogle)] : undefined } };
+            const titulos = destino.encabezados.map(comoLoLeeGoogle);
+            while (titulos.length > 0 && titulos[titulos.length - 1] === '') titulos.pop();
+            return { data: { values: titulos.length > 0 ? [titulos] : undefined } };
           }
           return { data: { values: destino.filas.map((f) => f.map(comoLoLeeGoogle)) } };
         },
@@ -334,8 +365,14 @@ vi.mock('@/lib/servidor/google', () => ({
           const destino = pestanaDeRango(p.range);
           // Como Google: se sobrescriben las celdas que se escriben y las de más a la derecha se quedan como estaban.
           const encima = <T,>(nuevas: T[], que: T[]) => [...nuevas, ...que.slice(nuevas.length)];
-          if (/!A1$/.test(p.range)) {
-            destino.encabezados = encima(p.requestBody.values[0], destino.encabezados);
+          const titulosDesde = /!([A-Z]+)1$/.exec(p.range);
+          if (titulosDesde) {
+            // Una sola fila de títulos desde esa columna: se sobrescriben las celdas que se escriben y las demás se quedan.
+            const inicio = titulosDesde[1].split('').reduce((n, letra) => n * 26 + letra.charCodeAt(0) - 64, 0) - 1;
+            const actuales = [...destino.encabezados];
+            while (actuales.length < inicio) actuales.push('');
+            destino.encabezados = [...actuales.slice(0, inicio), ...p.requestBody.values[0], ...actuales.slice(inicio + p.requestBody.values[0].length)];
+            hoja.eventos.push(`títulos desde ${titulosDesde[1]}`);
             return { data: {} };
           }
           if (fallaDe(destino)) throw new Error(fallaDe(destino)!);
@@ -374,7 +411,8 @@ beforeEach(() => {
   for (const p of pestanasSimuladas) {
     p.existe = false; p.encabezados = []; p.filas = []; p.indice = undefined;
     p.escrituras = []; p.limpiezas = []; p.creadaEn = undefined;
-    p.cuadricula = 1000; p.ampliaciones = []; p.casillas = []; p.casillasQuitadas = []; p.fallaPropia = null;
+    p.cuadricula = 1000; p.ampliaciones = []; p.columnas = 26; p.columnasAnadidas = []; p.formatosDeFecha = [];
+    p.casillas = []; p.casillasQuitadas = []; p.fallaPropia = null;
   }
   hoja.configurado = true; hoja.falla = null; hoja.fallaAlBorrar = null; hoja.fallaAlValidar = null; hoja.eventos = []; hoja.lecturasDeLaVieja = 0;
   asistencias = [];
@@ -399,7 +437,7 @@ describe('sincronizar la pestaña con la base', () => {
     expect(r).toMatchObject({ nuevas: 2, cambiadas: 0, quitadas: 0 });
     expect(personas.existe).toBe(true);
     expect(personas.creadaEn).toBe(2); // justo después de «Resumen Registro», que es la segunda
-    expect(personas.encabezados).toEqual([...ENCABEZADOS_PERSONAS]);
+    expect(personas.encabezados).toEqual(TITULOS_DE_UNA_HOJA_NUEVA);
     expect(personas.filas).toEqual([
       [1, 'Silvana Costa', 'silvana@x.org', 'Público general', 1, 1, 0, 2, true, ''],
       [2, 'Pedro Soto', 'pedro@x.org', '', 0, 1, 0, 1, false, ''],
@@ -480,7 +518,10 @@ describe('sincronizar la pestaña con la base', () => {
     expect(personas.filas.map((f) => [f[0], f[1], f[7]])).toEqual([[1, 'Ana Ruiz', 2], [2, 'Luis Pérez', 1]]);
     expect(personas.limpiezas.at(-1)).toMatch(/!A4:J4$/);
     // Ni queda una casilla vacía en la fila que ya no es de nadie (la fila 4 de la hoja es la 3 de la API).
-    expect(personas.casillasQuitadas).toEqual([{ desde: 3, hasta: 4, columna: COLUMNA_CON_REGISTRO }]);
+    expect(personas.casillasQuitadas).toEqual([
+      { desde: 3, hasta: 4, columna: COLUMNA_CON_REGISTRO },
+      { desde: 3, hasta: 4, columna: COLUMNA_DE_GENERAR },
+    ]);
   });
 
   it('no escribe fuera de sus diez columnas: lo que se genere o anote a la derecha no se pisa', async () => {
@@ -489,7 +530,7 @@ describe('sincronizar la pestaña con la base', () => {
     asistencias.push(registrada('miercoles', 'Tres', 'tres@x.org'), registrada('viernes', 'Dos', 'dos@x.org'));
     await sincronizarAsistencias();
     for (const e of personas.escrituras) expect(e.range).toMatch(/^'Asistencia por persona'!A\d+:J\d+$/);
-    for (const c of personas.casillas) expect(c.columna).toBe(8);
+    for (const c of personas.casillas) expect([COLUMNA_CON_REGISTRO, COLUMNA_DE_GENERAR]).toContain(c.columna);
   });
 
   it('si la base se vació y la pestaña no, no la toca; con --forzar sí', async () => {
@@ -528,7 +569,7 @@ describe('«Con registro» como casilla de verificación', () => {
     asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org'), una('jueves', 'presencial', 'Pedro Soto', 'pedro@x.org')];
     await sincronizarAsistencias();
     // Las filas de datos son la 2 y la 3 de la hoja: la 1 y la 2 de la API. Nada de la columna entera.
-    expect(personas.casillas).toEqual([{ desde: 1, hasta: 3, columna: COLUMNA_CON_REGISTRO }]);
+    expect(casillasDe(COLUMNA_CON_REGISTRO)).toEqual([{ desde: 1, hasta: 3, columna: COLUMNA_CON_REGISTRO }]);
     expect(personas.filas.map((f) => f[COLUMNA_CON_REGISTRO])).toEqual([true, false]);
     // Primero las casillas y después los valores: si falla a medias, la pasada siguiente lo repite todo junto.
     expect(hoja.eventos.indexOf('casillas 1-3')).toBeGreaterThanOrEqual(0);
@@ -540,7 +581,7 @@ describe('«Con registro» como casilla de verificación', () => {
     await sincronizarAsistencias();
     asistencias.push(registrada('jueves', 'Luis Pérez', 'luis@x.org'));
     await sincronizarAsistencias();
-    expect(personas.casillas).toEqual([
+    expect(casillasDe(COLUMNA_CON_REGISTRO)).toEqual([
       { desde: 1, hasta: 2, columna: COLUMNA_CON_REGISTRO },
       { desde: 2, hasta: 3, columna: COLUMNA_CON_REGISTRO },
     ]);
@@ -556,7 +597,8 @@ describe('«Con registro» como casilla de verificación', () => {
     hoja.fallaAlValidar = null;
     await sincronizarAsistencias();
     expect(personas.filas).toHaveLength(1);
-    expect(personas.casillas).toEqual([{ desde: 1, hasta: 2, columna: COLUMNA_CON_REGISTRO }]);
+    expect(casillasDe(COLUMNA_CON_REGISTRO)).toEqual([{ desde: 1, hasta: 2, columna: COLUMNA_CON_REGISTRO }]);
+    expect(personas.encabezados).toEqual(TITULOS_DE_UNA_HOJA_NUEVA);
   });
 
   it('una hoja con la versión anterior (texto «Sí» y «No») se reescribe una vez como casillas, y la pasada siguiente no escribe nada', async () => {
@@ -570,7 +612,7 @@ describe('«Con registro» como casilla de verificación', () => {
     const r = await sincronizarAsistencias();
     expect(r.cambiadas).toBe(2);
     expect(personas.filas.map((f) => f[COLUMNA_CON_REGISTRO])).toEqual([true, false]);
-    expect(personas.casillas).toEqual([{ desde: 1, hasta: 3, columna: COLUMNA_CON_REGISTRO }]);
+    expect(casillasDe(COLUMNA_CON_REGISTRO)).toEqual([{ desde: 1, hasta: 3, columna: COLUMNA_CON_REGISTRO }]);
     personas.escrituras = [];
     const otra = await sincronizarAsistencias();
     expect(otra).toMatchObject({ nuevas: 0, cambiadas: 0, quitadas: 0 });
@@ -653,9 +695,11 @@ describe('la pestaña que ya existía sin la columna «Ponencia»', () => {
 
   it('con la columna libre, sólo se pone el título y se escriben las filas que cambian: sin insertar nada', async () => {
     const r = await sincronizarAsistencias();
-    expect(personas.encabezados).toEqual([...ENCABEZADOS_PERSONAS]);
+    expect(personas.encabezados).toEqual(TITULOS_DE_UNA_HOJA_NUEVA);
     expect(hoja.eventos.some((e) => e.startsWith('insertar'))).toBe(false);
-    expect(r.avisos).toBeUndefined();
+    // Lo único que se avisa es que se añadieron las columnas de las constancias.
+    expect(r.avisos).toHaveLength(1);
+    expect(r.avisos?.[0]).toMatch(/columnas de las constancias/);
     // Ana ya estaba bien (su celda de ponencia vacía es igual a ninguna): sólo se escribe la fila nueva.
     expect(personas.escrituras).toHaveLength(1);
     expect(personas.escrituras[0].range).toMatch(/!A3:J3$/);
@@ -667,8 +711,8 @@ describe('la pestaña que ya existía sin la columna «Ponencia»', () => {
     personas.filas = [[...filaDeNueve(1, 'Ana Ruiz', 'ana@x.org'), 'https://docs.example/ana']];
     const r = await sincronizarAsistencias();
     expect(hoja.eventos.filter((e) => e === 'insertar columna 9')).toHaveLength(1);
-    expect(personas.encabezados).toEqual([...ENCABEZADOS_PERSONAS, 'Enlace a la constancia']);
-    // Lo suyo sigue en la fila de la misma persona, una columna más a la derecha.
+    // «Ponencia» en la J; lo de esa persona, una columna a la derecha; y las columnas de las constancias, después de lo suyo.
+    expect(personas.encabezados).toEqual([...ENCABEZADOS_PERSONAS, 'Enlace a la constancia', ...ENCABEZADOS_DE_CONSTANCIAS]);
     expect(personas.filas[0][10]).toBe('https://docs.example/ana');
     expect(personas.filas[0][9]).toBe('');
     expect(r.avisos?.[0]).toMatch(/Se insertó la columna «Ponencia» \(J\)/);
@@ -682,14 +726,14 @@ describe('la pestaña que ya existía sin la columna «Ponencia»', () => {
     expect(hoja.eventos.filter((e) => e === 'insertar columna 9')).toHaveLength(1);
     expect(otra.avisos).toBeUndefined();
     expect(otra).toMatchObject({ nuevas: 0, cambiadas: 0, quitadas: 0 });
-    expect(personas.encabezados.at(-1)).toBe('Enlace a la constancia');
+    expect(personas.encabezados[10]).toBe('Enlace a la constancia');
   });
 
   it('si la columna ya está en blanco (se insertó y la pasada se cortó antes de poner el título), no inserta otra', async () => {
     personas.encabezados = [...nueve, ''];
     await sincronizarAsistencias();
     expect(hoja.eventos.some((e) => e.startsWith('insertar'))).toBe(false);
-    expect(personas.encabezados).toEqual([...ENCABEZADOS_PERSONAS]);
+    expect(personas.encabezados).toEqual(TITULOS_DE_UNA_HOJA_NUEVA);
   });
 
   it('el aviso de la columna insertada llega aunque la pasada se detenga por prudencia', async () => {
@@ -709,6 +753,144 @@ describe('la pestaña que ya existía sin la columna «Ponencia»', () => {
   });
 });
 
+describe('las columnas de las constancias', () => {
+  const managed = ENCABEZADOS_PERSONAS;
+  /** Una pestaña que ya existía con las diez columnas del sistema y personas escritas. */
+  const conLaPestanaHecha = () => {
+    personas.existe = true;
+    personas.encabezados = [...managed];
+    asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org'), registrada('jueves', 'Luis Pérez', 'luis@x.org')];
+    personas.filas = filasDePersonas(asistencias as never, () => 'Público general').map((f) => f.slice(0, 9));
+  };
+
+  it('se llaman como las pidió quien hace las constancias, y en ese orden', () => {
+    expect([...ENCABEZADOS_DE_CONSTANCIAS]).toEqual([
+      'Total de horas', 'N° de constancia', 'Folio', 'Libro', 'Foja', 'Fecha de registro',
+      '✨Generar Constancia', 'Constancia', 'Fecha de elaboración', 'Estado automatización',
+    ]);
+    expect(COLUMNA_DE_GENERAR).toBe(16); // la Q
+  });
+
+  it('en una pestaña nueva van a la derecha de «Ponencia», de la K a la T, con los títulos tal cual', async () => {
+    asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org')];
+    const r = await sincronizarAsistencias();
+    expect(personas.encabezados.slice(0, 10)).toEqual([...managed]);
+    expect(personas.encabezados.slice(10)).toEqual([...ENCABEZADOS_DE_CONSTANCIAS]);
+    expect(personas.encabezados[10]).toBe('Total de horas');
+    expect(personas.encabezados[19]).toBe('Estado automatización');
+    expect(r.avisos?.[0]).toMatch(/de la K a la T/);
+  });
+
+  it('«✨Generar Constancia» es una casilla y las dos fechas llevan formato de fecha; el formato va antes que los títulos', async () => {
+    conLaPestanaHecha();
+    await sincronizarAsistencias();
+    // Las filas que ya había reciben la casilla, de la fila 2 a la 3 de la hoja.
+    expect(casillasDe(COLUMNA_DE_GENERAR)).toEqual([{ desde: 1, hasta: 3, columna: COLUMNA_DE_GENERAR }]);
+    expect(personas.formatosDeFecha).toEqual([
+      { columna: 15, patron: 'dd/mm/yyyy' }, // «Fecha de registro»
+      { columna: 18, patron: 'dd/mm/yyyy' }, // «Fecha de elaboración»
+    ]);
+    expect(hoja.eventos.indexOf('fecha 18')).toBeLessThan(hoja.eventos.indexOf('títulos desde K'));
+  });
+
+  it('si el formato falla, no quedan títulos sueltos: la pasada siguiente lo hace todo junto', async () => {
+    conLaPestanaHecha();
+    hoja.fallaAlValidar = 'Quota exceeded';
+    await expect(sincronizarAsistencias()).rejects.toThrow(/Quota/);
+    expect(personas.encabezados).toEqual([...managed]);
+    hoja.fallaAlValidar = null;
+    await sincronizarAsistencias();
+    expect(personas.encabezados.slice(10)).toEqual([...ENCABEZADOS_DE_CONSTANCIAS]);
+    expect(personas.formatosDeFecha).toHaveLength(2);
+    expect(casillasDe(COLUMNA_DE_GENERAR).length).toBeGreaterThan(0);
+  });
+
+  it('el sistema no escribe nunca en ellas: lo que se anote o genere ahí se queda aunque la fila se reescriba', async () => {
+    conLaPestanaHecha();
+    await sincronizarAsistencias();
+    personas.filas[0][10] = 24; // Total de horas
+    personas.filas[0][11] = 'CIESS-2026-0001'; // N° de constancia
+    personas.filas[0][COLUMNA_DE_GENERAR] = true; // ✨Generar Constancia
+    personas.filas[0][17] = 'https://drive.example/constancia-ana.pdf'; // Constancia
+    personas.filas[0][19] = 'Generada';
+    // Ana suma un día: su fila se reescribe, y también la de Luis, que viene después.
+    asistencias.push(registrada('viernes', 'Ana Ruiz', 'ana@x.org'));
+    const r = await sincronizarAsistencias();
+    expect(r.cambiadas).toBeGreaterThan(0);
+    expect(personas.filas[0].slice(10, 20)).toEqual([24, 'CIESS-2026-0001', undefined, undefined, undefined, undefined, true, 'https://drive.example/constancia-ana.pdf', undefined, 'Generada']);
+    for (const e of personas.escrituras) expect(e.range).toMatch(/!A\d+:J\d+$/);
+  });
+
+  it('se crean una sola vez: renombrar o quitar una no hace que el sistema la vuelva a poner', async () => {
+    conLaPestanaHecha();
+    await sincronizarAsistencias();
+    hoja.eventos = [];
+    const i = personas.encabezados.indexOf('Libro');
+    personas.encabezados[i] = 'Libro de registro'; // la renombran
+    personas.encabezados[personas.encabezados.indexOf('Foja')] = ''; // quitan otra
+    const r = await sincronizarAsistencias();
+    expect(r.avisos).toBeUndefined();
+    expect(hoja.eventos.some((e) => e.startsWith('títulos'))).toBe(false);
+    expect(personas.encabezados[i]).toBe('Libro de registro');
+  });
+
+  it('si no queda ninguna, se vuelven a poner las diez juntas', async () => {
+    conLaPestanaHecha();
+    await sincronizarAsistencias();
+    personas.encabezados = [...managed];
+    const r = await sincronizarAsistencias();
+    expect(personas.encabezados.slice(10)).toEqual([...ENCABEZADOS_DE_CONSTANCIAS]);
+    expect(r.avisos?.[0]).toMatch(/de la K a la T/);
+  });
+
+  it('si ya hay columnas de otra persona a la derecha, van detrás de ellas y no las pisan', async () => {
+    conLaPestanaHecha();
+    personas.encabezados = [...managed, 'Notas', '', 'Pendiente de firma'];
+    await sincronizarAsistencias();
+    // «Notas» en la K, un hueco en la L y «Pendiente de firma» en la M: las diez nuevas, desde la N.
+    expect(personas.encabezados.slice(0, 13)).toEqual([...managed, 'Notas', '', 'Pendiente de firma']);
+    expect(personas.encabezados.slice(13)).toEqual([...ENCABEZADOS_DE_CONSTANCIAS]);
+    expect(hoja.eventos).toContain('títulos desde N');
+    expect(casillasDe(13 + 6)).toEqual([{ desde: 1, hasta: 3, columna: 19 }]);
+  });
+
+  it('si la cuadrícula no tiene columnas para todas, se añaden las que faltan antes de escribir', async () => {
+    conLaPestanaHecha();
+    personas.columnas = 12;
+    await sincronizarAsistencias();
+    expect(personas.columnasAnadidas).toEqual([8]); // 20 columnas hasta la T, 12 que había
+    expect(personas.columnas).toBe(20);
+    expect(personas.encabezados.slice(10)).toEqual([...ENCABEZADOS_DE_CONSTANCIAS]);
+  });
+
+  it('quien llega después recibe la casilla de generar en su fila, y las de antes no se vuelven a pedir', async () => {
+    conLaPestanaHecha();
+    await sincronizarAsistencias();
+    asistencias.push(registrada('viernes', 'Eva Mora', 'eva@x.org'));
+    await sincronizarAsistencias();
+    expect(casillasDe(COLUMNA_DE_GENERAR).at(-1)).toEqual({ desde: 3, hasta: 4, columna: COLUMNA_DE_GENERAR });
+    expect(casillasDe(COLUMNA_DE_GENERAR)).toHaveLength(2); // las dos primeras filas, y la nueva
+  });
+
+  it('si la columna de generar ya existe (la puso quien hace las constancias), no se añade nada y sus filas nuevas la reciben', async () => {
+    conLaPestanaHecha();
+    personas.encabezados = [...managed, 'Mi columna', ENCABEZADO_DE_GENERAR];
+    const r = await sincronizarAsistencias();
+    expect(r.avisos).toBeUndefined();
+    expect(personas.encabezados).toEqual([...managed, 'Mi columna', ENCABEZADO_DE_GENERAR]);
+    asistencias.push(registrada('viernes', 'Eva Mora', 'eva@x.org'));
+    await sincronizarAsistencias();
+    expect(casillasDe(11).map((c) => [c.desde, c.hasta])).toEqual([[3, 4]]); // «✨Generar Constancia» está en la L (11)
+  });
+
+  it('simular no añade nada', async () => {
+    conLaPestanaHecha();
+    await sincronizarAsistencias({ simular: true });
+    expect(personas.encabezados).toEqual([...managed]);
+    expect(hoja.eventos).toEqual([]);
+  });
+});
+
 describe('cuando son muchas personas', () => {
   it('amplía la pestaña antes de escribir: una pestaña nueva trae 1,000 filas', async () => {
     asistencias = Array.from({ length: 1500 }, (_, i) => registrada('jueves', `Persona ${i}`, `p${i}@x.org`));
@@ -718,7 +900,7 @@ describe('cuando son muchas personas', () => {
     expect(personas.cuadricula).toBeGreaterThanOrEqual(1501);
     expect(personas.filas[1499][0]).toBe(1500);
     // Las casillas, por lotes de mil filas, cubren de la 1 a la 1500 de la API sin dejar hueco ni pasarse.
-    expect(personas.casillas.map((c) => [c.desde, c.hasta])).toEqual([[1, 1001], [1001, 1501]]);
+    expect(casillasDe(COLUMNA_CON_REGISTRO).map((c) => [c.desde, c.hasta])).toEqual([[1, 1001], [1001, 1501]]);
   });
 
   it('sin ampliar la cuadrícula Google rechazaría la escritura (lo que hace el simulacro)', async () => {
@@ -747,7 +929,7 @@ describe('los títulos de la pestaña', () => {
     personas.encabezados = ['Nombre', 'Correo'];
     asistencias = [registrada('jueves', 'Uno', 'uno@x.org')];
     await sincronizarAsistencias();
-    expect(personas.encabezados).toEqual([...ENCABEZADOS_PERSONAS]);
+    expect(personas.encabezados).toEqual(TITULOS_DE_UNA_HOJA_NUEVA);
   });
 });
 

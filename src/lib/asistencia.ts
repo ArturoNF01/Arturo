@@ -475,6 +475,23 @@ export const ENCABEZADOS_PERSONAS: readonly string[] = [
 export const COLUMNA_CON_REGISTRO = ENCABEZADOS_PERSONAS.indexOf('Con registro');
 
 /**
+ * Las columnas para hacer las constancias, a la derecha de las que llena el sistema (de la A a la J). Son de quien hace las
+ * constancias, o de su automatización: el sistema las crea una vez, con su formato, y no escribe nunca en ellas.
+ *  - los datos del registro de cada constancia: «Total de horas», «N° de constancia», «Folio», «Libro», «Foja» y «Fecha de registro»;
+ *  - los de la automatización: «✨Generar Constancia» (una casilla que la dispara), «Constancia» (el archivo), «Fecha de
+ *    elaboración» y «Estado automatización».
+ * Se llaman como los campos de la constancia (documentos/constancias/constancia.html): lo de una fila cae en su lugar.
+ */
+export const ENCABEZADOS_DE_CONSTANCIAS: readonly string[] = [
+  'Total de horas', 'N° de constancia', 'Folio', 'Libro', 'Foja', 'Fecha de registro',
+  '✨Generar Constancia', 'Constancia', 'Fecha de elaboración', 'Estado automatización',
+];
+/** La que se muestra con casillas de verificación. */
+export const ENCABEZADO_DE_GENERAR = '✨Generar Constancia';
+/** Las que llevan fechas: se les da formato de fecha, para que lo que se escriba ahí se lea y se ordene como tal. */
+export const ENCABEZADOS_DE_FECHAS: readonly string[] = ['Fecha de registro', 'Fecha de elaboración'];
+
+/**
  * La pestaña «Asistencias» que tuvo la hoja —una fila por asistencia, con el día y la modalidad— y que se retiró: sólo
  * quedó «Asistencia por persona». Estos son los títulos con que la ponía el sistema (los de ahora y los del diseño por
  * mesa, que llevaba una columna «Mesa»). Sirven para reconocerla al quitarla y no borrar una pestaña con ese nombre que
