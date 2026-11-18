@@ -686,8 +686,11 @@ async function principal() {
   await consultar(`delete from asistencia_codigos`);
   ok('limpieza de la asistencia a mano');
 
-  // 17. La pestaña «Asistencia por persona» de la hoja: lo que sale de la base, con la columna «Con registro»
-  const { ENCABEZADOS_PERSONAS, filasDePersonas } = await import('../../src/lib/asistencia');
+  // 17. La pestaña «Asistencia por persona» de la hoja: lo que sale de la base, con «Ponencia» tras el correo y la casilla «Con registro»
+  const { COLUMNA_CON_REGISTRO, COLUMNA_DE_PONENCIA, ENCABEZADOS_PERSONAS, filasDePersonas } = await import('../../src/lib/asistencia');
+  // Las columnas por su título, no por su número: si se reordenan, la prueba sigue diciendo lo mismo.
+  const COLUMNA_DEL_PERFIL = ENCABEZADOS_PERSONAS.indexOf('Perfil');
+  const COLUMNA_DEL_TOTAL = ENCABEZADOS_PERSONAS.indexOf('Total');
   const { nombreDePerfil } = await import('../../src/lib/normalizacion');
   const { ponenciasDeLaPersona, ponenciasParaLaHoja } = await import('../../src/lib/ponentes');
   const { posiblesRepetidos, resumenDePonentes } = await import('../../src/lib/asistencia');
@@ -737,25 +740,27 @@ async function principal() {
   comprobar(filasHoja.every((f) => f.length === ENCABEZADOS_PERSONAS.length), 'hoja por persona: cada fila trae una celda por título');
   comprobar(
     JSON.stringify(filaHoja('hoja.completa@example.org')?.slice(1)) ===
-      JSON.stringify(['Silvana Costa Arbulú', 'hoja.completa@example.org', 'Público general', 1, 1, 1, 3, true, '']),
+      JSON.stringify(['Silvana Costa Arbulú', 'hoja.completa@example.org', '', 'Público general', 1, 1, 1, 3, true]),
     'hoja por persona: quien asistió los tres días sale en una fila, con 1 por día, total 3 y la casilla marcada', filaHoja('hoja.completa@example.org'));
-  comprobar(filaHoja('hoja.espera@example.org')?.[8] === true && filaHoja('hoja.espera@example.org')?.[7] === 1,
+  comprobar(filaHoja('hoja.espera@example.org')?.[COLUMNA_CON_REGISTRO] === true && filaHoja('hoja.espera@example.org')?.[COLUMNA_DEL_TOTAL] === 1,
     'hoja por persona: un registro en lista de espera cuenta como registro', filaHoja('hoja.espera@example.org'));
-  comprobar(filaHoja('hoja.baja@example.org')?.[8] === false,
+  comprobar(filaHoja('hoja.baja@example.org')?.[COLUMNA_CON_REGISTRO] === false,
     'hoja por persona: un registro cancelado después de asistir deja la casilla sin marcar', filaHoja('hoja.baja@example.org'));
   comprobar(
-    JSON.stringify(filaHoja('hoja.sin@example.org')?.slice(1)) === JSON.stringify(['Pedro Sin Registro', 'hoja.sin@example.org', '', 0, 0, 1, 1, false, '']),
+    JSON.stringify(filaHoja('hoja.sin@example.org')?.slice(1)) === JSON.stringify(['Pedro Sin Registro', 'hoja.sin@example.org', '', '', 0, 0, 1, 1, false]),
     'hoja por persona: quien asistió sin registro sale con la casilla sin marcar y sin perfil', filaHoja('hoja.sin@example.org'));
   comprobar(filasHoja.map((f) => f[0]).every((n, i) => n === i + 1), 'hoja por persona: el N.º va seguido');
   const filaPonente = filaHoja('hoja.ponente@example.org');
   comprobar(
-    filaPonente?.[3] === 'Ponente' && ponenciasDeLaPersona('Nuria Ape').length === 2 && filaPonente[9] === ponenciasParaLaHoja('Nuria Ape') &&
-    String(filaPonente[9]).includes(' | '),
-    'hoja por persona: quien presentó dos ponencias del programa las lleva las dos, en una celda', filaPonente?.[9]);
+    filaPonente?.[COLUMNA_DEL_PERFIL] === 'Ponente' && ponenciasDeLaPersona('Nuria Ape').length === 2 &&
+    filaPonente[COLUMNA_DE_PONENCIA] === ponenciasParaLaHoja('Nuria Ape') && String(filaPonente[COLUMNA_DE_PONENCIA]).includes(' | '),
+    'hoja por persona: quien presentó dos ponencias del programa las lleva las dos, en una celda, junto al correo', filaPonente?.[COLUMNA_DE_PONENCIA]);
+  comprobar(ENCABEZADOS_PERSONAS[COLUMNA_DE_PONENCIA - 1] === 'Correo' && ENCABEZADOS_PERSONAS[COLUMNA_CON_REGISTRO] === 'Con registro',
+    'hoja por persona: «Ponencia» va justo después de «Correo» y «Con registro» es la casilla de la derecha');
   comprobar(
-    filaHoja('hoja.ponente2@example.org')?.[9] === 'Modelado markoviano de aportes previsionales con estados enriquecidos.',
+    filaHoja('hoja.ponente2@example.org')?.[COLUMNA_DE_PONENCIA] === 'Modelado markoviano de aportes previsionales con estados enriquecidos.',
     'hoja por persona: se reconoce al ponente aunque se haya registrado con los dos apellidos y con acento', filaHoja('hoja.ponente2@example.org'));
-  comprobar(filasHoja.filter((f) => f[2] !== 'hoja.ponente@example.org' && f[2] !== 'hoja.ponente2@example.org').every((f) => f[9] === ''),
+  comprobar(filasHoja.filter((f) => f[2] !== 'hoja.ponente@example.org' && f[2] !== 'hoja.ponente2@example.org').every((f) => f[COLUMNA_DE_PONENCIA] === ''),
     'hoja por persona: quien no presentó ponencia no lleva nada en esa columna');
 
   // Los ponentes: todos los registros de ponente, una vez cada uno, tengan o no asistencia
@@ -763,16 +768,16 @@ async function principal() {
     'ponentes: la consulta trae los registros con perfil de ponente', ponentesBase.length);
   comprobar(ponentesBase.every((r) => filasHoja.filter((f) => f[2] === r.correo).length === 1),
     'ponentes: cada registro de ponente sale una sola vez en la hoja, haya asistido o no');
-  comprobar(filasHoja.filter((f) => f[3] === 'Ponente').length === ponentesBase.length,
-    'ponentes: las filas con perfil «Ponente» son tantas como los registros de ponente', filasHoja.filter((f) => f[3] === 'Ponente').length);
+  comprobar(filasHoja.filter((f) => f[COLUMNA_DEL_PERFIL] === 'Ponente').length === ponentesBase.length,
+    'ponentes: las filas con perfil «Ponente» son tantas como los registros de ponente', filasHoja.filter((f) => f[COLUMNA_DEL_PERFIL] === 'Ponente').length);
   const filaSin = filaHoja('hoja.ponente3@example.org');
   comprobar(
-    JSON.stringify(filaSin?.slice(1)) === JSON.stringify(['Teresa Sin Asistencia', 'hoja.ponente3@example.org', 'Ponente', 0, 0, 0, 0, true, '']),
+    JSON.stringify(filaSin?.slice(1)) === JSON.stringify(['Teresa Sin Asistencia', 'hoja.ponente3@example.org', '', 'Ponente', 0, 0, 0, 0, true]),
     'ponentes: quien no registró asistencia sale con cero días y la casilla de registro marcada', filaSin);
-  comprobar(filaHoja('hoja.ponente4@example.org')?.[8] === false,
+  comprobar(filaHoja('hoja.ponente4@example.org')?.[COLUMNA_CON_REGISTRO] === false,
     'ponentes: un ponente con el registro cancelado sale, con la casilla sin marcar', filaHoja('hoja.ponente4@example.org'));
-  const ultimoQueAsistio = Math.max(...filasHoja.filter((f) => Number(f[7]) > 0).map((f) => Number(f[0])));
-  comprobar(ponentesBase.filter((r) => !filasHoja.some((f) => f[2] === r.correo && Number(f[7]) > 0))
+  const ultimoQueAsistio = Math.max(...filasHoja.filter((f) => Number(f[COLUMNA_DEL_TOTAL]) > 0).map((f) => Number(f[0])));
+  comprobar(ponentesBase.filter((r) => !filasHoja.some((f) => f[2] === r.correo && Number(f[COLUMNA_DEL_TOTAL]) > 0))
     .every((r) => Number(filaHoja(r.correo)![0]) > ultimoQueAsistio),
     'ponentes: los que no registraron asistencia van detrás de todos los que sí');
   const resumenPonentes = resumenDePonentes(deLaBase, ponentesBase);

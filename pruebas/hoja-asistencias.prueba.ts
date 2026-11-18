@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  COLUMNA_CON_REGISTRO, ENCABEZADOS_DE_CONSTANCIAS, ENCABEZADOS_DE_LA_HOJA_RETIRADA, ENCABEZADOS_PERSONAS, ENCABEZADO_DE_GENERAR,
-  HOJA_PERSONAS, HOJA_RETIRADA, conRegistro, filasDePersonas, planDeHoja, posiblesRepetidos, resumenDePonentes, type FilaDeAsistencia,
+  COLUMNA_CON_REGISTRO, COLUMNA_DE_PONENCIA, ENCABEZADOS_DE_CONSTANCIAS, ENCABEZADOS_DE_LA_HOJA_RETIRADA, ENCABEZADOS_PERSONAS,
+  ENCABEZADO_DE_GENERAR, HOJA_PERSONAS, HOJA_RETIRADA, REGLA_DE_CONSTANCIA, REGLA_DE_PONENCIA, colocarCeldas, conRegistro,
+  filasDePersonas, planDeColumnas, planDeHoja, posiblesRepetidos, resumenDePonentes, type CambioDeColumnas, type FilaDeAsistencia,
   type FilaDeHoja, type RegistroDePonente,
 } from '@/lib/asistencia';
 import { SEPARADOR_DE_PONENCIAS } from '@/lib/ponentes';
@@ -12,13 +13,24 @@ const COLUMNA_DE_GENERAR = ENCABEZADOS_PERSONAS.length + ENCABEZADOS_DE_CONSTANC
 /** Los títulos de la pestaña tal como quedan en una hoja nueva: los del sistema y, a su derecha, los de las constancias. */
 const TITULOS_DE_UNA_HOJA_NUEVA = [...ENCABEZADOS_PERSONAS, ...ENCABEZADOS_DE_CONSTANCIAS];
 
+/**
+ * Las columnas de la pestaña tal como estaban antes de poner «Ponencia» junto a «Correo»: «Ponencia» iba al final, tras «Con registro»
+ * (diez columnas), y, antes de que existiera, la pestaña sólo tenía las nueve primeras.
+ */
+const ENCABEZADOS_DE_ANTES = ['N.º', 'Nombre', 'Correo', 'Perfil', 'Miércoles 11', 'Jueves 12', 'Viernes 13', 'Total', 'Con registro', 'Ponencia'];
+const NUEVE_DE_ANTES = ENCABEZADOS_DE_ANTES.slice(0, 9);
+/** Una fila con el orden de antes (con la ponencia al final, si se da) y la casilla en la I. */
+const filaDeAntes = (n: number, nombre: string, correo: string, ponencia?: string) =>
+  [n, nombre, correo, 'Público general', 0, 1, 0, 1, true, ...(ponencia === undefined ? [] : [ponencia])];
+
 /** Los títulos del programa en los que figura un autor, tal como están en el programa. */
 const titulosDe = (autor: string) => MESAS.flatMap((m) => m.ponencias).filter((p) => p.autores.includes(autor)).map((p) => p.titulo);
 
 /**
- * La pestaña «Asistencia por persona» de la hoja de Google: nombre, correo, perfil, un día por columna, el total,
- * «Con registro» como casilla de verificación y la «Ponencia» de los ponentes. Se llena por lotes, no al escanear, y es copia de la base. Aquí se ve con una
- * hoja simulada con memoria lo que de verdad queda en cada fila, y cómo se retira la pestaña «Asistencias» del diseño anterior.
+ * La pestaña «Asistencia por persona» de la hoja de Google: nombre, correo, la «Ponencia» de los ponentes, perfil, un día por
+ * columna, el total y «Con registro» como casilla de verificación. Se llena por lotes, no al escanear, y es copia de la base. Aquí
+ * se ve con una hoja simulada con memoria lo que de verdad queda en cada fila, cómo se acomodan las columnas de una pestaña que
+ * ya existía con otro orden y cómo se retira la pestaña «Asistencias» del diseño anterior.
  */
 
 const de = (sesion: string, nombre: string, registro: string | null, extra: Partial<FilaDeAsistencia> = {}): FilaDeAsistencia => ({
@@ -28,16 +40,17 @@ const de = (sesion: string, nombre: string, registro: string | null, extra: Part
 });
 
 describe('las filas de la pestaña', () => {
-  it('lleva lo de la tabla «Por persona» del panel —nombre, correo, perfil, un día por columna, total— y «Con registro» al final', () => {
+  it('lleva lo de la tabla «Por persona» del panel —nombre, correo, perfil, un día por columna, total—, «Ponencia» justo después de «Correo» y «Con registro» al final', () => {
     expect(HOJA_PERSONAS).toBe('Asistencia por persona');
     expect([...ENCABEZADOS_PERSONAS]).toEqual([
-      'N.º', 'Nombre', 'Correo', 'Perfil', 'Miércoles 11', 'Jueves 12', 'Viernes 13', 'Total', 'Con registro', 'Ponencia',
+      'N.º', 'Nombre', 'Correo', 'Ponencia', 'Perfil', 'Miércoles 11', 'Jueves 12', 'Viernes 13', 'Total', 'Con registro',
     ]);
-    // La columna I: la que se muestra con casillas de verificación.
-    expect(COLUMNA_CON_REGISTRO).toBe(8);
+    // «Ponencia», justo después de «Correo»: la D.
+    expect(COLUMNA_DE_PONENCIA).toBe(3);
+    expect(ENCABEZADOS_PERSONAS[COLUMNA_DE_PONENCIA - 1]).toBe('Correo');
+    // La J, la última de las diez: la que se muestra con casillas de verificación.
+    expect(COLUMNA_CON_REGISTRO).toBe(9);
     expect(ENCABEZADOS_PERSONAS[COLUMNA_CON_REGISTRO]).toBe('Con registro');
-    // Y la nueva, «Ponencia», a su derecha: lo de antes no cambia de letra.
-    expect(ENCABEZADOS_PERSONAS[COLUMNA_CON_REGISTRO + 1]).toBe('Ponencia');
     expect(ENCABEZADOS_PERSONAS).toHaveLength(10);
   });
 
@@ -47,8 +60,8 @@ describe('las filas de la pestaña', () => {
       de('jueves', 'Luis Pérez', 'r2'),
     ]);
     expect(filas).toEqual([
-      [1, 'Silvana Costa', 'silvana.costa@x.org', 'publico_general', 1, 1, 1, 3, true, ''],
-      [2, 'Luis Pérez', 'luis.pérez@x.org', 'publico_general', 0, 1, 0, 1, true, ''],
+      [1, 'Silvana Costa', 'silvana.costa@x.org', '', 'publico_general', 1, 1, 1, 3, true],
+      [2, 'Luis Pérez', 'luis.pérez@x.org', '', 'publico_general', 0, 1, 0, 1, true],
     ]);
     // Cada fila trae una celda por título.
     expect(filas.every((f) => f.length === ENCABEZADOS_PERSONAS.length)).toBe(true);
@@ -63,8 +76,8 @@ describe('las filas de la pestaña', () => {
   it('el perfil sale como se lee, no como se guarda, si se da cómo nombrarlo; sin registro no tiene perfil', () => {
     const nombre = (clave: string) => ({ publico_general: 'Público general' })[clave] ?? clave;
     const filas = filasDePersonas([de('jueves', 'Ana Ruiz', 'r1'), de('jueves', 'Pedro Soto', null)], nombre);
-    expect(filas[0][3]).toBe('Público general');
-    expect(filas[1][3]).toBe('');
+    expect(filas[0][4]).toBe('Público general');
+    expect(filas[1][4]).toBe('');
   });
 
   it('quien asistió sin estar registrado queda sin marcar: no recibe constancia', () => {
@@ -86,7 +99,7 @@ describe('las filas de la pestaña', () => {
       de('viernes', 'Pedro S.', null, { correo: 'PEDRO@x.org' }),
     ]);
     expect(filas).toHaveLength(1);
-    expect(filas[0].slice(4)).toEqual([1, 0, 1, 2, false, '']);
+    expect(filas[0].slice(5)).toEqual([1, 0, 1, 2, false]);
   });
 
   it('va en orden de llegada, no por nombre ni por total: quien suma un día después no cambia de lugar', () => {
@@ -101,21 +114,22 @@ describe('las filas de la pestaña', () => {
     expect(despues.map((f) => f[0])).toEqual([1, 2]);
   });
 
-  it('la «Ponencia» es la última celda y sale de lo que se dé para cada nombre; sin nada que dar, queda en blanco', () => {
+  it('la «Ponencia» va justo después del correo y sale de lo que se dé para cada nombre; sin nada que dar, queda en blanco', () => {
     const ponencia = (nombre: string) => (nombre === 'Ana Ruiz' ? 'Título de Ana' : '');
     const filas = filasDePersonas([de('jueves', 'Ana Ruiz', 'r1'), de('jueves', 'Luis Pérez', 'r2')], undefined, ponencia);
-    expect(filas.map((f) => f.at(-1))).toEqual(['Título de Ana', '']);
+    expect(filas.map((f) => f[COLUMNA_DE_PONENCIA])).toEqual(['Título de Ana', '']);
+    expect(filas[0].slice(0, 3)).toEqual([1, 'Ana Ruiz', 'ana.ruiz@x.org']);
     expect(filas.every((f) => f.length === ENCABEZADOS_PERSONAS.length)).toBe(true);
   });
 
   it('la sesión de prueba no cuenta: quien sólo hizo la prueba no tiene fila', () => {
     expect(filasDePersonas([de('prueba', 'Ana Ruiz', 'r1')])).toEqual([]);
-    expect(filasDePersonas([de('prueba', 'Ana Ruiz', 'r1'), de('jueves', 'Ana Ruiz', 'r1')])[0].slice(4)).toEqual([0, 1, 0, 1, true, '']);
+    expect(filasDePersonas([de('prueba', 'Ana Ruiz', 'r1'), de('jueves', 'Ana Ruiz', 'r1')])[0].slice(5)).toEqual([0, 1, 0, 1, true]);
   });
 });
 
 describe('qué hay que escribir en la hoja', () => {
-  const f = (n: number, nombre = `P${n}`, registro = true, ponencia = ''): FilaDeHoja => [n, nombre, `p${n}@x.org`, 'Público general', 0, 1, 0, 1, registro, ponencia];
+  const f = (n: number, nombre = `P${n}`, registro = true, ponencia = ''): FilaDeHoja => [n, nombre, `p${n}@x.org`, ponencia, 'Público general', 0, 1, 0, 1, registro];
 
   it('una hoja igual a la base no necesita nada', () => {
     const p = planDeHoja([f(1), f(2)], [f(1), f(2)]);
@@ -148,30 +162,119 @@ describe('qué hay que escribir en la hoja', () => {
   });
 
   it('compara como texto: lo que la hoja devuelve como «1», «TRUE» o «FALSE» no es un cambio', () => {
-    const enLaHoja = ['1', 'P1', 'p1@x.org', 'Público general', '0', '1', '0', '1', 'TRUE'];
+    const enLaHoja = ['1', 'P1', 'p1@x.org', '', 'Público general', '0', '1', '0', '1', 'TRUE'];
     expect(planDeHoja([f(1)], [enLaHoja]).escribir).toEqual([]);
-    expect(planDeHoja([f(1, 'P1', false)], [[...enLaHoja.slice(0, 8), 'FALSE']]).escribir).toEqual([]);
+    expect(planDeHoja([f(1, 'P1', false)], [[...enLaHoja.slice(0, 9), 'FALSE']]).escribir).toEqual([]);
   });
 
   it('una casilla que alguien cambió a mano se corrige: la base manda', () => {
-    const p = planDeHoja([f(1, 'P1', true)], [[...f(1).slice(0, 8), 'FALSE']]);
+    const p = planDeHoja([f(1, 'P1', true)], [[...f(1).slice(0, 9), 'FALSE']]);
     expect(p.escribir).toEqual([f(1, 'P1', true)]);
     expect(p.cambian).toBe(1);
   });
 
   it('un «Sí» o «No» de la versión anterior de la hoja es un cambio: se reescribe como casilla', () => {
-    expect(planDeHoja([f(1)], [[...f(1).slice(0, 8), 'Sí']]).escribir).toEqual([f(1)]);
-    expect(planDeHoja([f(1, 'P1', false)], [[...f(1).slice(0, 8), 'No']]).escribir).toEqual([f(1, 'P1', false)]);
+    expect(planDeHoja([f(1)], [[...f(1).slice(0, 9), 'Sí']]).escribir).toEqual([f(1)]);
+    expect(planDeHoja([f(1, 'P1', false)], [[...f(1).slice(0, 9), 'No']]).escribir).toEqual([f(1, 'P1', false)]);
   });
 
-  it('una ponencia que se añade a una fila que no la tenía es un cambio; una hoja de nueve columnas no la trae y cuenta como vacía', () => {
+  it('una ponencia que se añade a una fila que no la tenía es un cambio; una celda de ponencia en blanco, o que la hoja no devuelve, cuenta como vacía', () => {
     expect(planDeHoja([f(1, 'P1', true, 'Título')], [f(1)]).escribir).toEqual([f(1, 'P1', true, 'Título')]);
-    // La pestaña de antes no tenía la columna: una fila sin la décima celda es igual a una con la celda en blanco.
-    expect(planDeHoja([f(1)], [f(1).slice(0, 9)]).escribir).toEqual([]);
+    const sinLaCelda = f(1).map((celda, i) => (i === COLUMNA_DE_PONENCIA ? undefined : celda));
+    expect(planDeHoja([f(1)], [sinLaCelda]).escribir).toEqual([]);
   });
 
   it('no mira lo que alguien haya anotado a la derecha de las diez columnas', () => {
     expect(planDeHoja([f(1)], [[...f(1), 'constancia.pdf']]).escribir).toEqual([]);
+  });
+});
+
+describe('el orden de las columnas (planDeColumnas)', () => {
+  const nuevo = [...ENCABEZADOS_PERSONAS, ...ENCABEZADOS_DE_CONSTANCIAS];
+  const reglas = [REGLA_DE_PONENCIA, REGLA_DE_CONSTANCIA];
+
+  it('lo que se pidió: «Ponencia» tras «Correo» y «Constancia» tras «✨Generar Constancia»', () => {
+    expect(REGLA_DE_PONENCIA).toMatchObject({ titulo: 'Ponencia', despuesDe: 'Correo' });
+    expect(REGLA_DE_CONSTANCIA).toMatchObject({ titulo: 'Constancia', despuesDe: '✨Generar Constancia' });
+    // Y los títulos de ahora ya las cumplen.
+    expect(nuevo[nuevo.indexOf('Correo') + 1]).toBe('Ponencia');
+    expect(nuevo[nuevo.indexOf('✨Generar Constancia') + 1]).toBe('Constancia');
+  });
+
+  it('si cada columna ya va donde le toca, no hay nada que hacer', () => {
+    expect(planDeColumnas(nuevo, reglas)).toEqual({ cambios: [], titulos: nuevo });
+  });
+
+  it('«Ponencia» al final de las diez pasa a ir tras «Correo»: un solo movimiento, de la J (9) a la D (3)', () => {
+    const plan = planDeColumnas([...ENCABEZADOS_DE_ANTES, ...ENCABEZADOS_DE_CONSTANCIAS], reglas);
+    expect(plan.cambios).toEqual([{ tipo: 'mover', titulo: 'Ponencia', despuesDe: 'Correo', desde: 9, hasta: 3 }]);
+    expect(plan.titulos).toEqual(nuevo);
+  });
+
+  it('«Constancia» antes de «✨Generar Constancia» se mueve hacia la derecha: queda en la columna de ésta, que se corre a la izquierda', () => {
+    const sin = ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== 'Constancia');
+    const antes = [...ENCABEZADOS_PERSONAS, 'Constancia', ...sin]; // «Constancia» en la K (10); «✨Generar Constancia» en la R (17)
+    const plan = planDeColumnas(antes, reglas);
+    expect(plan.cambios).toEqual([{ tipo: 'mover', titulo: 'Constancia', despuesDe: '✨Generar Constancia', desde: 10, hasta: 17 }]);
+    expect(plan.titulos).toEqual(nuevo);
+  });
+
+  it('«Constancia» después de «✨Generar Constancia» pero no pegada a ella se mueve hacia la izquierda', () => {
+    const sin = ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== 'Constancia');
+    const antes = [...ENCABEZADOS_PERSONAS, ...sin, 'Constancia']; // «Constancia» al final (19)
+    const plan = planDeColumnas(antes, reglas);
+    expect(plan.cambios).toEqual([{ tipo: 'mover', titulo: 'Constancia', despuesDe: '✨Generar Constancia', desde: 19, hasta: 17 }]);
+    expect(plan.titulos).toEqual(nuevo);
+  });
+
+  it('si hacen falta los dos movimientos, van en orden y cada uno cuenta con lo que movió el anterior', () => {
+    const sin = ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== 'Constancia');
+    const antes = [...ENCABEZADOS_DE_ANTES, 'Constancia', ...sin];
+    const plan = planDeColumnas(antes, reglas);
+    expect(plan.cambios.map((c) => c.titulo)).toEqual(['Ponencia', 'Constancia']);
+    expect(plan.titulos).toEqual(nuevo);
+    // Y es estable: planear otra vez sobre el resultado no da nada.
+    expect(planDeColumnas(plan.titulos, reglas).cambios).toEqual([]);
+  });
+
+  it('la pestaña de las nueve primeras, sin «Ponencia»: se inserta una columna en blanco tras «Correo»', () => {
+    const plan = planDeColumnas(NUEVE_DE_ANTES, [REGLA_DE_PONENCIA]);
+    expect(plan.cambios).toEqual([{ tipo: 'insertar', titulo: 'Ponencia', despuesDe: 'Correo', en: 3 }]);
+    // En blanco: el título se pone al escribir los de siempre, no aquí.
+    expect(plan.titulos).toEqual(['N.º', 'Nombre', 'Correo', '', 'Perfil', 'Miércoles 11', 'Jueves 12', 'Viernes 13', 'Total', 'Con registro']);
+  });
+
+  it('sin «Ponencia» y sin lo que había tras «Correo» en la pestaña de antes, no se inserta nada: ahí no se sabe qué hay', () => {
+    expect(planDeColumnas(['N.º', 'Nombre', 'Correo', ''], [REGLA_DE_PONENCIA]).cambios).toEqual([]);
+    expect(planDeColumnas(['N.º', 'Nombre', 'Correo', 'Otra cosa'], [REGLA_DE_PONENCIA]).cambios).toEqual([]);
+    expect(planDeColumnas(['N.º', 'Nombre', 'Correo'], [REGLA_DE_PONENCIA]).cambios).toEqual([]);
+  });
+
+  it('una pestaña sin títulos, o sin la columna de referencia, no se toca', () => {
+    expect(planDeColumnas([], reglas).cambios).toEqual([]);
+    expect(planDeColumnas(['Nombre', 'Ponencia'], reglas).cambios).toEqual([]); // sin «Correo»
+    expect(planDeColumnas([...ENCABEZADOS_PERSONAS, 'Constancia'], reglas).cambios).toEqual([]); // sin «✨Generar Constancia»
+    expect(planDeColumnas([...ENCABEZADOS_PERSONAS, '✨Generar Constancia'], reglas).cambios).toEqual([]); // sin «Constancia»: la crea quien la usa
+  });
+
+  it('no cambia la lista que se le da', () => {
+    const antes = [...ENCABEZADOS_DE_ANTES];
+    planDeColumnas(antes, reglas);
+    expect(antes).toEqual(ENCABEZADOS_DE_ANTES);
+  });
+
+  it('las celdas de una fila se llevan igual que los títulos: lo que se mueve o se inserta en ellos, se mueve o se inserta en la fila', () => {
+    const sin = ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== 'Constancia');
+    for (const antes of [[...ENCABEZADOS_DE_ANTES, ...ENCABEZADOS_DE_CONSTANCIAS], [...ENCABEZADOS_DE_ANTES, 'Constancia', ...sin], NUEVE_DE_ANTES]) {
+      const plan = planDeColumnas(antes, reglas);
+      expect(colocarCeldas(antes, plan.cambios, '')).toEqual(plan.titulos);
+    }
+  });
+
+  it('una fila más corta que la columna que se mueve se completa con celdas en blanco, como la hoja', () => {
+    const cambio: CambioDeColumnas = { tipo: 'mover', titulo: 'Ponencia', despuesDe: 'Correo', desde: 9, hasta: 3 };
+    expect(colocarCeldas([1, 'Ana', 'a@x.org'], [cambio], '')).toEqual([1, 'Ana', 'a@x.org', ...Array.from({ length: 7 }, () => '')]);
+    expect(colocarCeldas([1, 'Ana', 'a@x.org', 'P', 0, 1, 0, 1, true], [cambio], '')).toEqual([1, 'Ana', 'a@x.org', '', 'P', 0, 1, 0, 1, true]);
   });
 });
 
@@ -202,13 +305,19 @@ interface PestanaSimulada {
   /** Las casillas de verificación que se pidieron (filas de la API, desde 0, sin incluir `hasta`) y las que se quitaron. */
   casillas: { desde: number; hasta: number; columna: number }[];
   casillasQuitadas: { desde: number; hasta: number; columna: number }[];
+  /**
+   * Lo que hay ahora, no lo que se pidió: las columnas con casillas de verificación y con formato de fecha. Insertar o mover una
+   * columna las lleva consigo, como hace Google: la validación y el formato son de las celdas, no de la letra.
+   */
+  conCasillas: Set<number>;
+  conFecha: Set<number>;
   /** Si es verdadero, Google rechaza las escrituras de esta pestaña y de ninguna otra. */
   fallaPropia: string | null;
 }
 const pestanaNueva = (titulo: string, sheetId: number): PestanaSimulada => ({
   titulo, sheetId, existe: false, encabezados: [], filas: [], indice: undefined, escrituras: [], limpiezas: [],
   creadaEn: undefined, cuadricula: 1000, ampliaciones: [], columnas: 26, columnasAnadidas: [], formatosDeFecha: [],
-  casillas: [], casillasQuitadas: [], fallaPropia: null,
+  casillas: [], casillasQuitadas: [], conCasillas: new Set(), conFecha: new Set(), fallaPropia: null,
 });
 
 /** La pestaña «Asistencias» del diseño anterior: la que se retira. */
@@ -232,6 +341,17 @@ const hoja = {
   eventos: [] as string[],
   /** Cuántas veces se leyeron los títulos de la pestaña vieja (para ver que no se mira si no está). */
   lecturasDeLaVieja: 0,
+  /** Cuántas veces se leyó la fila de títulos de «Asistencia por persona», y qué pasa justo antes de cada lectura (otra pasada, a mano…). */
+  lecturasDeTitulos: 0,
+  alLeerTitulos: null as ((lectura: number) => void) | null,
+};
+
+/** Dónde queda el índice de una columna tras insertar `cuantas` en `donde`, o tras mover la de `desde` para que quede en `hasta`. */
+const trasInsertar = (donde: number, cuantas: number) => (n: number) => (n >= donde ? n + cuantas : n);
+const trasMover = (desde: number, hasta: number) => (n: number) => {
+  if (n === desde) return hasta;
+  if (desde < hasta) return n > desde && n <= hasta ? n - 1 : n;
+  return n >= hasta && n < desde ? n + 1 : n;
 };
 
 /** La pestaña a la que apunta un rango de Google: con nombre entre comillas, la de personas; sin ellas, la vieja. */
@@ -300,7 +420,38 @@ vi.mock('@/lib/servidor/google', () => ({
             // Lo que había desde esa columna se recorre a la derecha, títulos y datos; la nueva queda en blanco.
             if (destino.encabezados.length > donde) destino.encabezados = [...destino.encabezados.slice(0, donde), ...hueco, ...destino.encabezados.slice(donde)];
             destino.filas = destino.filas.map((fila) => (fila.length > donde ? [...fila.slice(0, donde), ...hueco, ...fila.slice(donde)] : fila));
+            destino.conCasillas = new Set([...destino.conCasillas].map(trasInsertar(donde, cuantas)));
+            destino.conFecha = new Set([...destino.conFecha].map(trasInsertar(donde, cuantas)));
+            destino.columnas += cuantas; // la cuadrícula crece con la columna insertada
             hoja.eventos.push(`insertar columna ${donde}`);
+            return {};
+          }
+          const mover = r.moveDimension as
+            { source: { sheetId: number; dimension: string; startIndex: number; endIndex: number }; destinationIndex: number } | undefined;
+          if (mover) {
+            const destino = pestanasSimuladas.find((x) => x.sheetId === mover.source.sheetId)!;
+            if (fallaDe(destino)) throw new Error(fallaDe(destino)!);
+            expect(mover.source.dimension).toBe('COLUMNS');
+            const desde = mover.source.startIndex;
+            expect(mover.source.endIndex).toBe(desde + 1);
+            // Mover una columna a donde ya está —delante de ella o justo detrás— no es mover nada: sería una petición de más.
+            expect([desde, desde + 1]).not.toContain(mover.destinationIndex);
+            // `destinationIndex` se cuenta antes de sacar la columna de su lugar.
+            const hasta = mover.destinationIndex > desde ? mover.destinationIndex - 1 : mover.destinationIndex;
+            const acomodar = <T,>(celdas: T[], vacio: T) => {
+              const nuevas = [...celdas];
+              while (nuevas.length <= desde) nuevas.push(vacio);
+              const [movida] = nuevas.splice(desde, 1);
+              while (nuevas.length < hasta) nuevas.push(vacio);
+              nuevas.splice(hasta, 0, movida);
+              return nuevas;
+            };
+            // Con sus datos, su formato y sus casillas: títulos, filas y los dos conjuntos.
+            destino.encabezados = acomodar(destino.encabezados, '');
+            destino.filas = destino.filas.map((fila) => acomodar(fila, '' as Celda));
+            destino.conCasillas = new Set([...destino.conCasillas].map(trasMover(desde, hasta)));
+            destino.conFecha = new Set([...destino.conFecha].map(trasMover(desde, hasta)));
+            hoja.eventos.push(`mover columna ${desde} a ${hasta}`);
             return {};
           }
           const ampliar = r.appendDimension as { sheetId: number; dimension: string; length: number } | undefined;
@@ -323,6 +474,7 @@ vi.mock('@/lib/servidor/google', () => ({
             const destino = pestanasSimuladas.find((x) => x.sheetId === formato.range.sheetId)!;
             expect(formato.cell.userEnteredFormat.numberFormat.type).toBe('DATE');
             destino.formatosDeFecha.push({ columna: formato.range.startColumnIndex, patron: formato.cell.userEnteredFormat.numberFormat.pattern });
+            destino.conFecha.add(formato.range.startColumnIndex);
             hoja.eventos.push(`fecha ${formato.range.startColumnIndex}`);
             return {};
           }
@@ -339,6 +491,7 @@ vi.mock('@/lib/servidor/google', () => ({
               // Una validación «booleana» estricta es lo que Sheets muestra como casilla de verificación.
               expect(validar.rule).toEqual({ condition: { type: 'BOOLEAN' }, strict: true });
               destino.casillas.push(rango);
+              destino.conCasillas.add(rango.columna);
               hoja.eventos.push(`casillas ${rango.desde}-${rango.hasta}`);
             } else {
               destino.casillasQuitadas.push(rango);
@@ -358,6 +511,7 @@ vi.mock('@/lib/servidor/google', () => ({
           if (destino === vieja) hoja.lecturasDeLaVieja += 1;
           // Los títulos (fila 1) y los datos (desde la 2) son lecturas distintas.
           if (/A1:[A-Z]1$/.test(p.range)) {
+            if (destino === personas) { hoja.lecturasDeTitulos += 1; hoja.alLeerTitulos?.(hoja.lecturasDeTitulos); }
             const titulos = destino.encabezados.map(comoLoLeeGoogle);
             while (titulos.length > 0 && titulos[titulos.length - 1] === '') titulos.pop();
             return { data: { values: titulos.length > 0 ? [titulos] : undefined } };
@@ -415,9 +569,10 @@ beforeEach(() => {
     p.existe = false; p.encabezados = []; p.filas = []; p.indice = undefined;
     p.escrituras = []; p.limpiezas = []; p.creadaEn = undefined;
     p.cuadricula = 1000; p.ampliaciones = []; p.columnas = 26; p.columnasAnadidas = []; p.formatosDeFecha = [];
-    p.casillas = []; p.casillasQuitadas = []; p.fallaPropia = null;
+    p.casillas = []; p.casillasQuitadas = []; p.conCasillas = new Set(); p.conFecha = new Set(); p.fallaPropia = null;
   }
   hoja.configurado = true; hoja.falla = null; hoja.fallaAlBorrar = null; hoja.fallaAlValidar = null; hoja.eventos = []; hoja.lecturasDeLaVieja = 0;
+  hoja.lecturasDeTitulos = 0; hoja.alLeerTitulos = null;
   asistencias = [];
   ponentesDeLaBase = [];
 });
@@ -443,8 +598,8 @@ describe('sincronizar la pestaña con la base', () => {
     expect(personas.creadaEn).toBe(2); // justo después de «Resumen Registro», que es la segunda
     expect(personas.encabezados).toEqual(TITULOS_DE_UNA_HOJA_NUEVA);
     expect(personas.filas).toEqual([
-      [1, 'Silvana Costa', 'silvana@x.org', 'Público general', 1, 1, 0, 2, true, ''],
-      [2, 'Pedro Soto', 'pedro@x.org', '', 0, 1, 0, 1, false, ''],
+      [1, 'Silvana Costa', 'silvana@x.org', '', 'Público general', 1, 1, 0, 2, true],
+      [2, 'Pedro Soto', 'pedro@x.org', '', '', 0, 1, 0, 1, false],
     ]);
     // Texto tal cual, sin interpretar: un nombre que empiece por «=» no se vuelve fórmula.
     expect(personas.escrituras[0].valueInputOption).toBe('RAW');
@@ -482,8 +637,8 @@ describe('sincronizar la pestaña con la base', () => {
     expect(r).toMatchObject({ nuevas: 0, cambiadas: 1, quitadas: 0 });
     expect(personas.escrituras).toHaveLength(1);
     expect(personas.escrituras[0].range).toMatch(/!A3:J3$/); // sólo la fila de Luis
-    expect(personas.filas[1].slice(4)).toEqual([0, 1, 1, 2, true, '']);
-    expect(personas.filas[0].slice(4)).toEqual([0, 1, 0, 1, true, '']);
+    expect(personas.filas[1].slice(5)).toEqual([0, 1, 1, 2, true]);
+    expect(personas.filas[0].slice(5)).toEqual([0, 1, 0, 1, true]);
   });
 
   it('lo que el comité concilia pasa a casilla marcada en su fila', async () => {
@@ -493,7 +648,7 @@ describe('sincronizar la pestaña con la base', () => {
     asistencias[0] = registrada('jueves', 'Pedro Ramírez Soto', 'pedro@ok.org', { id: asistencias[0].id });
     const r = await sincronizarAsistencias();
     expect(r.cambiadas).toBe(2);
-    expect(personas.filas[0]).toEqual([1, 'Pedro Ramírez Soto', 'pedro@ok.org', 'Público general', 0, 1, 0, 1, true, '']);
+    expect(personas.filas[0]).toEqual([1, 'Pedro Ramírez Soto', 'pedro@ok.org', '', 'Público general', 0, 1, 0, 1, true]);
   });
 
   it('una persona cuyo registro se cancela después de asistir queda sin marcar', async () => {
@@ -519,7 +674,7 @@ describe('sincronizar la pestaña con la base', () => {
     asistencias[1] = registrada('jueves', 'Ana Ruiz', 'ana@x.org', { id: asistencias[1].id });
     const r = await sincronizarAsistencias();
     expect(r.quitadas).toBe(1);
-    expect(personas.filas.map((f) => [f[0], f[1], f[7]])).toEqual([[1, 'Ana Ruiz', 2], [2, 'Luis Pérez', 1]]);
+    expect(personas.filas.map((f) => [f[0], f[1], f[8]])).toEqual([[1, 'Ana Ruiz', 2], [2, 'Luis Pérez', 1]]);
     expect(personas.limpiezas.at(-1)).toMatch(/!A4:J4$/);
     // Ni queda una casilla vacía en la fila que ya no es de nadie (la fila 4 de la hoja es la 3 de la API).
     expect(personas.casillasQuitadas).toEqual([
@@ -607,7 +762,7 @@ describe('«Con registro» como casilla de verificación', () => {
 
   it('una hoja con la versión anterior (texto «Sí» y «No») se reescribe una vez como casillas, y la pasada siguiente no escribe nada', async () => {
     personas.existe = true;
-    personas.encabezados = [...ENCABEZADOS_PERSONAS];
+    personas.encabezados = [...NUEVE_DE_ANTES];
     personas.filas = [
       [1, 'Ana Ruiz', 'ana@x.org', 'Público general', 0, 1, 0, 1, 'Sí'],
       [2, 'Pedro Soto', 'pedro@x.org', '', 0, 1, 0, 1, 'No'],
@@ -643,8 +798,8 @@ describe('la columna «Ponencia»', () => {
     asistencias = [ponente('jueves', 'Sebastian Grillo', 'sg@x.org'), registrada('jueves', 'Ana Ruiz', 'ana@x.org')];
     await sincronizarAsistencias();
     expect(titulosDe('Sebastian Grillo')).toHaveLength(1);
-    expect(personas.filas[0].at(-1)).toBe(titulosDe('Sebastian Grillo')[0]);
-    expect(personas.filas[1].at(-1)).toBe('');
+    expect(personas.filas[0][COLUMNA_DE_PONENCIA]).toBe(titulosDe('Sebastian Grillo')[0]);
+    expect(personas.filas[1][COLUMNA_DE_PONENCIA]).toBe('');
   });
 
   it('quien presentó dos ponencias lleva las dos, en el orden del programa, separadas', async () => {
@@ -652,119 +807,215 @@ describe('la columna «Ponencia»', () => {
     await sincronizarAsistencias();
     const titulos = titulosDe('Nuria Ape');
     expect(titulos).toHaveLength(2);
-    expect(personas.filas[0].at(-1)).toBe(titulos.join(SEPARADOR_DE_PONENCIAS));
+    expect(personas.filas[0][COLUMNA_DE_PONENCIA]).toBe(titulos.join(SEPARADOR_DE_PONENCIAS));
   });
 
   it('se reconoce a quien se registró con los dos apellidos, sin acentos o en mayúsculas', async () => {
     asistencias = [ponente('jueves', 'SEBASTIÁN GRILLO PÉREZ', 'sg@x.org')];
     await sincronizarAsistencias();
-    expect(personas.filas[0].at(-1)).toBe(titulosDe('Sebastian Grillo')[0]);
+    expect(personas.filas[0][COLUMNA_DE_PONENCIA]).toBe(titulosDe('Sebastian Grillo')[0]);
   });
 
   it('quien no figura en el programa queda en blanco, aunque se haya registrado como ponente', async () => {
     asistencias = [ponente('jueves', 'Juan Nadie Pérez', 'jn@x.org')];
     await sincronizarAsistencias();
-    expect(personas.filas[0].at(-1)).toBe('');
+    expect(personas.filas[0][COLUMNA_DE_PONENCIA]).toBe('');
   });
 
   it('también se reconoce a quien asistió sin registro, por el nombre que escribió', async () => {
     asistencias = [una('jueves', 'presencial', 'Sebastian Grillo', 'otro.correo@x.org')];
     await sincronizarAsistencias();
     expect(personas.filas[0][COLUMNA_CON_REGISTRO]).toBe(false);
-    expect(personas.filas[0].at(-1)).toBe(titulosDe('Sebastian Grillo')[0]);
+    expect(personas.filas[0][COLUMNA_DE_PONENCIA]).toBe(titulosDe('Sebastian Grillo')[0]);
   });
 
   it('una celda de ponencia cambiada a mano se corrige: la base manda', async () => {
     asistencias = [ponente('jueves', 'Sebastian Grillo', 'sg@x.org')];
     await sincronizarAsistencias();
-    personas.filas[0][9] = 'Otro título';
+    personas.filas[0][COLUMNA_DE_PONENCIA] = 'Otro título';
     const r = await sincronizarAsistencias();
     expect(r.cambiadas).toBe(1);
-    expect(personas.filas[0].at(-1)).toBe(titulosDe('Sebastian Grillo')[0]);
+    expect(personas.filas[0][COLUMNA_DE_PONENCIA]).toBe(titulosDe('Sebastian Grillo')[0]);
   });
 });
 
-describe('la pestaña que ya existía sin la columna «Ponencia»', () => {
-  const nueve = ENCABEZADOS_PERSONAS.slice(0, 9);
-  const filaDeNueve = (n: number, nombre: string, correo: string) => [n, nombre, correo, 'Público general', 0, 1, 0, 1, true];
+describe('la pestaña que ya existía sin la columna «Ponencia» (sólo las nueve primeras)', () => {
   const ponente = (sesion: string, nombre: string, correo: string) =>
     registrada(sesion, nombre, correo, { perfil: 'ponente' });
 
   beforeEach(() => {
     personas.existe = true;
-    personas.encabezados = [...nueve];
-    personas.filas = [filaDeNueve(1, 'Ana Ruiz', 'ana@x.org')];
+    personas.encabezados = [...NUEVE_DE_ANTES];
+    personas.filas = [filaDeAntes(1, 'Ana Ruiz', 'ana@x.org')];
+    personas.conCasillas = new Set([8]); // «Con registro» estaba en la I
     asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org'), ponente('jueves', 'Sebastian Grillo', 'sg@x.org')];
   });
 
-  it('con la columna libre, sólo se pone el título y se escriben las filas que cambian: sin insertar nada', async () => {
+  it('se inserta en la D, justo después de «Correo»: lo demás se recorre una columna, con sus casillas, y cada fila sigue siendo de quien era', async () => {
     const r = await sincronizarAsistencias();
+    expect(hoja.eventos.filter((e) => e === 'insertar columna 3')).toHaveLength(1);
+    expect(hoja.eventos.some((e) => e.startsWith('mover'))).toBe(false);
     expect(personas.encabezados).toEqual(TITULOS_DE_UNA_HOJA_NUEVA);
-    expect(hoja.eventos.some((e) => e.startsWith('insertar'))).toBe(false);
-    // Lo único que se avisa es que se añadieron las columnas de las constancias.
-    expect(r.avisos).toHaveLength(1);
-    expect(r.avisos?.[0]).toMatch(/columnas de las constancias/);
-    // Ana ya estaba bien (su celda de ponencia vacía es igual a ninguna): sólo se escribe la fila nueva.
+    expect(personas.conCasillas.has(COLUMNA_CON_REGISTRO)).toBe(true); // la casilla se fue a la J con su columna
+    expect(personas.conCasillas.has(8)).toBe(false);
+    // El aviso de la columna insertada y el de las columnas de las constancias que se añadieron.
+    expect(r.avisos).toHaveLength(2);
+    expect(r.avisos?.[0]).toMatch(/Se insertó la columna «Ponencia» \(D\) de «Asistencia por persona», después de «Correo»/);
+    expect(r.avisos?.[1]).toMatch(/columnas de las constancias/);
+    // Ana ya estaba bien (su celda de ponencia, vacía, es igual a la nueva en blanco): sólo se escribe la fila nueva.
+    expect(personas.filas[0]).toEqual([1, 'Ana Ruiz', 'ana@x.org', '', 'Público general', 0, 1, 0, 1, true]);
     expect(personas.escrituras).toHaveLength(1);
     expect(personas.escrituras[0].range).toMatch(/!A3:J3$/);
-    expect(personas.filas[1].at(-1)).toBe(titulosDe('Sebastian Grillo')[0]);
+    expect(personas.filas[1][COLUMNA_DE_PONENCIA]).toBe(titulosDe('Sebastian Grillo')[0]);
   });
 
-  it('si en ese lugar había una columna de quien hace las constancias, se inserta una nueva y la suya se recorre con sus datos', async () => {
-    personas.encabezados = [...nueve, 'Enlace a la constancia'];
-    personas.filas = [[...filaDeNueve(1, 'Ana Ruiz', 'ana@x.org'), 'https://docs.example/ana']];
+  it('lo de quien hace las constancias a la derecha se recorre con sus datos, sin pisarlo, y las columnas de las constancias van detrás de lo suyo', async () => {
+    personas.encabezados = [...NUEVE_DE_ANTES, 'Enlace a la constancia'];
+    personas.filas = [[...filaDeAntes(1, 'Ana Ruiz', 'ana@x.org'), 'https://docs.example/ana']];
     const r = await sincronizarAsistencias();
-    expect(hoja.eventos.filter((e) => e === 'insertar columna 9')).toHaveLength(1);
-    // «Ponencia» en la J; lo de esa persona, una columna a la derecha; y las columnas de las constancias, después de lo suyo.
+    expect(hoja.eventos.filter((e) => e === 'insertar columna 3')).toHaveLength(1);
+    // Las diez nuestras, «Enlace a la constancia» donde quedó (la K) y, después de lo suyo, las de las constancias.
     expect(personas.encabezados).toEqual([...ENCABEZADOS_PERSONAS, 'Enlace a la constancia', ...ENCABEZADOS_DE_CONSTANCIAS]);
     expect(personas.filas[0][10]).toBe('https://docs.example/ana');
-    expect(personas.filas[0][9]).toBe('');
-    expect(r.avisos?.[0]).toMatch(/Se insertó la columna «Ponencia» \(J\)/);
+    expect(personas.filas[0][COLUMNA_CON_REGISTRO]).toBe(true);
+    expect(r.avisos?.[0]).toMatch(/Se insertó la columna «Ponencia» \(D\)/);
   });
 
-  it('y en la pasada siguiente no inserta otra: ya está su título', async () => {
-    personas.encabezados = [...nueve, 'Enlace a la constancia'];
-    personas.filas = [[...filaDeNueve(1, 'Ana Ruiz', 'ana@x.org'), 'https://docs.example/ana']];
+  it('en la pasada siguiente no inserta otra: ya está su título, y no queda nada por hacer', async () => {
+    personas.encabezados = [...NUEVE_DE_ANTES, 'Enlace a la constancia'];
+    personas.filas = [[...filaDeAntes(1, 'Ana Ruiz', 'ana@x.org'), 'https://docs.example/ana']];
     await sincronizarAsistencias();
+    hoja.eventos = [];
     const otra = await sincronizarAsistencias();
-    expect(hoja.eventos.filter((e) => e === 'insertar columna 9')).toHaveLength(1);
     expect(otra.avisos).toBeUndefined();
     expect(otra).toMatchObject({ nuevas: 0, cambiadas: 0, quitadas: 0 });
+    expect(hoja.eventos).toEqual([]);
     expect(personas.encabezados[10]).toBe('Enlace a la constancia');
   });
 
-  it('si la columna ya está en blanco (se insertó y la pasada se cortó antes de poner el título), no inserta otra', async () => {
-    personas.encabezados = [...nueve, ''];
+  it('si la columna ya está en blanco (se insertó y la pasada se cortó antes de poner el título), no inserta otra: sólo pone el título', async () => {
+    personas.encabezados = [...NUEVE_DE_ANTES.slice(0, 3), '', ...NUEVE_DE_ANTES.slice(3)];
+    personas.filas = [[1, 'Ana Ruiz', 'ana@x.org', '', 'Público general', 0, 1, 0, 1, true]];
     await sincronizarAsistencias();
     expect(hoja.eventos.some((e) => e.startsWith('insertar'))).toBe(false);
     expect(personas.encabezados).toEqual(TITULOS_DE_UNA_HOJA_NUEVA);
   });
 
   it('el aviso de la columna insertada llega aunque la pasada se detenga por prudencia', async () => {
-    personas.encabezados = [...nueve, 'Mi columna'];
-    personas.filas = Array.from({ length: 15 }, (_, i) => filaDeNueve(i + 1, `P${i}`, `p${i}@x.org`));
+    personas.encabezados = [...NUEVE_DE_ANTES, 'Mi columna'];
+    personas.filas = Array.from({ length: 15 }, (_, i) => filaDeAntes(i + 1, `P${i}`, `p${i}@x.org`));
     asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org')];
     const r = await sincronizarAsistencias();
     expect(r.omitido).toBeDefined();
     expect(r.avisos?.[0]).toMatch(/Se insertó la columna/);
   });
 
-  it('simular no inserta nada', async () => {
-    personas.encabezados = [...nueve, 'Mi columna'];
-    await sincronizarAsistencias({ simular: true });
+  it('simular no inserta nada, pero dice lo que haría y compara las filas como quedarían', async () => {
+    personas.encabezados = [...NUEVE_DE_ANTES, 'Mi columna'];
+    const r = await sincronizarAsistencias({ simular: true });
     expect(hoja.eventos).toEqual([]);
-    expect(personas.encabezados).toEqual([...nueve, 'Mi columna']);
+    expect(personas.encabezados).toEqual([...NUEVE_DE_ANTES, 'Mi columna']);
+    expect(r.avisos?.[0]).toMatch(/Se insertaría la columna «Ponencia» \(D\)/);
+    // Con la columna ya puesta, Ana está bien: sólo se añadiría la fila del ponente, no se «corregirían» todas por el corrimiento.
+    expect(r).toMatchObject({ nuevas: 1, cambiadas: 0, quitadas: 0, simulado: true });
+  });
+});
+
+describe('la pestaña con «Ponencia» al final, como estaba antes de ponerla junto a «Correo»', () => {
+  const ponente = (sesion: string, nombre: string, correo: string) =>
+    registrada(sesion, nombre, correo, { perfil: 'ponente' });
+  const titulosDeAntes = [...ENCABEZADOS_DE_ANTES, ...ENCABEZADOS_DE_CONSTANCIAS];
+
+  /** Una pestaña como la dejó la versión de antes: diez columnas nuestras, las diez de las constancias y datos de quien las hace. */
+  const conElOrdenDeAntes = () => {
+    asistencias = [
+      registrada('jueves', 'Ana Ruiz', 'ana@x.org'), ponente('jueves', 'Sebastian Grillo', 'sg@x.org'), registrada('jueves', 'Luis Pérez', 'luis@x.org'),
+    ];
+    personas.existe = true;
+    personas.encabezados = [...titulosDeAntes];
+    personas.filas = [
+      [...filaDeAntes(1, 'Ana Ruiz', 'ana@x.org', ''), 24, 'CIESS-2026-0001', 'F1', 'L1', '7', '12/11/2026', true, 'https://drive.example/ana.pdf', '13/11/2026', 'Generada'],
+      [2, 'Sebastian Grillo', 'sg@x.org', 'Ponente', 0, 1, 0, 1, true, titulosDe('Sebastian Grillo')[0], 20, 'CIESS-2026-0002'],
+      [...filaDeAntes(3, 'Luis Pérez', 'luis@x.org', '')],
+    ];
+    personas.conCasillas = new Set([8, 16]); // «Con registro» (I) y «✨Generar Constancia» (Q)
+    personas.conFecha = new Set([15, 18]);
+  };
+
+  it('«Ponencia» se mueve de la J a la D, con sus datos; «Con registro» queda en la J con su casilla, y las de las constancias no cambian de lugar', async () => {
+    conElOrdenDeAntes();
+    const r = await sincronizarAsistencias();
+    // Una sola petición de mover, de la J (9) a la D (3), y ninguna otra cosa en la estructura.
+    expect(hoja.eventos.filter((e) => e.startsWith('mover') || e.startsWith('insertar'))).toEqual(['mover columna 9 a 3']);
+    expect(personas.encabezados).toEqual(TITULOS_DE_UNA_HOJA_NUEVA);
+    // Los datos viajan con la columna: lo de cada persona sigue en su fila, ahora en el orden nuevo.
+    expect(personas.filas[0].slice(0, 10)).toEqual([1, 'Ana Ruiz', 'ana@x.org', '', 'Público general', 0, 1, 0, 1, true]);
+    expect(personas.filas[1].slice(0, 10)).toEqual([2, 'Sebastian Grillo', 'sg@x.org', titulosDe('Sebastian Grillo')[0], 'Ponente', 0, 1, 0, 1, true]);
+    // Lo anotado a la derecha ni se movió ni se tocó.
+    expect(personas.filas[0].slice(10)).toEqual([24, 'CIESS-2026-0001', 'F1', 'L1', '7', '12/11/2026', true, 'https://drive.example/ana.pdf', '13/11/2026', 'Generada']);
+    expect(personas.filas[1].slice(10)).toEqual([20, 'CIESS-2026-0002']);
+    // La casilla de «Con registro» se fue a la J con su columna y en la I ya no hay ninguna; la de generar sigue en la Q.
+    expect([...personas.conCasillas].sort((a, b) => a - b)).toEqual([COLUMNA_CON_REGISTRO, COLUMNA_DE_GENERAR]);
+    expect([...personas.conFecha].sort((a, b) => a - b)).toEqual([15, 18]);
+    // Se dice, con las letras.
+    expect(r.avisos).toHaveLength(1);
+    expect(r.avisos?.[0]).toBe('Se movió la columna «Ponencia» de «Asistencia por persona» de la J a la D, justo después de «Correo», con sus datos y su formato; las que quedaron en medio se recorrieron una columna.');
+  });
+
+  it('al moverla las filas ya coinciden con la base: no se reescribe ninguna, y sus casillas no se vuelven a pedir', async () => {
+    conElOrdenDeAntes();
+    const r = await sincronizarAsistencias();
+    expect(r).toMatchObject({ nuevas: 0, cambiadas: 0, quitadas: 0 });
+    expect(personas.escrituras).toEqual([]);
+    expect(personas.casillas).toEqual([]);
+  });
+
+  it('en la pasada siguiente no hay nada que mover: ni una petición', async () => {
+    conElOrdenDeAntes();
+    await sincronizarAsistencias();
+    hoja.eventos = [];
+    const otra = await sincronizarAsistencias();
+    expect(otra.avisos).toBeUndefined();
+    expect(hoja.eventos).toEqual([]);
+  });
+
+  it('si falla al moverla, no se queda a medias: la pasada falla, la hoja sigue como estaba y la siguiente lo hace', async () => {
+    conElOrdenDeAntes();
+    personas.fallaPropia = 'Quota exceeded';
+    await expect(sincronizarAsistencias()).rejects.toThrow(/Quota/);
+    expect(personas.encabezados).toEqual(titulosDeAntes);
+    personas.fallaPropia = null;
+    await sincronizarAsistencias();
+    expect(personas.encabezados).toEqual(TITULOS_DE_UNA_HOJA_NUEVA);
+  });
+
+  it('si alguien movió ya «Ponencia» a la D, no la mueve otra vez: se decide por lo que hay', async () => {
+    conElOrdenDeAntes();
+    personas.encabezados = [...TITULOS_DE_UNA_HOJA_NUEVA];
+    personas.filas = personas.filas.map((f) => [...f.slice(0, 3), f[9], ...f.slice(3, 9), ...f.slice(10)]);
+    await sincronizarAsistencias();
+    expect(hoja.eventos.some((e) => e.startsWith('mover'))).toBe(false);
+  });
+
+  it('simular no mueve nada, pero dice que la movería y compara las filas como quedarían: ni una «corrección» por el corrimiento', async () => {
+    conElOrdenDeAntes();
+    const r = await sincronizarAsistencias({ simular: true });
+    expect(hoja.eventos).toEqual([]);
+    expect(personas.encabezados).toEqual(titulosDeAntes);
+    expect(r.avisos?.[0]).toBe('Se movería la columna «Ponencia» de «Asistencia por persona» de la J a la D, justo después de «Correo», con sus datos y su formato; las que quedan en medio se recorrerían una columna.');
+    expect(r).toMatchObject({ nuevas: 0, cambiadas: 0, quitadas: 0, simulado: true });
   });
 });
 
 describe('las columnas de las constancias', () => {
   const managed = ENCABEZADOS_PERSONAS;
-  /** Una pestaña que ya existía con las diez columnas del sistema y personas escritas. */
+  /** Una pestaña que ya existía con las diez columnas del sistema, en el orden de ahora, y personas escritas. */
   const conLaPestanaHecha = () => {
     personas.existe = true;
     personas.encabezados = [...managed];
     asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org'), registrada('jueves', 'Luis Pérez', 'luis@x.org')];
-    personas.filas = filasDePersonas(asistencias as never, () => 'Público general').map((f) => f.slice(0, 9));
+    personas.filas = filasDePersonas(asistencias as never, () => 'Público general');
+    personas.conCasillas = new Set([COLUMNA_CON_REGISTRO]);
   };
 
   it('se llaman como las pidió quien hace las constancias, y en ese orden', () => {
@@ -775,7 +1026,7 @@ describe('las columnas de las constancias', () => {
     expect(COLUMNA_DE_GENERAR).toBe(16); // la Q
   });
 
-  it('en una pestaña nueva van a la derecha de «Ponencia», de la K a la T, con los títulos tal cual', async () => {
+  it('en una pestaña nueva van a la derecha de «Con registro», de la K a la T, con los títulos tal cual', async () => {
     asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org')];
     const r = await sincronizarAsistencias();
     expect(personas.encabezados.slice(0, 10)).toEqual([...managed]);
@@ -849,18 +1100,24 @@ describe('las columnas de las constancias', () => {
     expect(r.avisos?.[0]).toMatch(/que faltaban \(de la U a la V\): Libro, Foja/);
   });
 
-  it('una columna con el nombre de una de las nuestras («Constancia», por ejemplo) no impide que se creen las demás', async () => {
+  it('una columna con el nombre de una de las nuestras («Constancia», por ejemplo) no impide que se creen las demás, y se acomoda junto a «✨Generar Constancia»', async () => {
     conLaPestanaHecha();
     personas.encabezados = [...managed, 'Constancia'];
+    personas.filas[0][10] = 'https://drive.example/ana.pdf'; // lo que quien hace las constancias puso en «Constancia»
     const r = await sincronizarAsistencias();
-    // «Constancia» sigue en la K, donde la puso quien hace las constancias; las otras nueve, detrás.
-    expect(personas.encabezados.slice(0, 11)).toEqual([...managed, 'Constancia']);
-    expect(personas.encabezados.slice(11)).toEqual(ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== 'Constancia'));
+    // Las otras nueve se añadieron detrás de ella, en la L, y «Constancia» —que estaba en la K— se movió, con sus datos, a donde
+    // le toca: justo después de «✨Generar Constancia». Queda el orden de las constancias tal como se pidió.
+    expect(personas.encabezados).toEqual([...managed, ...ENCABEZADOS_DE_CONSTANCIAS]);
+    expect(personas.filas[0][ENCABEZADOS_PERSONAS.length + ENCABEZADOS_DE_CONSTANCIAS.indexOf('Constancia')]).toBe('https://drive.example/ana.pdf');
+    expect(r.avisos).toHaveLength(2);
     expect(r.avisos?.[0]).toMatch(/que faltaban \(de la L a la T\)/);
-    // Y la casilla de generar y los formatos de fecha caen en las columnas nuevas, no en la de «Constancia».
-    const generar = personas.encabezados.indexOf(ENCABEZADO_DE_GENERAR);
-    expect(casillasDe(generar)).toEqual([{ desde: 1, hasta: 3, columna: generar }]);
-    expect(personas.formatosDeFecha.map((f) => personas.encabezados[f.columna])).toEqual(['Fecha de registro', 'Fecha de elaboración']);
+    expect(r.avisos?.[1]).toMatch(/Se movió la columna «Constancia» de «Asistencia por persona» de la K a la R, justo después de «✨Generar Constancia»/);
+    // La casilla de generar y los formatos de fecha se pidieron en las columnas nuevas, no en la de «Constancia», y al moverla
+    // siguen con sus columnas: están en las de ahora.
+    expect([...personas.conCasillas].sort((a, b) => a - b)).toEqual([COLUMNA_CON_REGISTRO, COLUMNA_DE_GENERAR]);
+    expect([...personas.conFecha].sort((a, b) => a - b)).toEqual([15, 18]);
+    expect(personas.encabezados[15]).toBe('Fecha de registro');
+    expect(personas.encabezados[18]).toBe('Fecha de elaboración');
   });
 
   it('si no queda ninguna, se vuelven a poner las diez juntas', async () => {
@@ -906,13 +1163,90 @@ describe('las columnas de las constancias', () => {
     personas.encabezados = [...managed, 'Mi columna', ENCABEZADO_DE_GENERAR];
     const r = await sincronizarAsistencias();
     // Se añaden las otras nueve, detrás; «✨Generar Constancia» se queda en la L y no se le pide la casilla de las filas de antes.
+    // «Constancia», que se añadió al final, se mueve a la M, justo detrás de «✨Generar Constancia»; las demás, después de ella.
     expect(personas.encabezados.slice(0, 12)).toEqual([...managed, 'Mi columna', ENCABEZADO_DE_GENERAR]);
-    expect(personas.encabezados.slice(12)).toEqual(ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== ENCABEZADO_DE_GENERAR));
+    expect(personas.encabezados.slice(12)).toEqual(['Constancia', ...ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== ENCABEZADO_DE_GENERAR && t !== 'Constancia')]);
     expect(r.avisos?.[0]).toMatch(/que faltaban/);
+    expect(r.avisos?.[1]).toMatch(/Se movió la columna «Constancia» .* de la S a la M, justo después de «✨Generar Constancia»/);
     expect(casillasDe(11)).toEqual([]);
     asistencias.push(registrada('viernes', 'Eva Mora', 'eva@x.org'));
     await sincronizarAsistencias();
     expect(casillasDe(11).map((c) => [c.desde, c.hasta])).toEqual([[3, 4]]); // «✨Generar Constancia» está en la L (11)
+  });
+
+  describe('«Constancia» va justo después de «✨Generar Constancia»', () => {
+    /** Las diez de las constancias en su orden, salvo «Constancia», que se pone donde se diga (índice dentro de las diez, o null si se omite). */
+    const conConstanciaEn = (lugar: number) => {
+      const demas = ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== 'Constancia');
+      return [...demas.slice(0, lugar), 'Constancia', ...demas.slice(lugar)];
+    };
+
+    it('si está antes de «Total de horas», se mueve, con lo que haya en ella, a donde le toca; lo demás no se toca y las casillas siguen a sus columnas', async () => {
+      conLaPestanaHecha();
+      personas.encabezados = [...managed, ...conConstanciaEn(0)];
+      personas.filas[0][10] = 'https://drive.example/ana.pdf'; // «Constancia», en la K
+      personas.filas[0][11] = 24; // «Total de horas», en la L
+      personas.conCasillas = new Set([COLUMNA_CON_REGISTRO, 17]); // «✨Generar Constancia» está en la R
+      personas.conFecha = new Set([16, 18]);
+      const r = await sincronizarAsistencias();
+      expect(hoja.eventos.filter((e) => e.startsWith('mover') || e.startsWith('insertar'))).toEqual(['mover columna 10 a 17']);
+      expect(personas.encabezados).toEqual([...managed, ...ENCABEZADOS_DE_CONSTANCIAS]);
+      expect(personas.filas[0][17]).toBe('https://drive.example/ana.pdf');
+      expect(personas.filas[0][10]).toBe(24); // «Total de horas» pasó a la K, con su dato
+      expect([...personas.conCasillas].sort((a, b) => a - b)).toEqual([COLUMNA_CON_REGISTRO, COLUMNA_DE_GENERAR]);
+      expect([...personas.conFecha].sort((a, b) => a - b)).toEqual([15, 18]);
+      expect(r.avisos).toHaveLength(1);
+      expect(r.avisos?.[0]).toMatch(/de la K a la R/);
+      // No hay ningún otro cambio: ni títulos, ni formatos, ni filas.
+      expect(hoja.eventos.filter((e) => !e.startsWith('mover'))).toEqual([]);
+    });
+
+    it('si está al final, después de «Estado automatización», se mueve hacia la izquierda', async () => {
+      conLaPestanaHecha();
+      personas.encabezados = [...managed, ...conConstanciaEn(9)];
+      personas.filas[0][19] = 'https://drive.example/ana.pdf';
+      const r = await sincronizarAsistencias();
+      expect(hoja.eventos.filter((e) => e.startsWith('mover'))).toEqual(['mover columna 19 a 17']);
+      expect(personas.encabezados).toEqual([...managed, ...ENCABEZADOS_DE_CONSTANCIAS]);
+      expect(personas.filas[0][17]).toBe('https://drive.example/ana.pdf');
+      expect(r.avisos?.[0]).toMatch(/de la T a la R/);
+    });
+
+    it('en la pasada siguiente ya no hay nada que mover', async () => {
+      conLaPestanaHecha();
+      personas.encabezados = [...managed, ...conConstanciaEn(0)];
+      await sincronizarAsistencias();
+      hoja.eventos = [];
+      const otra = await sincronizarAsistencias();
+      expect(otra.avisos).toBeUndefined();
+      expect(hoja.eventos).toEqual([]);
+    });
+
+    it('antes de mover vuelve a leer los títulos: si otra pasada (el cron es otro proceso) ya la acomodó, no mueve otra columna en su lugar', async () => {
+      conLaPestanaHecha();
+      personas.encabezados = [...managed, 'Constancia']; // se añadirán las otras nueve y habrá que acomodarla
+      // La otra pasada termina justo antes de que ésta vuelva a leer los títulos (la segunda lectura): deja todo en orden.
+      hoja.alLeerTitulos = (lectura) => {
+        if (lectura !== 2) return;
+        personas.encabezados = [...managed, ...ENCABEZADOS_DE_CONSTANCIAS];
+      };
+      const r = await sincronizarAsistencias();
+      // Sin la segunda lectura, esta pasada habría movido «la columna K» —que ya era «Total de horas»— y habría desordenado todo.
+      expect(hoja.lecturasDeTitulos).toBe(2);
+      expect(hoja.eventos.some((e) => e.startsWith('mover'))).toBe(false);
+      expect(personas.encabezados).toEqual([...managed, ...ENCABEZADOS_DE_CONSTANCIAS]);
+      expect(r.avisos?.some((a) => a.includes('Se movió'))).toBe(false);
+    });
+
+    it('si «✨Generar Constancia» no existía y se añade ahora, «Constancia» —que ya estaba, en otro lugar— se acomoda detrás de ella', async () => {
+      conLaPestanaHecha();
+      personas.encabezados = [...managed, 'Notas', 'Constancia'];
+      await sincronizarAsistencias();
+      // Se añadieron las nueve que faltaban (entre ellas «✨Generar Constancia») y entonces «Constancia» se acomodó tras ella.
+      expect(personas.encabezados.slice(0, 11)).toEqual([...managed, 'Notas']);
+      const generar = personas.encabezados.indexOf(ENCABEZADO_DE_GENERAR);
+      expect(personas.encabezados[generar + 1]).toBe('Constancia');
+    });
   });
 
   it('simular no añade nada', async () => {
@@ -920,6 +1254,14 @@ describe('las columnas de las constancias', () => {
     await sincronizarAsistencias({ simular: true });
     expect(personas.encabezados).toEqual([...managed]);
     expect(hoja.eventos).toEqual([]);
+  });
+
+  it('simular tampoco mueve «Constancia», pero dice que la movería', async () => {
+    conLaPestanaHecha();
+    personas.encabezados = [...managed, 'Constancia', ...ENCABEZADOS_DE_CONSTANCIAS.filter((t) => t !== 'Constancia')];
+    const r = await sincronizarAsistencias({ simular: true });
+    expect(hoja.eventos).toEqual([]);
+    expect(r.avisos?.[0]).toMatch(/Se movería la columna «Constancia» .* de la K a la R, justo después de «✨Generar Constancia»/);
   });
 });
 
@@ -941,15 +1283,15 @@ describe('los ponentes que no registraron asistencia', () => {
   it('van al final, en el orden en que se registraron, con cero días, la casilla marcada y su perfil de ponente', () => {
     const f = filas([registrada('jueves', 'Ana Ruiz', 'ana@x.org')], [registro(1, 'Luis Pérez'), registro(2, 'Eva Mora')]);
     expect(f.map((x) => x[1])).toEqual(['Ana Ruiz', 'Luis Pérez', 'Eva Mora']);
-    expect(f[1]).toEqual([2, 'Luis Pérez', 'ponente1@x.org', 'Ponente', 0, 0, 0, 0, true, '']);
+    expect(f[1]).toEqual([2, 'Luis Pérez', 'ponente1@x.org', '', 'Ponente', 0, 0, 0, 0, true]);
     expect(f.map((x) => x[0])).toEqual([1, 2, 3]);
   });
 
   it('quien ya está por su asistencia no se repite abajo: cada registro de ponente sale una sola vez', () => {
     const f = filas([asistio('jueves', 1, 'Luis Pérez'), asistio('viernes', 1, 'Luis Pérez')], [registro(1, 'Luis Pérez'), registro(2, 'Eva Mora')]);
     expect(f.map((x) => x[1])).toEqual(['Luis Pérez', 'Eva Mora']);
-    expect(f[0].slice(4)).toEqual([0, 1, 1, 2, true, '']); // su fila de asistencia, con sus dos días
-    expect(f[1].slice(4)).toEqual([0, 0, 0, 0, true, '']); // y la de quien no asistió
+    expect(f[0].slice(5)).toEqual([0, 1, 1, 2, true]); // su fila de asistencia, con sus dos días
+    expect(f[1].slice(5)).toEqual([0, 0, 0, 0, true]); // y la de quien no asistió
   });
 
   it('con 64 registros de ponente la hoja lleva 64 filas de ponente, hayan asistido unos u otros, sin repetir a nadie', () => {
@@ -961,7 +1303,7 @@ describe('los ponentes que no registraron asistencia', () => {
       asistio('viernes', 1),
     ];
     const f = filas(asistentes, ponentes);
-    const deponentes = f.filter((x) => x[3] === 'Ponente');
+    const deponentes = f.filter((x) => x[4] === 'Ponente');
     expect(deponentes).toHaveLength(64);
     expect(new Set(deponentes.map((x) => x[2])).size).toBe(64); // ni un correo repetido
     expect(f).toHaveLength(20 + 64);
@@ -983,8 +1325,8 @@ describe('los ponentes que no registraron asistencia', () => {
 
   it('su ponencia se reconoce igual, hayan asistido o no', () => {
     const conPonencia = filasDePersonas([] as never, perfil, (nombre) => (nombre === 'Sebastian Grillo' ? titulosDe('Sebastian Grillo')[0] : ''), [registro(1, 'Sebastian Grillo'), registro(2)]);
-    expect(conPonencia[0].at(-1)).toBe(titulosDe('Sebastian Grillo')[0]);
-    expect(conPonencia[1].at(-1)).toBe('');
+    expect(conPonencia[0][COLUMNA_DE_PONENCIA]).toBe(titulosDe('Sebastian Grillo')[0]);
+    expect(conPonencia[1][COLUMNA_DE_PONENCIA]).toBe('');
   });
 
   it('la asistencia sólo de la sesión de prueba no cuenta: ese ponente sigue sin asistencia', () => {
@@ -1041,7 +1383,7 @@ describe('los ponentes en la hoja', () => {
     const r = await sincronizarAsistencias();
     expect(r.nuevas).toBe(2);
     expect(personas.filas.map((f) => f[1])).toEqual(['Ponente Número 1', 'Ponente Número 2']);
-    expect(personas.filas[0].slice(4, 10)).toEqual([0, 0, 0, 0, true, '']);
+    expect(personas.filas[0].slice(5, 10)).toEqual([0, 0, 0, 0, true]);
   });
 
   it('en una hoja que ya tenía asistentes se añaden sólo al final: nadie se mueve y no se reescribe nada de antes', async () => {
@@ -1072,7 +1414,7 @@ describe('los ponentes en la hoja', () => {
     ponentesDeLaBase = [registro(1), registro(2), registro(3), registro(4)];
     const r = await sincronizarAsistencias();
     expect(r.ponentes).toEqual({ total: 4, sinAsistencia: 2 });
-    expect(personas.filas.filter((f) => f[3] === 'Público general' || f[3] === '')).toHaveLength(1);
+    expect(personas.filas.filter((f) => f[4] === 'Público general' || f[4] === '')).toHaveLength(1);
   });
 
   it('el cotejo sale en el resultado, con el nombre y las filas', async () => {
@@ -1095,7 +1437,7 @@ describe('los ponentes en la hoja', () => {
     asistencias.push(asistio('viernes', 2)); // el 2 asiste: sube a su lugar, detrás de quien ya había llegado
     const r = await sincronizarAsistencias();
     expect(personas.filas.map((f) => f[1])).toEqual(['Ana Ruiz', 'Ponente Número 2', 'Ponente Número 1']);
-    expect(personas.filas.filter((f) => f[3] === 'ponente' || String(f[1]).startsWith('Ponente'))).toHaveLength(2);
+    expect(personas.filas.filter((f) => f[4] === 'ponente' || String(f[1]).startsWith('Ponente'))).toHaveLength(2);
     expect(r.ponentes).toEqual({ total: 2, sinAsistencia: 1 });
   });
 

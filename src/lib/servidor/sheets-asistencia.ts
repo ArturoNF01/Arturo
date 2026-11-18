@@ -1,8 +1,9 @@
 import 'server-only';
 import {
   COLUMNA_CON_REGISTRO, ENCABEZADOS_DE_CONSTANCIAS, ENCABEZADOS_DE_FECHAS, ENCABEZADOS_DE_LA_HOJA_RETIRADA, ENCABEZADOS_PERSONAS,
-  ENCABEZADO_DE_GENERAR, HOJA_PERSONAS, HOJA_RETIRADA, filasDePersonas, planDeHoja, posiblesRepetidos, resumenDePonentes,
-  type PosibleRepetido,
+  ENCABEZADO_DE_GENERAR, HOJA_PERSONAS, HOJA_RETIRADA, REGLA_DE_CONSTANCIA, REGLA_DE_PONENCIA, colocarCeldas, filasDePersonas,
+  planDeColumnas, planDeHoja, posiblesRepetidos, resumenDePonentes,
+  type CambioDeColumnas, type PlanDeColumnas, type PosibleRepetido, type ReglaDeColumna,
 } from '@/lib/asistencia';
 import { HOJA_LISTA, nombreDePerfil, rangoDe } from '@/lib/normalizacion';
 import { ponenciasParaLaHoja } from '@/lib/ponentes';
@@ -12,11 +13,16 @@ import { conEspera, peticionesDeTitulos } from './sheets';
 
 /**
  * La pestaña «Asistencia por persona» de la hoja de Google: una fila por persona, como la tabla «Por persona» del
- * panel —nombre, correo, perfil, un día por columna y el total— más «Con registro», una casilla de verificación que está
- * marcada si la persona tenía registro, y «Ponencia», el título de la ponencia del programa en que participó, si presentó
- * una. De ahí se hacen las constancias, que sólo reciben quienes estaban registrados. A la derecha de esas diez columnas la
- * pestaña lleva las de las constancias mismas —horas, número, folio, libro, foja, el botón de generar, el archivo…—, que son de
- * quien las hace: el sistema las crea una vez (`ENCABEZADOS_DE_CONSTANCIAS`) y no escribe nunca en ellas.
+ * panel —nombre, correo, perfil, un día por columna y el total— más «Ponencia», el título de la ponencia del programa en que
+ * participó, si presentó una (justo después de «Correo»), y «Con registro», una casilla de verificación que está marcada si
+ * la persona tenía registro. De ahí se hacen las constancias, que sólo reciben quienes estaban registrados. A la derecha de esas
+ * diez columnas la pestaña lleva las de las constancias mismas —horas, número, folio, libro, foja, el botón de generar, el
+ * archivo…—, que son de quien las hace: el sistema las crea una vez (`ENCABEZADOS_DE_CONSTANCIAS`) y no escribe nunca en ellas.
+ *
+ * El orden de las columnas se mantiene en una pestaña que ya existía: «Ponencia» va justo después de «Correo» y «Constancia»
+ * justo después de «✨Generar Constancia». Si alguna está en otro lugar, esta pasada la mueve —con sus datos, su formato y sus
+ * casillas, como si se arrastrara— y lo dice en los avisos (`acomodar`). Sólo mueve esas dos: el resto de lo que haya a la
+ * derecha, de quien hace las constancias, se queda como esté.
  *
  * Los ponentes tienen constancia aunque no registraron asistencia (no era un requisito para ellos): todos los registros de
  * ponente salen en la pestaña, una sola vez cada uno —los que asistieron, en su fila de llegada, y los demás al final, con
@@ -122,6 +128,35 @@ const pedirCasillas = (sheetId: number, columnas: readonly number[], desde: numb
 /** Lo contrario, para las filas que se vacían: sin `rule`, Google quita la validación de ese rango. */
 const quitarCasillas = (sheetId: number, columnas: readonly number[], desde: number, hasta: number) =>
   columnas.map((columna) => ({ setDataValidation: { range: rangoDeColumna(sheetId, columna, desde, hasta) } }));
+
+/**
+ * Lo que se le pide a Google para un cambio de columnas: mover la columna, como si se arrastrara (con sus datos, su formato y sus
+ * casillas), o insertar una en blanco. `destinationIndex` se cuenta antes de sacar la columna de su lugar: hacia la derecha,
+ * es una más allá de donde la columna queda.
+ */
+const peticionDeAcomodo = (sheetId: number, cambio: CambioDeColumnas) =>
+  cambio.tipo === 'insertar'
+    ? { insertDimension: { range: { sheetId, dimension: 'COLUMNS', startIndex: cambio.en, endIndex: cambio.en + 1 }, inheritFromBefore: true } }
+    : {
+        moveDimension: {
+          source: { sheetId, dimension: 'COLUMNS', startIndex: cambio.desde, endIndex: cambio.desde + 1 },
+          destinationIndex: cambio.hasta > cambio.desde ? cambio.hasta + 1 : cambio.hasta,
+        },
+      };
+
+/** Lo que se dice de un cambio de columnas, con la letra de cada columna: una pasada que sólo simula lo dice en condicional. */
+function textoDeAcomodo(cambio: CambioDeColumnas, simular: boolean): string {
+  if (cambio.tipo === 'insertar') {
+    const donde = `la columna «${cambio.titulo}» (${letraDeColumna(cambio.en + 1)}) de «${HOJA_PERSONAS}», después de «${cambio.despuesDe}»`;
+    return simular
+      ? `Se insertaría ${donde}: lo que hay a su derecha se recorrería una columna, con sus datos.`
+      : `Se insertó ${donde}: lo que había a su derecha se recorrió una columna, con sus datos.`;
+  }
+  const trayecto = `la columna «${cambio.titulo}» de «${HOJA_PERSONAS}» de la ${letraDeColumna(cambio.desde + 1)} a la ${letraDeColumna(cambio.hasta + 1)}, justo después de «${cambio.despuesDe}»`;
+  return simular
+    ? `Se movería ${trayecto}, con sus datos y su formato; las que quedan en medio se recorrerían una columna.`
+    : `Se movió ${trayecto}, con sus datos y su formato; las que quedaron en medio se recorrieron una columna.`;
+}
 
 /**
  * Quita la pestaña «Asistencias» del diseño anterior (una fila por asistencia): se pidió dejar sólo «Asistencia por
@@ -240,103 +275,126 @@ export async function sincronizarAsistencias(
   const conAvisos = (r: ResultadoDeAsistencias): ResultadoDeAsistencias => (avisos.length > 0 ? { ...r, avisos } : r);
   // Las columnas que llevan casillas de verificación: «Con registro» y, cuando ya existe, «✨Generar Constancia».
   let columnasConCasillas: number[] = [COLUMNA_CON_REGISTRO];
-  if (sheetId !== null && !simular) {
+  // Al simular, lo que se movería en las diez columnas propias: las filas leídas se comparan ya acomodadas, como quedarían.
+  let acomodoParaSimular: CambioDeColumnas[] = [];
+  if (sheetId !== null) {
     // Se leen hasta la Z: las diez primeras son nuestras; las demás, de quien hace las constancias.
-    const titulos = ((await conEspera(() =>
+    const leerTitulos = async () => ((await conEspera(() =>
       sheets.spreadsheets.values.get({ spreadsheetId: idLibro, range: rangoDe(HOJA_PERSONAS, `A1:${ULTIMA_COLUMNA_DE_TITULOS}1`) }),
     )).data.values?.[0] ?? []).map((t) => String(t ?? '').trim());
 
-    // La última columna («Ponencia») se añadió después de que la pestaña existiera, y a su derecha pudo haber crecido algo
-    // de quien hace las constancias: las columnas que añaden los complementos de Sheets (el enlace de cada documento, si ya
-    // se mandó…) van justo detrás de la última. Si en el lugar que le toca ya hay una columna que no es nuestra, no se
-    // escribe encima: se inserta una nueva y lo de esa persona se recorre una a la derecha, con sus datos y fórmulas. Una
-    // celda en blanco, o la nuestra, no necesita nada; y una vez puesto el título, no vuelve a hacer falta.
-    const nueva = ENCABEZADOS_PERSONAS.length - 1;
-    if ((titulos[nueva] ?? '') !== '' && titulos[nueva] !== ENCABEZADOS_PERSONAS[nueva]) {
-      await conEspera(() =>
-        sheets.spreadsheets.batchUpdate({
-          spreadsheetId: idLibro,
-          requestBody: {
-            requests: [{
-              insertDimension: { range: { sheetId, dimension: 'COLUMNS', startIndex: nueva, endIndex: nueva + 1 }, inheritFromBefore: false },
-            }],
-          },
-        }),
-      );
-      titulos.splice(nueva, 0, ''); // lo que estaba ahí pasa a la columna de al lado
-      avisos.push(`Se insertó la columna «${ENCABEZADOS_PERSONAS[nueva]}» (${letraDeColumna(nueva + 1)}) de «${HOJA_PERSONAS}»: lo que había a su derecha se recorrió una columna, con sus datos.`);
-    }
-
-    const propios = titulos.slice(0, ENCABEZADOS_PERSONAS.length);
-    const dicenLoEsperado =
-      ENCABEZADOS_PERSONAS.length === propios.filter((t) => t !== '').length && ENCABEZADOS_PERSONAS.every((t, i) => propios[i] === t);
-    if (!dicenLoEsperado) {
-      await conEspera(() =>
-        sheets.spreadsheets.values.update({
-          spreadsheetId: idLibro,
-          range: rangoDe(HOJA_PERSONAS, 'A1'),
-          valueInputOption: 'RAW',
-          requestBody: { values: [[...ENCABEZADOS_PERSONAS]] },
-        }),
-      );
-    }
-
-    // Las columnas de las constancias (de la K en adelante, o detrás de lo que ya haya): cada una tiene que estar en la hoja, porque
-    // quien hace las constancias —o su automatización— las busca por su título. Las que faltan se añaden juntas, al final de lo que
-    // ya haya a la derecha y sin tocarlo; las que ya están, donde estén y como estén, se dejan. (Una de esas columnas con el
-    // nombre de otra de las nuestras, como «Constancia», no debe hacer que no se creen las demás.)
-    const resto = titulos.slice(ENCABEZADOS_PERSONAS.length);
-    const faltan = ENCABEZADOS_DE_CONSTANCIAS.filter((t) => !resto.includes(t));
-    if (faltan.length > 0) {
-      const ultimaOcupada = titulos.reduce((ultima, t, i) => (t !== '' && i > ultima ? i : ultima), ENCABEZADOS_PERSONAS.length - 1);
-      const primera = ultimaOcupada + 1;
-      const fin = primera + faltan.length; // no incluida
-      if (fin > columnasDeLaCuadricula) {
+    // Pone una columna donde le toca (`planDeColumnas`): la mueve, con sus datos, su formato y sus casillas, o, si es una de las
+    // nuestras que la pestaña todavía no tenía, inserta una en blanco —lo que había a su derecha, de quien hace las constancias,
+    // se recorre con sus datos y fórmulas, y no se pisa—. Todo en una sola petición, para que no quede a medias. Se decide por
+    // lo que hay: si ya está donde va, no hace nada, así que una pasada que ya la acomodó no deja trabajo a la siguiente.
+    const acomodar = async (titulos: string[], regla: ReglaDeColumna): Promise<PlanDeColumnas> => {
+      const plan = planDeColumnas(titulos, [regla]);
+      if (plan.cambios.length === 0) return plan;
+      if (!simular) {
         await conEspera(() =>
           sheets.spreadsheets.batchUpdate({
             spreadsheetId: idLibro,
-            requestBody: { requests: [{ appendDimension: { sheetId, dimension: 'COLUMNS', length: fin - columnasDeLaCuadricula } }] },
+            requestBody: { requests: plan.cambios.map((c) => peticionDeAcomodo(sheetId, c)) },
           }),
         );
-        columnasDeLaCuadricula = fin;
+        // Una columna insertada agranda la cuadrícula; una movida, no.
+        columnasDeLaCuadricula += plan.cambios.filter((c) => c.tipo === 'insertar').length;
       }
-      // Primero el formato y después los títulos: si algo falla a medias, la pasada siguiente —que sigue sin encontrar los títulos—
-      // lo repite todo junto, en vez de quedarse con títulos y sin casillas ni formato de fecha (y sin volver a intentarlo).
-      // Su formato: la casilla de generar en las filas que ya hay (las que lleguen después la reciben al escribirse) y el formato de
-      // fecha en las columnas de fechas, para toda la columna.
-      const columnaDe = (titulo: string) => primera + faltan.indexOf(titulo);
-      const formatos = [
-        ...(faltan.includes(ENCABEZADO_DE_GENERAR) && deseadas.length > 0
-          ? pedirCasillas(sheetId, [columnaDe(ENCABEZADO_DE_GENERAR)], 1, deseadas.length + 1)
-          : []),
-        ...ENCABEZADOS_DE_FECHAS.filter((t) => faltan.includes(t)).map((t) => ({
-          repeatCell: {
-            range: { sheetId, startRowIndex: 1, startColumnIndex: columnaDe(t), endColumnIndex: columnaDe(t) + 1 },
-            cell: { userEnteredFormat: { numberFormat: { type: 'DATE', pattern: 'dd/mm/yyyy' } } },
-            fields: 'userEnteredFormat.numberFormat',
-          },
-        })),
-      ];
-      if (formatos.length > 0) {
+      avisos.push(...plan.cambios.map((c) => textoDeAcomodo(c, simular)));
+      return plan;
+    };
+
+    let titulos = await leerTitulos();
+    // «Ponencia» va justo después de «Correo». En la pestaña de antes iba al final de las diez (tras «Con registro»): se mueve
+    // con sus datos; si la pestaña es todavía más vieja y no la tenía, se inserta una nueva en ese lugar. Va antes que lo demás
+    // porque de eso depende dónde está cada columna de ahí en adelante.
+    const ponencia = await acomodar(titulos, REGLA_DE_PONENCIA);
+    titulos = ponencia.titulos;
+
+    if (simular) {
+      acomodoParaSimular = ponencia.cambios;
+      // Al simular no se escribe nada más: sólo se dice si «Constancia» se movería.
+      await acomodar(titulos, REGLA_DE_CONSTANCIA);
+    } else {
+      const propios = titulos.slice(0, ENCABEZADOS_PERSONAS.length);
+      const dicenLoEsperado =
+        ENCABEZADOS_PERSONAS.length === propios.filter((t) => t !== '').length && ENCABEZADOS_PERSONAS.every((t, i) => propios[i] === t);
+      if (!dicenLoEsperado) {
         await conEspera(() =>
-          sheets.spreadsheets.batchUpdate({ spreadsheetId: idLibro, requestBody: { requests: formatos } }),
+          sheets.spreadsheets.values.update({
+            spreadsheetId: idLibro,
+            range: rangoDe(HOJA_PERSONAS, 'A1'),
+            valueInputOption: 'RAW',
+            requestBody: { values: [[...ENCABEZADOS_PERSONAS]] },
+          }),
         );
       }
-      await conEspera(() =>
-        sheets.spreadsheets.values.update({
-          spreadsheetId: idLibro,
-          range: rangoDe(HOJA_PERSONAS, `${letraDeColumna(primera + 1)}1`),
-          valueInputOption: 'RAW',
-          requestBody: { values: [[...faltan]] },
-        }),
-      );
-      while (titulos.length < primera) titulos.push('');
-      titulos.splice(primera, faltan.length, ...faltan);
-      const queFaltaban = faltan.length === ENCABEZADOS_DE_CONSTANCIAS.length ? '' : ' que faltaban';
-      avisos.push(`Se añadieron a «${HOJA_PERSONAS}» las columnas de las constancias${queFaltaban} (de la ${letraDeColumna(primera + 1)} a la ${letraDeColumna(fin)}): ${faltan.join(', ')}. El sistema no escribe en ellas.`);
+
+      // Las columnas de las constancias (de la K en adelante, o detrás de lo que ya haya): cada una tiene que estar en la hoja, porque
+      // quien hace las constancias —o su automatización— las busca por su título. Las que faltan se añaden juntas, al final de lo que
+      // ya haya a la derecha y sin tocarlo; las que ya están, donde estén y como estén, se dejan. (Una de esas columnas con el
+      // nombre de otra de las nuestras, como «Constancia», no debe hacer que no se creen las demás.)
+      const resto = titulos.slice(ENCABEZADOS_PERSONAS.length);
+      const faltan = ENCABEZADOS_DE_CONSTANCIAS.filter((t) => !resto.includes(t));
+      if (faltan.length > 0) {
+        const ultimaOcupada = titulos.reduce((ultima, t, i) => (t !== '' && i > ultima ? i : ultima), ENCABEZADOS_PERSONAS.length - 1);
+        const primera = ultimaOcupada + 1;
+        const fin = primera + faltan.length; // no incluida
+        if (fin > columnasDeLaCuadricula) {
+          await conEspera(() =>
+            sheets.spreadsheets.batchUpdate({
+              spreadsheetId: idLibro,
+              requestBody: { requests: [{ appendDimension: { sheetId, dimension: 'COLUMNS', length: fin - columnasDeLaCuadricula } }] },
+            }),
+          );
+          columnasDeLaCuadricula = fin;
+        }
+        // Primero el formato y después los títulos: si algo falla a medias, la pasada siguiente —que sigue sin encontrar los títulos—
+        // lo repite todo junto, en vez de quedarse con títulos y sin casillas ni formato de fecha (y sin volver a intentarlo).
+        // Su formato: la casilla de generar en las filas que ya hay (las que lleguen después la reciben al escribirse) y el formato de
+        // fecha en las columnas de fechas, para toda la columna.
+        const columnaDe = (titulo: string) => primera + faltan.indexOf(titulo);
+        const formatos = [
+          ...(faltan.includes(ENCABEZADO_DE_GENERAR) && deseadas.length > 0
+            ? pedirCasillas(sheetId, [columnaDe(ENCABEZADO_DE_GENERAR)], 1, deseadas.length + 1)
+            : []),
+          ...ENCABEZADOS_DE_FECHAS.filter((t) => faltan.includes(t)).map((t) => ({
+            repeatCell: {
+              range: { sheetId, startRowIndex: 1, startColumnIndex: columnaDe(t), endColumnIndex: columnaDe(t) + 1 },
+              cell: { userEnteredFormat: { numberFormat: { type: 'DATE', pattern: 'dd/mm/yyyy' } } },
+              fields: 'userEnteredFormat.numberFormat',
+            },
+          })),
+        ];
+        if (formatos.length > 0) {
+          await conEspera(() =>
+            sheets.spreadsheets.batchUpdate({ spreadsheetId: idLibro, requestBody: { requests: formatos } }),
+          );
+        }
+        await conEspera(() =>
+          sheets.spreadsheets.values.update({
+            spreadsheetId: idLibro,
+            range: rangoDe(HOJA_PERSONAS, `${letraDeColumna(primera + 1)}1`),
+            valueInputOption: 'RAW',
+            requestBody: { values: [[...faltan]] },
+          }),
+        );
+        while (titulos.length < primera) titulos.push('');
+        titulos.splice(primera, faltan.length, ...faltan);
+        const queFaltaban = faltan.length === ENCABEZADOS_DE_CONSTANCIAS.length ? '' : ' que faltaban';
+        avisos.push(`Se añadieron a «${HOJA_PERSONAS}» las columnas de las constancias${queFaltaban} (de la ${letraDeColumna(primera + 1)} a la ${letraDeColumna(fin)}): ${faltan.join(', ')}. El sistema no escribe en ellas.`);
+      }
+
+      // «Constancia» va justo después de «✨Generar Constancia»: si ya existía en otro lugar (la puso quien hace las constancias, o
+      // las demás se añadieron detrás de ella), se mueve con sus datos. Antes de mover se vuelven a leer los títulos: una columna
+      // se mueve por su posición, y si otra pasada —el cron es otro proceso— la acomodó mientras ésta añadía columnas, mover por
+      // lo leído al empezar movería otra. Sólo se vuelve a leer cuando hace falta mover: lo normal es que no.
+      if (planDeColumnas(titulos, [REGLA_DE_CONSTANCIA]).cambios.length > 0) {
+        titulos = (await acomodar(await leerTitulos(), REGLA_DE_CONSTANCIA)).titulos;
+      }
+      const generar = titulos.indexOf(ENCABEZADO_DE_GENERAR, ENCABEZADOS_PERSONAS.length);
+      if (generar >= 0) columnasConCasillas = [COLUMNA_CON_REGISTRO, generar];
     }
-    const generar = titulos.indexOf(ENCABEZADO_DE_GENERAR, ENCABEZADOS_PERSONAS.length);
-    if (generar >= 0) columnasConCasillas = [COLUMNA_CON_REGISTRO, generar];
   }
 
   const leida = sheetId === null
@@ -346,7 +404,9 @@ export async function sincronizarAsistencias(
           spreadsheetId: idLibro,
           range: rangoDe(HOJA_PERSONAS, `A2:${ULTIMA_COLUMNA}`),
         }),
-      )).data.values ?? []);
+      )).data.values ?? []).map((fila: unknown[]) =>
+        // Al simular las columnas no se movieron: se comparan las filas como quedarían si se movieran.
+        (acomodoParaSimular.length > 0 ? colocarCeldas(fila, acomodoParaSimular, '') : fila));
   // Sólo se descartan las filas en blanco del final (restos de un borrado a mano): una en blanco a mitad de
   // lista cuenta como una fila que difiere, y se reescribe, para que cada fila siga en su lugar.
   let fin = leida.length;
@@ -369,7 +429,7 @@ export async function sincronizarAsistencias(
   }
   if (simular) {
     const retirada = await retirarLaPestanaVieja(sheets, idLibro, hojas, true);
-    return { ...resultado, ...(retirada ? { retirada } : {}) };
+    return conAvisos({ ...resultado, ...(retirada ? { retirada } : {}) });
   }
   if (sheetId === null) return resultado;
 

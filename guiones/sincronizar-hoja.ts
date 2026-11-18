@@ -8,9 +8,9 @@
  *   npm run sincronizar -- --vaciar   # sólo la vacía, sin escribir nada
  *   npm run sincronizar -- --simular  # dice qué quitaría de la hoja, sin tocar nada
  *
- * También pone al día la pestaña «Asistencia por persona» (una fila por persona, con un día por columna, una casilla
- * «Con registro» y la «Ponencia» de los ponentes, para las constancias) y quita la pestaña «Asistencias» del diseño
- * anterior si todavía está.
+ * También pone al día la pestaña «Asistencia por persona» (una fila por persona, con la «Ponencia» de los ponentes junto al
+ * correo, un día por columna y una casilla «Con registro», para las constancias; «Ponencia» y «Constancia» se mueven a su
+ * lugar si estaban en otro) y quita la pestaña «Asistencias» del diseño anterior si todavía está.
  *   npm run sincronizar -- --forzar   # quita de la hoja más de 10 bajas de una vez
  *
  * Hace lo mismo que el botón del panel, pero desde el servidor. Esa es la
@@ -87,8 +87,8 @@ async function principal() {
     try {
       const r = await sincronizarAsistencias({ forzar: process.argv.includes('--forzar') });
       if (r.omitido) console.log(r.omitido);
-      // Lo que cambió en la estructura de la hoja (una columna insertada) se dice siempre: quien la lea mañana tiene que
-      // poder saber por qué sus columnas se movieron.
+      // Lo que cambió en la estructura de la hoja (una columna insertada o movida) se dice siempre: quien la lea mañana
+      // tiene que poder saber por qué sus columnas se movieron.
       for (const aviso of r.avisos ?? []) console.log(aviso);
       const partes = [
         r.nuevas > 0 && `${r.nuevas} nuevas`,
@@ -161,6 +161,8 @@ async function principal() {
     if (r.renumeradas > 0) console.log(`N.º que se corregirían: ${r.renumeradas}`);
     for (const hoja of r.reconstruidas) console.log(`${hoja}: se volvería a escribir entera.`);
     const a = await sincronizarAsistencias({ simular: true, forzar: process.argv.includes('--forzar') });
+    // Las columnas que se moverían (una pestaña con el orden de antes) se dicen antes que las filas.
+    for (const aviso of a.avisos ?? []) console.log(aviso);
     if (a.omitido) console.log(a.omitido);
     else console.log(`Asistencia por persona: se añadirían ${a.nuevas}, se corregirían ${a.cambiadas} y se quitarían ${a.quitadas} filas.`);
     if (a.retirada) console.log(a.retirada.mensaje);

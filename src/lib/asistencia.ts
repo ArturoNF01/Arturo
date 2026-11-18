@@ -461,16 +461,20 @@ const diaCortoEnEspanol = (texto: Texto) => texto.es.split(' ').slice(0, 2).join
 /**
  * Los títulos: los de la tabla «Por persona» del panel —nombre, correo, perfil, un día por columna y el total— y dos más que
  * el panel no tiene, para hacer las constancias desde la hoja:
- *  - «Con registro»: quien asistió sin estar registrado no recibe constancia, y tiene que verse de un vistazo;
- *  - «Ponencia»: para los ponentes, la ponencia del programa en la que participaron (el título que lleva su constancia).
+ *  - «Ponencia»: para los ponentes, la ponencia del programa en la que participaron (el título que lleva su constancia); va
+ *    justo después de «Correo», junto a los datos de quien es;
+ *  - «Con registro»: quien asistió sin estar registrado no recibe constancia, y tiene que verse de un vistazo.
  * Los días salen de la agenda: si ésta cambia, los títulos la siguen.
  *
- * Las columnas nuevas se añaden siempre a la derecha, para que las de antes no cambien de letra.
+ * «Ponencia» se añadió primero como última columna y después se pidió ponerla junto a «Correo»: una pestaña que ya existía con
+ * el orden de antes se acomoda sola (`planDeColumnas`), moviendo la columna con sus datos.
  */
 export const ENCABEZADOS_PERSONAS: readonly string[] = [
-  'N.º', 'Nombre', 'Correo', 'Perfil', ...DIAS_DE_ASISTENCIA.map((d) => diaCortoEnEspanol(d.texto)), 'Total', 'Con registro', 'Ponencia',
+  'N.º', 'Nombre', 'Correo', 'Ponencia', 'Perfil', ...DIAS_DE_ASISTENCIA.map((d) => diaCortoEnEspanol(d.texto)), 'Total', 'Con registro',
 ];
 
+/** Dónde está «Ponencia» (contando desde 0): justo después de «Correo». */
+export const COLUMNA_DE_PONENCIA = ENCABEZADOS_PERSONAS.indexOf('Ponencia');
 /** Dónde está «Con registro» (contando desde 0): la columna que se muestra con casillas de verificación. */
 export const COLUMNA_CON_REGISTRO = ENCABEZADOS_PERSONAS.indexOf('Con registro');
 
@@ -490,6 +494,90 @@ export const ENCABEZADOS_DE_CONSTANCIAS: readonly string[] = [
 export const ENCABEZADO_DE_GENERAR = '✨Generar Constancia';
 /** Las que llevan fechas: se les da formato de fecha, para que lo que se escriba ahí se lea y se ordene como tal. */
 export const ENCABEZADOS_DE_FECHAS: readonly string[] = ['Fecha de registro', 'Fecha de elaboración'];
+
+// ---------------------------------------------------------------------------
+// El orden de las columnas en una pestaña que ya existía
+// ---------------------------------------------------------------------------
+
+/** Que una columna vaya justo después de otra. */
+export interface ReglaDeColumna {
+  titulo: string;
+  despuesDe: string;
+  /**
+   * Si la columna no existe, el título de la que sigue a la ancla en la pestaña de antes: ahí se inserta una nueva. Sin esto,
+   * una columna que falta no se crea aquí (la crea quien la usa, o se añade con las de las constancias).
+   */
+  insertarAntesDe?: string;
+}
+
+/** «Ponencia» va justo después de «Correo». En la pestaña de antes iba a la derecha de todo, tras «Con registro». */
+export const REGLA_DE_PONENCIA: ReglaDeColumna = { titulo: 'Ponencia', despuesDe: 'Correo', insertarAntesDe: 'Perfil' };
+/** «Constancia» va justo después de «✨Generar Constancia». */
+export const REGLA_DE_CONSTANCIA: ReglaDeColumna = { titulo: 'Constancia', despuesDe: ENCABEZADO_DE_GENERAR };
+
+/** Un cambio en las columnas de la pestaña: los índices cuentan desde 0 y son los de la pestaña justo antes de ese cambio. */
+export type CambioDeColumnas =
+  | { tipo: 'mover'; titulo: string; despuesDe: string; desde: number; /** Dónde queda la columna ya movida. */ hasta: number }
+  | { tipo: 'insertar'; titulo: string; despuesDe: string; en: number };
+
+export interface PlanDeColumnas {
+  /** Lo que hay que hacer en la hoja, en orden. Vacío si cada columna ya va donde le toca. */
+  cambios: CambioDeColumnas[];
+  /** Los títulos tal como quedan tras los cambios (una columna insertada, con el título en blanco). */
+  titulos: string[];
+}
+
+/**
+ * Qué hay que hacerle a las columnas de la pestaña para que cada una vaya donde le toca. Se decide por lo que hay, sin
+ * recordar nada: si la columna ya está justo después de su ancla, no hace falta nada, y una pasada que ya acomodó deja a la
+ * siguiente sin trabajo. Si no están las dos —la columna y su ancla—, tampoco se hace nada.
+ *
+ * Mover una columna es lo que haría quien la arrastra con el ratón: la columna lleva sus datos, su formato y sus casillas, y lo
+ * que quedó en medio se recorre. No se escribe ni se borra ninguna celda, así que lo que alguien haya puesto en ella se conserva.
+ */
+export function planDeColumnas(titulos: readonly string[], reglas: readonly ReglaDeColumna[]): PlanDeColumnas {
+  const t = [...titulos];
+  const cambios: CambioDeColumnas[] = [];
+  for (const { titulo, despuesDe, insertarAntesDe } of reglas) {
+    const ancla = t.indexOf(despuesDe);
+    if (ancla < 0 || t[ancla + 1] === titulo) continue;
+    const desde = t.indexOf(titulo);
+    if (desde < 0) {
+      if (insertarAntesDe !== undefined && t[ancla + 1] === insertarAntesDe) {
+        cambios.push({ tipo: 'insertar', titulo, despuesDe, en: ancla + 1 });
+        t.splice(ancla + 1, 0, '');
+      }
+      continue;
+    }
+    // Al quitarla de su lugar, una ancla que estaba detrás se corre una columna a la izquierda.
+    const hasta = desde < ancla ? ancla : ancla + 1;
+    cambios.push({ tipo: 'mover', titulo, despuesDe, desde, hasta });
+    t.splice(desde, 1);
+    t.splice(hasta, 0, titulo);
+  }
+  return { cambios, titulos: t };
+}
+
+/**
+ * Una fila de la hoja tal como quedaría tras esos cambios de columnas: lo mismo que hace la hoja con sus filas, para comparar al
+ * simular una pasada sin tocar nada. Las celdas que faltan se toman por vacías.
+ */
+export function colocarCeldas<T>(fila: readonly T[], cambios: readonly CambioDeColumnas[], vacio: T): T[] {
+  const celdas = [...fila];
+  const hastaAhi = (n: number) => { while (celdas.length < n) celdas.push(vacio); };
+  for (const cambio of cambios) {
+    if (cambio.tipo === 'insertar') {
+      hastaAhi(cambio.en);
+      celdas.splice(cambio.en, 0, vacio);
+    } else {
+      hastaAhi(cambio.desde + 1);
+      const [movida] = celdas.splice(cambio.desde, 1);
+      hastaAhi(cambio.hasta);
+      celdas.splice(cambio.hasta, 0, movida);
+    }
+  }
+  return celdas;
+}
 
 /**
  * La pestaña «Asistencias» que tuvo la hoja —una fila por asistencia, con el día y la modalidad— y que se retiró: sólo
@@ -550,8 +638,9 @@ function personasDeLaHoja(asistentes: readonly FilaDeAsistencia[], ponentes: rea
 }
 
 /**
- * Las filas de la pestaña por persona: una por quien asistió a algo y una por cada ponente que no, con cuántas sesiones
- * tuvo cada día y en total (como en el panel: 1 o 0 por día), si tenía registro (la casilla) y, si presentó una ponencia, cuál.
+ * Las filas de la pestaña por persona: una por quien asistió a algo y una por cada ponente que no, con, si presentó una
+ * ponencia, cuál (junto al correo), cuántas sesiones tuvo cada día y en total (como en el panel: 1 o 0 por día) y si tenía
+ * registro (la casilla). Las celdas van en el orden de `ENCABEZADOS_PERSONAS`.
  *
  * **En orden de llegada** (quien escaneó primero, primero), no por nombre ni por total como en el panel: la pestaña es una
  * copia que se reescribe, y con un orden que se mueve cada vez que alguien suma un día, lo que se anote o genere a la derecha
@@ -573,11 +662,11 @@ export function filasDePersonas(
     i + 1,
     p.nombre,
     p.correo,
+    ponenciaDe(p.nombre),
     p.perfil ? etiquetaDePerfil(p.perfil) : '',
     ...DIAS_DE_ASISTENCIA.map((d) => p.porDia[d.iso] ?? 0),
     p.total,
     conRegistro(p),
-    ponenciaDe(p.nombre),
   ]);
 }
 
