@@ -34,6 +34,8 @@ const ORDEN_DE_RIESGO: readonly RiesgoDeRepetido[] = ['dos_constancias', 'dias_r
 export interface FilaRepetida {
   /** El N.º de la fila en «Asistencia por persona». */
   numero: number;
+  /** Su registro, si lo tiene (aunque esté cancelado). */
+  registroId: string | null;
   nombre: string;
   correo: string;
   perfil: string | null;
@@ -157,7 +159,7 @@ export function revisarRepetidos(
   ponenciaDe: (nombre: string) => string = () => '',
 ): RevisionDeRepetidos {
   const filas: Omit<FilaRepetida, 'accion'>[] = personasDeLaHoja(asistentes, ponentes).map((p, i) => ({
-    numero: i + 1, nombre: p.nombre, correo: p.correo, perfil: p.perfil, folio: p.folio, conRegistro: conRegistro(p),
+    numero: i + 1, registroId: p.registroId, nombre: p.nombre, correo: p.correo, perfil: p.perfil, folio: p.folio, conRegistro: conRegistro(p),
     ligada: !p.sinRegistro, total: p.total, ponencia: ponenciaDe(p.nombre),
   }));
 

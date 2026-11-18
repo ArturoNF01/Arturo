@@ -931,6 +931,58 @@ async function principal() {
   await consultar(`delete from registros where correo like 'rep.%@example.org'`);
   ok('limpieza de la revisión de repetidos');
 
+  // 20. La limpieza: ligar las asistencias sueltas que repiten a alguien registrado y pasar a altas y bajas los nombres en mayúsculas
+  const { planearFusiones, planearNombresDeRegistros, planearNombresDeSueltas } = await import('../../src/lib/limpieza');
+  const limpieza = await import('../../src/lib/servidor/limpieza');
+  const { revisarRepetidos } = await import('../../src/lib/repetidos');
+  // Escaneó dos días con el correo de otra persona y sin estar registrado; después se registró (con el nombre todo en mayúsculas) y
+  // asistió el jueves con su correo: el jueves de la suelta es un duplicado, el miércoles es un día que no tenía.
+  await asiste('miercoles', 'kbarrios.lim@example.org', 'CARLOS CHAVERA BIANCHI');
+  await asiste('jueves', 'kbarrios.lim@example.org', 'CARLOS CHAVERA BIANCHI');
+  await altaDeRepetido('lim.carlos@example.org', 'CARLOS', 'CHAVERA BIANCHI');
+  await asiste('jueves', 'lim.carlos@example.org');
+  await asiste('viernes', 'lim.suelto@example.org', 'PEDRO SUELTO LIMPIO'); // alguien sin registro, sin repetir, con el nombre en mayúsculas
+  const idCarlos = (await unaFila<{ id: string }>(`select id from registros where correo = 'lim.carlos@example.org'`))!.id;
+
+  const asistenciasLim = await asistenciasDeAhora();
+  const planLim = planearFusiones(revisarRepetidos(asistenciasLim, await ponentesRegistrados()), asistenciasLim);
+  const fusionCarlos = planLim.fusiones.find((f) => f.destino.registroId === idCarlos);
+  comprobar(fusionCarlos?.sueltas.length === 1 && fusionCarlos.sueltas[0].asistencias.length === 2 && fusionCarlos.sueltas[0].fila.correo === 'kbarrios.lim@example.org',
+    'limpieza: la suelta que repite a alguien registrado se liga a él, con sus dos asistencias', fusionCarlos);
+  const hecha = await limpieza.aplicarFusion(fusionCarlos!);
+  comprobar(hecha.ligadas === 1 && hecha.descartadas === 1 && hecha.fallidas.length === 0,
+    'limpieza: el miércoles (un día que no tenía) se liga y el jueves (que ya tenía) se descarta por repetido', hecha);
+  const dias = await consultar<{ sesion: string }>(`select sesion from asistencias where registro_id = $1 order by sesion`, [idCarlos]);
+  comprobar(dias.map((d) => d.sesion).join() === 'jueves,miercoles', 'limpieza: su registro queda con los dos días, sin repetir', dias);
+  comprobar((await consultar(`select 1 from asistencias where correo = 'kbarrios.lim@example.org' and registro_id is null`)).length === 0,
+    'limpieza: ya no queda ninguna asistencia suelta con ese correo');
+
+  const cambiosLim = planearNombresDeRegistros(await limpieza.leerRegistrosConNombre()).filter((c) => c.id === idCarlos);
+  comprobar(cambiosLim.length === 1 && cambiosLim[0].despues.nombres === 'Carlos' && cambiosLim[0].despues.apellidos === 'Chavera Bianchi',
+    'limpieza: el nombre todo en mayúsculas se pasa a altas y bajas', cambiosLim);
+  const hechos = await limpieza.aplicarNombresDeRegistros(cambiosLim);
+  const quedo = await unaFila<{ nombres: string; apellidos: string }>('select nombres, apellidos from registros where id = $1', [idCarlos]);
+  comprobar(!hechos[0].omitido && quedo?.nombres === 'Carlos' && quedo.apellidos === 'Chavera Bianchi', 'limpieza: el registro quedó con su nombre en altas y bajas', quedo);
+  const rastroLim = await unaFila<{ origen: string; antes: string; despues: string }>(
+    `select origen, datos_previos->>'nombres' as antes, datos_nuevos->>'nombres' as despues from auditoria
+      where tabla = 'registros' and accion = 'UPDATE' and registro_id = $1 order by ocurrido_en desc limit 1`, [idCarlos]);
+  comprobar(rastroLim?.origen === 'sistema' && rastroLim.antes === 'CARLOS' && rastroLim.despues === 'Carlos',
+    'limpieza: la auditoría asienta el cambio como del sistema, con el nombre de antes', rastroLim);
+  // Lo que alguien editó entre el cálculo y el cambio no se pisa.
+  await consultar(`update registros set nombres = 'CARLOS ALBERTO' where id = $1`, [idCarlos]);
+  const enMedio = await limpieza.aplicarNombresDeRegistros(cambiosLim);
+  comprobar(Boolean(enMedio[0].omitido) && (await unaFila<{ nombres: string }>('select nombres from registros where id = $1', [idCarlos]))?.nombres === 'CARLOS ALBERTO',
+    'limpieza: si lo editaron mientras tanto, se deja como está');
+
+  const cambiosSueltas = planearNombresDeSueltas(await limpieza.leerSueltasConNombre()).filter((c) => c.correo === 'lim.suelto@example.org');
+  comprobar(cambiosSueltas.length === 1 && (await limpieza.aplicarNombresDeSueltas(cambiosSueltas)) === 1 &&
+    (await unaFila<{ nombre: string }>(`select nombre from asistencias where correo = 'lim.suelto@example.org'`))?.nombre === 'Pedro Suelto Limpio',
+    'limpieza: también el nombre de una asistencia sin registro');
+
+  await consultar(`delete from asistencias where correo like '%.lim@example.org' or correo like 'lim.%' or registro_id = $1`, [idCarlos]);
+  await consultar(`delete from registros where correo like 'lim.%@example.org'`);
+  ok('limpieza de la limpieza de repetidos');
+
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);
   await consultar(`delete from usuarios_panel where correo = 'prueba@ciess.org'`);
