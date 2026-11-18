@@ -1,0 +1,24 @@
+PIN 20 ANIVERSARIO AJA TORO - PROPUESTA 3 - ARCHIVOS VECTORIALES
+=================================================================
+Chapa redonda de 58 mm. El arte llega a 68.44 mm (sangrado) para que envuelva el borde.
+Todo el texto esta convertido a curvas (no hay fuentes que instalar). Sin imagenes ni degradados.
+
+ARCHIVOS
+- pin-20-aniversario-propuesta-3_sangrado-68mm.svg   Maestro editable. Capas con nombre (fondo_y_rayos, aro_exterior,
+                                                     parche_logo, logo_aja_toro, numero_2, cero_con_boca, franja_aniversario,
+                                                     franja_fecha, lema_viviendo_el_rock_and_roll). Abre en Illustrator, Inkscape, Figma, Affinity.
+- pin-20-aniversario-propuesta-3_corte-58mm.svg      Mismo arte recortado al circulo de 58 mm (para mockups / web).
+- pin-20-aniversario-propuesta-3_CMYK.pdf            Para imprenta. Vector, CMYK, 68.44 mm. TrimBox = cuadrado de 58 mm.
+- pin-20-aniversario-propuesta-3_CMYK.eps            Igual, en EPS (algunos proveedores lo piden).
+- pin-20-aniversario-propuesta-3_CMYK.ai             El mismo PDF con extension .ai (Illustrator lo abre como PDF-compatible).
+- pin-20-aniversario-propuesta-3_RGB.pdf             Version RGB (pantalla / impresion de oficina).
+- pin-20-aniversario-propuesta-3_guias.pdf           Con guias: verde = corte 58 mm, azul punteado = zona segura (50 mm).
+
+COLORES (planos, 5 tintas)
+ carbon #1B1A17 | ladrillo #AF2E0E | ladrillo claro (rayos) #C93D17 | crema #E9D7A7 | rojo lengua #E8372B
+
+NOTAS
+- La conversion a CMYK es automatica (generica). Para igualar colores de marca, pida prueba o use tintas Pantone y
+  reemplace los 5 colores en el SVG maestro.
+- Confirme con su proveedor el diametro exacto de impresion/sangrado de su chapa de 58 mm.
+- La lengua de los Rolling Stones es marca registrada: ok para uso interno/regalo; revise antes de venderla.
