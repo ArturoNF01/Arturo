@@ -13,6 +13,7 @@
     "sembrar": "tsx --conditions=react-server guiones/sembrar-demostracion.ts",
     "sincronizar": "tsx --conditions=react-server guiones/sincronizar-hoja.ts",
     "cotejar-ponentes": "tsx --conditions=react-server guiones/cotejar-ponentes.ts",
+    "revisar-repetidos": "tsx --conditions=react-server guiones/revisar-repetidos.ts",
     "probar-correo": "tsx --conditions=react-server guiones/probar-correo.ts",
     "revisar-correo": "tsx --conditions=react-server guiones/revisar-correo.ts",
     "vista-correos": "tsx --conditions=react-server guiones/vista-previa-correos.ts",

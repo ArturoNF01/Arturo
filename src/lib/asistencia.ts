@@ -623,7 +623,7 @@ export function conRegistro(p: Pick<PersonaConAsistencia, 'sinRegistro' | 'estad
  *
  * Los ponentes sin asistencia van al final, no mezclados, para que las filas de quienes ya estaban no se muevan.
  */
-function personasDeLaHoja(asistentes: readonly FilaDeAsistencia[], ponentes: readonly RegistroDePonente[]): PersonaConAsistencia[] {
+export function personasDeLaHoja(asistentes: readonly FilaDeAsistencia[], ponentes: readonly RegistroDePonente[]): PersonaConAsistencia[] {
   const personas = reunirPorPersona(asistentes);
   const yaEstan = new Set(personas.map((p) => p.registroId).filter((id): id is string => id !== null));
   for (const r of ponentes) {

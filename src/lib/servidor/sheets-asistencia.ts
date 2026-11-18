@@ -7,6 +7,7 @@ import {
 } from '@/lib/asistencia';
 import { HOJA_LISTA, nombreDePerfil, rangoDe } from '@/lib/normalizacion';
 import { ponenciasParaLaHoja } from '@/lib/ponentes';
+import { revisarRepetidos, type ResumenDeRepetidos } from '@/lib/repetidos';
 import { ponentesRegistrados, todasLasAsistencias } from './asistencia';
 import { clienteSheets, googleConfigurado } from './google';
 import { conEspera, peticionesDeTitulos } from './sheets';
@@ -80,6 +81,12 @@ export interface ResultadoDeAsistencias {
   ponentes?: { total: number; sinAsistencia: number };
   /** El cotejo: quién sale en más de una fila con el mismo nombre, siendo alguna de un ponente. Sólo se avisa. */
   repetidos?: string[];
+  /**
+   * Los repetidos de toda la pestaña, de cualquier perfil —el mismo nombre o el mismo correo en más de una fila—, si los hay: de
+   * cada fila con «Con registro» sale una constancia, y una persona en dos filas son dos constancias o los días partidos. El
+   * detalle y qué hacer con cada caso: `npm run revisar-repetidos`. Sólo se avisa.
+   */
+  porRevisar?: ResumenDeRepetidos;
 }
 
 export interface OpcionesDeSincronizacion {
@@ -235,6 +242,7 @@ export async function sincronizarAsistencias(
   const ponentes = await ponentesRegistrados();
   const deseadas = filasDePersonas(asistencias, nombreDePerfil, ponenciasParaLaHoja, ponentes);
   const repetidos = posiblesRepetidos(asistencias, ponentes).map(textoDeRepetido);
+  const porRevisar = revisarRepetidos(asistencias, ponentes).resumen;
 
   // Sin pestaña y sin asistencias no hay nada que crear: la pestaña nace con la primera asistencia.
   if (sheetId === null && deseadas.length === 0) return { nuevas: 0, cambiadas: 0, quitadas: 0 };
@@ -419,6 +427,7 @@ export async function sincronizarAsistencias(
     nuevas: plan.nuevas, cambiadas: plan.cambian, quitadas: plan.sobran, ...(simular ? { simulado: true } : {}),
     ponentes: resumenDePonentes(asistencias, ponentes),
     ...(repetidos.length > 0 ? { repetidos } : {}),
+    ...(porRevisar.casos > 0 ? { porRevisar } : {}),
   };
 
   if (deseadas.length === 0 && hojaEstaba > 0 && !forzar) {

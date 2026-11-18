@@ -3,9 +3,10 @@ import { conActor, consultar } from '@/lib/bd/conexion';
 import {
   ENCABEZADOS_DE_COTEJO, PERFIL_DE_PONENTE, PERFILES_QUE_SE_CAMBIAN, filasDeCotejoParaLaHoja, type Cotejo, type RegistroParaCotejo,
 } from '@/lib/cotejo-ponentes';
-import { nombreDePerfil, rangoDe } from '@/lib/normalizacion';
-import { clienteSheets, googleConfigurado } from './google';
-import { conEspera, peticionesDeTitulos, resincronizarRegistro } from './sheets';
+import { nombreDePerfil } from '@/lib/normalizacion';
+import { googleConfigurado } from './google';
+import { escribirPestanaDeRevision } from './pestana-de-revision';
+import { resincronizarRegistro } from './sheets';
 
 /**
  * El cotejo de los ponentes de la agenda con los registros, del lado del servidor: leer los registros, pasar a ponente a
@@ -81,73 +82,15 @@ export async function aplicarCambiosDePerfil(cambios: Cotejo['cambios']): Promis
 const ANCHOS = [55, 380, 210, 110, 100, 330, 220, 220, 110, 120, 100, 380, 150, 420];
 
 /**
- * Escribe el cotejo en la pestaña «Cotejo de ponentes»: la crea al final si no existe y la vuelve a escribir entera cada vez
- * (es una vista del cotejo, no un dato: lo que alguien anote ahí no se conserva). Fuera de la pasada de la hoja de asistencia:
- * sólo se escribe cuando se corre el cotejo, y si alguien la borra no vuelve a aparecer sola.
+ * Escribe el cotejo en la pestaña «Cotejo de ponentes» (`escribirPestanaDeRevision`): la crea al final si no existe y la vuelve a
+ * escribir entera cada vez, porque es una vista del cotejo, no un dato. Fuera de la pasada de la hoja de asistencia: sólo se
+ * escribe cuando se corre el cotejo.
  */
 export async function escribirCotejoEnLaHoja(cotejo: Cotejo, cambiados: ReadonlySet<string> = new Set()): Promise<{ filas: number }> {
-  const idLibro = process.env.GOOGLE_SHEETS_ID;
-  if (!googleConfigurado() || !idLibro) throw new Error('Google Sheets no está configurado.');
-  const sheets = clienteSheets();
-  const filas = filasDeCotejoParaLaHoja(cotejo, nombreDePerfil, cambiados);
-
-  const libro = await conEspera(() =>
-    sheets.spreadsheets.get({ spreadsheetId: idLibro, fields: 'sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))' }),
-  );
-  const existente = (libro.data.sheets ?? []).find((h) => h.properties?.title === HOJA_COTEJO)?.properties;
-  let sheetId = existente?.sheetId ?? null;
-  let filasDeLaCuadricula = existente?.gridProperties?.rowCount ?? 1000;
-
-  if (sheetId === null) {
-    const creada = await conEspera(() =>
-      sheets.spreadsheets.batchUpdate({
-        spreadsheetId: idLibro,
-        requestBody: { requests: [{ addSheet: { properties: { title: HOJA_COTEJO, gridProperties: { frozenRowCount: 1 } } } }] },
-      }),
-    );
-    const propiedades = creada.data.replies?.[0]?.addSheet?.properties;
-    sheetId = propiedades?.sheetId ?? null;
-    filasDeLaCuadricula = propiedades?.gridProperties?.rowCount ?? 1000;
-    if (sheetId !== null) {
-      await conEspera(() =>
-        sheets.spreadsheets.batchUpdate({
-          spreadsheetId: idLibro,
-          requestBody: {
-            requests: [
-              ...peticionesDeTitulos(sheetId),
-              ...ANCHOS.map((pixelSize, i) => ({
-                updateDimensionProperties: {
-                  range: { sheetId, dimension: 'COLUMNS', startIndex: i, endIndex: i + 1 },
-                  properties: { pixelSize },
-                  fields: 'pixelSize',
-                },
-              })),
-            ],
-          },
-        }),
-      );
-    }
-  }
-
-  const ultima = String.fromCharCode('A'.charCodeAt(0) + ENCABEZADOS_DE_COTEJO.length - 1);
-  // Escribir fuera de la cuadrícula falla: se amplía si hace falta.
-  if (sheetId !== null && filasDeLaCuadricula < filas.length + 1) {
-    await conEspera(() =>
-      sheets.spreadsheets.batchUpdate({
-        spreadsheetId: idLibro,
-        requestBody: { requests: [{ appendDimension: { sheetId, dimension: 'ROWS', length: filas.length + 1 - filasDeLaCuadricula + 100 } }] },
-      }),
-    );
-  }
-  await conEspera(() => sheets.spreadsheets.values.clear({ spreadsheetId: idLibro, range: rangoDe(HOJA_COTEJO, `A1:${ultima}`) }));
-  await conEspera(() =>
-    sheets.spreadsheets.values.update({
-      spreadsheetId: idLibro,
-      range: rangoDe(HOJA_COTEJO, 'A1'),
-      // RAW: nombres y títulos los escribe cualquiera en el formulario público; nunca se interpretan como fórmula.
-      valueInputOption: 'RAW',
-      requestBody: { values: [[...ENCABEZADOS_DE_COTEJO], ...filas] },
-    }),
-  );
-  return { filas: filas.length };
+  return escribirPestanaDeRevision({
+    titulo: HOJA_COTEJO,
+    encabezados: ENCABEZADOS_DE_COTEJO,
+    filas: filasDeCotejoParaLaHoja(cotejo, nombreDePerfil, cambiados),
+    anchos: ANCHOS,
+  });
 }

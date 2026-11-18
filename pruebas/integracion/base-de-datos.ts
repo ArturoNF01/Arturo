@@ -865,6 +865,72 @@ async function principal() {
   await consultar(`delete from registros where correo like 'cot.%@example.org'`);
   ok('limpieza del cotejo de ponentes');
 
+  // 19. La revisión de repetidos de «Asistencia por persona»: quién sale más de una vez, con el mismo nombre o el mismo correo
+  const { leerRevisionDeRepetidos } = await import('../../src/lib/servidor/repetidos');
+  const altaDeRepetido = async (correo: string, nombres: string, apellidos: string, estado = 'confirmado') => {
+    const a = armarInsercion({
+      perfil: 'publico_general', grupo: 'externo', modalidad: 'presencial', idioma: 'es', nombres, apellidos,
+      correo, institucion: 'CIESS', pais_residencia: 'México', estado, consentimiento_datos: true,
+    });
+    await consultar(`insert into registros (${a.columnas}) values (${a.marcadores})`, a.valores);
+  };
+  const asiste = (sesion: string, correo: string, nombre?: string) =>
+    registrarAsistenciaManual({ sesion, via: 'presencial', correo, ...(nombre ? { nombre } : {}), usuarioId: usuario!.id });
+
+  // Una persona registrada dos veces con correos distintos: son dos registros vigentes (dos constancias).
+  await altaDeRepetido('rep.a1@example.org', 'Rosa', 'Repetida Nombre');
+  await altaDeRepetido('rep.a2@example.org', 'Rosa', 'Repetida Nombre');
+  await asiste('jueves', 'rep.a1@example.org');
+  await asiste('viernes', 'rep.a2@example.org');
+  // El mismo correo: la base sólo lo permite si el primer registro se canceló (índice parcial de registros vigentes). Se registró,
+  // asistió, canceló y volvió a registrarse con otro apellido.
+  await altaDeRepetido('rep.b@example.org', 'Sara', 'Correo Repetido');
+  await asiste('miercoles', 'rep.b@example.org');
+  await consultar(`update registros set estado = 'cancelado' where correo = 'rep.b@example.org'`);
+  await altaDeRepetido('rep.b@example.org', 'Sara', 'Correo Repetido Soto');
+  await asiste('jueves', 'rep.b@example.org');
+  comprobar((await consultar(`select 1 from registros where correo = 'rep.b@example.org'`)).length === 2,
+    'repetidos: la base deja dos registros con el mismo correo si el primero está cancelado');
+  // Escaneó con un correo y después se registró con otro: la asistencia queda «sin registro» y sus días, repartidos.
+  await asiste('jueves', 'rep.c.otro@example.org', 'Tania Repartida Dias');
+  await altaDeRepetido('rep.c@example.org', 'Tania', 'Repartida Dias');
+  await asiste('miercoles', 'rep.c@example.org');
+  // Alguien que no se repite.
+  await altaDeRepetido('rep.d@example.org', 'Ulises', 'Unico Sin Repetir');
+  await asiste('jueves', 'rep.d@example.org');
+
+  const revision = await leerRevisionDeRepetidos();
+  const casosPropios = revision.casos.filter((c) => c.filas.some((f) => f.correo.startsWith('rep.')));
+  const casoDe = (correo: string) => casosPropios.find((c) => c.filas.some((f) => f.correo === correo));
+  comprobar(casosPropios.length === 3, 'repetidos: tres casos —la persona registrada dos veces, el correo repetido y los días repartidos— y no el que no se repite', casosPropios.length);
+  const casoA = casoDe('rep.a1@example.org');
+  comprobar(casoA?.riesgo === 'dos_constancias' && casoA.motivos.join() === 'nombre' && casoA.filas.length === 2 && casoA.filas.every((f) => f.conRegistro),
+    'repetidos: dos registros vigentes con el mismo nombre dan dos constancias', casoA);
+  const casoB = casoDe('rep.b@example.org');
+  comprobar(
+    casoB?.motivos.join() === 'correo' && casoB.riesgo === 'dias_repartidos' && casoB.filas.filter((f) => f.conRegistro).length === 1 &&
+    casoB.filas.some((f) => !f.conRegistro && f.ligada && f.accion.startsWith('Registro cancelado')),
+    'repetidos: el mismo correo en un registro cancelado y en el vigente se junta; el cancelado no recibe constancia', casoB);
+  const casoC = casoDe('rep.c@example.org');
+  comprobar(
+    casoC?.riesgo === 'dias_repartidos' && casoC.filas.length === 2 && casoC.filas.some((f) => !f.ligada && f.correo === 'rep.c.otro@example.org'),
+    'repetidos: una asistencia sin registro con el nombre de alguien registrado reparte sus días', casoC);
+  comprobar(!casoDe('rep.d@example.org'), 'repetidos: quien no se repite no sale');
+  comprobar(
+    revision.casos.every((c, i) => c.numero === i + 1) &&
+    revision.casos.map((c) => ['dos_constancias', 'dias_repartidos', 'sin_registro', 'sin_riesgo'].indexOf(c.riesgo)).every((v, i, a) => i === 0 || a[i - 1] <= v),
+    'repetidos: los casos van numerados y de más a menos urgente');
+  // Es lo que lee la hoja: el N.º de cada fila es el de «Asistencia por persona».
+  const { todasLasAsistencias: asistenciasDeAhora } = await import('../../src/lib/servidor/asistencia');
+  const hojaDeAhora = filasDePersonas(await asistenciasDeAhora(), nombreDePerfil, ponenciasParaLaHoja, await ponentesRegistrados());
+  comprobar(
+    casosPropios.every((c) => c.filas.every((f) => hojaDeAhora[f.numero - 1]?.[2] === f.correo)),
+    'repetidos: el N.º de cada fila es el de la pestaña «Asistencia por persona»');
+
+  await consultar(`delete from asistencias where correo like 'rep.%' or registro_id in (select id from registros where correo like 'rep.%@example.org')`);
+  await consultar(`delete from registros where correo like 'rep.%@example.org'`);
+  ok('limpieza de la revisión de repetidos');
+
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);
   await consultar(`delete from usuarios_panel where correo = 'prueba@ciess.org'`);

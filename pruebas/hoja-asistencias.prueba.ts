@@ -1449,6 +1449,49 @@ describe('los ponentes en la hoja', () => {
   });
 });
 
+describe('los repetidos de toda la pestaña (de cualquier perfil)', () => {
+  it('sin repetidos el resultado no trae la cuenta', async () => {
+    asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org'), registrada('jueves', 'Luis Pérez', 'luis@x.org')];
+    expect((await sincronizarAsistencias()).porRevisar).toBeUndefined();
+  });
+
+  it('dos registros con el mismo nombre se cuentan, con el riesgo de dos constancias; y se escriben los dos, porque la base manda', async () => {
+    asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@casa.org'), registrada('viernes', 'Ana Ruiz', 'ana@trabajo.org')];
+    const r = await sincronizarAsistencias();
+    expect(r.porRevisar).toEqual({
+      filas: 2, nombresRepetidos: 1, correosRepetidos: 0, casos: 1, dosConstancias: 1, diasRepartidos: 0, sinRegistro: 0, sinRiesgo: 0,
+    });
+    // Sólo se avisa: no se juntan ni se tocan las filas.
+    expect(personas.filas.map((f) => [f[0], f[1], f[COLUMNA_CON_REGISTRO]])).toEqual([[1, 'Ana Ruiz', true], [2, 'Ana Ruiz', true]]);
+  });
+
+  it('el mismo correo en dos filas también se cuenta, aunque los nombres difieran', async () => {
+    asistencias = [
+      registrada('jueves', 'Ana Ruiz', 'ana@x.org'),
+      registrada('viernes', 'Ana R. Soto', 'ana@x.org', { registro_id: 'r-otro', estado_registro: 'cancelado' }),
+    ];
+    const r = await sincronizarAsistencias();
+    expect(r.porRevisar).toMatchObject({ nombresRepetidos: 0, correosRepetidos: 1, casos: 1 });
+  });
+
+  it('los días repartidos entre una fila con registro y otra sin él se cuentan aparte de las dos constancias', async () => {
+    asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@x.org'), una('viernes', 'presencial', 'Ana Ruiz', 'ana.otra@y.org')];
+    const r = await sincronizarAsistencias();
+    expect(r.porRevisar).toMatchObject({ casos: 1, dosConstancias: 0, diasRepartidos: 1 });
+  });
+
+  it('también llega al simular, y sigue llegando cuando la pasada se detiene por prudencia', async () => {
+    asistencias = [registrada('jueves', 'Ana Ruiz', 'ana@casa.org'), registrada('viernes', 'Ana Ruiz', 'ana@trabajo.org')];
+    expect((await sincronizarAsistencias({ simular: true })).porRevisar?.dosConstancias).toBe(1);
+    expect(hoja.eventos).toEqual([]);
+    await sincronizarAsistencias();
+    asistencias = asistencias.slice(0, 1); // la base se encogió de golpe
+    personas.filas = Array.from({ length: 15 }, (_, i) => [i + 1, 'Ana Ruiz', `a${i}@x.org`, '', 'Público general', 0, 1, 0, 1, true]);
+    const r = await sincronizarAsistencias();
+    expect(r.omitido).toBeDefined();
+  });
+});
+
 describe('cuando son muchas personas', () => {
   it('amplía la pestaña antes de escribir: una pestaña nueva trae 1,000 filas', async () => {
     asistencias = Array.from({ length: 1500 }, (_, i) => registrada('jueves', `Persona ${i}`, `p${i}@x.org`));

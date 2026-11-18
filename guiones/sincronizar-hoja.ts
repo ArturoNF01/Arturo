@@ -109,6 +109,14 @@ async function principal() {
         if (r.repetidos.length > 40) decir(`  … y ${r.repetidos.length - 40} más.`);
         decir('  Si es la misma persona: en el panel, Asistencia → Por día → «Ligar» su asistencia a su registro; la hoja las junta sola.');
       }
+      // Cada fila con «Con registro» es una constancia: una persona en dos filas son dos constancias, o los días partidos. Aquí sólo la
+      // cuenta (de cualquier perfil, por nombre o por correo); el detalle y qué hacer con cada caso, en el comando de revisión.
+      if (r.porRevisar) {
+        const p = r.porRevisar;
+        const en = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+        decir(`Repetidos por revisar en toda la pestaña: ${en(p.nombresRepetidos, 'nombre repetido', 'nombres repetidos')} y ${en(p.correosRepetidos, 'correo repetido', 'correos repetidos')} (${en(p.casos, 'caso', 'casos')}, ${p.dosConstancias} con riesgo de dos constancias).`);
+        decir('  Qué hacer con cada uno: sudo bash /opt/congreso/guiones/servidor/revisar-repetidos.sh');
+      }
       // Que se quitó, o que no se pudo, se dice siempre; que se dejó porque no es la del sistema, sólo si no es cron
       // (se repetiría cada diez minutos).
       if (r.retirada) {
