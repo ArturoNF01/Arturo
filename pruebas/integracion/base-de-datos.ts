@@ -983,6 +983,64 @@ async function principal() {
   await consultar(`delete from registros where correo like 'lim.%@example.org'`);
   ok('limpieza de la limpieza de repetidos');
 
+  // 21. Eliminar las filas «sin registro»: sus asistencias, con una copia en CSV antes; nunca un registro ni una asistencia ligada
+  const { filasSinRegistro } = await import('../../src/lib/sin-registro');
+  const { eliminarAsistenciasSinRegistro, respaldarAsistencias } = await import('../../src/lib/servidor/sin-registro');
+  const { conciliarAsistencia: ligarAsistencia } = await import('../../src/lib/servidor/asistencia');
+  const { mkdtemp, readFile, stat, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  await altaDeRepetido('sin.ana@example.org', 'Ana', 'Registrada Sin');
+  await asiste('jueves', 'sin.ana@example.org');
+  await altaDeRepetido('sin.baja@example.org', 'Berta', 'Dada De Baja');
+  await asiste('jueves', 'sin.baja@example.org');
+  await consultar(`update registros set estado = 'cancelado' where correo = 'sin.baja@example.org'`);
+  await asiste('miercoles', 'sin.suelto@example.org', 'Pedro Suelto Uno');
+  await asiste('jueves', 'sin.suelto@example.org', 'Pedro Suelto Uno');
+  await asiste('viernes', 'sin.otro@example.org', 'Otro Suelto Dos');
+  const registrosAntes = Number((await unaFila<{ n: string }>('select count(*)::text as n from registros'))!.n);
+
+  const filasSueltas = filasSinRegistro(await asistenciasDeAhora(), await ponentesRegistrados());
+  const suyas = filasSueltas.filas.filter((f) => f.correo.startsWith('sin.'));
+  comprobar(suyas.length === 2 && suyas.map((f) => f.asistencias.length).sort().join() === '1,2',
+    'sin registro: sólo las filas de quien escaneó sin registro, con todas sus asistencias', suyas);
+  comprobar(filasSueltas.conRegistroCancelado >= 1 && !suyas.some((f) => f.correo === 'sin.baja@example.org' || f.correo === 'sin.ana@example.org'),
+    'sin registro: ni la persona registrada ni la del registro cancelado son «sin registro»');
+  const ids = suyas.flatMap((f) => f.asistencias);
+
+  // La copia primero, con permiso sólo para su dueño
+  const carpeta = await mkdtemp(join(tmpdir(), 'respaldo-sin-registro-'));
+  const ruta = await respaldarAsistencias(ids, join(carpeta, 'copias'));
+  const csv = await readFile(ruta, 'utf8');
+  comprobar(csv.startsWith('\uFEFFid,sesion,via,origen,identificado_por,nombre,correo') && csv.split('\r\n').filter(Boolean).length === 1 + ids.length &&
+    csv.includes('sin.suelto@example.org') && csv.includes('Otro Suelto Dos') && !csv.includes('sin.ana@example.org'),
+    'sin registro: la copia lleva un renglón por asistencia que se borrará, con todas sus columnas, y nada más');
+  comprobar(((await stat(ruta)).mode & 0o777) === 0o600 && ((await stat(join(carpeta, 'copias'))).mode & 0o777) === 0o700,
+    'sin registro: la copia y su carpeta sólo las lee su dueño');
+
+  // Una de las asistencias se liga a su registro entre la vista previa y el borrado: ya es de alguien y se queda
+  const idAna = (await unaFila<{ id: string }>(`select id from registros where correo = 'sin.ana@example.org'`))!.id;
+  const idLigada = suyas.find((f) => f.correo === 'sin.suelto@example.org')!.asistencias[0];
+  comprobar((await ligarAsistencia(idLigada, idAna)).ok, 'sin registro: una asistencia se liga mientras tanto');
+  const sinRegistroBorradas = await eliminarAsistenciasSinRegistro(ids);
+  comprobar(sinRegistroBorradas === ids.length - 1, 'sin registro: se borran las que siguen sin registro, y no la que se ligó', sinRegistroBorradas);
+  comprobar((await consultar(`select 1 from asistencias where correo in ('sin.suelto@example.org', 'sin.otro@example.org') and registro_id is null`)).length === 0,
+    'sin registro: no queda ninguna asistencia suelta de esas personas');
+  comprobar(Number((await unaFila<{ n: string }>('select count(*)::text as n from asistencias where registro_id = $1', [idAna]))!.n) === 2,
+    'sin registro: la asistencia ligada se queda, con la que ya tenía');
+  comprobar(Number((await unaFila<{ n: string }>(`select count(*)::text as n from asistencias a join registros r on r.id = a.registro_id where r.correo = 'sin.baja@example.org'`))!.n) === 1,
+    'sin registro: la asistencia de un registro cancelado no se toca');
+  comprobar(Number((await unaFila<{ n: string }>('select count(*)::text as n from registros'))!.n) === registrosAntes,
+    'sin registro: no se borró ningún registro');
+  const vacia = await filasSinRegistro(await asistenciasDeAhora(), await ponentesRegistrados());
+  comprobar(vacia.filas.filter((f) => f.correo.startsWith('sin.')).length === 0, 'sin registro: la pestaña ya no tiene esas filas');
+  comprobar((await eliminarAsistenciasSinRegistro(ids)) === 0, 'sin registro: repetirlo no borra nada más');
+
+  await rm(carpeta, { recursive: true, force: true });
+  await consultar(`delete from asistencias where correo like 'sin.%' or registro_id in (select id from registros where correo like 'sin.%@example.org')`);
+  await consultar(`delete from registros where correo like 'sin.%@example.org'`);
+  ok('limpieza de las filas sin registro');
+
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);
   await consultar(`delete from usuarios_panel where correo = 'prueba@ciess.org'`);

@@ -26,3 +26,6 @@ vista-previa-congreso.html
 documentos/anteproyecto/correos/
 # El PDF de relleno con el que el guion de capturas pasa el paso de la semblanza.
 documentos/anteproyecto/.semblanza-de-relleno.pdf
+
+# Copias de lo que se borra (nombres y correos): nunca al repositorio
+respaldos/
