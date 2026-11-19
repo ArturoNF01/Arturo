@@ -17,6 +17,7 @@
     "llenar-folios": "tsx --conditions=react-server guiones/llenar-folios.ts",
     "limpiar-repetidos": "tsx --conditions=react-server guiones/limpiar-repetidos.ts",
     "eliminar-sin-registro": "tsx --conditions=react-server guiones/eliminar-sin-registro.ts",
+    "resolver-duplicados": "tsx --conditions=react-server guiones/resolver-duplicados.ts",
     "probar-correo": "tsx --conditions=react-server guiones/probar-correo.ts",
     "revisar-correo": "tsx --conditions=react-server guiones/revisar-correo.ts",
     "vista-correos": "tsx --conditions=react-server guiones/vista-previa-correos.ts",

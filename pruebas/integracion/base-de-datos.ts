@@ -1041,6 +1041,53 @@ async function principal() {
   await consultar(`delete from registros where correo like 'sin.%@example.org'`);
   ok('limpieza de las filas sin registro');
 
+  // 22. Juntar los registros de una misma persona: los días del que sobra pasan al que queda y él se cancela, en silencio
+  const { planearDuplicados } = await import('../../src/lib/duplicados');
+  const { fusionarRegistros } = await import('../../src/lib/servidor/duplicados');
+  await altaDeRepetido('dup.uno@example.org', 'Jose', 'Duplicado Prueba');
+  await altaDeRepetido('dup.dos@example.org', 'Jose', 'Duplicado Prueba');
+  // El primero asistió miércoles y jueves; el segundo, jueves (el mismo día, repetido) y viernes (uno que el primero no tenía)
+  await asiste('miercoles', 'dup.uno@example.org');
+  await asiste('jueves', 'dup.uno@example.org');
+  await asiste('jueves', 'dup.dos@example.org');
+  await asiste('viernes', 'dup.dos@example.org');
+  const idUno = (await unaFila<{ id: string }>(`select id from registros where correo = 'dup.uno@example.org'`))!.id;
+  const idDos = (await unaFila<{ id: string }>(`select id from registros where correo = 'dup.dos@example.org'`))!.id;
+  const antesDeCancelar = Number((await unaFila<{ n: string }>('select count(*)::text as n from registros'))!.n);
+
+  const asistenciasDup = await asistenciasDeAhora();
+  const revisionDup = revisarRepetidos(asistenciasDup, await ponentesRegistrados());
+  // Los dos llevan dos días: los datos no los distinguen, y no se escoge solo.
+  comprobar(planearDuplicados(revisionDup).sinResolver.some((c) => c.filas.some((f) => f.correo === 'dup.uno@example.org')),
+    'duplicados: con los mismos días y el mismo perfil, no se escoge solo');
+  const casoDup = planearDuplicados(revisionDup, ['dup.uno@example.org']).resueltos.find((c) => c.queda.correo === 'dup.uno@example.org');
+  comprobar(casoDup?.cancelar.length === 1 && casoDup.cancelar[0].correo === 'dup.dos@example.org',
+    'duplicados: con --mantener queda el que se pide y el otro se cancela', casoDup);
+
+  const fusion = await fusionarRegistros(idUno, idDos);
+  comprobar(!fusion.omitido && fusion.movidas === 1 && fusion.descartadas === 1,
+    'duplicados: el viernes (que no tenía) pasa al que queda y el jueves (que ya tenía) se descarta', fusion);
+  const diasUno = await consultar<{ sesion: string }>('select sesion from asistencias where registro_id = $1 order by sesion', [idUno]);
+  comprobar(diasUno.map((d) => d.sesion).join() === 'jueves,miercoles,viernes', 'duplicados: el registro que queda tiene los tres días, sin repetir', diasUno);
+  comprobar((await consultar('select 1 from asistencias where registro_id = $1', [idDos])).length === 0,
+    'duplicados: el que se cancela ya no lleva ninguna asistencia');
+  const cancelado = await unaFila<{ estado: string; nombres: string }>('select estado::text as estado, nombres from registros where id = $1', [idDos]);
+  comprobar(cancelado?.estado === 'cancelado' && cancelado.nombres === 'Jose', 'duplicados: el que sobra queda cancelado, con sus datos intactos', cancelado);
+  comprobar(Number((await unaFila<{ n: string }>('select count(*)::text as n from registros'))!.n) === antesDeCancelar, 'duplicados: no se borró ningún registro');
+  const rastroDup = await unaFila<{ origen: string; antes: string; despues: string }>(
+    `select origen, datos_previos->>'estado' as antes, datos_nuevos->>'estado' as despues from auditoria
+      where tabla = 'registros' and accion = 'UPDATE' and registro_id = $1 order by ocurrido_en desc limit 1`, [idDos]);
+  comprobar(rastroDup?.origen === 'sistema' && rastroDup.antes !== 'cancelado' && rastroDup.despues === 'cancelado',
+    'duplicados: la auditoría asienta la cancelación como del sistema, con el estado de antes', rastroDup);
+  const otraVez = await fusionarRegistros(idUno, idDos);
+  comprobar(Boolean(otraVez.omitido) && otraVez.movidas === 0, 'duplicados: repetirlo no hace nada: el que sobra ya no es vigente', otraVez);
+  const sinMasCasos = planearDuplicados(revisarRepetidos(await asistenciasDeAhora(), await ponentesRegistrados()));
+  comprobar(!sinMasCasos.resueltos.some((c) => c.queda.correo === 'dup.uno@example.org'), 'duplicados: ya no sale como dos constancias');
+
+  await consultar(`delete from asistencias where correo like 'dup.%' or registro_id in (select id from registros where correo like 'dup.%@example.org')`);
+  await consultar(`delete from registros where correo like 'dup.%@example.org'`);
+  ok('limpieza de los registros duplicados');
+
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);
   await consultar(`delete from usuarios_panel where correo = 'prueba@ciess.org'`);
