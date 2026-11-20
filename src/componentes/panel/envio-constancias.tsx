@@ -17,7 +17,7 @@ type Hoja =
       enlaceNuevo: number;
       porIdioma: { es: number; en: number; pt: number };
       excluidos: Excluidos;
-      faltan: { numero: string; nombre: string }[];
+      faltan: { numero: string; nombre: string; correo: string }[];
       faltanTotal: number;
       muestra: { numero: string; nombre: string; enlace: string }[];
     }
@@ -202,8 +202,9 @@ export function EnvioConstancias() {
         {hoja?.ok && hoja.faltan.length > 0 && (
           <details className="mt-3 text-sm">
             <summary className="cursor-pointer font-medium">{k.faltanConstancia} ({hoja.faltanTotal})</summary>
+            <p className="ayuda !mt-1">{k.faltanAyuda}</p>
             <ul className="mt-1 list-disc pl-5">
-              {hoja.faltan.map((f) => <li key={f.numero}>N.º {f.numero} · {f.nombre}</li>)}
+              {hoja.faltan.map((f) => <li key={f.numero}>N.º {f.numero} · {f.nombre}{f.correo ? ` · ${f.correo}` : ''}</li>)}
               {hoja.faltanTotal > hoja.faltan.length && <li>{interpolar(k.yMas, { n: String(hoja.faltanTotal - hoja.faltan.length) })}</li>}
             </ul>
           </details>

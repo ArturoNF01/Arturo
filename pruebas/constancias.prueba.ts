@@ -125,7 +125,7 @@ describe('a quién le toca su constancia', () => {
     const s = elegirDestinatariosDeConstancias({ filas: [f(1), f(2, { texto: '', enlace: null }), f(3, { texto: 'pendiente', enlace: null })], registros, yaEnviadas: nadie });
     expect(s.destinatarios).toHaveLength(1);
     expect(s.excluidos).toMatchObject({ sinConstancia: 1, enlaceInvalido: 1 });
-    expect(s.faltan).toEqual([{ numero: '2', nombre: 'Persona 2' }]);
+    expect(s.faltan).toEqual([{ numero: '2', nombre: 'Persona 2', correo: expect.any(String) }]);
   });
 
   it('un correo que no es válido, o que falta, deja fuera a esa fila', () => {

@@ -132,6 +132,8 @@ export interface DestinatarioDeConstancia {
 export interface FaltaConstancia {
   numero: string;
   nombre: string;
+  /** Su correo: ayuda a ubicar la fila en la hoja cuando hay nombres parecidos. */
+  correo: string;
 }
 
 export interface SeleccionDeConstancias {
@@ -192,7 +194,7 @@ export function elegirDestinatariosDeConstancias({
   for (const f of filas) {
     if (!f.conRegistro) { excluidos.sinRegistro += 1; continue; }
     if (!f.enlace) {
-      if (f.texto === '') { excluidos.sinConstancia += 1; faltan.push({ numero: f.numero, nombre: f.nombre }); }
+      if (f.texto === '') { excluidos.sinConstancia += 1; faltan.push({ numero: f.numero, nombre: f.nombre, correo: f.correo }); }
       else excluidos.enlaceInvalido += 1;
       continue;
     }
