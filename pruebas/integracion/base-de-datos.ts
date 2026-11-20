@@ -512,6 +512,20 @@ async function principal() {
   await consultar(migracionSql);
   comprobar((await cupo()) === 130, 'aforo: un segundo despliegue no pisa lo que el panel cambió', await cupo());
 
+  // 14b. El registro se cierra una vez al desplegar (el evento terminó) y después manda el panel
+  const registroAbierto = async () => (await unaFila<{ valor: boolean }>(
+    `select valor from configuracion where clave = 'registro_abierto'`))!.valor;
+  await consultar(`delete from configuracion where clave = 'migracion_registro_cerrado_fin_congreso'`);
+  await consultar(`update configuracion set valor = 'true'::jsonb where clave = 'registro_abierto'`);
+  await consultar(migracionSql);
+  comprobar((await registroAbierto()) === false, 'cierre: la migración deja el registro cerrado', await registroAbierto());
+  comprobar(
+    Boolean(await unaFila(`select 1 from configuracion where clave = 'migracion_registro_cerrado_fin_congreso'`)),
+    'cierre: deja su marca de migración aplicada');
+  await consultar(`update configuracion set valor = 'true'::jsonb where clave = 'registro_abierto'`);
+  await consultar(migracionSql);
+  comprobar((await registroAbierto()) === true, 'cierre: un segundo despliegue no cierra lo que el panel volvió a abrir', await registroAbierto());
+
   // 15. La pantalla de recepción (/qr): lo que se arma, el aviso del comité y la sala del jueves
   const publicadoAntes = (await unaFila<{ valor: boolean }>(`select valor from configuracion where clave = 'programa_publicado'`))!.valor;
   comprobar(

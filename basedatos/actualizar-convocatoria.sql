@@ -267,6 +267,25 @@ begin
 end
 $cupo$;
 
+-- El registro al congreso se cierra: el evento ya terminó (11 al 13 de noviembre de 2026).
+--
+-- Se aplica UNA sola vez, y por eso lleva una marca: esto corre en cada despliegue, y una orden suelta
+-- cerraría el registro otra vez cada vez que el comité lo abra desde Cupos y configuración (el panel
+-- manda). Con la marca se cierra en el primer despliegue y después nada lo vuelve a tocar. No cambia
+-- los registros que ya hay ni la fecha límite. La marca es una fila más de `configuracion` que ninguna
+-- pantalla enseña; no hay que borrarla.
+do $cierre$
+begin
+  if not exists (select 1 from configuracion where clave = 'migracion_registro_cerrado_fin_congreso') then
+    update configuracion set valor = 'false'::jsonb where clave = 'registro_abierto';
+
+    insert into configuracion (clave, valor, descripcion)
+    values ('migracion_registro_cerrado_fin_congreso', 'true'::jsonb,
+            'Marca interna de una migración ya aplicada: el registro al congreso se cerró al terminar el evento. No borrar.');
+  end if;
+end
+$cierre$;
+
 -- La sala de «sesiones» no existe: la mesa 4 es en la sala de comisiones (planta baja).
 -- Sólo cambia la descripción del enlace de Meet, y sólo si conserva el texto de siempre.
 update configuracion

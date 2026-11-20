@@ -93,7 +93,7 @@ export function PlantillaDeConstancia() {
       ) : (
         plantillas && <p className="ayuda mt-3">{interpolar(k.plantillaSinEsta, { idioma })}</p>
       )}
-      <a href="/panel/plantillas" className="mt-2 inline-block text-sm underline">{k.editarTexto}</a>
+      <a href="/panel/plantillas?clave=constancia" className="mt-2 inline-block text-sm underline">{k.editarTexto}</a>
     </section>
   );
 }

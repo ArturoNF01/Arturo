@@ -23,10 +23,11 @@ const NOMBRES_CLAVE: Record<string, string> = {
   constancia: 'Constancia de participación (botón de descarga)',
 };
 
-export function EditorPlantillas() {
+/** `claveInicial`: la plantilla con que se abre el editor (el atajo desde «Constancias»); sin ella, la de confirmación. */
+export function EditorPlantillas({ claveInicial }: { claveInicial?: string }) {
   const { t } = useApp();
   const [plantillas, setPlantillas] = useState<Plantilla[]>([]);
-  const [clave, setClave] = useState('confirmacion_registro');
+  const [clave, setClave] = useState(claveInicial ?? 'confirmacion_registro');
   const [idiomaPlantilla, setIdiomaPlantilla] = useState<Idioma>('es');
   // Los cambios sin guardar viven en un mapa por plantilla e idioma, de modo
   // que cambiar de pestaña no los descarte ni haya que sincronizar estado
@@ -42,7 +43,11 @@ export function EditorPlantillas() {
   useEffect(() => {
     void fetch('/api/plantillas')
       .then((r) => r.json())
-      .then((datos: Plantilla[]) => setPlantillas(datos));
+      .then((datos: Plantilla[]) => {
+        setPlantillas(datos);
+        // Una clave pedida por la dirección que no existe no deja el editor en blanco: vuelve a la de siempre.
+        setClave((pedida) => (datos.some((p) => p.clave === pedida) ? pedida : 'confirmacion_registro'));
+      });
   }, []);
 
   const llave = `${clave}|${idiomaPlantilla}`;

@@ -170,7 +170,7 @@ export function EnvioConstancias() {
         <h1 className="text-xl font-bold">{k.titulo}</h1>
         <p className="ayuda !mt-1">{k.ayuda}</p>
         <p className="ayuda">{k.archivos}</p>
-        <a href="/panel/plantillas" className="text-sm underline">{k.editarTexto}</a>
+        <a href="/panel/plantillas?clave=constancia" className="text-sm underline">{k.editarTexto}</a>
       </header>
 
       <section className="tarjeta p-4" aria-labelledby="constancias-estado">
