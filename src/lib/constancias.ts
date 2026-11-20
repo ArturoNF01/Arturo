@@ -1,4 +1,5 @@
 import type { IdiomaEnvio } from '@/lib/comunicados';
+import { nombreDePerfil } from '@/lib/normalizacion';
 
 /**
  * El envío de constancias: a quién le toca el correo y con qué enlace. Es lógica pura, aparte de la hoja y de Resend, para
@@ -10,6 +11,17 @@ import type { IdiomaEnvio } from '@/lib/comunicados';
 
 /** El título de la columna de la hoja que lleva el enlace. Se busca por su título, no por su letra. */
 export const COLUMNA_DE_CONSTANCIA = 'Constancia';
+
+/** A quiénes se manda por separado: las constancias de público general y las de ponentes salen en envíos distintos. */
+export type GrupoDeConstancia = 'publico_general' | 'ponente';
+export const GRUPOS_DE_CONSTANCIA: readonly GrupoDeConstancia[] = ['publico_general', 'ponente'];
+
+/** El grupo de una fila según su «Perfil» tal como se lee en la hoja («Público general», «Ponente»); nada si no es ninguno de los dos. */
+export function grupoDePerfil(texto: string): GrupoDeConstancia | null {
+  const limpio = texto.trim().toLowerCase();
+  if (limpio === '') return null;
+  return GRUPOS_DE_CONSTANCIA.find((g) => g === limpio || nombreDePerfil(g).toLowerCase() === limpio) ?? null;
+}
 
 /** Una celda de la hoja: lo que se ve y, si la celda es un hipervínculo (una fórmula HYPERLINK, un texto con enlace), a dónde lleva. */
 export interface CeldaDeLaHoja {
@@ -68,6 +80,8 @@ export interface FilaDeConstancia {
   nombre: string;
   correo: string;
   conRegistro: boolean;
+  /** Público general o ponente, según su «Perfil»; nada si la celda no dice ninguno de los dos. */
+  grupo: GrupoDeConstancia | null;
   /** Lo que hay en la columna «Constancia», tal como se ve. */
   texto: string;
   /** El enlace de descarga, si lo que hay es un enlace válido. */
@@ -78,7 +92,7 @@ const comoTexto = (celda: CeldaDeLaHoja | undefined) => String(celda?.texto ?? '
 
 /**
  * Las filas de la pestaña con lo que hace falta para mandar su constancia. La primera fila son los títulos: las columnas se buscan
- * por su título («Nombre», «Correo», «Con registro», «Constancia»), porque quien hace las constancias puede moverlas. Si falta
+ * por su título («Nombre», «Correo», «Perfil», «Con registro», «Constancia»), porque quien hace las constancias puede moverlas. Si falta
  * alguna, se dice cuál: no se adivina de dónde sacar un enlace.
  */
 export function filasDeConstancias(tabla: readonly (readonly CeldaDeLaHoja[])[]): FilaDeConstancia[] {
@@ -90,6 +104,7 @@ export function filasDeConstancias(tabla: readonly (readonly CeldaDeLaHoja[])[])
   };
   const cNombre = columna('Nombre');
   const cCorreo = columna('Correo');
+  const cPerfil = columna('Perfil');
   const cRegistro = columna('Con registro');
   const cConstancia = columna(COLUMNA_DE_CONSTANCIA);
   const cNumero = titulos.indexOf('N.º');
@@ -105,6 +120,7 @@ export function filasDeConstancias(tabla: readonly (readonly CeldaDeLaHoja[])[])
       nombre: comoTexto(fila[cNombre]),
       correo: comoTexto(fila[cCorreo]).toLowerCase(),
       conRegistro: comoTexto(fila[cRegistro]).toUpperCase() === 'TRUE',
+      grupo: grupoDePerfil(comoTexto(fila[cPerfil])),
       texto: texto || String(celda?.enlace ?? '').trim(),
       enlace: enlace ? enlaceDeDescarga(enlace) : null,
     }];
@@ -125,6 +141,8 @@ export interface DestinatarioDeConstancia {
   correo: string;
   registro_id: string | null;
   idioma: IdiomaEnvio;
+  /** Su grupo según la hoja; no se guarda con el envío, sirve para enseñarlo. */
+  grupo: GrupoDeConstancia | null;
   /** Lo que se guarda con su envío y se manda: su enlace, el nombre con que se le saluda y su fila. */
   datos: { enlace: string; nombre: string; numero: string };
 }
@@ -171,14 +189,18 @@ const correoValido = (correo: string) => /^[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]{2
  *  - Quien ya la recibió con el mismo enlace queda fuera: repetir el envío sólo alcanza a quienes faltan. Si el enlace cambió
  *    (se corrigió una constancia), sí se manda otra vez, y se cuenta aparte para que quien envía lo sepa.
  *  - Cada quien la recibe en el idioma con que se registró; quien no está registrado con ese correo, en español.
+ *  - Con `grupo`, sólo se cuentan y se eligen las filas de ese grupo (público general o ponentes). Un correo que sale en dos filas,
+ *    aunque sean de grupos distintos, es una sola persona: se manda una sola vez, con la primera fila que tenga enlace.
  */
 export function elegirDestinatariosDeConstancias({
-  filas, registros, yaEnviadas,
+  filas, registros, yaEnviadas, grupo,
 }: {
   filas: readonly FilaDeConstancia[];
   registros: readonly RegistroParaConstancia[];
   /** Los enlaces que ya se mandaron, por correo (en minúsculas). */
   yaEnviadas: ReadonlyMap<string, ReadonlySet<string>>;
+  /** Sólo este grupo; sin él, todos (cualquiera que sea su perfil). */
+  grupo?: GrupoDeConstancia;
 }): SeleccionDeConstancias {
   const registroPorCorreo = new Map<string, RegistroParaConstancia>();
   for (const r of registros) registroPorCorreo.set(r.correo.trim().toLowerCase(), r);
@@ -192,15 +214,20 @@ export function elegirDestinatariosDeConstancias({
   let sinRegistroDeCorreo = 0;
 
   for (const f of filas) {
-    if (!f.conRegistro) { excluidos.sinRegistro += 1; continue; }
+    // Las filas de otro grupo no se cuentan, pero sí cuentan para saber si un correo ya salió: es una persona, no una fila.
+    const delGrupo = grupo === undefined || f.grupo === grupo;
+    const contar = (motivo: keyof typeof excluidos) => { if (delGrupo) excluidos[motivo] += 1; };
+    if (!f.conRegistro) { contar('sinRegistro'); continue; }
     if (!f.enlace) {
+      if (!delGrupo) continue;
       if (f.texto === '') { excluidos.sinConstancia += 1; faltan.push({ numero: f.numero, nombre: f.nombre, correo: f.correo }); }
       else excluidos.enlaceInvalido += 1;
       continue;
     }
-    if (!correoValido(f.correo)) { excluidos.sinCorreo += 1; continue; }
-    if (vistos.has(f.correo)) { excluidos.correoRepetido += 1; continue; }
+    if (!correoValido(f.correo)) { contar('sinCorreo'); continue; }
+    if (vistos.has(f.correo)) { contar('correoRepetido'); continue; }
     vistos.add(f.correo);
+    if (!delGrupo) continue;
 
     const antes = yaEnviadas.get(f.correo);
     if (antes?.has(f.enlace)) { excluidos.yaRecibieron += 1; continue; }
@@ -214,8 +241,134 @@ export function elegirDestinatariosDeConstancias({
       correo: f.correo,
       registro_id: registro?.id ?? null,
       idioma,
+      grupo: f.grupo,
       datos: { enlace: f.enlace, nombre: f.nombre, numero: f.numero },
     });
   }
   return { destinatarios, enlaceNuevo, excluidos, porIdioma, faltan, sinRegistroDeCorreo };
+}
+
+// ---------------------------------------------------------------------------
+// Una lista de personas
+// ---------------------------------------------------------------------------
+
+/** A quiénes sale un envío: a un grupo, a una lista de correos o (sólo para quien lo pida por código) a todos los que tienen enlace. */
+export type AlcanceDeConstancias =
+  | { tipo: 'todos' }
+  | { tipo: 'grupo'; grupo: GrupoDeConstancia }
+  | { tipo: 'lista'; correos: readonly string[]; reenviar: boolean };
+
+/** Cuántos correos admite una lista: para un par de personas o para un puñado; más se manda por grupo. */
+export const MAXIMO_DE_LA_LISTA = 200;
+
+const CORREO_EN_UN_TEXTO = /[^\s<>,;"'()[\]]+@[^\s<>,;"'()[\]]+/g;
+
+/**
+ * Los correos de lo que se pegó o escribió: separados por comas, punto y coma, saltos de línea o espacios, o dentro de un
+ * «Nombre <correo@dominio>». En minúsculas y sin repetir, en el orden en que se escribieron. Un pedazo que no trae ningún correo
+ * se conserva tal cual para decirlo («no es un correo»), no se descarta en silencio.
+ */
+export function correosDeUnTexto(texto: string): string[] {
+  const vistos = new Set<string>();
+  const resultado: string[] = [];
+  const poner = (valor: string) => {
+    if (valor !== '' && !vistos.has(valor)) { vistos.add(valor); resultado.push(valor); }
+  };
+  for (const pedazo of texto.split(/[\n;,]+/)) {
+    const hallados = pedazo.match(CORREO_EN_UN_TEXTO);
+    if (hallados) for (const h of hallados) poner(h.toLowerCase().replace(/[.:]+$/, ''));
+    else poner(pedazo.trim().slice(0, 80));
+  }
+  return resultado;
+}
+
+/** Qué pasa con cada correo de una lista. */
+export type EstadoDeCorreo =
+  | 'enviar'
+  | 'yaRecibio'
+  | 'sinRegistro'
+  | 'sinConstancia'
+  | 'enlaceInvalido'
+  | 'noEstaEnLaHoja'
+  | 'correoInvalido';
+
+export interface VerificacionDeCorreo {
+  correo: string;
+  estado: EstadoDeCorreo;
+  /** De su fila en la hoja, si está. */
+  numero?: string;
+  nombre?: string;
+  grupo?: GrupoDeConstancia | null;
+  /** Sólo con `enviar`: ya la había recibido con este mismo enlace y se vuelve a mandar porque se pidió. */
+  reenvio?: boolean;
+}
+
+export interface SeleccionDeLista {
+  verificacion: VerificacionDeCorreo[];
+  destinatarios: DestinatarioDeConstancia[];
+  /** Cuántos recibirán otra vez el mismo enlace (se pidió reenviar), y cuántos recibirán uno nuevo después de otro distinto. */
+  reenvios: number;
+  enlaceNuevo: number;
+  porIdioma: Record<IdiomaEnvio, number>;
+}
+
+/**
+ * Comprueba, correo por correo, que a cada persona de la lista le toca su constancia: que esté en la hoja, con «Con registro»
+ * marcado y un enlace válido en «Constancia». A quien no, se le dice por qué, y no se le manda nada. Quien ya la recibió con el
+ * mismo enlace queda fuera, salvo que se pida `reenviar` (alguien que la perdió o no le llegó).
+ *
+ * Es la misma regla que la del envío por grupo: el mismo enlace de su fila, el mismo idioma. Un correo que sale en dos filas usa
+ * la primera con registro y enlace válido.
+ */
+export function elegirDeUnaLista({
+  correos, filas, registros, yaEnviadas, reenviar = false,
+}: {
+  correos: readonly string[];
+  filas: readonly FilaDeConstancia[];
+  registros: readonly RegistroParaConstancia[];
+  yaEnviadas: ReadonlyMap<string, ReadonlySet<string>>;
+  reenviar?: boolean;
+}): SeleccionDeLista {
+  const registroPorCorreo = new Map<string, RegistroParaConstancia>();
+  for (const r of registros) registroPorCorreo.set(r.correo.trim().toLowerCase(), r);
+
+  const verificacion: VerificacionDeCorreo[] = [];
+  const destinatarios: DestinatarioDeConstancia[] = [];
+  const porIdioma: Record<IdiomaEnvio, number> = { es: 0, en: 0, pt: 0 };
+  let reenvios = 0;
+  let enlaceNuevo = 0;
+
+  for (const correo of correos) {
+    if (!correoValido(correo)) { verificacion.push({ correo, estado: 'correoInvalido' }); continue; }
+    const suyas = filas.filter((f) => f.correo === correo);
+    if (suyas.length === 0) { verificacion.push({ correo, estado: 'noEstaEnLaHoja' }); continue; }
+    const conRegistro = suyas.filter((f) => f.conRegistro);
+    const datosDe = (f: FilaDeConstancia) => ({ numero: f.numero, nombre: f.nombre, grupo: f.grupo });
+    if (conRegistro.length === 0) { verificacion.push({ correo, estado: 'sinRegistro', ...datosDe(suyas[0]) }); continue; }
+    const fila = conRegistro.find((f) => f.enlace);
+    if (!fila || !fila.enlace) {
+      const conAlgo = conRegistro.some((f) => f.texto !== '');
+      verificacion.push({ correo, estado: conAlgo ? 'enlaceInvalido' : 'sinConstancia', ...datosDe(conRegistro[0]) });
+      continue;
+    }
+
+    const antes = yaEnviadas.get(correo);
+    const yaLaTiene = Boolean(antes?.has(fila.enlace));
+    if (yaLaTiene && !reenviar) { verificacion.push({ correo, estado: 'yaRecibio', ...datosDe(fila) }); continue; }
+    if (yaLaTiene) reenvios += 1;
+    else if (antes && antes.size > 0) enlaceNuevo += 1;
+
+    const registro = registroPorCorreo.get(correo);
+    const idioma: IdiomaEnvio = registro && esIdioma(registro.idioma) ? registro.idioma : 'es';
+    porIdioma[idioma] += 1;
+    verificacion.push({ correo, estado: 'enviar', ...datosDe(fila), ...(yaLaTiene ? { reenvio: true } : {}) });
+    destinatarios.push({
+      correo,
+      registro_id: registro?.id ?? null,
+      idioma,
+      grupo: fila.grupo,
+      datos: { enlace: fila.enlace, nombre: fila.nombre, numero: fila.numero },
+    });
+  }
+  return { verificacion, destinatarios, reenvios, enlaceNuevo, porIdioma };
 }

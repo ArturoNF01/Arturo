@@ -558,6 +558,12 @@ vi.mock('@/lib/servidor/sheets', () => ({
   peticionesDeTitulos: () => [],
 }));
 vi.mock('@/lib/servidor/asistencia', () => ({ todasLasAsistencias: async () => asistencias, ponentesRegistrados: async () => ponentesDeLaBase }));
+// Si la pestaña está congelada se lee de la base (`configuracion`); aquí, de una variable. Por omisión, libre: lo de siempre.
+let congelada: boolean | 'falla' = false;
+vi.mock('@/lib/servidor/hoja-congelada', () => ({
+  TEXTO_HOJA_CONGELADA: 'La pestaña «Asistencia por persona» está congelada: el sistema no la toca.',
+  hojaCongelada: async () => { if (congelada === 'falla') throw new Error('la base no responde'); return congelada; },
+}));
 
 const {
   ESPERA_AUTOMATICA_MS, estadoDeLaHoja, pedirSincronizacionDeAsistencias, sincronizarAsistencias, sincronizarYAnotar,
@@ -575,6 +581,7 @@ beforeEach(() => {
   hoja.lecturasDeTitulos = 0; hoja.alLeerTitulos = null;
   asistencias = [];
   ponentesDeLaBase = [];
+  congelada = false;
 });
 
 const registrada = (sesion: string, nombre: string, correo: string, extra: Record<string, unknown> = {}) =>
@@ -720,6 +727,62 @@ describe('sincronizar la pestaña con la base', () => {
     expect(personas.existe).toBe(false);
     expect(personas.escrituras).toEqual([]);
     expect(hoja.eventos).toEqual([]);
+  });
+});
+
+describe('la pestaña congelada: se edita a mano y el sistema no la toca', () => {
+  /** La pestaña ya escrita por el sistema, y después de eso alguien corrige un nombre a mano (la columna B de la primera fila). */
+  async function conUnaEdicionAMano() {
+    asistencias = [registrada('jueves', 'Uno', 'uno@x.org'), registrada('jueves', 'Dos', 'dos@x.org')];
+    await sincronizarAsistencias();
+    personas.filas[0][1] = 'Uno Corregido a Mano';
+  }
+
+  it('libre, la pasada deshace lo que se cambió a mano en sus diez columnas (por eso existe el congelado)', async () => {
+    await conUnaEdicionAMano();
+    await sincronizarAsistencias();
+    expect(personas.filas[0][1]).toBe('Uno');
+  });
+
+  it('congelada, no lee ni escribe nada: lo corregido a mano se queda y nada se manda a Google', async () => {
+    await conUnaEdicionAMano();
+    congelada = true;
+    asistencias = [...asistencias, registrada('viernes', 'Tres', 'tres@x.org')];
+    const eventos = hoja.eventos.length;
+    const r = await sincronizarAsistencias();
+    expect(r).toMatchObject({ nuevas: 0, cambiadas: 0, quitadas: 0, congelada: true });
+    expect(r.omitido).toMatch(/congelada/);
+    expect(personas.filas[0][1]).toBe('Uno Corregido a Mano');
+    expect(personas.filas).toHaveLength(2);
+    expect(hoja.eventos).toHaveLength(eventos);
+  });
+
+  it('si no se puede saber si está congelada (la base no responde), no escribe: es lo que no hace daño', async () => {
+    await conUnaEdicionAMano();
+    congelada = 'falla';
+    const r = await sincronizarAsistencias();
+    expect(r.congelada).toBe(true);
+    expect(personas.filas[0][1]).toBe('Uno Corregido a Mano');
+  });
+
+  it('una simulación sí corre: sólo lee, y sirve para ver qué haría una pasada si se descongelara', async () => {
+    await conUnaEdicionAMano();
+    congelada = true;
+    const r = await sincronizarAsistencias({ simular: true });
+    expect(r).toMatchObject({ simulado: true, cambiadas: 2 });
+    expect(r.congelada).toBeUndefined();
+    expect(personas.filas[0][1]).toBe('Uno Corregido a Mano');
+  });
+
+  it('el botón del panel y la pasada automática tampoco la tocan, y congelada no se anota como un fallo ni como «al día»', async () => {
+    await conUnaEdicionAMano();
+    congelada = true;
+    const antes = estadoDeLaHoja().ultimaVez;
+    const r = await sincronizarYAnotar();
+    expect(r.congelada).toBe(true);
+    expect(estadoDeLaHoja().error).toBeNull();
+    expect(estadoDeLaHoja().ultimaVez).toBe(antes);
+    expect(personas.filas[0][1]).toBe('Uno Corregido a Mano');
   });
 });
 

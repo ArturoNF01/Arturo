@@ -1184,6 +1184,72 @@ async function principal() {
   const sinCuarto = await crearCampanaDeConstancias({ confirmacion: '0', usuarioId: usuario!.id, tabla: tablaCon(enlaceDeAna) });
   comprobar(!sinCuarto.ok && sinCuarto.codigo === 'invalido', 'constancias: sin nadie a quien enviar no se crea nada', sinCuarto);
 
+  // 23b. Por separado: público general, ponentes y una lista de correos (que se comprueban contra la hoja)
+  const { calcularPorGrupo, verificarListaDeConstancias } = await import('../../src/lib/servidor/constancias');
+  const filaGrupo = (n: number, nombre: string, correo: string, perfil: string, constancia: ReturnType<typeof celdaCon>) =>
+    [String(n), nombre, correo, '', perfil, '1', 'TRUE'].map((x) => celdaCon(x)).concat([constancia]);
+  const tablaGrupos = [
+    titulosCon.map((x) => celdaCon(x)),
+    filaGrupo(1, 'Ana Constancia Uno', 'con.ana@example.org', 'Público general', celdaCon('Constancia de Ana', enlaceDeAna)), // ya la recibió
+    filaGrupo(2, 'Eva Constancia Dos', 'con.eva@example.org', 'Ponente', celdaCon('https://constancias.example.org/eva.pdf')), // ya la recibió
+    filaGrupo(3, 'Luis Constancia Tres', 'con.luis@example.org', 'Ponente', celdaCon('https://constancias.example.org/luis.pdf')),
+    filaGrupo(4, 'Maria Publico', 'con.maria@example.org', 'Público general', celdaCon('https://constancias.example.org/maria.pdf')),
+    filaGrupo(5, 'Pedro Ponente', 'con.pedro@example.org', 'Ponente', celdaCon('https://constancias.example.org/pedro.pdf')),
+    filaGrupo(6, 'Sofia Sin Enlace', 'con.sofia@example.org', 'Ponente', celdaCon('')),
+  ];
+  const porGrupo = await calcularPorGrupo(tablaGrupos);
+  comprobar(porGrupo.grupos.publico_general.destinatarios.map((d) => d.correo).join() === 'con.maria@example.org' &&
+    porGrupo.grupos.ponente.destinatarios.map((d) => d.correo).join() === 'con.luis@example.org,con.pedro@example.org',
+    'constancias por grupo: cada grupo sólo ve a los suyos (y lo ya enviado no se repite)', porGrupo.grupos);
+  comprobar(porGrupo.grupos.ponente.faltan.map((f) => f.nombre).join() === 'Sofia Sin Enlace' && porGrupo.grupos.publico_general.faltan.length === 0,
+    'constancias por grupo: quien no tiene enlace sale en la lista de su grupo');
+
+  const malaPonentes = await crearCampanaDeConstancias({ confirmacion: '3', usuarioId: usuario!.id, tabla: tablaGrupos, alcance: { tipo: 'grupo', grupo: 'ponente' } });
+  comprobar(!malaPonentes.ok && malaPonentes.codigo === 'cifra', 'constancias por grupo: la cifra que se confirma es la del grupo', malaPonentes);
+  const deLosPonentes = await crearCampanaDeConstancias({ confirmacion: '2', usuarioId: usuario!.id, tabla: tablaGrupos, alcance: { tipo: 'grupo', grupo: 'ponente' } });
+  comprobar(deLosPonentes.ok && deLosPonentes.total === 2, 'constancias por grupo: se crea el envío de los ponentes', deLosPonentes);
+  const alcancePonentes = await consultar<{ correo: string; alcance: string }>(
+    `select correo, datos->>'alcance' as alcance from envios_campana where campana_id = $1 order by correo`, [deLosPonentes.ok ? deLosPonentes.id : '']);
+  comprobar(alcancePonentes.map((x) => `${x.correo}:${x.alcance}`).join() === 'con.luis@example.org:ponente,con.pedro@example.org:ponente',
+    'constancias por grupo: cada fila del envío guarda a qué grupo salió', alcancePonentes);
+  await consultar('delete from campanas_correo where id = $1', [deLosPonentes.ok ? deLosPonentes.id : '']);
+
+  const correosDeLista = ['con.luis@example.org', 'con.ana@example.org', 'con.sofia@example.org', 'con.nadie@example.org', 'esto no es un correo'];
+  const verificada = await verificarListaDeConstancias({ correos: correosDeLista, tabla: tablaGrupos });
+  comprobar(verificada.verificacion.map((v) => v.estado).join() === 'enviar,yaRecibio,sinConstancia,noEstaEnLaHoja,correoInvalido',
+    'constancias por lista: cada correo dice si le toca su constancia y, si no, por qué', verificada.verificacion);
+  const reenviada = await verificarListaDeConstancias({ correos: correosDeLista, reenviar: true, tabla: tablaGrupos });
+  comprobar(reenviada.destinatarios.map((d) => d.correo).join() === 'con.luis@example.org,con.ana@example.org' && reenviada.reenvios === 1,
+    'constancias por lista: con «reenviar» también la recibe quien ya la tenía, y se cuenta aparte', reenviada);
+  const listaMala = await crearCampanaDeConstancias({ confirmacion: '2', usuarioId: usuario!.id, tabla: tablaGrupos, alcance: { tipo: 'lista', correos: correosDeLista, reenviar: false } });
+  comprobar(!listaMala.ok && listaMala.codigo === 'cifra', 'constancias por lista: el envío vuelve a comprobar la lista contra la hoja (sólo le toca a una persona)', listaMala);
+  const deLaLista = await crearCampanaDeConstancias({ confirmacion: '1', usuarioId: usuario!.id, tabla: tablaGrupos, alcance: { tipo: 'lista', correos: correosDeLista, reenviar: false } });
+  comprobar(deLaLista.ok && deLaLista.total === 1, 'constancias por lista: sólo sale a quien le toca', deLaLista);
+  const deLista = await consultar<{ correo: string; alcance: string; enlace: string }>(
+    `select correo, datos->>'alcance' as alcance, datos->>'enlace' as enlace from envios_campana where campana_id = $1`, [deLaLista.ok ? deLaLista.id : '']);
+  comprobar(deLista.length === 1 && deLista[0].correo === 'con.luis@example.org' && deLista[0].alcance === 'lista' && deLista[0].enlace === 'https://constancias.example.org/luis.pdf',
+    'constancias por lista: con su propio enlace y marcado como de lista', deLista);
+  await consultar('delete from campanas_correo where id = $1', [deLaLista.ok ? deLaLista.id : '']);
+  const listaVacia = await crearCampanaDeConstancias({ confirmacion: '0', usuarioId: usuario!.id, tabla: tablaGrupos, alcance: { tipo: 'lista', correos: ['con.nadie@example.org'], reenviar: false } });
+  comprobar(!listaVacia.ok && listaVacia.codigo === 'invalido', 'constancias por lista: si a nadie le toca no se crea nada', listaVacia);
+
+  // 23c. La pestaña congelada: la fila nace sembrada y el interruptor funciona y se audita
+  const { hojaCongelada, ponerHojaCongelada, exigirHojaLibre } = await import('../../src/lib/servidor/hoja-congelada');
+  comprobar(Boolean(await unaFila(`select 1 from configuracion where clave = 'hoja_personas_congelada'`)), 'hoja congelada: la fila del interruptor está sembrada');
+  await ponerHojaCongelada(false, null);
+  comprobar((await hojaCongelada()) === false, 'hoja congelada: se descongela');
+  let rechazo = '';
+  try { await exigirHojaLibre(); } catch { rechazo = 'no debía rechazar'; }
+  comprobar(rechazo === '', 'hoja congelada: libre, los guiones que cambian la base siguen');
+  await ponerHojaCongelada(true, null);
+  comprobar((await hojaCongelada()) === true, 'hoja congelada: se congela');
+  let mensajeDeRechazo = '';
+  try { await exigirHojaLibre(); } catch (e) { mensajeDeRechazo = e instanceof Error ? e.message : String(e); }
+  comprobar(/congelada/.test(mensajeDeRechazo), 'hoja congelada: congelada, los guiones que cambian la base se niegan y dicen por qué', mensajeDeRechazo);
+  const auditadas = await consultar<{ origen: string }>(
+    `select origen from auditoria where tabla = 'configuracion' and datos_nuevos->>'clave' = 'hoja_personas_congelada' order by ocurrido_en desc limit 1`);
+  comprobar(auditadas[0]?.origen === 'sistema', 'hoja congelada: el cambio queda en la auditoría', auditadas);
+
   await consultar('delete from campanas_correo where id = $1', [idCampana]);
   await consultar(`delete from registros where correo like 'con.%@example.org'`);
   ok('limpieza del envío de constancias');

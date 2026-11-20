@@ -10,6 +10,7 @@ import { ponenciasParaLaHoja } from '@/lib/ponentes';
 import { revisarRepetidos, type ResumenDeRepetidos } from '@/lib/repetidos';
 import { ponentesRegistrados, todasLasAsistencias } from './asistencia';
 import { clienteSheets, googleConfigurado } from './google';
+import { TEXTO_HOJA_CONGELADA, hojaCongelada } from './hoja-congelada';
 import { conEspera, peticionesDeTitulos } from './sheets';
 
 /**
@@ -43,6 +44,10 @@ import { conEspera, peticionesDeTitulos } from './sheets';
  *    falló en el momento, la pasada siguiente lo alcanza;
  *  - a pedido, con el botón del panel.
  *
+ * **Congelada, no se toca** (`hojaCongelada`): cuando quien hace las constancias edita la pestaña a mano, el sistema deja de escribirla,
+ * porque una pasada deshace lo que se cambió en sus diez columnas y, si las filas cambiaron de orden, desalinea las constancias.
+ * Una simulación sí corre: sólo lee.
+ *
  * La pestaña es una copia de la base (la base manda): se compara fila por fila y sólo se escribe lo que
  * falta o cambió. Sólo toca sus diez columnas; lo que alguien anote a la derecha no se pisa. Y como una copia
  * que desaparece es peor que una copia que tarda, no quita filas de golpe: si la hoja tuviera muchas más
@@ -71,6 +76,8 @@ export interface ResultadoDeAsistencias {
   quitadas: number;
   /** Si no se tocó la hoja, por qué. */
   omitido?: string;
+  /** Verdadero si no se tocó porque la pestaña está congelada (se edita a mano): no es un fallo ni hay nada pendiente. */
+  congelada?: boolean;
   /** Verdadero si sólo se calculó lo que pasaría. */
   simulado?: boolean;
   /** Si la hoja todavía tenía la pestaña «Asistencias» del diseño anterior, qué se hizo con ella. */
@@ -223,6 +230,12 @@ export async function sincronizarAsistencias(
 ): Promise<ResultadoDeAsistencias> {
   const idLibro = process.env.GOOGLE_SHEETS_ID;
   if (!googleConfigurado() || !idLibro) throw new Error('Google Sheets no está configurado.');
+  // Congelada, ni se lee ni se escribe: lo primero, antes de cualquier petición a Google. Si no se puede saber (la base no responde),
+  // se actúa como si lo estuviera: no escribir es lo que no se puede lamentar.
+  if (!simular) {
+    const congelada = await hojaCongelada().catch(() => true);
+    if (congelada) return { nuevas: 0, cambiadas: 0, quitadas: 0, congelada: true, omitido: TEXTO_HOJA_CONGELADA };
+  }
   const sheets = clienteSheets();
 
   const libro = await conEspera(() =>
@@ -541,8 +554,9 @@ export function sincronizarYAnotar(opciones?: { forzar?: boolean }): Promise<Res
   const pasada = cola.then(async () => {
     try {
       const r = await sincronizarAsistencias(opciones);
-      estado.ultimaVez = new Date().toISOString();
-      estado.error = r.omitido ?? null;
+      // Congelada no es un fallo ni una puesta al día: no se anota ni como error ni como «al día a las…».
+      if (!r.congelada) estado.ultimaVez = new Date().toISOString();
+      estado.error = r.congelada ? null : (r.omitido ?? null);
       return r;
     } catch (fallo) {
       estado.error = fallo instanceof Error ? fallo.message : String(fallo);

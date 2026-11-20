@@ -86,6 +86,8 @@ async function principal() {
   const sincronizarLasAsistencias = async () => {
     try {
       const r = await sincronizarAsistencias({ forzar: process.argv.includes('--forzar') });
+      // Congelada: se dice una vez y no se sigue con el «al día», que no sería cierto.
+      if (r.congelada) { decir('Asistencia por persona: congelada, no se toca (se edita a mano).'); return; }
       if (r.omitido) console.log(r.omitido);
       // Lo que cambió en la estructura de la hoja (una columna insertada o movida) se dice siempre: quien la lea mañana
       // tiene que poder saber por qué sus columnas se movieron.

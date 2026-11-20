@@ -7,6 +7,7 @@ import {
 } from '@/lib/servidor/asistencia';
 import { googleConfigurado } from '@/lib/servidor/google';
 import { estadoDeLaHoja, pedirSincronizacionDeAsistencias, sincronizarYAnotar } from '@/lib/servidor/sheets-asistencia';
+import { hojaCongelada, ponerHojaCongelada } from '@/lib/servidor/hoja-congelada';
 import { esUuid } from '@/lib/esquema';
 import { permisos, usuarioActual } from '@/lib/servidor/sesion';
 
@@ -25,7 +26,11 @@ export async function GET(peticion: NextRequest) {
 
   const vista = peticion.nextUrl.searchParams.get('vista') ?? 'resumen';
   try {
-    if (vista === 'resumen') return NextResponse.json({ resumen: await resumenPorSesion(), hoja: estadoDeLaHoja() });
+    if (vista === 'resumen') {
+      // Si no se puede saber si está congelada, se dice que lo está: es lo que no hace daño.
+      const congelada = await hojaCongelada().catch(() => true);
+      return NextResponse.json({ resumen: await resumenPorSesion(), hoja: { ...estadoDeLaHoja(), congelada } });
+    }
 
     if (vista === 'sesion') {
       const sesion = peticion.nextUrl.searchParams.get('sesion') ?? '';
@@ -113,6 +118,13 @@ export async function POST(peticion: NextRequest) {
       // La hoja de Google no lleva la sesión de prueba (sólo la gente que asistió a un día del Congreso), así que no hay nada
       // que quitar de ella.
       return NextResponse.json({ borradas, prueba: await estadoDePrueba(urlSitio()) });
+    }
+
+    // Congelar la pestaña de la hoja (se edita a mano: el sistema no la escribe) o volver a dejarla como copia de la base.
+    if (accion === 'congelar_hoja') {
+      if (typeof cuerpo?.congelada !== 'boolean') return NextResponse.json({ mensaje: 'Falta indicar si se congela.' }, { status: 422 });
+      await ponerHojaCongelada(cuerpo.congelada, usuario.id);
+      return NextResponse.json({ congelada: cuerpo.congelada });
     }
 
     // Pasar la asistencia a la hoja ahora, sin esperar a la sincronización de cada 10 minutos.

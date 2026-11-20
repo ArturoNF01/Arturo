@@ -74,7 +74,7 @@ export function PanelAsistencia({
   const [prueba, setPrueba] = useState(pruebaInicial);
   const [trabajando, setTrabajando] = useState(false);
   /** Cómo le fue a la última pasada a la hoja de Google desde el servidor del sitio. */
-  const [hoja, setHoja] = useState<{ ultimaVez: string | null; error: string | null } | null>(null);
+  const [hoja, setHoja] = useState<{ ultimaVez: string | null; error: string | null; congelada?: boolean } | null>(null);
   const abiertaRef = useRef(abierta);
   useEffect(() => { abiertaRef.current = abierta; }, [abierta]);
 
@@ -88,7 +88,7 @@ export function PanelAsistencia({
   );
 
   const cargarResumen = useCallback(async () => {
-    const r = await pedir<{ resumen: Record<string, ResumenDeSesion>; hoja: { ultimaVez: string | null; error: string | null } }>('/api/asistencia/panel?vista=resumen');
+    const r = await pedir<{ resumen: Record<string, ResumenDeSesion>; hoja: { ultimaVez: string | null; error: string | null; congelada?: boolean } }>('/api/asistencia/panel?vista=resumen');
     if (r.ok && r.datos) { setResumen(r.datos.resumen); setHoja(r.datos.hoja); marcarActualizado(); setError(''); } else setError(a.error);
   }, [a.error, marcarActualizado]);
 
@@ -188,6 +188,17 @@ export function PanelAsistencia({
     } else setError(r.mensaje ?? a.error);
   }
 
+  /** Congela la pestaña de la hoja (se edita a mano) o la devuelve a ser copia de la base; al descongelar se pide confirmación. */
+  async function cambiarCongelada(congelada: boolean) {
+    if (!congelada && !window.confirm(a.hojaDescongelarConfirma)) return;
+    setTrabajando(true);
+    const r = await pedir<{ congelada: boolean }>('/api/asistencia/panel', post({ accion: 'congelar_hoja', congelada }));
+    setTrabajando(false);
+    if (!r.ok || !r.datos) { setError(r.mensaje ?? a.error); return; }
+    setHoja((previa) => (previa ? { ...previa, congelada: r.datos!.congelada } : previa));
+    avisar(r.datos.congelada ? a.hojaCongeladaListo : a.hojaLibreListo);
+  }
+
   async function pasarALaHoja() {
     setTrabajando(true);
     const r = await pedir<{ hoja: { nuevas: number; cambiadas: number; quitadas: number; omitido?: string } }>(
@@ -228,17 +239,32 @@ export function PanelAsistencia({
           {actualizadoA && <span>{interpolar(a.actualizadoA, { hora: actualizadoA })}</span>}
           <button type="button" className="underline" onClick={() => void refrescarTodo(abierta ?? undefined)}>{a.actualizar}</button>
           {puedeExportar && <a className="underline" href="/api/asistencia/exportar">{a.exportarTodo}</a>}
-          {puedeGestionar && (
+          {puedeGestionar && !hoja?.congelada && (
             <button type="button" className="underline" disabled={trabajando} onClick={() => void pasarALaHoja()}>{a.hojaAhora}</button>
           )}
         </span>
       </div>
 
       {error && <p className="text-sm text-red-500" role="alert">{error}</p>}
-      {puedeGestionar && hoja?.error && (
+      {puedeGestionar && hoja?.congelada !== undefined && (
+        <label className="tarjeta flex cursor-pointer items-start gap-3 p-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-ciess-500"
+            checked={hoja.congelada}
+            disabled={trabajando}
+            onChange={(e) => void cambiarCongelada(e.target.checked)}
+          />
+          <span>
+            <span className="text-sm font-medium">{a.hojaCongelada}</span>
+            <span className="ayuda block">{a.hojaCongeladaAyuda}</span>
+          </span>
+        </label>
+      )}
+      {puedeGestionar && !hoja?.congelada && hoja?.error && (
         <p className="rounded-lg bg-amber-500/10 p-3 text-sm" role="status">{interpolar(a.hojaError, { mensaje: hoja.error })}</p>
       )}
-      {puedeGestionar && !hoja?.error && hoja?.ultimaVez && (
+      {puedeGestionar && !hoja?.congelada && !hoja?.error && hoja?.ultimaVez && (
         <p className="text-xs tenue">{interpolar(a.hojaAlDia, { hora: hora(hoja.ultimaVez) })}</p>
       )}
       {aviso && <p className="rounded-lg bg-green-500/10 p-3 text-sm" role="status">{aviso}</p>}

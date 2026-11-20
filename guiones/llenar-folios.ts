@@ -55,7 +55,8 @@ async function principal() {
   if (aplicar) {
     const hoja = await sincronizarAsistencias();
     for (const aviso of hoja.avisos ?? []) console.log(aviso);
-    if (hoja.omitido) { console.error(`La pestaña no quedó al día: ${hoja.omitido}`); process.exit(1); }
+    // Congelada, la hoja es la que manda: los folios se ponen sobre ella tal como está, que es lo que se lee de todos modos.
+    if (hoja.omitido && !hoja.congelada) { console.error(`La pestaña no quedó al día: ${hoja.omitido}`); process.exit(1); }
   }
 
   const r = await llenarFolios({ aplicar });

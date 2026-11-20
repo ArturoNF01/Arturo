@@ -1232,8 +1232,15 @@ begin
   end if;
 end $$;
 
+-- La pestaña «Asistencia por persona» nace congelada: el evento terminó y quien hace las constancias la edita a mano, y una pasada del
+-- sistema deshace lo que se cambió en sus diez columnas (y desalinea las constancias si las filas cambian de orden). Se descongela desde
+-- el panel (Asistencia) o con `npm run congelar-hoja -- --descongelar`; una instalación que ya tenga la fila no se toca (el panel manda).
+insert into configuracion (clave, valor, descripcion) values
+  ('hoja_personas_congelada', 'true'::jsonb, 'La pestaña «Asistencia por persona» se edita a mano: el sistema no la escribe')
+on conflict (clave) do nothing;
+
 -- La plantilla del correo de la constancia, editable en el panel (Plantillas). `{{boton_constancia}}` es el bloque con el botón de
--- descarga y el enlace a la vista, en el idioma de quien recibe el correo; `{{url_constancia}}` es sólo el enlace, por si se quiere
+-- descarga (sin el enlace escrito debajo), en el idioma de quien recibe el correo; `{{url_constancia}}` es sólo el enlace, por si se quiere
 -- ponerlo en otro lado. Las versiones en inglés y portugués son traducciones propias, pendientes de revisión del comité.
 -- `on conflict do nothing`: lo que el comité cambie en el panel no se pisa.
 insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values

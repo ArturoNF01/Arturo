@@ -121,7 +121,7 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
 <p style="margin:0;">${t.constancia.recordatorio}</p>
 </div>`,
     // La constancia de esta persona: el enlace suelto, para ponerlo donde el comité quiera, y el bloque con el botón de descarga
-    // ya armado, en el idioma de quien lo recibe. El enlace sale de la hoja, así que va escapado para ir en un atributo HTML; sin
+    // ya armado, en el idioma de quien lo recibe (sin el enlace escrito debajo: el comité no lo quiere a la vista). El enlace sale de la hoja, así que va escapado para ir en un atributo HTML; sin
     // enlace (cualquier otro correo) no hay bloque.
     url_constancia: datos.enlaceConstancia ? escaparAtributo(datos.enlaceConstancia) : '',
     boton_constancia: datos.enlaceConstancia
@@ -129,7 +129,6 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
 <p style="margin:0 0 8px;font-weight:bold;color:#002269;">${t.constancia.descargaTitulo}</p>
 <p style="margin:0 0 12px;">${t.constancia.descargaTexto}</p>
 <p style="margin:0;"><a href="${escaparAtributo(datos.enlaceConstancia)}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#002269;color:#ffffff;text-decoration:none;font-weight:bold;">${t.constancia.descargaBoton}</a></p>
-<p style="margin:12px 0 0;font-size:13px;color:#5b6b7f;word-break:break-all;">${t.constancia.descargaEnlace}<br/>${escaparAtributo(datos.enlaceConstancia)}</p>
 </div>`
       : '',
     url_agenda: urlAgenda,

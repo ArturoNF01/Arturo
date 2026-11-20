@@ -37,6 +37,8 @@ async function principal() {
   const { googleConfigurado } = await import('../src/lib/servidor/google');
 
   const aplicar = process.argv.includes('--aplicar');
+  // Estos cambios son de la base y la hoja los sigue: con «Asistencia por persona» congelada (se edita a mano) no los recibiría.
+  if (aplicar) await (await import('../src/lib/servidor/hoja-congelada')).exigirHojaLibre();
   const forzar = process.argv.includes('--forzar');
   const conHoja = !process.argv.includes('--sin-hoja') && googleConfigurado() && Boolean(process.env.GOOGLE_SHEETS_ID);
 
