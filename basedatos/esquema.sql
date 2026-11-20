@@ -1212,6 +1212,61 @@ insert into configuracion (clave, valor, descripcion) values
 on conflict (clave) do nothing;
 
 -- ---------------------------------------------------------------------
+-- Envío de constancias
+-- ---------------------------------------------------------------------
+-- Cada persona recibe su constancia en un botón con SU enlace, que sale de la columna «Constancia» de la pestaña «Asistencia por
+-- persona» de la hoja de Google. El enlace es distinto para cada destinatario, así que cada fila del envío guarda sus propios
+-- datos (el enlace, el nombre que lleva la constancia, el N.º de su fila); lo que se manda es lo que quedó aquí.
+alter table envios_campana add column if not exists datos jsonb;
+-- La audiencia «constancias» (las personas que tienen enlace) se suma a las que ya había, sin tocar lo que hay.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'campanas_correo'::regclass and conname = 'campanas_correo_audiencia_check'
+       and pg_get_constraintdef(oid) like '%constancias%'
+  ) then
+    alter table campanas_correo drop constraint if exists campanas_correo_audiencia_check;
+    alter table campanas_correo add constraint campanas_correo_audiencia_check
+      check (audiencia in ('todos', 'ponentes', 'lista', 'automatico', 'constancias'));
+  end if;
+end $$;
+
+-- La plantilla del correo de la constancia, editable en el panel (Plantillas). `{{boton_constancia}}` es el bloque con el botón de
+-- descarga y el enlace a la vista, en el idioma de quien recibe el correo; `{{url_constancia}}` es sólo el enlace, por si se quiere
+-- ponerlo en otro lado. Las versiones en inglés y portugués son traducciones propias, pendientes de revisión del comité.
+-- `on conflict do nothing`: lo que el comité cambie en el panel no se pisa.
+insert into plantillas_correo (clave, idioma, asunto, cuerpo_html) values
+('constancia', 'es',
+ 'Su constancia de participación · 1er Congreso de Estudios Interamericanos de Seguridad Social',
+ $html$<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#ffffff;">Descargue su constancia de participación en el Congreso.</div>
+<p style="margin:0 0 18px;font-weight:bold;color:#a08536;">Estimada o estimado {{nombre}}:</p>
+<p style="margin:0 0 16px;">Agradecemos su participación en el <strong>Primer Congreso de Estudios Interamericanos de Seguridad Social</strong>, realizado del <strong>11 al 13 de noviembre de 2026</strong>. Con mucho gusto le hacemos llegar su constancia.</p>
+{{boton_constancia}}
+<p style="margin:0 0 16px;">Si encuentra algún error en su nombre o en los datos de su constancia, responda a este correo o escriba a <a href="mailto:{{correo_contacto}}" style="color:#467886;text-decoration:underline;">{{correo_contacto}}</a> y la corregiremos.</p>
+<p style="margin:0 0 16px;">Un cordial saludo,</p>
+<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Comité Organizador</span><br/><span style="color:#a08536;">Congreso de la RIUSS | CIESS</span></p>$html$),
+('constancia', 'en',
+ 'Your certificate of participation · 1st Congress of Inter-American Social Security Studies',
+ $html$<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#ffffff;">Download your certificate of participation in the Congress.</div>
+<p style="margin:0 0 18px;font-weight:bold;color:#a08536;">Dear {{nombre}}:</p>
+<p style="margin:0 0 16px;">Thank you for taking part in the <strong>First Congress of Inter-American Social Security Studies</strong>, held on <strong>11–13 November 2026</strong>. We are pleased to send you your certificate.</p>
+{{boton_constancia}}
+<p style="margin:0 0 16px;">If you find any error in your name or in the details of your certificate, please reply to this email or write to <a href="mailto:{{correo_contacto}}" style="color:#467886;text-decoration:underline;">{{correo_contacto}}</a> and we will correct it.</p>
+<p style="margin:0 0 16px;">Kind regards,</p>
+<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Organizing Committee</span><br/><span style="color:#a08536;">RIUSS Congress | CIESS</span></p>$html$),
+('constancia', 'pt',
+ 'Seu certificado de participação · 1º Congresso de Estudos Interamericanos de Seguridade Social',
+ $html$<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#ffffff;">Baixe seu certificado de participação no Congresso.</div>
+<p style="margin:0 0 18px;font-weight:bold;color:#a08536;">Prezada ou prezado {{nombre}}:</p>
+<p style="margin:0 0 16px;">Agradecemos a sua participação no <strong>Primeiro Congresso de Estudos Interamericanos de Seguridade Social</strong>, realizado de <strong>11 a 13 de novembro de 2026</strong>. É com grande satisfação que lhe enviamos o seu certificado.</p>
+{{boton_constancia}}
+<p style="margin:0 0 16px;">Se encontrar algum erro no seu nome ou nos dados do certificado, responda a este e-mail ou escreva para <a href="mailto:{{correo_contacto}}" style="color:#467886;text-decoration:underline;">{{correo_contacto}}</a> e faremos a correção.</p>
+<p style="margin:0 0 16px;">Cordialmente,</p>
+<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">Comitê Organizador</span><br/><span style="color:#a08536;">Congresso da RIUSS | CIESS</span></p>$html$)
+on conflict (clave, idioma) do nothing;
+
+-- ---------------------------------------------------------------------
 -- Asistencia a las sesiones
 -- ---------------------------------------------------------------------
 -- La persona escanea un QR impreso (presencial) o abre el enlace que se pega en el chat de Zoom o

@@ -53,6 +53,8 @@ export async function correoDeMuestra({
     urlAgendaEn: configuracion.url_agenda_en,
     urlSesionZoom: configuracion.url_sesion_zoom,
     programaPublicado: configuracion.programa_publicado,
+    // El correo de la constancia se ve con un botón de ejemplo: lleva al sitio, no a la constancia de nadie.
+    ...(clave === 'constancia' ? { enlaceConstancia: urlSitio() } : {}),
   });
 
   return componerCorreo(plantilla, variables, {

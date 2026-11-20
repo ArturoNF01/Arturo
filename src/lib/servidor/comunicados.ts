@@ -42,6 +42,8 @@ export interface FilaDeEnvio {
   correo: string;
   registro_id: string | null;
   idioma: IdiomaEnvio;
+  /** Lo propio de esta persona que lleva su correo, si algo: el enlace de su constancia, el nombre con que se la saluda. */
+  datos?: { enlace?: string; nombre?: string; numero?: string } | null;
 }
 
 export interface Repositorio {
@@ -179,7 +181,7 @@ export const repositorioPg: Repositorio = {
           set estado = 'enviando', reclamado_en = now()
          from candidatas c
         where e.campana_id = $1 and e.correo = c.correo
-       returning e.correo, e.registro_id, e.idioma`,
+       returning e.correo, e.registro_id, e.idioma, e.datos`,
       [campanaId, n, MINUTOS_PARA_DAR_POR_PERDIDO],
     );
   },
@@ -285,10 +287,13 @@ export async function armarDeLaCampana(campanaId: string, filas: FilaDeEnvio[]):
       correo: fila.correo, folio: '', nombres: '', apellidos: '', perfil: '', modalidad: 'en_linea',
     };
     const plantilla = campana.plantilla[fila.idioma] ?? campana.plantilla.es;
+    // Con datos propios (la constancia): se saluda con el nombre que lleva su constancia, y su enlace va en su correo.
+    const nombre = fila.datos?.nombre?.trim();
     const correo = armarCorreoConPlantilla(
       {
         clave: campana.clave as ClavePlantilla,
-        registro: { ...registro, correo: fila.correo, idioma: fila.idioma },
+        registro: { ...registro, correo: fila.correo, idioma: fila.idioma, ...(nombre ? { nombres: nombre, apellidos: '' } : {}) },
+        enlaceConstancia: fila.datos?.enlace,
         correoContacto: configuracion.correo_contacto,
         fechaLimite: configuracion.fecha_limite_registro,
         urlAgenda: configuracion.url_agenda,

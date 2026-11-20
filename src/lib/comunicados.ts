@@ -21,7 +21,12 @@ export type Audiencia = (typeof AUDIENCIAS)[number];
  * en el panel (por eso no está en `AUDIENCIAS`): es la campaña donde quedan asentados.
  */
 export const AUDIENCIA_AUTOMATICA = 'automatico';
-export type AudienciaGuardada = Audiencia | typeof AUDIENCIA_AUTOMATICA;
+/**
+ * La audiencia de los envíos de constancias: las personas que tienen un enlace en la hoja. Tampoco se elige en este panel de
+ * comunicados: sale de la sección «Constancias», que la calcula de la hoja.
+ */
+export const AUDIENCIA_DE_CONSTANCIAS = 'constancias';
+export type AudienciaGuardada = Audiencia | typeof AUDIENCIA_AUTOMATICA | typeof AUDIENCIA_DE_CONSTANCIAS;
 
 /**
  * ¿A este registro le toca el comunicado automático? A quien está vigente y tiene correo: no a quien canceló ni a

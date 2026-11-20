@@ -10,6 +10,7 @@ import { nombrePerfil, perfilPorClave, registroMinimo, type Modalidad } from '@/
 import { leerEjes } from './contenido';
 import { traducir } from '@/lib/contenido';
 import { aplicarPlantilla, componerCorreo, envolverCorreo, estilizarCuerpo, tituloDeAsunto } from '@/lib/plantillas';
+import { escaparAtributo } from '@/lib/constancias';
 
 export type ClavePlantilla =
   | 'confirmacion_registro'
@@ -21,6 +22,9 @@ export type ClavePlantilla =
   | 'ponencia_aceptada_con_cambios'
   | 'ponencia_rechazada'
   | 'recordatorio'
+  // El correo de la constancia de cada persona, con el botón para descargarla. Sólo sale de un envío que alguien lance a propósito
+  // desde la sección «Constancias» del panel, y cada persona lleva su propio enlace.
+  | 'constancia'
   // El comunicado masivo del comité. Ningún flujo automático lo envía: sale sólo de un envío
   // que alguien lance a propósito desde el panel.
   | 'comunicado';
@@ -37,6 +41,8 @@ export interface DatosCorreo {
   urlAgendaEn?: string;
   /** La sala del seminario web: el enlace con el que se entra a las sesiones. */
   urlSesionZoom?: string;
+  /** El enlace de descarga de la constancia de esta persona: sólo lo lleva el correo de la constancia. */
+  enlaceConstancia?: string;
   /**
    * Si el comité ya dio el programa por publicado. Mientras no, el acuse sale
    * sin su botón: un correo es lo único que no se puede corregir después, y
@@ -114,6 +120,18 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
 <p style="margin:0 0 8px;font-weight:bold;color:#002269;">${t.constancia.titulo}</p>
 <p style="margin:0;">${t.constancia.recordatorio}</p>
 </div>`,
+    // La constancia de esta persona: el enlace suelto, para ponerlo donde el comité quiera, y el bloque con el botón de descarga
+    // ya armado, en el idioma de quien lo recibe. El enlace sale de la hoja, así que va escapado para ir en un atributo HTML; sin
+    // enlace (cualquier otro correo) no hay bloque.
+    url_constancia: datos.enlaceConstancia ? escaparAtributo(datos.enlaceConstancia) : '',
+    boton_constancia: datos.enlaceConstancia
+      ? `<div style="margin:20px 0;padding:16px;border-radius:8px;background:#eef2f8;border:1px solid #cfd8ea;">
+<p style="margin:0 0 8px;font-weight:bold;color:#002269;">${t.constancia.descargaTitulo}</p>
+<p style="margin:0 0 12px;">${t.constancia.descargaTexto}</p>
+<p style="margin:0;"><a href="${escaparAtributo(datos.enlaceConstancia)}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#002269;color:#ffffff;text-decoration:none;font-weight:bold;">${t.constancia.descargaBoton}</a></p>
+<p style="margin:12px 0 0;font-size:13px;color:#5b6b7f;word-break:break-all;">${t.constancia.descargaEnlace}<br/>${escaparAtributo(datos.enlaceConstancia)}</p>
+</div>`
+      : '',
     url_agenda: urlAgenda,
     // El programa, para todo el mundo: quien expone quiere ver en qué mesa
     // quedó y a qué hora, y quien asiste, qué va a oír. Es el único bloque

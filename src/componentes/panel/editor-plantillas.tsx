@@ -20,6 +20,7 @@ const NOMBRES_CLAVE: Record<string, string> = {
   edicion_registro: 'Registro actualizado',
   lista_espera: 'Lista de espera',
   comunicado: 'Comunicado: acceso, asistencia y constancias',
+  constancia: 'Constancia de participación (botón de descarga)',
 };
 
 export function EditorPlantillas() {
@@ -241,6 +242,12 @@ export function EditorPlantillas() {
       )}
 
       {/* Sólo las plantillas pensadas para mandarse a mucha gente llevan envío. */}
+      {clave === 'constancia' && (
+        <section className="tarjeta mt-4 p-4">
+          <p className="ayuda !mt-0">{t.panel.constancias.plantillaAyuda}</p>
+          <a href="/panel/constancias" className="boton-primario mt-3 inline-block !py-2 !text-sm">{t.panel.constancias.irAlEnvio}</a>
+        </section>
+      )}
       {esPlantillaMasiva(clave) && (
         <EnvioComunicado clave={clave} idioma={idiomaPlantilla} sinGuardar={hayCambiosSinGuardar} />
       )}

@@ -228,7 +228,7 @@ export function EnvioComunicado({
   const puedeConfirmar = calculo !== null && total > 0 && confirmacion.trim() === String(total) && !sinGuardar && !enviando;
 
   const nombreAudiencia: Record<AudienciaGuardada, string> = {
-    todos: c.todos, ponentes: c.ponentes, lista: c.lista, automatico: c.automatico,
+    todos: c.todos, ponentes: c.ponentes, lista: c.lista, automatico: c.automatico, constancias: t.panel.constancias.titulo,
   };
   const fecha = (iso: string) =>
     new Date(iso).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Mexico_City' });

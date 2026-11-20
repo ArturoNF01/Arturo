@@ -36,6 +36,7 @@ export function MarcoPanel({
     { href: '/panel/dictamen', texto: t.panel.secciones.dictamen, visible: permisos.editarRegistros, icono: 'dictamen' },
     { href: '/panel/sql', texto: t.panel.secciones.sql, visible: permisos.consultarSql, icono: 'sql' },
     { href: '/panel/plantillas', texto: t.panel.secciones.plantillas, visible: permisos.editarPlantillas, icono: 'correo' },
+    { href: '/panel/constancias', texto: t.panel.secciones.constancias, visible: permisos.enviarComunicados, icono: 'asistencia' },
     { href: '/panel/cupos', texto: t.panel.secciones.cupos, visible: permisos.editarConfiguracion, icono: 'ajustes' },
     { href: '/panel/contenido', texto: t.panel.secciones.contenido, visible: permisos.editarConfiguracion, icono: 'texto' },
     { href: '/panel/auditoria', texto: t.panel.secciones.auditoria, visible: permisos.verAuditoria, icono: 'escudo' },

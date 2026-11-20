@@ -1088,6 +1088,92 @@ async function principal() {
   await consultar(`delete from registros where correo like 'dup.%@example.org'`);
   ok('limpieza de los registros duplicados');
 
+  // 23. El envío de constancias: cada persona, una vez, con SU enlace, en su idioma
+  const { calcularConstancias, crearCampanaDeConstancias } = await import('../../src/lib/servidor/constancias');
+  const plantillasConstancia = await consultar<{ idioma: string }>(`select idioma from plantillas_correo where clave = 'constancia' and activa order by idioma`);
+  comprobar(plantillasConstancia.map((p) => p.idioma).sort().join() === 'en,es,pt', 'constancias: la plantilla del correo existe en español, inglés y portugués');
+  const altaConstancia = async (correo: string, nombres: string, apellidos: string, idioma: string) => {
+    const a = armarInsercion({
+      perfil: 'publico_general', grupo: 'externo', modalidad: 'presencial', idioma, nombres, apellidos,
+      correo, institucion: 'CIESS', pais_residencia: 'México', estado: 'confirmado', consentimiento_datos: true,
+    });
+    await consultar(`insert into registros (${a.columnas}) values (${a.marcadores})`, a.valores);
+  };
+  await altaConstancia('con.ana@example.org', 'Ana', 'Constancia Uno', 'es');
+  await altaConstancia('con.eva@example.org', 'Eva', 'Constancia Dos', 'en');
+  await altaConstancia('con.luis@example.org', 'Luis', 'Constancia Tres', 'pt');
+
+  const titulosCon = ['N.º', 'Nombre', 'Correo', 'Ponencia', 'Perfil', 'Total', 'Con registro', 'Constancia'];
+  const celdaCon = (texto: string, enlace?: string) => ({ texto, enlace: enlace ?? null });
+  const filaCon = (n: number, nombre: string, correo: string, registro: string, constancia: ReturnType<typeof celdaCon>) =>
+    [String(n), nombre, correo, '', 'Público general', '1', registro].map((x) => celdaCon(x)).concat([constancia]);
+  const tablaCon = (enlaceAna: string) => [
+    titulosCon.map((x) => celdaCon(x)),
+    filaCon(1, 'Ana Constancia Uno', 'con.ana@example.org', 'TRUE', celdaCon('Constancia de Ana', enlaceAna)),
+    filaCon(2, 'Eva Constancia Dos', 'con.eva@example.org', 'TRUE', celdaCon('https://constancias.example.org/eva.pdf')),
+    filaCon(3, 'Luis Constancia Tres', 'con.luis@example.org', 'TRUE', celdaCon('')), // sin constancia todavía
+    filaCon(4, 'Sin Registro Vigente', 'con.nadie@example.org', 'FALSE', celdaCon('https://constancias.example.org/nadie.pdf')),
+  ];
+  const enlaceDeAna = 'https://drive.google.com/file/d/IDANA1/view?usp=sharing';
+
+  const calculo = await calcularConstancias(tablaCon(enlaceDeAna));
+  comprobar(calculo.destinatarios.map((d) => `${d.correo}:${d.idioma}`).join() === 'con.ana@example.org:es,con.eva@example.org:en',
+    'constancias: a quien tiene registro y enlace, en el idioma de su registro', calculo.destinatarios);
+  comprobar(calculo.excluidos.sinConstancia === 1 && calculo.excluidos.sinRegistro === 1 && calculo.faltan[0]?.nombre === 'Luis Constancia Tres',
+    'constancias: sin enlace queda fuera y sale en la lista de quienes faltan; sin registro vigente, también fuera', calculo.excluidos);
+  comprobar(calculo.destinatarios[0].datos.enlace === 'https://drive.google.com/uc?export=download&id=IDANA1',
+    'constancias: el enlace de Drive se convierte en descarga directa');
+
+  const mala = await crearCampanaDeConstancias({ confirmacion: '99', usuarioId: usuario!.id, tabla: tablaCon(enlaceDeAna) });
+  comprobar(!mala.ok && mala.codigo === 'cifra', 'constancias: con una cifra que no coincide no se crea el envío', mala);
+  const creada = await crearCampanaDeConstancias({ confirmacion: '2', usuarioId: usuario!.id, tabla: tablaCon(enlaceDeAna) });
+  comprobar(creada.ok && creada.total === 2, 'constancias: con la cifra correcta se crea el envío', creada);
+  const idCampana = creada.ok ? creada.id : '';
+  const guardados = await consultar<{ correo: string; datos: { enlace: string; nombre: string } }>(
+    'select correo, datos from envios_campana where campana_id = $1 order by correo', [idCampana]);
+  comprobar(guardados.length === 2 && guardados[0].datos.enlace === 'https://drive.google.com/uc?export=download&id=IDANA1' &&
+    guardados[1].datos.nombre === 'Eva Constancia Dos', 'constancias: cada fila del envío guarda su enlace y su nombre', guardados);
+  const camp = await unaFila<{ clave: string; audiencia: string }>('select clave, audiencia from campanas_correo where id = $1', [idCampana]);
+  comprobar(camp?.clave === 'constancia' && camp.audiencia === 'constancias', 'constancias: el envío queda como de constancias');
+  const segundoEnvio = await crearCampanaDeConstancias({ confirmacion: '2', usuarioId: usuario!.id, tabla: tablaCon(enlaceDeAna) });
+  comprobar(!segundoEnvio.ok && segundoEnvio.codigo === 'en_curso', 'constancias: mientras haya un envío sin terminar no se crea otro', segundoEnvio);
+
+  // El correo de cada una lleva SU enlace y nadie más lo ve
+  const filasEnvio = await repositorioPg.reclamar(idCampana, 10);
+  const listos = await armarDeLaCampana(idCampana, filasEnvio);
+  const deAna = listos.find((c) => c.to === 'con.ana@example.org')!;
+  const deEva = listos.find((c) => c.to === 'con.eva@example.org')!;
+  comprobar(deAna.html.includes('uc?export=download&amp;id=IDANA1') && !deAna.html.includes('eva.pdf') && deAna.html.includes('Ana Constancia Uno') && deAna.html.includes('Descargar constancia'),
+    'constancias: el correo de Ana lleva su botón, su nombre y sólo su enlace, en español', deAna.html.slice(0, 200));
+  comprobar(deEva.html.includes('https://constancias.example.org/eva.pdf') && !deEva.html.includes('IDANA1') && deEva.html.includes('Download certificate'),
+    'constancias: el de Eva, el suyo y en inglés');
+  comprobar(deAna.subject.startsWith('Su constancia de participación') && deEva.subject.startsWith('Your certificate of participation'),
+    'constancias: el asunto sale de la plantilla de cada idioma');
+
+  // Se manda (con un enviador de mentira) y nadie recibe dos veces lo mismo
+  await repositorioPg.devolverAPendientes(idCampana, filasEnvio.map((f) => f.correo));
+  const enviados: string[] = [];
+  const r = await procesarTanda({
+    repo: repositorioPg, campanaId: idCampana, armar: (filas) => armarDeLaCampana(idCampana, filas),
+    enviador: {
+      lote: async (correos) => { enviados.push(...correos.map((c) => c.to)); return { error: null }; },
+      uno: async (correo) => { enviados.push(correo.to); return { error: null }; },
+    },
+  });
+  comprobar(r.progreso.enviados === 2 && r.progreso.pendientes === 0 && enviados.length === 2, 'constancias: la tanda sale y las dos quedan como enviadas', r.progreso);
+  const trasEnviar = await calcularConstancias(tablaCon(enlaceDeAna));
+  comprobar(trasEnviar.destinatarios.length === 0 && trasEnviar.excluidos.yaRecibieron === 2,
+    'constancias: repetir no alcanza a quien ya la recibió', trasEnviar.excluidos);
+  const corregida = await calcularConstancias(tablaCon('https://drive.google.com/file/d/IDANA2/view'));
+  comprobar(corregida.destinatarios.length === 1 && corregida.enlaceNuevo === 1 && corregida.destinatarios[0].correo === 'con.ana@example.org',
+    'constancias: si el enlace de una persona cambia (se corrigió su constancia) vuelve a tocarle, y sólo a ella', corregida.destinatarios);
+  const sinCuarto = await crearCampanaDeConstancias({ confirmacion: '0', usuarioId: usuario!.id, tabla: tablaCon(enlaceDeAna) });
+  comprobar(!sinCuarto.ok && sinCuarto.codigo === 'invalido', 'constancias: sin nadie a quien enviar no se crea nada', sinCuarto);
+
+  await consultar('delete from campanas_correo where id = $1', [idCampana]);
+  await consultar(`delete from registros where correo like 'con.%@example.org'`);
+  ok('limpieza del envío de constancias');
+
   // Limpieza
   await consultar(`delete from registros where correo = 'ana.prueba@example.org'`);
   await consultar(`delete from usuarios_panel where correo = 'prueba@ciess.org'`);

@@ -42,9 +42,9 @@ function componer(p: (typeof SEMBRADAS)[number]) {
 }
 
 describe('el diseño en todas las plantillas sembradas', () => {
-  it('hay las diez plantillas en los tres idiomas', () => {
-    expect(SEMBRADAS).toHaveLength(30);
-    expect(new Set(SEMBRADAS.map((p) => p.clave)).size).toBe(10);
+  it('hay las once plantillas en los tres idiomas', () => {
+    expect(SEMBRADAS).toHaveLength(33);
+    expect(new Set(SEMBRADAS.map((p) => p.clave)).size).toBe(11);
   });
 
   it('todas salen con la cabecera con logos, el pie y el título azul marino', () => {
@@ -71,11 +71,23 @@ describe('el diseño en todas las plantillas sembradas', () => {
   });
 
   it('el saludo va en dorado y negritas, y la firma en azul marino y dorado, en los tres idiomas', () => {
-    for (const p of SEMBRADAS.filter((x) => x.clave !== 'comunicado')) {
+    // La constancia saluda a cada persona por su nombre: lleva su propio saludo, que se prueba aparte.
+    for (const p of SEMBRADAS.filter((x) => x.clave !== 'comunicado' && x.clave !== 'constancia')) {
       const { html } = componer(p);
       const quien = `${p.clave}/${p.idioma}`;
       expect(html, quien).toMatch(/<p style="margin:0 0 18px;font-weight:bold;color:#a08536;">(Estimada persona participante:|Dear participant,|Prezada pessoa participante,)<\/p>/);
       expect(html, quien).toMatch(/<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">(Comité|Organizing|Review|Comitê)/);
+    }
+  });
+
+  it('la constancia saluda por el nombre, va con el estilo del comunicado y lleva el botón de descarga en los tres idiomas', () => {
+    for (const p of SEMBRADAS.filter((x) => x.clave === 'constancia')) {
+      const quien = `${p.clave}/${p.idioma}`;
+      const { html } = componer(p);
+      expect(html, quien).toMatch(/<p style="margin:0 0 18px;font-weight:bold;color:#a08536;">(Estimada o estimado|Dear|Prezada ou prezado) [^<]*:<\/p>/);
+      expect(html, quien).toMatch(/<p style="margin:0 0 24px;font-weight:bold;"><span style="color:#002269;">(Comité|Organizing|Comitê)/);
+      expect(p.cuerpo_html, quien).toContain('{{boton_constancia}}');
+      expect(p.cuerpo_html, quien).toContain('{{nombre}}');
     }
   });
 
