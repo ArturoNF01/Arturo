@@ -15,6 +15,7 @@
     "cotejar-ponentes": "tsx --conditions=react-server guiones/cotejar-ponentes.ts",
     "revisar-repetidos": "tsx --conditions=react-server guiones/revisar-repetidos.ts",
     "llenar-folios": "tsx --conditions=react-server guiones/llenar-folios.ts",
+    "cerrar-registro": "tsx --conditions=react-server guiones/cerrar-registro.ts",
     "limpiar-repetidos": "tsx --conditions=react-server guiones/limpiar-repetidos.ts",
     "eliminar-sin-registro": "tsx --conditions=react-server guiones/eliminar-sin-registro.ts",
     "resolver-duplicados": "tsx --conditions=react-server guiones/resolver-duplicados.ts",

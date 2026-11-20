@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/componentes/proveedores';
 import { interpolar } from '@/i18n';
 import { porcentajeAtendido, type Progreso } from '@/lib/comunicados';
+import { PlantillaDeConstancia } from './plantilla-de-constancia';
 
 interface Excluidos {
   sinRegistro: number; sinConstancia: number; enlaceInvalido: number; sinCorreo: number; correoRepetido: number; yaRecibieron: number;
@@ -336,6 +337,8 @@ export function EnvioConstancias() {
           </div>
         )}
       </section>
+
+      <PlantillaDeConstancia />
     </div>
   );
 }

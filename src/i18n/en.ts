@@ -628,6 +628,11 @@ export const en: Diccionario = {
       enviarAhora: 'Send certificates',
       sinHistorial: 'No certificate has been sent yet.',
       plantillaAyuda: 'Variables specific to this email: {{nombre}}, {{boton_constancia}} (the block with the download button and the link) and {{url_constancia}} (the link only). Sending is done from the Certificates section.',
+      plantillaTitulo: 'The email each person will receive',
+      plantillaNota: 'This is how it reaches someone who is registered. The button in this preview carries a sample link: each person\'s own link comes from their row in the sheet.',
+      plantillaFalta: 'There is no certificate template yet in: {idiomas}. Without it nothing can be sent. On the server, run «sudo bash /opt/congreso/guiones/servidor/poner-al-dia.sh» to create it.',
+      plantillaSinEsta: 'There is no template in {idioma}.',
+      plantillaNoCargo: 'The template could not be loaded. Reopen the page.',
       irAlEnvio: 'Go to sending certificates',
     },
     cupos: {

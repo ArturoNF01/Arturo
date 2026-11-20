@@ -697,6 +697,11 @@ export const es = {
       enviarAhora: 'Enviar constancias',
       sinHistorial: 'Todavía no se ha enviado ninguna constancia.',
       plantillaAyuda: 'Variables propias de este correo: {{nombre}}, {{boton_constancia}} (el bloque con el botón de descarga y el enlace) y {{url_constancia}} (solo el enlace). El envío se hace desde la sección Constancias.',
+      plantillaTitulo: 'El correo que recibirá cada persona',
+      plantillaNota: 'Así llega a quien tiene registro. El botón de esta vista previa lleva un enlace de muestra: el de cada persona sale de su fila de la hoja.',
+      plantillaFalta: 'Todavía no hay plantilla de la constancia en: {idiomas}. Sin ella no se puede enviar. En el servidor, ejecute «sudo bash /opt/congreso/guiones/servidor/poner-al-dia.sh» para que se cree.',
+      plantillaSinEsta: 'No hay plantilla en {idioma}.',
+      plantillaNoCargo: 'No se pudo cargar la plantilla. Vuelva a abrir la página.',
       irAlEnvio: 'Ir al envío de constancias',
     },
     cupos: {

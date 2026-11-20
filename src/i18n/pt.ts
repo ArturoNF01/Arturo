@@ -629,6 +629,11 @@ export const pt: Diccionario = {
       enviarAhora: 'Enviar certificados',
       sinHistorial: 'Nenhum certificado foi enviado ainda.',
       plantillaAyuda: 'Variáveis próprias deste e-mail: {{nombre}}, {{boton_constancia}} (o bloco com o botão de download e o link) e {{url_constancia}} (somente o link). O envio é feito na seção Certificados.',
+      plantillaTitulo: 'O e-mail que cada pessoa vai receber',
+      plantillaNota: 'É assim que chega a quem está inscrito. O botão desta pré-visualização leva um link de exemplo: o de cada pessoa vem da sua linha da planilha.',
+      plantillaFalta: 'Ainda não há modelo do certificado em: {idiomas}. Sem ele não é possível enviar. No servidor, execute «sudo bash /opt/congreso/guiones/servidor/poner-al-dia.sh» para criá-lo.',
+      plantillaSinEsta: 'Não há modelo em {idioma}.',
+      plantillaNoCargo: 'Não foi possível carregar o modelo. Abra a página de novo.',
       irAlEnvio: 'Ir para o envio de certificados',
     },
     cupos: {
