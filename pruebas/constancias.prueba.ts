@@ -100,7 +100,7 @@ describe('leer la pestaña', () => {
 
 describe('a quién le toca su constancia', () => {
   const f = (n: number, extra: Partial<FilaDeConstancia> = {}): FilaDeConstancia => ({
-    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo: 'publico_general', perfil: 'Público general', texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
+    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo: 'publico_general', perfil: 'Público general', ponencia: '', texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
   });
   const registros = [
     { id: 'r1', correo: 'p1@x.org', idioma: 'es' }, { id: 'r2', correo: 'P2@x.org', idioma: 'en' }, { id: 'r3', correo: 'p3@x.org', idioma: 'pt' },
@@ -234,7 +234,7 @@ describe('el grupo de cada fila: público general o ponente', () => {
   });
 
   const f = (n: number, grupo: FilaDeConstancia['grupo'], extra: Partial<FilaDeConstancia> = {}): FilaDeConstancia => ({
-    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo, perfil: grupo === 'ponente' ? 'Ponente' : 'Público general', texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
+    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo, perfil: grupo === 'ponente' ? 'Ponente' : 'Público general', ponencia: '', texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
   });
   const filas = [f(1, 'publico_general'), f(2, 'ponente'), f(3, 'publico_general'), f(4, 'ponente'), f(5, 'publico_general', { conRegistro: false })];
   const nadie = new Map<string, Set<string>>();
@@ -302,7 +302,7 @@ describe('los correos de una lista', () => {
 
 describe('verificar una lista de personas', () => {
   const f = (n: number, extra: Partial<FilaDeConstancia> = {}): FilaDeConstancia => ({
-    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo: n % 2 ? 'publico_general' : 'ponente', perfil: n % 2 ? 'Público general' : 'Ponente',
+    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo: n % 2 ? 'publico_general' : 'ponente', perfil: n % 2 ? 'Público general' : 'Ponente', ponencia: '',
     texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
   });
   const registros = [{ id: 'r1', correo: 'p1@x.org', idioma: 'es' }, { id: 'r2', correo: 'p2@x.org', idioma: 'pt' }];
@@ -361,5 +361,126 @@ describe('verificar una lista de personas', () => {
   it('con correos pegados en cualquier orden y repetidos no se manda dos veces (la lista ya viene sin repetir)', () => {
     const r = lista(correosDeUnTexto('P1@x.org, p1@x.org\np2@x.org'));
     expect(r.destinatarios.map((d) => d.correo)).toEqual(['p1@x.org', 'p2@x.org']);
+  });
+});
+
+describe('un ponente con dos participaciones: una constancia por participación, en el mismo correo', () => {
+  const f = (n: number, extra: Partial<FilaDeConstancia> = {}): FilaDeConstancia => ({
+    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo: 'ponente', perfil: 'Ponente',
+    ponencia: `Ponencia ${n}`, texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
+  });
+  const dosVeces = [f(1), f(2, { correo: 'p1@x.org' }), f(3)];
+  const nadie = new Map<string, Set<string>>();
+  const elegir = (filas: FilaDeConstancia[], extra: { yaEnviadas?: Map<string, Set<string>>; grupo?: 'ponente' | 'publico_general' } = {}) =>
+    elegirDestinatariosDeConstancias({ filas, registros: [], yaEnviadas: extra.yaEnviadas ?? nadie, grupo: extra.grupo });
+
+  it('sus dos filas salen en un solo correo: la primera constancia y, en «otros», la de la otra participación con su ponencia', () => {
+    const s = elegir(dosVeces, { grupo: 'ponente' });
+    expect(s.destinatarios).toHaveLength(2);
+    expect(s.destinatarios[0]).toMatchObject({
+      correo: 'p1@x.org',
+      datos: { enlace: 'https://x.org/1.pdf', numero: '1', ponencia: 'Ponencia 1', otros: [{ enlace: 'https://x.org/2.pdf', numero: '2', ponencia: 'Ponencia 2' }] },
+    });
+    expect(s.destinatarios[1].datos.otros).toBeUndefined();
+    expect(s.constancias).toBe(3);
+    expect(s.conVariasParticipaciones).toBe(1);
+    expect(s.excluidos.correoRepetido).toBe(0);
+  });
+
+  it('con el mismo enlace dos veces no hay dos constancias: es una fila repetida', () => {
+    const s = elegir([f(1), f(2, { correo: 'p1@x.org', enlace: 'https://x.org/1.pdf', texto: 'https://x.org/1.pdf' })], { grupo: 'ponente' });
+    expect(s.destinatarios).toHaveLength(1);
+    expect(s.destinatarios[0].datos.otros).toBeUndefined();
+    expect(s.excluidos.correoRepetido).toBe(1);
+  });
+
+  it('la excepción es sólo de ponentes: público general con el mismo correo en dos filas sigue siendo una persona repetida', () => {
+    const publico = [f(1, { grupo: 'publico_general', perfil: 'Público general' }), f(2, { correo: 'p1@x.org', grupo: 'publico_general', perfil: 'Público general' })];
+    const s = elegir(publico, { grupo: 'publico_general' });
+    expect(s.destinatarios).toHaveLength(1);
+    expect(s.destinatarios[0].datos.otros).toBeUndefined();
+    expect(s.excluidos.correoRepetido).toBe(1);
+  });
+
+  it('un correo que está una vez como ponente y otra como público general tampoco se junta: sólo cuenta la primera fila', () => {
+    const mixtas = [f(1), f(2, { correo: 'p1@x.org', grupo: 'publico_general', perfil: 'Público general' })];
+    expect(elegir(mixtas, { grupo: 'ponente' }).destinatarios[0].datos.otros).toBeUndefined();
+    expect(elegir(mixtas, { grupo: 'publico_general' }).destinatarios).toHaveLength(0);
+  });
+
+  it('si ya recibió una, el correo lleva sólo la que le falta, y eso no cuenta como «enlace corregido»', () => {
+    const ya = new Map([['p1@x.org', new Set(['https://x.org/1.pdf'])]]);
+    const s = elegir(dosVeces, { yaEnviadas: ya, grupo: 'ponente' });
+    expect(s.destinatarios[0].datos).toEqual({ enlace: 'https://x.org/2.pdf', nombre: 'Persona 2', numero: '2' });
+    expect(s.constancias).toBe(2);
+    expect(s.enlaceNuevo).toBe(0);
+  });
+
+  it('si ya recibió las dos, queda fuera', () => {
+    const ya = new Map([['p1@x.org', new Set(['https://x.org/1.pdf', 'https://x.org/2.pdf'])]]);
+    const s = elegir(dosVeces, { yaEnviadas: ya, grupo: 'ponente' });
+    expect(s.destinatarios.map((d) => d.correo)).toEqual(['p3@x.org']);
+    expect(s.excluidos.yaRecibieron).toBe(1);
+  });
+
+  it('si una constancia ya enviada cambió de enlace, sí es un enlace corregido', () => {
+    const ya = new Map([['p1@x.org', new Set(['https://x.org/viejo.pdf'])]]);
+    const s = elegir(dosVeces, { yaEnviadas: ya, grupo: 'ponente' });
+    expect(s.destinatarios[0].datos.otros).toHaveLength(1);
+    expect(s.enlaceNuevo).toBe(1);
+  });
+
+  it('en una lista, el mismo correo con dos participaciones lleva las dos; con «reenviar» salen las dos otra vez', () => {
+    const base = { correos: ['p1@x.org'], filas: dosVeces, registros: [] as { id: string; correo: string; idioma: string }[] };
+    const una = elegirDeUnaLista({ ...base, yaEnviadas: nadie });
+    expect(una.verificacion[0]).toMatchObject({ estado: 'enviar', constancias: 2 });
+    expect(una.destinatarios[0].datos.otros).toHaveLength(1);
+
+    const ya = new Map([['p1@x.org', new Set(['https://x.org/1.pdf', 'https://x.org/2.pdf'])]]);
+    expect(elegirDeUnaLista({ ...base, yaEnviadas: ya }).verificacion[0].estado).toBe('yaRecibio');
+    const otraVez = elegirDeUnaLista({ ...base, yaEnviadas: ya, reenviar: true });
+    expect(otraVez.destinatarios[0].datos.otros).toHaveLength(1);
+    expect(otraVez.reenvios).toBe(1);
+
+    const faltaUna = elegirDeUnaLista({ ...base, yaEnviadas: new Map([['p1@x.org', new Set(['https://x.org/1.pdf'])]]) });
+    expect(faltaUna.destinatarios[0].datos).toMatchObject({ enlace: 'https://x.org/2.pdf' });
+    expect(faltaUna.destinatarios[0].datos.otros).toBeUndefined();
+  });
+});
+
+describe('el correo con las constancias de varias participaciones', () => {
+  const datos = (idioma: string, varias?: { enlace: string; ponencia: string }[]) => ({
+    clave: 'constancia' as const,
+    registro: { folio: 'REG-1', nombres: 'Ana Ruiz', apellidos: '', correo: 'a@b.org', idioma },
+    correoContacto: 'congreso@ciess.org', fechaLimite: '', urlAgenda: '', enlaceConstancia: varias?.[0].enlace ?? 'https://x.org/1.pdf',
+    constanciasDeVariasParticipaciones: varias,
+  });
+  const plantilla = { asunto: 'Sus constancias', cuerpo_html: '<p>Estimada {{nombre}}:</p>{{boton_constancia}}' };
+  const dos = [{ enlace: 'https://x.org/1.pdf', ponencia: 'La pensión por fallecimiento' }, { enlace: 'https://x.org/2.pdf', ponencia: '' }];
+
+  it('un botón por participación, cada uno con su enlace y rotulado con su ponencia (o con «Participación n»)', () => {
+    const c = armarCorreoConPlantilla(datos('es', dos), plantilla);
+    expect(c.html).toContain('Sus constancias están listas');
+    expect(c.html).toContain('href="https://x.org/1.pdf"');
+    expect(c.html).toContain('href="https://x.org/2.pdf"');
+    expect(c.html).toContain('La pensión por fallecimiento');
+    expect(c.html).toContain('Participación 2');
+    expect(c.html.split('Descargar constancia').length - 1).toBe(2);
+  });
+
+  it('en el idioma de quien lo recibe', () => {
+    expect(armarCorreoConPlantilla(datos('en', dos), plantilla).html).toContain('Participation 2');
+    expect(armarCorreoConPlantilla(datos('pt', dos), plantilla).html).toContain('Participação 2');
+  });
+
+  it('la ponencia sale de la hoja: no puede meter HTML', () => {
+    const c = armarCorreoConPlantilla(datos('es', [{ enlace: 'https://x.org/1.pdf', ponencia: '<script>alert(1)</script>' }, dos[1]]), plantilla);
+    expect(c.html).not.toContain('<script>alert(1)</script>');
+  });
+
+  it('con una sola constancia el correo es el de siempre', () => {
+    const c = armarCorreoConPlantilla(datos('es', [dos[0]]), plantilla);
+    expect(c.html).toContain('Su constancia está lista');
+    expect(c.html).not.toContain('Sus constancias están listas');
   });
 });

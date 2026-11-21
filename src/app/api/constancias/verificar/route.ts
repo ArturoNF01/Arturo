@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MAXIMO_DE_LA_LISTA, correosDeUnTexto } from '@/lib/constancias';
+import { MAXIMO_DE_LA_LISTA, constanciasDe, correosDeUnTexto } from '@/lib/constancias';
 import { usuarioActual, permisos } from '@/lib/servidor/sesion';
 import { verificarListaDeConstancias } from '@/lib/servidor/constancias';
 
@@ -29,6 +29,7 @@ export async function POST(peticion: NextRequest) {
     return NextResponse.json({
       verificacion: r.verificacion,
       porEnviar: r.destinatarios.length,
+      constancias: r.destinatarios.reduce((n, d) => n + constanciasDe(d), 0),
       reenvios: r.reenvios,
       enlaceNuevo: r.enlaceNuevo,
       porIdioma: r.porIdioma,

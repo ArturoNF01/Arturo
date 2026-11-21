@@ -43,7 +43,7 @@ export interface FilaDeEnvio {
   registro_id: string | null;
   idioma: IdiomaEnvio;
   /** Lo propio de esta persona que lleva su correo, si algo: el enlace de su constancia, el nombre con que se la saluda. */
-  datos?: { enlace?: string; nombre?: string; numero?: string } | null;
+  datos?: { enlace?: string; nombre?: string; numero?: string; ponencia?: string; otros?: { enlace: string; numero: string; ponencia: string }[] } | null;
 }
 
 export interface Repositorio {
@@ -294,6 +294,10 @@ export async function armarDeLaCampana(campanaId: string, filas: FilaDeEnvio[]):
         clave: campana.clave as ClavePlantilla,
         registro: { ...registro, correo: fila.correo, idioma: fila.idioma, ...(nombre ? { nombres: nombre, apellidos: '' } : {}) },
         enlaceConstancia: fila.datos?.enlace,
+        // Un ponente con varias participaciones: todas sus constancias en el mismo correo, cada una con su ponencia.
+        ...(fila.datos?.enlace && fila.datos.otros && fila.datos.otros.length > 0
+          ? { constanciasDeVariasParticipaciones: [{ enlace: fila.datos.enlace, ponencia: fila.datos.ponencia ?? '' }, ...fila.datos.otros.map((o) => ({ enlace: o.enlace, ponencia: o.ponencia }))] }
+          : {}),
         correoContacto: configuracion.correo_contacto,
         fechaLimite: configuracion.fecha_limite_registro,
         urlAgenda: configuracion.url_agenda,

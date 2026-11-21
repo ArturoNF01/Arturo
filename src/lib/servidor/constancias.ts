@@ -67,10 +67,17 @@ async function leerContexto(tabla?: CeldaDeLaHoja[][]): Promise<ContextoDeConsta
     consultar<{ id: string; correo: string; idioma: string }>(
       `select id, correo, idioma from registros order by (estado = 'cancelado') desc, creado_en`,
     ),
+    // Cada enlace que salió: el principal de cada correo y los de sus otras participaciones (un ponente con dos constancias).
     consultar<{ correo: string; enlace: string }>(
-      `select lower(e.correo) as correo, e.datos->>'enlace' as enlace
-         from envios_campana e join campanas_correo c on c.id = e.campana_id
-        where c.clave = $1 and e.estado = 'enviado' and e.datos->>'enlace' is not null`,
+      `select lower(e.correo) as correo, l.enlace
+         from envios_campana e
+         join campanas_correo c on c.id = e.campana_id
+         cross join lateral (
+           select e.datos->>'enlace' as enlace
+           union all
+           select o->>'enlace' from jsonb_array_elements(coalesce(e.datos->'otros', '[]'::jsonb)) as o
+         ) l
+        where c.clave = $1 and e.estado = 'enviado' and l.enlace is not null`,
       [CLAVE_DE_CONSTANCIA],
     ),
   ]);

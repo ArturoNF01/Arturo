@@ -27,6 +27,9 @@ interface EstadoDeGrupo {
   sinRegistroFilas: { numero: string; nombre: string; correo: string }[];
   sinRegistroTotal: number;
   muestra: { numero: string; nombre: string; enlace: string }[];
+  /** Cuántas constancias salen en esos correos y a cuántas personas les tocan varias (un ponente con dos participaciones). */
+  constancias: number;
+  conVariasParticipaciones: number;
 }
 type Hoja =
   | { ok: true; filas: number; conRegistro: number; sinPerfil: number; sinPerfilDetalle: PerfilContado[]; grupos: Record<Grupo, EstadoDeGrupo> }
@@ -34,8 +37,9 @@ type Hoja =
 
 type EstadoDeCorreo = 'enviar' | 'yaRecibio' | 'sinRegistro' | 'sinConstancia' | 'enlaceInvalido' | 'noEstaEnLaHoja' | 'correoInvalido';
 interface VerificacionDeLista {
-  verificacion: { correo: string; estado: EstadoDeCorreo; numero?: string; nombre?: string; reenvio?: boolean }[];
+  verificacion: { correo: string; estado: EstadoDeCorreo; numero?: string; nombre?: string; reenvio?: boolean; constancias?: number }[];
   porEnviar: number;
+  constancias: number;
   reenvios: number;
   enlaceNuevo: number;
   porIdioma: { es: number; en: number; pt: number };
@@ -210,6 +214,10 @@ export function EnvioConstancias() {
 
   const sinTerminar = campanas.find((x) => x.faltaPorEnviar);
   const totalAConfirmar = confirmando ? totalDe(confirmando) : 0;
+  /** Las constancias que salen en esos correos: más que los correos si algún ponente tiene varias participaciones. */
+  const constanciasAConfirmar = confirmando === 'lista'
+    ? (listaVigente?.constancias ?? 0)
+    : (confirmando && hoja?.ok ? hoja.grupos[confirmando].constancias : 0);
   const puedeConfirmar = totalAConfirmar > 0 && confirmacion.trim() === String(totalAConfirmar) && !enviando;
   const fecha = (iso: string) =>
     new Date(iso).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Mexico_City' });
@@ -309,6 +317,9 @@ export function EnvioConstancias() {
             <p className="text-base font-bold" role="status">
               {interpolar(k.listaResumen, { enviar: String(listaVigente.porEnviar), total: String(listaVigente.verificacion.length) })}
             </p>
+            {listaVigente.constancias > listaVigente.porEnviar && (
+              <p>{interpolar(k.constanciasEnCorreos, { c: String(listaVigente.constancias), n: String(listaVigente.porEnviar) })}</p>
+            )}
             {listaVigente.reenvios > 0 && <p className="text-amber-600">{interpolar(k.listaReenvios, { n: String(listaVigente.reenvios) })}</p>}
             {listaVigente.enlaceNuevo > 0 && <p className="text-amber-600">{interpolar(k.enlaceNuevo, { n: String(listaVigente.enlaceNuevo) })}</p>}
             {listaVigente.porEnviar > 0 && (
@@ -333,7 +344,9 @@ export function EnvioConstancias() {
                       <td className="py-1.5 pr-3">{v.nombre ?? '—'}</td>
                       <td className="py-1.5 pr-3">{v.numero ?? '—'}</td>
                       <td className={`py-1.5 ${v.estado === 'enviar' ? 'font-medium' : 'text-amber-600'}`}>
-                        {v.estado === 'enviar' && v.reenvio ? k.estados.reenvio : k.estados[v.estado]}
+                        {v.estado === 'enviar' && (v.constancias ?? 1) > 1
+                          ? interpolar(k.estados.variasConstancias, { n: String(v.constancias) })
+                          : v.estado === 'enviar' && v.reenvio ? k.estados.reenvio : k.estados[v.estado]}
                       </td>
                     </tr>
                   ))}
@@ -359,6 +372,9 @@ export function EnvioConstancias() {
       {confirmando && totalAConfirmar > 0 && (
         <section className="tarjeta mt-4 p-4" aria-label={k.enviarAhora}>
           <p className="text-base font-bold">{interpolar(k.confirmarA, { alcance: nombreDe(confirmando), n: String(totalAConfirmar) })}</p>
+          {constanciasAConfirmar > totalAConfirmar && (
+            <p className="text-sm">{interpolar(k.constanciasEnCorreos, { c: String(constanciasAConfirmar), n: String(totalAConfirmar) })}</p>
+          )}
           <label className="etiqueta mt-3 block" htmlFor="confirmar-constancias">{interpolar(c.confirmar, { n: String(totalAConfirmar) })}</label>
           <input
             id="confirmar-constancias"
@@ -479,6 +495,9 @@ function TarjetaDeGrupo({
         <p className="text-base font-bold">{interpolar(k.porEnviar, { n: String(estado.porEnviar) })}</p>
         {estado.porEnviar > 0 && (
           <p className="ayuda">{interpolar(k.porIdioma, { es: String(estado.porIdioma.es), en: String(estado.porIdioma.en), pt: String(estado.porIdioma.pt) })}</p>
+        )}
+        {estado.conVariasParticipaciones > 0 && (
+          <p>{interpolar(k.variasParticipaciones, { m: String(estado.conVariasParticipaciones), c: String(estado.constancias), n: String(estado.porEnviar) })}</p>
         )}
         {estado.enlaceNuevo > 0 && <p className="text-amber-600">{interpolar(k.enlaceNuevo, { n: String(estado.enlaceNuevo) })}</p>}
         {fuera.length > 0 && <p className="ayuda">{k.fuera}: {fuera.join(' · ')}.</p>}

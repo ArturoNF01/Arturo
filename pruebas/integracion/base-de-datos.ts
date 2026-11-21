@@ -1282,6 +1282,47 @@ async function principal() {
     'ponentes y coordinación: repetir el envío no alcanza a quien ya la recibió', trasPrograma.grupos.ponente.excluidos);
   await consultar('delete from campanas_correo where id = $1', [idPrograma]);
 
+  // 23e. Un ponente con dos participaciones recibe un solo correo con sus dos constancias, y ninguna se repite
+  const filaDoble = (n: number, ponencia: string, enlace: string) =>
+    [String(n), 'Pon Del Programa', 'con.pon@example.org', ponencia, 'Ponente', '1', 'TRUE'].map((x) => celdaCon(x)).concat([celdaCon(enlace)]);
+  const tablaDoble = (enlaces: string[]) => [
+    titulosCon.map((x) => celdaCon(x)),
+    ...enlaces.map((e, i) => filaDoble(i + 1, `Ponencia número ${i + 1} del Congreso`, e)),
+  ];
+  const dobles = await calcularPorGrupo(tablaDoble(['https://constancias.example.org/pon-1.pdf', 'https://constancias.example.org/pon-2.pdf']));
+  comprobar(dobles.grupos.ponente.destinatarios.length === 1 && dobles.grupos.ponente.constancias === 2 && dobles.grupos.ponente.conVariasParticipaciones === 1,
+    'dos participaciones: un correo y dos constancias', dobles.grupos.ponente.destinatarios);
+  const creadaDoble = await crearCampanaDeConstancias({ confirmacion: '1', usuarioId: usuario!.id, tabla: tablaDoble(['https://constancias.example.org/pon-1.pdf', 'https://constancias.example.org/pon-2.pdf']), alcance: { tipo: 'grupo', grupo: 'ponente' } });
+  comprobar(creadaDoble.ok && creadaDoble.total === 1, 'dos participaciones: el envío tiene una sola fila (se confirma por correos)', creadaDoble);
+  const idDoble = creadaDoble.ok ? creadaDoble.id : '';
+  const guardadoDoble = await unaFila<{ datos: { enlace: string; otros?: { enlace: string; ponencia: string }[] } }>(
+    'select datos from envios_campana where campana_id = $1', [idDoble]);
+  comprobar(guardadoDoble?.datos.otros?.length === 1 && guardadoDoble.datos.otros[0].enlace === 'https://constancias.example.org/pon-2.pdf',
+    'dos participaciones: la fila guarda la constancia principal y la de la otra participación', guardadoDoble?.datos);
+  const filasDobles = await repositorioPg.reclamar(idDoble, 10);
+  const correoDoble = (await armarDeLaCampana(idDoble, filasDobles))[0];
+  comprobar(correoDoble.html.includes('pon-1.pdf') && correoDoble.html.includes('pon-2.pdf') && correoDoble.html.includes('Ponencia número 2 del Congreso') &&
+    correoDoble.html.includes('Sus constancias están listas'),
+    'dos participaciones: el correo lleva las dos constancias, cada una con su botón y su ponencia', correoDoble.html.slice(0, 160));
+  await repositorioPg.devolverAPendientes(idDoble, filasDobles.map((x) => x.correo));
+  const salidosDobles: string[] = [];
+  const tandaDoble = await procesarTanda({
+    repo: repositorioPg, campanaId: idDoble, armar: (filas) => armarDeLaCampana(idDoble, filas),
+    enviador: {
+      lote: async (correos) => { salidosDobles.push(...correos.map((c) => c.to)); return { error: null }; },
+      uno: async (correo) => { salidosDobles.push(correo.to); return { error: null }; },
+    },
+  });
+  comprobar(tandaDoble.progreso.enviados === 1 && salidosDobles.length === 1, 'dos participaciones: sale un solo correo', tandaDoble.progreso);
+  const trasDoble = await calcularPorGrupo(tablaDoble(['https://constancias.example.org/pon-1.pdf', 'https://constancias.example.org/pon-2.pdf']));
+  comprobar(trasDoble.grupos.ponente.destinatarios.length === 0 && trasDoble.grupos.ponente.excluidos.yaRecibieron === 1,
+    'dos participaciones: repetir el envío no alcanza a quien ya recibió las dos', trasDoble.grupos.ponente.excluidos);
+  const tercera = await calcularPorGrupo(tablaDoble(['https://constancias.example.org/pon-1.pdf', 'https://constancias.example.org/pon-2.pdf', 'https://constancias.example.org/pon-3.pdf']));
+  comprobar(tercera.grupos.ponente.destinatarios.length === 1 && tercera.grupos.ponente.destinatarios[0].datos.enlace === 'https://constancias.example.org/pon-3.pdf' &&
+    tercera.grupos.ponente.destinatarios[0].datos.otros === undefined && tercera.grupos.ponente.enlaceNuevo === 0,
+    'dos participaciones: una participación que se añade después se manda sola, sin repetir las anteriores', tercera.grupos.ponente.destinatarios);
+  await consultar('delete from campanas_correo where id = $1', [idDoble]);
+
   // 23c. La pestaña congelada: la fila nace sembrada y el interruptor funciona y se audita
   const { hojaCongelada, ponerHojaCongelada, exigirHojaLibre } = await import('../../src/lib/servidor/hoja-congelada');
   comprobar(Boolean(await unaFila(`select 1 from configuracion where clave = 'hoja_personas_congelada'`)), 'hoja congelada: la fila del interruptor está sembrada');

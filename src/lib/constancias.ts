@@ -95,6 +95,8 @@ export interface FilaDeConstancia {
   grupo: GrupoDeConstancia | null;
   /** Su «Perfil» tal como está en la hoja (para decir qué perfiles entran en cada grupo). */
   perfil: string;
+  /** La «Ponencia» de su fila, si la hoja tiene esa columna: dice de qué participación es la constancia. */
+  ponencia: string;
   /** Lo que hay en la columna «Constancia», tal como se ve. */
   texto: string;
   /** El enlace de descarga, si lo que hay es un enlace válido. */
@@ -121,6 +123,7 @@ export function filasDeConstancias(tabla: readonly (readonly CeldaDeLaHoja[])[])
   const cRegistro = columna('Con registro');
   const cConstancia = columna(COLUMNA_DE_CONSTANCIA);
   const cNumero = titulos.indexOf('N.º');
+  const cPonencia = titulos.indexOf('Ponencia');
 
   return tabla.slice(1).flatMap((fila, i) => {
     if (fila.every((c) => comoTexto(c) === '')) return [];
@@ -135,6 +138,7 @@ export function filasDeConstancias(tabla: readonly (readonly CeldaDeLaHoja[])[])
       conRegistro: comoTexto(fila[cRegistro]).toUpperCase() === 'TRUE',
       grupo: grupoDePerfil(comoTexto(fila[cPerfil])),
       perfil: comoTexto(fila[cPerfil]),
+      ponencia: cPonencia >= 0 ? comoTexto(fila[cPonencia]) : '',
       texto: texto || String(celda?.enlace ?? '').trim(),
       enlace: enlace ? enlaceDeDescarga(enlace) : null,
     }];
@@ -157,9 +161,19 @@ export interface DestinatarioDeConstancia {
   idioma: IdiomaEnvio;
   /** Su grupo según la hoja; no se guarda con el envío, sirve para enseñarlo. */
   grupo: GrupoDeConstancia | null;
-  /** Lo que se guarda con su envío y se manda: su enlace, el nombre con que se le saluda y su fila. */
-  datos: { enlace: string; nombre: string; numero: string };
+  /**
+   * Lo que se guarda con su envío y se manda: su enlace, el nombre con que se le saluda y su fila. Un ponente con más de una
+   * participación tiene una constancia por cada una, y todas van en el mismo correo: la primera en `enlace` y las demás en `otros`;
+   * `ponencia` dice de cuál participación es cada una.
+   */
+  datos: { enlace: string; nombre: string; numero: string; ponencia?: string; otros?: ParticipacionDeConstancia[] };
 }
+
+/** Una constancia de una participación: su enlace, su fila y la ponencia que ampara. */
+export interface ParticipacionDeConstancia { enlace: string; numero: string; ponencia: string }
+
+/** Cuántas constancias lleva un correo: la suya y las de sus otras participaciones. */
+export const constanciasDe = (d: DestinatarioDeConstancia): number => 1 + (d.datos.otros?.length ?? 0);
 
 export interface FaltaConstancia {
   numero: string;
@@ -170,6 +184,9 @@ export interface FaltaConstancia {
 
 export interface SeleccionDeConstancias {
   destinatarios: DestinatarioDeConstancia[];
+  /** Cuántas constancias salen en esos correos (más que los correos si algún ponente tiene dos participaciones), y a cuántas personas les tocan varias. */
+  constancias: number;
+  conVariasParticipaciones: number;
   /** Cuántas personas llevan un enlace que ya recibieron, y cuántas recibirán uno nuevo después de otro distinto. */
   enlaceNuevo: number;
   excluidos: {
@@ -199,7 +216,40 @@ const esIdioma = (valor: string): valor is IdiomaEnvio => (IDIOMAS as readonly s
 const correoValido = (correo: string) => /^[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]{2,}$/.test(correo);
 
 /**
- * A quién le toca su constancia ahora. Cada persona, una sola vez: por su correo, y con el enlace de su propia fila.
+ * Las filas de un mismo correo que se mandan juntas: la primera con enlace y, si es de un ponente, también las demás filas de ponente
+ * del mismo correo con otro enlace —un ponente con dos participaciones tiene una constancia por participación, y las dos van en el
+ * mismo correo—. Con cualquier otro perfil, un correo en dos filas es una persona repetida: sólo cuenta la primera.
+ */
+const sumarParticipacion = (previas: FilaDeConstancia[], f: FilaDeConstancia): boolean => {
+  if (previas[0].grupo !== 'ponente' || f.grupo !== 'ponente') return false;
+  return !previas.some((x) => x.enlace === f.enlace);
+};
+
+const participacionDe = (f: FilaDeConstancia): ParticipacionDeConstancia => ({ enlace: f.enlace ?? '', numero: f.numero, ponencia: f.ponencia });
+
+/**
+ * El destinatario de un correo a partir de las constancias que le tocan ahora (las filas con su enlace, la primera es la principal).
+ * Con una sola, el correo es el de siempre; con varias, las demás van en `otros` y cada una lleva su ponencia, para rotular su botón.
+ */
+function destinatarioDe(
+  correo: string, filas: readonly FilaDeConstancia[], registro: RegistroParaConstancia | undefined,
+): DestinatarioDeConstancia {
+  const [primera, ...resto] = filas;
+  const idioma: IdiomaEnvio = registro && esIdioma(registro.idioma) ? registro.idioma : 'es';
+  return {
+    correo,
+    registro_id: registro?.id ?? null,
+    idioma,
+    grupo: primera.grupo,
+    datos: {
+      enlace: primera.enlace ?? '', nombre: primera.nombre, numero: primera.numero,
+      ...(resto.length > 0 ? { ponencia: primera.ponencia, otros: resto.map(participacionDe) } : {}),
+    },
+  };
+}
+
+/**
+ * A quién le toca su constancia ahora. Cada persona, un solo correo: por su correo, y con el enlace de su propia fila.
  *
  *  - Sin la casilla «Con registro» no hay constancia, aunque haya un enlace.
  *  - Quien ya la recibió con el mismo enlace queda fuera: repetir el envío sólo alcanza a quienes faltan. Si el enlace cambió
@@ -207,6 +257,8 @@ const correoValido = (correo: string) => /^[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]{2
  *  - Cada quien la recibe en el idioma con que se registró; quien no está registrado con ese correo, en español.
  *  - Con `grupo`, sólo se cuentan y se eligen las filas de ese grupo (público general o ponentes). Un correo que sale en dos filas,
  *    aunque sean de grupos distintos, es una sola persona: se manda una sola vez, con la primera fila que tenga enlace.
+ *  - Excepción: un ponente que sale en dos filas de ponente con enlaces distintos (dos participaciones, una constancia por cada una)
+ *    recibe un solo correo con sus dos constancias. Si ya recibió una, el correo lleva sólo la que le falta.
  */
 export function elegirDestinatariosDeConstancias({
   filas, registros, yaEnviadas, grupo,
@@ -226,7 +278,8 @@ export function elegirDestinatariosDeConstancias({
   const destinatarios: DestinatarioDeConstancia[] = [];
   const faltan: FaltaConstancia[] = [];
   const sinRegistroFilas: FaltaConstancia[] = [];
-  const vistos = new Set<string>();
+  // Las filas de cada correo, en el orden en que aparecen: la primera con enlace y, si son de ponente, sus otras participaciones.
+  const porCorreo = new Map<string, FilaDeConstancia[]>();
   let enlaceNuevo = 0;
   let sinRegistroDeCorreo = 0;
 
@@ -246,27 +299,32 @@ export function elegirDestinatariosDeConstancias({
       continue;
     }
     if (!correoValido(f.correo)) { contar('sinCorreo'); continue; }
-    if (vistos.has(f.correo)) { contar('correoRepetido'); continue; }
-    vistos.add(f.correo);
-    if (!delGrupo) continue;
-
-    const antes = yaEnviadas.get(f.correo);
-    if (antes?.has(f.enlace)) { excluidos.yaRecibieron += 1; continue; }
-    if (antes && antes.size > 0) enlaceNuevo += 1;
-
-    const registro = registroPorCorreo.get(f.correo);
-    if (!registro) sinRegistroDeCorreo += 1;
-    const idioma: IdiomaEnvio = registro && esIdioma(registro.idioma) ? registro.idioma : 'es';
-    porIdioma[idioma] += 1;
-    destinatarios.push({
-      correo: f.correo,
-      registro_id: registro?.id ?? null,
-      idioma,
-      grupo: f.grupo,
-      datos: { enlace: f.enlace, nombre: f.nombre, numero: f.numero },
-    });
+    const previas = porCorreo.get(f.correo);
+    if (!previas) { porCorreo.set(f.correo, [f]); continue; }
+    if (sumarParticipacion(previas, f)) previas.push(f);
+    else contar('correoRepetido');
   }
-  return { destinatarios, enlaceNuevo, excluidos, porIdioma, faltan, sinRegistroFilas, sinRegistroDeCorreo };
+
+  for (const [correo, suyas] of porCorreo) {
+    if (grupo !== undefined && suyas[0].grupo !== grupo) continue;
+    const antes = yaEnviadas.get(correo);
+    const pendientes = suyas.filter((x) => !antes?.has(x.enlace ?? ''));
+    if (pendientes.length === 0) { excluidos.yaRecibieron += 1; continue; }
+    // «Enlace nuevo» es que una constancia ya enviada cambió de enlace; que le falte la de otra participación no lo es.
+    if (antes && [...antes].some((e) => !suyas.some((x) => x.enlace === e))) enlaceNuevo += 1;
+
+    const registro = registroPorCorreo.get(correo);
+    if (!registro) sinRegistroDeCorreo += 1;
+    const d = destinatarioDe(correo, pendientes, registro);
+    porIdioma[d.idioma] += 1;
+    destinatarios.push(d);
+  }
+  return {
+    destinatarios,
+    constancias: destinatarios.reduce((n, d) => n + constanciasDe(d), 0),
+    conVariasParticipaciones: destinatarios.filter((d) => constanciasDe(d) > 1).length,
+    enlaceNuevo, excluidos, porIdioma, faltan, sinRegistroFilas, sinRegistroDeCorreo,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -322,6 +380,8 @@ export interface VerificacionDeCorreo {
   grupo?: GrupoDeConstancia | null;
   /** Sólo con `enviar`: ya la había recibido con este mismo enlace y se vuelve a mandar porque se pidió. */
   reenvio?: boolean;
+  /** Sólo con `enviar`: cuántas constancias lleva su correo (más de una si es un ponente con varias participaciones). */
+  constancias?: number;
 }
 
 export interface SeleccionDeLista {
@@ -366,30 +426,31 @@ export function elegirDeUnaLista({
     const conRegistro = suyas.filter((f) => f.conRegistro);
     const datosDe = (f: FilaDeConstancia) => ({ numero: f.numero, nombre: f.nombre, grupo: f.grupo });
     if (conRegistro.length === 0) { verificacion.push({ correo, estado: 'sinRegistro', ...datosDe(suyas[0]) }); continue; }
-    const fila = conRegistro.find((f) => f.enlace);
-    if (!fila || !fila.enlace) {
+    // Sus constancias: la de la primera fila con enlace y, si es ponente, la de cada una de sus otras participaciones.
+    const suyasConEnlace: FilaDeConstancia[] = [];
+    for (const f of conRegistro) {
+      if (!f.enlace) continue;
+      if (suyasConEnlace.length === 0 || sumarParticipacion(suyasConEnlace, f)) suyasConEnlace.push(f);
+    }
+    if (suyasConEnlace.length === 0) {
       const conAlgo = conRegistro.some((f) => f.texto !== '');
       verificacion.push({ correo, estado: conAlgo ? 'enlaceInvalido' : 'sinConstancia', ...datosDe(conRegistro[0]) });
       continue;
     }
 
     const antes = yaEnviadas.get(correo);
-    const yaLaTiene = Boolean(antes?.has(fila.enlace));
-    if (yaLaTiene && !reenviar) { verificacion.push({ correo, estado: 'yaRecibio', ...datosDe(fila) }); continue; }
-    if (yaLaTiene) reenvios += 1;
-    else if (antes && antes.size > 0) enlaceNuevo += 1;
+    const pendientes = suyasConEnlace.filter((x) => !antes?.has(x.enlace ?? ''));
+    // Con «reenviar», todas sus constancias salen otra vez, aunque ya las tenga.
+    const aMandar = reenviar ? suyasConEnlace : pendientes;
+    if (aMandar.length === 0) { verificacion.push({ correo, estado: 'yaRecibio', ...datosDe(suyasConEnlace[0]) }); continue; }
+    const reenvio = reenviar && pendientes.length < suyasConEnlace.length;
+    if (reenvio) reenvios += 1;
+    if (antes && [...antes].some((e) => !suyasConEnlace.some((x) => x.enlace === e))) enlaceNuevo += 1;
 
-    const registro = registroPorCorreo.get(correo);
-    const idioma: IdiomaEnvio = registro && esIdioma(registro.idioma) ? registro.idioma : 'es';
-    porIdioma[idioma] += 1;
-    verificacion.push({ correo, estado: 'enviar', ...datosDe(fila), ...(yaLaTiene ? { reenvio: true } : {}) });
-    destinatarios.push({
-      correo,
-      registro_id: registro?.id ?? null,
-      idioma,
-      grupo: fila.grupo,
-      datos: { enlace: fila.enlace, nombre: fila.nombre, numero: fila.numero },
-    });
+    const d = destinatarioDe(correo, aMandar, registroPorCorreo.get(correo));
+    porIdioma[d.idioma] += 1;
+    verificacion.push({ correo, estado: 'enviar', ...datosDe(aMandar[0]), constancias: constanciasDe(d), ...(reenvio ? { reenvio: true } : {}) });
+    destinatarios.push(d);
   }
   return { verificacion, destinatarios, reenvios, enlaceNuevo, porIdioma };
 }

@@ -44,6 +44,11 @@ export interface DatosCorreo {
   /** El enlace de descarga de la constancia de esta persona: sólo lo lleva el correo de la constancia. */
   enlaceConstancia?: string;
   /**
+   * Todas sus constancias, si tiene más de una (un ponente con dos participaciones): cada una con la ponencia que ampara, para
+   * rotular su botón. Con una sola no se usa: el correo es el de siempre.
+   */
+  constanciasDeVariasParticipaciones?: { enlace: string; ponencia: string }[];
+  /**
    * Si el comité ya dio el programa por publicado. Mientras no, el acuse sale
    * sin su botón: un correo es lo único que no se puede corregir después, y
    * mandar a descargar un PDF que todavía se está corrigiendo deja circulando
@@ -124,7 +129,14 @@ export function variablesDeRegistro(datos: DatosCorreo): Record<string, string> 
     // ya armado, en el idioma de quien lo recibe (sin el enlace escrito debajo: el comité no lo quiere a la vista). El enlace sale de la hoja, así que va escapado para ir en un atributo HTML; sin
     // enlace (cualquier otro correo) no hay bloque.
     url_constancia: datos.enlaceConstancia ? escaparAtributo(datos.enlaceConstancia) : '',
-    boton_constancia: datos.enlaceConstancia
+    boton_constancia: datos.enlaceConstancia && (datos.constanciasDeVariasParticipaciones?.length ?? 0) > 1
+      ? `<div style="margin:20px 0;padding:16px;border-radius:8px;background:#eef2f8;border:1px solid #cfd8ea;">
+<p style="margin:0 0 8px;font-weight:bold;color:#002269;">${t.constancia.descargaTituloVarias}</p>
+<p style="margin:0 0 12px;">${t.constancia.descargaTextoVarias}</p>
+${datos.constanciasDeVariasParticipaciones!.map((c, i) => `<p style="margin:${i === 0 ? '0' : '16px'} 0 6px;font-weight:bold;">${escaparAtributo(c.ponencia.trim() || t.constancia.descargaParticipacion.replace('{n}', String(i + 1)))}</p>
+<p style="margin:0;"><a href="${escaparAtributo(c.enlace)}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#002269;color:#ffffff;text-decoration:none;font-weight:bold;">${t.constancia.descargaBoton}</a></p>`).join('\n')}
+</div>`
+      : datos.enlaceConstancia
       ? `<div style="margin:20px 0;padding:16px;border-radius:8px;background:#eef2f8;border:1px solid #cfd8ea;">
 <p style="margin:0 0 8px;font-weight:bold;color:#002269;">${t.constancia.descargaTitulo}</p>
 <p style="margin:0 0 12px;">${t.constancia.descargaTexto}</p>

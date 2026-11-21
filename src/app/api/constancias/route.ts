@@ -41,6 +41,8 @@ export async function GET() {
         conRegistro: x.conRegistro,
         perfiles: x.perfiles,
         porEnviar: x.destinatarios.length,
+        constancias: x.constancias,
+        conVariasParticipaciones: x.conVariasParticipaciones,
         enlaceNuevo: x.enlaceNuevo,
         porIdioma: x.porIdioma,
         excluidos: x.excluidos,
