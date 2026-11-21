@@ -1,5 +1,4 @@
 import type { IdiomaEnvio } from '@/lib/comunicados';
-import { nombreDePerfil } from '@/lib/normalizacion';
 
 /**
  * El envío de constancias: a quién le toca el correo y con qué enlace. Es lógica pura, aparte de la hoja y de Resend, para
@@ -16,11 +15,23 @@ export const COLUMNA_DE_CONSTANCIA = 'Constancia';
 export type GrupoDeConstancia = 'publico_general' | 'ponente';
 export const GRUPOS_DE_CONSTANCIA: readonly GrupoDeConstancia[] = ['publico_general', 'ponente'];
 
-/** El grupo de una fila según su «Perfil» tal como se lee en la hoja («Público general», «Ponente»); nada si no es ninguno de los dos. */
+const sinAcentos = (texto: string) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+/**
+ * Quienes suben al programa: además de «Ponente», los perfiles con que alguien se registró antes de que quedaran dos (conferencista,
+ * coordinador o coordinadora de mesa, moderador o moderadora) y los que se escriban a mano en la hoja con esas palabras («Coordinadora
+ * de mesa»). Las constancias de todos ellos salen juntas, con las de ponentes. Un dictaminador no entra: no sube al programa.
+ */
+const PERFIL_DE_PONENTES = /\b(ponentes?|conferencistas?|coordinador(?:a|es|as)?|moderador(?:a|es|as)?|panelistas?)\b/;
+
+/**
+ * El grupo de una fila según su «Perfil» tal como se lee en la hoja: «Público general», o «Ponente» y quienes participan en el programa
+ * con otro papel (coordinación de mesa, moderación, conferencia). Nada si no es ninguno: esa fila no entra en ningún envío por grupo,
+ * y el panel lo dice.
+ */
 export function grupoDePerfil(texto: string): GrupoDeConstancia | null {
-  const limpio = texto.trim().toLowerCase();
-  if (limpio === '') return null;
-  return GRUPOS_DE_CONSTANCIA.find((g) => g === limpio || nombreDePerfil(g).toLowerCase() === limpio) ?? null;
+  const limpio = sinAcentos(texto);
+  if (limpio === 'publico general' || limpio === 'publico_general') return 'publico_general';
+  return PERFIL_DE_PONENTES.test(limpio) ? 'ponente' : null;
 }
 
 /** Una celda de la hoja: lo que se ve y, si la celda es un hipervínculo (una fórmula HYPERLINK, un texto con enlace), a dónde lleva. */
@@ -80,8 +91,10 @@ export interface FilaDeConstancia {
   nombre: string;
   correo: string;
   conRegistro: boolean;
-  /** Público general o ponente, según su «Perfil»; nada si la celda no dice ninguno de los dos. */
+  /** Público general o ponentes, según su «Perfil»; nada si la celda no dice ninguno de los dos. */
   grupo: GrupoDeConstancia | null;
+  /** Su «Perfil» tal como está en la hoja (para decir qué perfiles entran en cada grupo). */
+  perfil: string;
   /** Lo que hay en la columna «Constancia», tal como se ve. */
   texto: string;
   /** El enlace de descarga, si lo que hay es un enlace válido. */
@@ -121,6 +134,7 @@ export function filasDeConstancias(tabla: readonly (readonly CeldaDeLaHoja[])[])
       correo: comoTexto(fila[cCorreo]).toLowerCase(),
       conRegistro: comoTexto(fila[cRegistro]).toUpperCase() === 'TRUE',
       grupo: grupoDePerfil(comoTexto(fila[cPerfil])),
+      perfil: comoTexto(fila[cPerfil]),
       texto: texto || String(celda?.enlace ?? '').trim(),
       enlace: enlace ? enlaceDeDescarga(enlace) : null,
     }];
@@ -174,6 +188,8 @@ export interface SeleccionDeConstancias {
   porIdioma: Record<IdiomaEnvio, number>;
   /** Quiénes tienen registro y todavía no tienen enlace (para ir a buscarlos), con su fila. */
   faltan: FaltaConstancia[];
+  /** Las filas del grupo que no tienen la casilla «Con registro» marcada, con su fila: si deben recibirla, se marca en la hoja. */
+  sinRegistroFilas: FaltaConstancia[];
   /** Las filas que tienen enlace pero cuyo correo no es de ningún registro: se les manda en español. */
   sinRegistroDeCorreo: number;
 }
@@ -209,6 +225,7 @@ export function elegirDestinatariosDeConstancias({
   const porIdioma: Record<IdiomaEnvio, number> = { es: 0, en: 0, pt: 0 };
   const destinatarios: DestinatarioDeConstancia[] = [];
   const faltan: FaltaConstancia[] = [];
+  const sinRegistroFilas: FaltaConstancia[] = [];
   const vistos = new Set<string>();
   let enlaceNuevo = 0;
   let sinRegistroDeCorreo = 0;
@@ -217,7 +234,11 @@ export function elegirDestinatariosDeConstancias({
     // Las filas de otro grupo no se cuentan, pero sí cuentan para saber si un correo ya salió: es una persona, no una fila.
     const delGrupo = grupo === undefined || f.grupo === grupo;
     const contar = (motivo: keyof typeof excluidos) => { if (delGrupo) excluidos[motivo] += 1; };
-    if (!f.conRegistro) { contar('sinRegistro'); continue; }
+    if (!f.conRegistro) {
+      contar('sinRegistro');
+      if (delGrupo) sinRegistroFilas.push({ numero: f.numero, nombre: f.nombre, correo: f.correo });
+      continue;
+    }
     if (!f.enlace) {
       if (!delGrupo) continue;
       if (f.texto === '') { excluidos.sinConstancia += 1; faltan.push({ numero: f.numero, nombre: f.nombre, correo: f.correo }); }
@@ -245,7 +266,7 @@ export function elegirDestinatariosDeConstancias({
       datos: { enlace: f.enlace, nombre: f.nombre, numero: f.numero },
     });
   }
-  return { destinatarios, enlaceNuevo, excluidos, porIdioma, faltan, sinRegistroDeCorreo };
+  return { destinatarios, enlaceNuevo, excluidos, porIdioma, faltan, sinRegistroFilas, sinRegistroDeCorreo };
 }
 
 // ---------------------------------------------------------------------------

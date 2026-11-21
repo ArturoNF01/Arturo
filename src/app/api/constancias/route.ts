@@ -38,17 +38,21 @@ export async function GET() {
     const grupos = Object.fromEntries(GRUPOS_DE_CONSTANCIA.map((g) => {
       const x = e.grupos[g];
       return [g, {
+        conRegistro: x.conRegistro,
+        perfiles: x.perfiles,
         porEnviar: x.destinatarios.length,
         enlaceNuevo: x.enlaceNuevo,
         porIdioma: x.porIdioma,
         excluidos: x.excluidos,
         faltan: x.faltan.slice(0, MAXIMO_DE_FALTANTES),
         faltanTotal: x.faltan.length,
+        sinRegistroFilas: x.sinRegistroFilas.slice(0, MAXIMO_DE_FALTANTES),
+        sinRegistroTotal: x.sinRegistroFilas.length,
         muestra: x.destinatarios.slice(0, MUESTRA).map((d) => ({ numero: d.datos.numero, nombre: d.datos.nombre, enlace: d.datos.enlace })),
       }];
     }));
     return NextResponse.json({
-      hoja: { ok: true, filas: e.filas, conRegistro: e.conRegistro, sinPerfil: e.sinPerfil, grupos },
+      hoja: { ok: true, filas: e.filas, conRegistro: e.conRegistro, sinPerfil: e.sinPerfil, sinPerfilDetalle: e.sinPerfilDetalle, grupos },
       campanas: conAlcance,
     });
   } catch (error) {

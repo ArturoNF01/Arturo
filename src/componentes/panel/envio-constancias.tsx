@@ -14,17 +14,22 @@ const GRUPOS: readonly Grupo[] = ['publico_general', 'ponente'];
 interface Excluidos {
   sinRegistro: number; sinConstancia: number; enlaceInvalido: number; sinCorreo: number; correoRepetido: number; yaRecibieron: number;
 }
+interface PerfilContado { perfil: string; n: number }
 interface EstadoDeGrupo {
+  conRegistro: number;
+  perfiles: PerfilContado[];
   porEnviar: number;
   enlaceNuevo: number;
   porIdioma: { es: number; en: number; pt: number };
   excluidos: Excluidos;
   faltan: { numero: string; nombre: string; correo: string }[];
   faltanTotal: number;
+  sinRegistroFilas: { numero: string; nombre: string; correo: string }[];
+  sinRegistroTotal: number;
   muestra: { numero: string; nombre: string; enlace: string }[];
 }
 type Hoja =
-  | { ok: true; filas: number; conRegistro: number; sinPerfil: number; grupos: Record<Grupo, EstadoDeGrupo> }
+  | { ok: true; filas: number; conRegistro: number; sinPerfil: number; sinPerfilDetalle: PerfilContado[]; grupos: Record<Grupo, EstadoDeGrupo> }
   | { ok: false; mensaje: string };
 
 type EstadoDeCorreo = 'enviar' | 'yaRecibio' | 'sinRegistro' | 'sinConstancia' | 'enlaceInvalido' | 'noEstaEnLaHoja' | 'correoInvalido';
@@ -49,6 +54,8 @@ interface Campana {
 
 const MAXIMO_DE_LA_LISTA = 200;
 const dormir = (ms: number) => new Promise((seguir) => setTimeout(seguir, ms));
+/** «Ponente: 40 · Coordinador o coordinadora: 4» */
+const detalleDePerfiles = (perfiles: readonly PerfilContado[]) => perfiles.map((p) => `${p.perfil}: ${p.n}`).join(' · ');
 
 /**
  * El envío de las constancias: cada persona recibe un correo con un botón para descargar SU constancia, con el enlace de su fila
@@ -233,7 +240,9 @@ export function EnvioConstancias() {
         {hoja?.ok && (
           <div className="mt-3 space-y-1 text-sm" role="status">
             <p>{interpolar(k.resumenHoja, { filas: String(hoja.filas), n: String(hoja.conRegistro) })}</p>
-            {hoja.sinPerfil > 0 && <p className="text-amber-600">{interpolar(k.sinPerfil, { n: String(hoja.sinPerfil) })}</p>}
+            {hoja.sinPerfil > 0 && (
+              <p className="text-amber-600">{interpolar(k.sinPerfil, { n: String(hoja.sinPerfil), detalle: detalleDePerfiles(hoja.sinPerfilDetalle) })}</p>
+            )}
           </div>
         )}
 
@@ -465,6 +474,7 @@ function TarjetaDeGrupo({
     <section className="tarjeta p-4" aria-labelledby={`constancias-${grupo}`}>
       <h2 id={`constancias-${grupo}`} className="text-base font-bold">{nombre}</h2>
       <div className="mt-2 space-y-1 text-sm" role="status">
+        <p>{interpolar(k.grupoIncluye, { n: String(estado.conRegistro), detalle: detalleDePerfiles(estado.perfiles) || '—' })}</p>
         <p>{interpolar(k.yaRecibieron, { n: String(x.yaRecibieron) })}</p>
         <p className="text-base font-bold">{interpolar(k.porEnviar, { n: String(estado.porEnviar) })}</p>
         {estado.porEnviar > 0 && (
@@ -481,6 +491,17 @@ function TarjetaDeGrupo({
           <ul className="mt-1 list-disc pl-5">
             {estado.faltan.map((f) => <li key={f.numero}>N.º {f.numero} · {f.nombre}{f.correo ? ` · ${f.correo}` : ''}</li>)}
             {estado.faltanTotal > estado.faltan.length && <li>{interpolar(k.yMas, { n: String(estado.faltanTotal - estado.faltan.length) })}</li>}
+          </ul>
+        </details>
+      )}
+
+      {estado.sinRegistroFilas.length > 0 && (
+        <details className="mt-3 text-sm">
+          <summary className="cursor-pointer font-medium">{interpolar(k.sinRegistroLista, { n: String(estado.sinRegistroTotal) })}</summary>
+          <p className="ayuda !mt-1">{k.sinRegistroAyuda}</p>
+          <ul className="mt-1 list-disc pl-5">
+            {estado.sinRegistroFilas.map((f) => <li key={f.numero}>N.º {f.numero} · {f.nombre}{f.correo ? ` · ${f.correo}` : ''}</li>)}
+            {estado.sinRegistroTotal > estado.sinRegistroFilas.length && <li>{interpolar(k.yMas, { n: String(estado.sinRegistroTotal - estado.sinRegistroFilas.length) })}</li>}
           </ul>
         </details>
       )}

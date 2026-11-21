@@ -96,23 +96,45 @@ export async function calcularConstancias(tabla?: CeldaDeLaHoja[][], grupo?: Gru
   };
 }
 
+/** Cuántas filas hay con cada perfil, tal como se lee en la hoja, de más a menos. */
+export interface PerfilContado { perfil: string; n: number }
+
 export interface EstadoPorGrupo {
   filas: number;
   conRegistro: number;
-  /** Con registro, pero con un perfil que no es ninguno de los dos grupos: no entran en ningún envío por grupo. */
+  /** Con registro, pero con un perfil que no es de ninguno de los grupos: no entran en ningún envío por grupo. */
   sinPerfil: number;
-  grupos: Record<GrupoDeConstancia, SeleccionDeConstancias>;
+  sinPerfilDetalle: PerfilContado[];
+  grupos: Record<GrupoDeConstancia, SeleccionDeConstancias & {
+    /** Las filas del grupo con «Con registro» marcado y los perfiles de la hoja con que entran en él. */
+    conRegistro: number;
+    perfiles: PerfilContado[];
+  }>;
 }
+
+const contarPerfiles = (filas: readonly { perfil: string }[]): PerfilContado[] => {
+  const cuentas = new Map<string, number>();
+  for (const f of filas) { const p = f.perfil || '(vacío)'; cuentas.set(p, (cuentas.get(p) ?? 0) + 1); }
+  return [...cuentas].map(([perfil, n]) => ({ perfil, n })).sort((a, b) => b.n - a.n || a.perfil.localeCompare(b.perfil, 'es'));
+};
 
 /** Lo que dice la hoja, por grupo: una sola lectura para los dos. */
 export async function calcularPorGrupo(tabla?: CeldaDeLaHoja[][]): Promise<EstadoPorGrupo> {
   const c = await leerContexto(tabla);
-  const para = (grupo: GrupoDeConstancia) =>
-    elegirDestinatariosDeConstancias({ filas: c.filas, registros: c.registros, yaEnviadas: c.yaEnviadas, grupo });
+  const para = (grupo: GrupoDeConstancia) => {
+    const delGrupo = c.filas.filter((f) => f.conRegistro && f.grupo === grupo);
+    return {
+      ...elegirDestinatariosDeConstancias({ filas: c.filas, registros: c.registros, yaEnviadas: c.yaEnviadas, grupo }),
+      conRegistro: delGrupo.length,
+      perfiles: contarPerfiles(delGrupo),
+    };
+  };
+  const sinPerfil = c.filas.filter((f) => f.conRegistro && f.grupo === null);
   return {
     filas: c.filas.length,
     conRegistro: c.filas.filter((f) => f.conRegistro).length,
-    sinPerfil: c.filas.filter((f) => f.conRegistro && f.grupo === null).length,
+    sinPerfil: sinPerfil.length,
+    sinPerfilDetalle: contarPerfiles(sinPerfil),
     grupos: { publico_general: para('publico_general'), ponente: para('ponente') },
   };
 }

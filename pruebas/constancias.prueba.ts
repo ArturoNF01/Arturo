@@ -100,7 +100,7 @@ describe('leer la pestaña', () => {
 
 describe('a quién le toca su constancia', () => {
   const f = (n: number, extra: Partial<FilaDeConstancia> = {}): FilaDeConstancia => ({
-    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo: 'publico_general', texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
+    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo: 'publico_general', perfil: 'Público general', texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
   });
   const registros = [
     { id: 'r1', correo: 'p1@x.org', idioma: 'es' }, { id: 'r2', correo: 'P2@x.org', idioma: 'en' }, { id: 'r3', correo: 'p3@x.org', idioma: 'pt' },
@@ -220,8 +220,21 @@ describe('el grupo de cada fila: público general o ponente', () => {
     expect(grupoDePerfil('Organizador')).toBeNull();
   });
 
+  it('quien participa en el programa con otro papel —coordinación de mesa, moderación, conferencia— entra con los ponentes', () => {
+    for (const perfil of ['Coordinador o coordinadora', 'Coordinadora de mesa', 'coordinador (a) de la mesa de salud', 'Moderador o moderadora',
+      'Moderadora', 'Conferencista', 'Ponente y coordinadora', 'PANELISTA']) {
+      expect(grupoDePerfil(perfil), perfil).toBe('ponente');
+    }
+  });
+
+  it('un dictaminador no sube al programa: no entra en ningún grupo (se manda por lista)', () => {
+    expect(grupoDePerfil('Dictaminador o dictaminadora')).toBeNull();
+    expect(grupoDePerfil('Asistente')).toBeNull();
+    expect(grupoDePerfil('Público general y ponente')).toBe('ponente'); // dice «ponente»: sube al programa
+  });
+
   const f = (n: number, grupo: FilaDeConstancia['grupo'], extra: Partial<FilaDeConstancia> = {}): FilaDeConstancia => ({
-    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo, texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
+    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo, perfil: grupo === 'ponente' ? 'Ponente' : 'Público general', texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
   });
   const filas = [f(1, 'publico_general'), f(2, 'ponente'), f(3, 'publico_general'), f(4, 'ponente'), f(5, 'publico_general', { conRegistro: false })];
   const nadie = new Map<string, Set<string>>();
@@ -253,6 +266,13 @@ describe('el grupo de cada fila: público general o ponente', () => {
     expect(publico.excluidos.yaRecibieron).toBe(1);
   });
 
+  it('las filas del grupo sin «Con registro» se listan con su fila: si deben recibirla, se marca en la hoja', () => {
+    const con = [f(1, 'ponente', { conRegistro: false }), f(2, 'ponente'), f(3, 'publico_general', { conRegistro: false })];
+    const ponentes = elegirDestinatariosDeConstancias({ filas: con, registros: [], yaEnviadas: nadie, grupo: 'ponente' });
+    expect(ponentes.sinRegistroFilas.map((x) => x.numero)).toEqual(['1']);
+    expect(ponentes.destinatarios.map((d) => d.correo)).toEqual(['p2@x.org']);
+  });
+
   it('los que no tienen enlace se cuentan en su grupo: la lista de quienes faltan es la del grupo', () => {
     const con = [f(1, 'publico_general', { texto: '', enlace: null }), f(2, 'ponente', { texto: '', enlace: null }), f(3, 'ponente')];
     const ponentes = elegirDestinatariosDeConstancias({ filas: con, registros: [], yaEnviadas: nadie, grupo: 'ponente' });
@@ -282,7 +302,7 @@ describe('los correos de una lista', () => {
 
 describe('verificar una lista de personas', () => {
   const f = (n: number, extra: Partial<FilaDeConstancia> = {}): FilaDeConstancia => ({
-    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo: n % 2 ? 'publico_general' : 'ponente',
+    numero: String(n), nombre: `Persona ${n}`, correo: `p${n}@x.org`, conRegistro: true, grupo: n % 2 ? 'publico_general' : 'ponente', perfil: n % 2 ? 'Público general' : 'Ponente',
     texto: `https://x.org/${n}.pdf`, enlace: `https://x.org/${n}.pdf`, ...extra,
   });
   const registros = [{ id: 'r1', correo: 'p1@x.org', idioma: 'es' }, { id: 'r2', correo: 'p2@x.org', idioma: 'pt' }];

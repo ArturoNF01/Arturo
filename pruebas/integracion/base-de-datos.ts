@@ -1233,6 +1233,55 @@ async function principal() {
   const listaVacia = await crearCampanaDeConstancias({ confirmacion: '0', usuarioId: usuario!.id, tabla: tablaGrupos, alcance: { tipo: 'lista', correos: ['con.nadie@example.org'], reenviar: false } });
   comprobar(!listaVacia.ok && listaVacia.codigo === 'invalido', 'constancias por lista: si a nadie le toca no se crea nada', listaVacia);
 
+  // 23d. Ponentes y coordinación de mesa: los perfiles históricos entran con los ponentes, también quien no tiene registro con ese correo
+  const altaConPerfil = async (correo: string, nombres: string, perfil: string, idioma: string) => {
+    const a = armarInsercion({
+      perfil, grupo: 'externo', modalidad: 'presencial', idioma, nombres, apellidos: 'Del Programa',
+      correo, institucion: 'CIESS', pais_residencia: 'México', estado: 'confirmado', consentimiento_datos: true,
+    });
+    await consultar(`insert into registros (${a.columnas}) values (${a.marcadores})`, a.valores);
+  };
+  await altaConPerfil('con.pon@example.org', 'Pon', 'ponente', 'es');
+  await altaConPerfil('con.coord@example.org', 'Coord', 'coordinador', 'pt');
+  const filaPerfil = (n: number, nombre: string, correo: string, perfil: string, registro: string, constancia: ReturnType<typeof celdaCon>) =>
+    [String(n), nombre, correo, '', perfil, '1', registro].map((x) => celdaCon(x)).concat([constancia]);
+  const tablaPrograma = [
+    titulosCon.map((x) => celdaCon(x)),
+    filaPerfil(1, 'Pon Del Programa', 'con.pon@example.org', 'Ponente', 'TRUE', celdaCon('https://constancias.example.org/pon.pdf')),
+    filaPerfil(2, 'Coord Del Programa', 'con.coord@example.org', 'Coordinador o coordinadora', 'TRUE', celdaCon('https://constancias.example.org/coord.pdf')),
+    filaPerfil(3, 'Moderadora Sin Registro De Correo', 'con.moder@example.org', 'Moderadora', 'TRUE', celdaCon('https://constancias.example.org/moder.pdf')),
+    filaPerfil(4, 'Dictaminadora', 'con.dict@example.org', 'Dictaminador o dictaminadora', 'TRUE', celdaCon('https://constancias.example.org/dict.pdf')),
+    filaPerfil(5, 'Coordinadora Sin Casilla', 'con.sincasilla@example.org', 'Coordinadora de mesa', 'FALSE', celdaCon('https://constancias.example.org/sincasilla.pdf')),
+  ];
+  const delPrograma = await calcularPorGrupo(tablaPrograma);
+  const ponentesDelPrograma = delPrograma.grupos.ponente;
+  comprobar(ponentesDelPrograma.destinatarios.map((d) => `${d.correo}:${d.idioma}`).join() === 'con.pon@example.org:es,con.coord@example.org:pt,con.moder@example.org:es',
+    'ponentes y coordinación: entran la ponente, la coordinadora (en el idioma de su registro) y la moderadora (en español, sin registro con ese correo)', ponentesDelPrograma.destinatarios);
+  comprobar(ponentesDelPrograma.perfiles.map((x) => `${x.perfil}:${x.n}`).sort().join() === 'Coordinador o coordinadora:1,Moderadora:1,Ponente:1',
+    'ponentes y coordinación: el panel dice con qué perfiles de la hoja entran', ponentesDelPrograma.perfiles);
+  comprobar(delPrograma.sinPerfil === 1 && delPrograma.sinPerfilDetalle[0]?.perfil === 'Dictaminador o dictaminadora',
+    'ponentes y coordinación: quien no es de ningún grupo (dictaminadora) se dice con su perfil, y no se manda por grupo', delPrograma.sinPerfilDetalle);
+  comprobar(ponentesDelPrograma.sinRegistroFilas.map((x) => x.numero).join() === '5',
+    'ponentes y coordinación: la fila sin «Con registro» sale en la lista para marcarla en la hoja', ponentesDelPrograma.sinRegistroFilas);
+
+  const delProgramaCreada = await crearCampanaDeConstancias({ confirmacion: '3', usuarioId: usuario!.id, tabla: tablaPrograma, alcance: { tipo: 'grupo', grupo: 'ponente' } });
+  comprobar(delProgramaCreada.ok && delProgramaCreada.total === 3, 'ponentes y coordinación: se crea el envío de las tres', delProgramaCreada);
+  const idPrograma = delProgramaCreada.ok ? delProgramaCreada.id : '';
+  const salidos: string[] = [];
+  const tandaPrograma = await procesarTanda({
+    repo: repositorioPg, campanaId: idPrograma, armar: (filas) => armarDeLaCampana(idPrograma, filas),
+    enviador: {
+      lote: async (correos) => { salidos.push(...correos.map((c) => c.to)); return { error: null }; },
+      uno: async (correo) => { salidos.push(correo.to); return { error: null }; },
+    },
+  });
+  comprobar(tandaPrograma.progreso.enviados === 3 && tandaPrograma.progreso.errores === 0 && salidos.length === 3,
+    'ponentes y coordinación: la tanda sale entera, también para quien no tiene registro ligado', tandaPrograma.progreso);
+  const trasPrograma = await calcularPorGrupo(tablaPrograma);
+  comprobar(trasPrograma.grupos.ponente.destinatarios.length === 0 && trasPrograma.grupos.ponente.excluidos.yaRecibieron === 3,
+    'ponentes y coordinación: repetir el envío no alcanza a quien ya la recibió', trasPrograma.grupos.ponente.excluidos);
+  await consultar('delete from campanas_correo where id = $1', [idPrograma]);
+
   // 23c. La pestaña congelada: la fila nace sembrada y el interruptor funciona y se audita
   const { hojaCongelada, ponerHojaCongelada, exigirHojaLibre } = await import('../../src/lib/servidor/hoja-congelada');
   comprobar(Boolean(await unaFila(`select 1 from configuracion where clave = 'hoja_personas_congelada'`)), 'hoja congelada: la fila del interruptor está sembrada');
