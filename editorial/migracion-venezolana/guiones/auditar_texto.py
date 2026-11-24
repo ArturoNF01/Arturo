@@ -200,7 +200,8 @@ def cambios_aprobados(docx):
     if not ruta.exists():
         return [], []
     todos = json.loads(ruta.read_text(encoding="utf-8"))["cambios"]
-    mios = [c for c in todos if c["docx"] == pathlib.Path(docx).name]
+    # «aplicar»: false = ya incorporado en el manuscrito vigente o descartado
+    mios = [c for c in todos if c["docx"] == pathlib.Path(docx).name and c.get("aplicar", True)]
     return [c for c in mios if "original" in c], [norm(c["añadido"]) for c in mios if "añadido" in c]
 
 

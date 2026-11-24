@@ -1,6 +1,6 @@
 {
   "_nota": "Fotografía de la portada (insumos/, no se versiona). 'foco' = punto [x, y] de la foto (0-1) que queda al centro del recorte; 'zoom' > 1 acerca. Tratamiento 'color' (brillo_color, saturacion y la misma sombra superior), 'gris' (negro/blanco = niveles de salida; sombra_superior = oscurecimiento arriba, hasta alto_sombra de la altura) o 'azul' (virado en las tintas del libro).",
-  "archivo": "insumos/fotos/portada.png",
+  "archivo": "insumos/fotos/foto-portada-color-ampliada.jpg",
   "foco": [
     0.518,
     0.5

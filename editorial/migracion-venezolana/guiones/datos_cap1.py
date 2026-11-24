@@ -2,7 +2,8 @@
 
 Fuentes (carpeta insumos/, tal como llegaron en Capítulo 1_CODESS.zip):
   - Cuadros_Cap 1.xlsx ........ cuadros 1-9 y gráficas 7, 8 y 9
-  - Cap1_Características.docx .. cuadros 4-8 (tablas de Word, 2022-2025)
+  - capitulo-1.docx ............ cuadros 4-8 (tablas de Word, 2022-2025); manuscrito vigente,
+    salido de guiones/dividir_docx.py (antes: Cap1_Características.docx)
   - Grafico2_*.html, Grafico3_*.html, Grafico4.html, Grafico5.html, mapa1.html, mapa2.html
   - Gráfica 1.png y Gráfica 6.png: solo existen como imagen; los valores se
     transcribieron de sus etiquetas (ver GRAFICA_1 y GRAFICA_6).
@@ -49,8 +50,17 @@ def filas(ws, desde, hasta, cols="BCDEFG"):
     return out
 
 
+def manuscrito():
+    """Manuscrito vigente del capítulo 1 (de guiones/dividir_docx.py) o, si no está, el anterior.
+    En los dos, las tablas 2, 4, 5, 6 y 8 son los cuadros 4 a 8 (la 9, el cuadro 9 en el vigente)."""
+    for nombre in ("capitulo-1.docx", "Cap1_Características.docx"):
+        if (INS / nombre).exists():
+            return INS / nombre
+    raise FileNotFoundError("insumos/capitulo-1.docx (python guiones/dividir_docx.py …)")
+
+
 def tablas_docx():
-    d = docx.Document(INS / "Cap1_Características.docx")
+    d = docx.Document(manuscrito())
     res = []
     for t in d.tables:
         filas_t = []

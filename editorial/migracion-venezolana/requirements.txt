@@ -1,0 +1,11 @@
+# Probado con Python 3.11 (python3 -m pip install -r requirements.txt).
+# WeasyPrint fijo: otra versión puede paginar distinto (huecos, cortes, folios).
+weasyprint==70.0
+pyphen>=0.18
+pypdf>=7.1
+pymupdf>=2.1
+python-docx>=1.2
+openpyxl>=3.1
+lxml>=6.1
+numpy>=2.4
+pillow>=13.0

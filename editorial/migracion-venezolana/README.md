@@ -70,21 +70,21 @@ insumos/          Archivos originales del capítulo (no se versionan)
 
 ## Construir
 
-Requisitos: Python 3.11+ con `weasyprint pyphen pypdf pymupdf openpyxl python-docx lxml`
-y Node 20+.
+Requisitos: Python 3.11+ (`python3 -m pip install -r requirements.txt`; WeasyPrint
+fijo en 70.0 porque otra versión pagina distinto) y Node 20+.
 
 ```bash
-npm install                                   # D3, topojson, world-atlas, opentype.js
+npm ci                                        # D3, topojson, world-atlas, opentype.js
 python guiones/datos_cap1.py                  # insumos/ -> datos/capitulo-1.json
 python guiones/cuadros_cap1.py                # datos -> contenido/cuadros/*.html
 npm run figuras                               # datos -> figuras/svg/*.svg
 python guiones/construir.py --figuras         # -> salida/
 ```
 
-Portada: fotografía a sangre en grises con el mapa de las rutas de Venezuela a las
-principales ciudades de Colombia encima (`figuras/portada.mjs`). La foto va en
-`insumos/fotos/portada.png` (no se versiona); recorte, foco y tratamiento (`gris` o
-`azul`) en `figuras/foto-portada.json`. `construir.py` la prepara sola
+Portada: fotografía a color a sangre con el mapa de Venezuela y Colombia encima, en
+cristal blanco translúcido, y la ruta de centro a centro (`figuras/portada.mjs`). La
+foto va en `insumos/fotos/foto-portada-color-ampliada.jpg` (no se versiona); recorte,
+foco y tratamiento (`color`, `gris` o `azul`) en `figuras/foto-portada.json`. `construir.py` la prepara sola
 (`guiones/fotos_portada.py`); mientras falte, deja un fondo provisional. Si la foto
 no llega a 300 ppp, `guiones/ampliar_foto.py` la amplía ×4 con Real-ESRGAN.
 
@@ -127,3 +127,18 @@ testimonios, notas al pie, cuadros de texto y referencias. Después:
 
 El capítulo 1 se extrajo con `guiones/extraer_docx.py` (manuscrito sin estilos) y se
 ajustó a mano.
+
+### Manuscrito con varios capítulos
+
+```bash
+python guiones/dividir_docx.py "insumos/Capitulos-1-3-CODES.docx" insumos/   # -> capitulo-0…3.docx
+python guiones/estado_cambios.py insumos/capitulo-1.docx     # cambios aprobados: pendientes o ya incorporados
+python guiones/estructura_docx.py insumos/capitulo-2.docx analisis/estructura-2.txt
+python guiones/texto_plano.py insumos/capitulo-2.docx analisis/
+python guiones/extraer_series_r.py insumos/cap2-graficas/FIGURA.pdf
+```
+
+`dividir_docx.py` deja cada capítulo en su propio DOCX (estilos, numeración, imágenes y
+solo sus notas al pie), así el convertidor y el auditor trabajan capítulo a capítulo.
+`extraer_series_r.py` recupera los datos de una gráfica de R en PDF vectorial para
+redibujarla con la línea del libro (validar siempre contra el texto).

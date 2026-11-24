@@ -22,10 +22,21 @@ const FIGURAS = {
   "portada-mascara": portadaMascara,
 };
 
-const D = datos();
+// Las figuras de la portada no necesitan datos/capitulo-1.json (privado, no versionado).
+const SIN_DATOS = new Set(["portada-mapa", "portada-mascara"]);
+let D = null;
+try {
+  D = datos();
+} catch {
+  console.warn("⚠ Falta datos/capitulo-1.json (python guiones/datos_cap1.py): solo se generan las figuras de la portada.");
+}
 const pedidas = process.argv.slice(2);
 for (const [nombre, fn] of Object.entries(FIGURAS)) {
   if (pedidas.length && !pedidas.includes(nombre)) continue;
-  guardar(nombre, fn(D));
+  if (!D && !SIN_DATOS.has(nombre)) {
+    console.warn("  omitida:", nombre);
+    continue;
+  }
+  guardar(nombre, fn(D ?? {}));
   console.log("✓", nombre);
 }
