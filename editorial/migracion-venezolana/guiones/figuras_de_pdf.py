@@ -32,7 +32,7 @@ def lineas(pagina):
         for ln in b.get("lines", []):
             t = "".join(s["text"] for s in ln["spans"]).strip()
             if t:
-                out.append((pymupdf.Rect(ln["bbox"]), t))
+                out.append((pymupdf.Rect(ln["bbox"]), t, max(s["size"] for s in ln["spans"])))
     return sorted(out, key=lambda x: (x[0].y0, x[0].x0))
 
 
@@ -45,7 +45,7 @@ def recortes(pagina):
     """[(nombre_base, Rect)] de las figuras de la página."""
     ls = lineas(pagina)
     figuras = []
-    for i, (r, t) in enumerate(ls):
+    for i, (r, t, _) in enumerate(ls):
         m = PIE.match(t)
         if not m:
             continue
@@ -54,15 +54,18 @@ def recortes(pagina):
         j = i + 1
         while j < len(ls) and ls[j][0].y0 - fondo < 3 and not FIN.match(ls[j][1]):
             fondo = max(fondo, ls[j][0].y1); j += 1
-        tope = next((rr.y0 for rr, tt in ls[j:] if FIN.match(tt) and rr.y0 > fondo), None)
+        # termina en «Fuente:»/«Nota:»; si la figura no tiene, en el siguiente texto de cuerpo
+        # (letra de 10 pt o más), en el siguiente pie de figura o al final de la caja de texto
+        tope = next((rr.y0 for rr, tt, _ in ls[j:] if FIN.match(tt) and rr.y0 > fondo), None)
         if tope is None:
-            continue
+            tope = next((rr.y0 for rr, tt, tam in ls[j:] if rr.y0 > fondo + 20 and (tam >= 10 or PIE.match(tt))),
+                        pagina.rect.height - 45)
         banda = pymupdf.Rect(0, fondo + 0.5, pagina.rect.width, tope - 0.5)
         caja = pymupdf.Rect()
         for d in pagina.get_drawings():
             if d["rect"].intersects(banda):
                 caja |= d["rect"] & banda
-        for rr, tt in ls:
+        for rr, _, _ in ls:
             if banda.contains(rr):
                 caja |= rr
         if not caja.is_empty and caja.height > 20:
