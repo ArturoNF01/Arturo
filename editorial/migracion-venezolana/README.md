@@ -138,6 +138,15 @@ python guiones/texto_plano.py insumos/capitulo-2.docx analisis/
 python guiones/extraer_series_r.py insumos/cap2-graficas/FIGURA.pdf
 ```
 
+### Figuras del capítulo 2 y recuperación de figuras
+
+- `figuras/capitulo2.mjs` dibuja las gráficas 1-9 y el Anexo 1 del capítulo 2 con la línea
+  del libro (`node figuras/generar.mjs c2-grafica-1 … c2-anexo-1`). Los datos y rótulos
+  salen de `datos/capitulo-2.json` (privado), recuperado de los PDF de R con
+  `guiones/ggplot_pdf.py` y validado.
+- `guiones/figuras_de_pdf.py LIBRO.pdf PRIMERA ULTIMA` recupera en vector (SVG) las figuras
+  de un PDF ya maquetado: sirve de respaldo si faltan los datos de un capítulo.
+
 `dividir_docx.py` deja cada capítulo en su propio DOCX (estilos, numeración, imágenes y
 solo sus notas al pie), así el convertidor y el auditor trabajan capítulo a capítulo.
 `extraer_series_r.py` recupera los datos de una gráfica de R en PDF vectorial para
